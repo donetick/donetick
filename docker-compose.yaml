@@ -1,0 +1,22 @@
+version: '3.3'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: donetick-core
+    restart: unless-stopped
+
+    volumes:
+    # sqlite database:
+      - ./data:/usr/src/app/data
+
+    ports:
+      - "8085:8000"
+    environment:
+      - CA_ENV=prod
+    hostname: donetick-core
+    command: ["/donetick-core"]  # Command to execute your binary inside the container
+networks:
+  default:

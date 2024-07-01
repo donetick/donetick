@@ -227,7 +227,8 @@ func (h *Handler) GetThingHistory(c *gin.Context) {
 		c.JSON(400, gin.H{"error": "Invalid offset"})
 		return
 	}
-	history, err := h.tRepo.GetThingHistoryWithOffset(c, thingID, offset, 10)
+
+	history, err := h.tRepo.GetThingHistoryWithOffset(c, thingID, offset)
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return

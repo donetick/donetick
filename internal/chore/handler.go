@@ -195,12 +195,6 @@ func (h *Handler) createChore(c *gin.Context) {
 			return
 		}
 
-	} else {
-		c.JSON(400, gin.H{
-			"error": "Due date is required",
-		})
-		return
-
 	}
 
 	freqencyMetadataBytes, err := json.Marshal(choreReq.FrequencyMetadata)

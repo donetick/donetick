@@ -109,8 +109,12 @@ func newServer(lc fx.Lifecycle, cfg *config.Config, db *gorm.DB, notifier *notif
 		WriteTimeout: cfg.Server.WriteTimeout,
 	}
 	config := cors.DefaultConfig()
-	config.AllowAllOrigins = !cfg.IsDoneTickDotCom
-	config.AllowOrigins = cfg.Server.CorsAllowOrigins
+	if cfg.IsDoneTickDotCom {
+		config.AllowOrigins = cfg.Server.CorsAllowOrigins
+	} else {
+		config.AllowAllOrigins = true
+	}
+
 	config.AllowCredentials = true
 	config.AddAllowHeaders("Authorization", "secretkey")
 	r.Use(cors.New(config))

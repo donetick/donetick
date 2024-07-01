@@ -58,7 +58,7 @@ func (r *UserRepository) GetUserByUsername(c context.Context, username string) (
 			return nil, err
 		}
 	} else {
-		if err := r.db.WithContext(c).Where("username = ?", username).First(&user).Error; err != nil {
+		if err := r.db.WithContext(c).Table("users u").Select("u.*, 'active' as  subscription, '2999-12-31' as expiration").Where("username = ?", username).First(&user).Error; err != nil {
 			return nil, err
 		}
 	}

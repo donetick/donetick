@@ -562,6 +562,8 @@ func (h *Handler) deleteChore(c *gin.Context) {
 		return
 	}
 	h.nRepo.DeleteAllChoreNotifications(id)
+	h.tRepo.DissociateChoreWithThing(c, id)
+
 	c.JSON(200, gin.H{
 		"message": "Chore deleted successfully",
 	})

@@ -48,6 +48,9 @@ func (n *NotificationPlanner) GenerateNotifications(c context.Context, chore *ch
 	var mt *chModel.NotificationMetadata
 	if err := json.Unmarshal([]byte(*chore.NotificationMetadata), &mt); err != nil {
 		log.Error("Error unmarshalling notification metadata", err)
+		return false
+	}
+	if chore.NextDueDate == nil {
 		return true
 	}
 	if mt.DueDate {

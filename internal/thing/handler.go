@@ -261,6 +261,16 @@ func (h *Handler) DeleteThing(c *gin.Context) {
 		c.JSON(403, gin.H{"error": "Forbidden"})
 		return
 	}
+	//  confirm there are no chores associated with the thing:
+	thingChores, err := h.tRepo.GetThingChoresByThingId(c, thing.ID)
+	if err != nil {
+		c.JSON(500, gin.H{"error": "Unable to find tasks linked to this thing"})
+		return
+	}
+	if len(thingChores) > 0 {
+		c.JSON(405, gin.H{"error": "Unable to delete thing with associated tasks"})
+		return
+	}
 	if err := h.tRepo.DeleteThing(c, thingID); err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return

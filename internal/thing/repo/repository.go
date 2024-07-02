@@ -70,6 +70,10 @@ func (r *ThingRepository) DissociateThingWithChore(c context.Context, thingID in
 	return r.db.WithContext(c).Where("thing_id = ? AND chore_id = ?", thingID, choreID).Delete(&tModel.ThingChore{}).Error
 }
 
+func (r *ThingRepository) DissociateChoreWithThing(c context.Context, choreID int) error {
+	return r.db.WithContext(c).Where("chore_id = ?", choreID).Delete(&tModel.ThingChore{}).Error
+}
+
 func (r *ThingRepository) GetThingHistoryWithOffset(c context.Context, thingID int, offset int) ([]*tModel.ThingHistory, error) {
 	var thingHistory []*tModel.ThingHistory
 	if err := r.db.WithContext(c).Model(&tModel.ThingHistory{}).Where("thing_id = ?", thingID).Order("created_at desc").Offset(offset).Limit(10).Find(&thingHistory).Error; err != nil {

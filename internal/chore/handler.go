@@ -488,7 +488,7 @@ func (h *Handler) editChore(c *gin.Context) {
 	go func() {
 		h.nPlanner.GenerateNotifications(c, updatedChore)
 	}()
-	if oldChore.ThingChore.ThingID != 0 {
+	if oldChore.ThingChore != nil {
 		// TODO: Add check to see if dissociation is necessary
 		h.tRepo.DissociateThingWithChore(c, oldChore.ThingChore.ThingID, oldChore.ID)
 

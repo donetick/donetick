@@ -111,6 +111,13 @@ func (r *ChoreRepository) GetChoreHistory(c context.Context, choreID int) ([]*ch
 	}
 	return histories, nil
 }
+func (r *ChoreRepository) GetChoreHistoryWithLimit(c context.Context, choreID int, limit int) ([]*chModel.ChoreHistory, error) {
+	var histories []*chModel.ChoreHistory
+	if err := r.db.WithContext(c).Where("chore_id = ?", choreID).Order("completed_at desc").Limit(limit).Find(&histories).Error; err != nil {
+		return nil, err
+	}
+	return histories, nil
+}
 
 func (r *ChoreRepository) UpdateChoreAssignees(c context.Context, assignees []*chModel.ChoreAssignees) error {
 	return r.db.WithContext(c).Save(&assignees).Error
@@ -243,7 +250,7 @@ func (r *ChoreRepository) GetChoreDetailByID(c context.Context, choreID int, cir
         )
     ) AS recent_history ON chores.id = recent_history.chore_id`).
 		Where("chores.id = ? and chores.circle_id = ?", choreID, circleID).
-		Group("chores.id, recent_history.last_completed_date").
+		Group("chores.id, recent_history.last_completed_date, recent_history.last_assigned_to").
 		First(&choreDetail).Error; err != nil {
 		return nil, err
 

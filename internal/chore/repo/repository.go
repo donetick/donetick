@@ -243,7 +243,7 @@ func (r *ChoreRepository) GetChoreDetailByID(c context.Context, choreID int, cir
         )
     ) AS recent_history ON chores.id = recent_history.chore_id`).
 		Where("chores.id = ? and chores.circle_id = ?", choreID, circleID).
-		Group("chores.id").
+		Group("chores.id, recent_history.last_completed_date").
 		First(&choreDetail).Error; err != nil {
 		return nil, err
 

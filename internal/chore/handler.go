@@ -873,6 +873,37 @@ func (h *Handler) GetChoreHistory(c *gin.Context) {
 	})
 }
 
+func (h *Handler) GetChoreDetail(c *gin.Context) {
+
+	currentUser, ok := auth.CurrentUser(c)
+	if !ok {
+		c.JSON(500, gin.H{
+			"error": "Error getting current user",
+		})
+		return
+	}
+	rawID := c.Param("id")
+	id, err := strconv.Atoi(rawID)
+	if err != nil {
+		c.JSON(400, gin.H{
+			"error": "Invalid ID",
+		})
+		return
+	}
+
+	detailed, err := h.choreRepo.GetChoreDetailByID(c, id, currentUser.CircleID)
+	if err != nil {
+		c.JSON(500, gin.H{
+			"error": "Error getting chore history",
+		})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"res": detailed,
+	})
+}
+
 func checkNextAssignee(chore *chModel.Chore, choresHistory []*chModel.ChoreHistory, performerID int) (int, error) {
 	// copy the history to avoid modifying the original:
 	history := make([]*chModel.ChoreHistory, len(choresHistory))
@@ -959,6 +990,7 @@ func Routes(router *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware) {
 		choresRoutes.PUT("/", h.editChore)
 		choresRoutes.POST("/", h.createChore)
 		choresRoutes.GET("/:id", h.getChore)
+		choresRoutes.GET("/:id/details", h.GetChoreDetail)
 		choresRoutes.GET("/:id/history", h.GetChoreHistory)
 		choresRoutes.POST("/:id/do", h.completeChore)
 		choresRoutes.POST("/:id/skip", h.skipChore)

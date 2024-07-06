@@ -69,6 +69,7 @@ func (h *Handler) signUp(c *gin.Context) {
 	type SignUpReq struct {
 		Username    string `json:"username" binding:"required,min=4,max=20"`
 		Password    string `json:"password" binding:"required,min=8,max=45"`
+		Email       string `json:"email" binding:"required,email"`
 		DisplayName string `json:"displayName"`
 	}
 	var signupReq SignUpReq
@@ -96,6 +97,7 @@ func (h *Handler) signUp(c *gin.Context) {
 		Username:    signupReq.Username,
 		Password:    password,
 		DisplayName: signupReq.DisplayName,
+		Email:       signupReq.Email,
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
 	}); err != nil {

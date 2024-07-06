@@ -70,3 +70,15 @@ type Tag struct {
 // 	CircleID int `json:"circleId" gorm:"primaryKey;autoIncrement:false"`
 // 	TagID    int `json:"tagId" gorm:"primaryKey;autoIncrement:false"`
 // }
+
+type ChoreDetail struct {
+	ID                  int        `json:"id" gorm:"column:id"`
+	Name                string     `json:"name" gorm:"column:name"`
+	FrequencyType       string     `json:"frequencyType" gorm:"column:frequency_type"`
+	NextDueDate         *time.Time `json:"nextDueDate" gorm:"column:next_due_date"`
+	AssignedTo          int        `json:"assignedTo" gorm:"column:assigned_to"`
+	LastCompletedDate   *time.Time `json:"lastCompletedDate" gorm:"column:last_completed_date"`
+	LastCompletedBy     *int       `json:"lastCompletedBy" gorm:"column:last_completed_by"`
+	TotalCompletedCount int        `json:"totalCompletedCount" gorm:"column:total_completed"`
+	CreatedBy           int        `json:"createdBy" gorm:"column:created_by"`
+}

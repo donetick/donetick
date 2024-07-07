@@ -111,6 +111,13 @@ func (r *ChoreRepository) GetChoreHistory(c context.Context, choreID int) ([]*ch
 	}
 	return histories, nil
 }
+func (r *ChoreRepository) GetChoreHistoryWithLimit(c context.Context, choreID int, limit int) ([]*chModel.ChoreHistory, error) {
+	var histories []*chModel.ChoreHistory
+	if err := r.db.WithContext(c).Where("chore_id = ?", choreID).Order("completed_at desc").Limit(limit).Find(&histories).Error; err != nil {
+		return nil, err
+	}
+	return histories, nil
+}
 
 func (r *ChoreRepository) UpdateChoreAssignees(c context.Context, assignees []*chModel.ChoreAssignees) error {
 	return r.db.WithContext(c).Save(&assignees).Error
@@ -213,4 +220,43 @@ func (r *ChoreRepository) SetDueDate(c context.Context, choreID int, dueDate tim
 
 func (r *ChoreRepository) SetDueDateIfNotExisted(c context.Context, choreID int, dueDate time.Time) error {
 	return r.db.WithContext(c).Model(&chModel.Chore{}).Where("id = ? and next_due_date is null", choreID).Update("next_due_date", dueDate).Error
+}
+
+func (r *ChoreRepository) GetChoreDetailByID(c context.Context, choreID int, circleID int) (*chModel.ChoreDetail, error) {
+	var choreDetail chModel.ChoreDetail
+	if err := r.db.WithContext(c).
+		Table("chores").
+		Select(`
+        chores.id, 
+        chores.name, 
+        chores.frequency_type, 
+        chores.next_due_date, 
+        chores.assigned_to,
+        chores.created_by,
+        recent_history.last_completed_date,
+		recent_history.notes,
+        recent_history.last_assigned_to as last_completed_by,
+        COUNT(chore_histories.id) as total_completed`).
+		Joins("LEFT JOIN chore_histories ON chores.id = chore_histories.chore_id").
+		Joins(`LEFT JOIN (
+        SELECT 
+            chore_id, 
+            assigned_to AS last_assigned_to, 
+            completed_at AS last_completed_date,
+			notes
+			
+        FROM chore_histories
+        WHERE (chore_id, completed_at) IN (
+            SELECT chore_id, MAX(completed_at)
+            FROM chore_histories
+            GROUP BY chore_id
+        )
+    ) AS recent_history ON chores.id = recent_history.chore_id`).
+		Where("chores.id = ? and chores.circle_id = ?", choreID, circleID).
+		Group("chores.id, recent_history.last_completed_date, recent_history.last_assigned_to, recent_history.notes").
+		First(&choreDetail).Error; err != nil {
+		return nil, err
+
+	}
+	return &choreDetail, nil
 }

@@ -283,9 +283,8 @@ func (h *Handler) resetPassword(c *gin.Context) {
 	}
 	user, err := h.userRepo.FindByEmail(c, req.Email)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{
-			"error": "User not found",
-		})
+		c.JSON(http.StatusOK, gin.H{})
+		log.Error("account.handler.resetPassword failed to find user")
 		return
 	}
 	if user.Provider != 0 {

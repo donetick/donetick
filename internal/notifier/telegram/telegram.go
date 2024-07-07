@@ -55,7 +55,7 @@ func (tn *TelegramNotifier) SendChoreCompletion(c context.Context, chore *chMode
 		if user.ChatID == 0 {
 			continue
 		}
-		text := fmt.Sprintf("🎉 '%s' is completed! is off the list, %s! 🌟 ", chore.Name, user.DisplayName)
+		text := fmt.Sprintf("🎉 *%s* is completed! is off the list, %s! 🌟 ", chore.Name, user.DisplayName)
 		msg := tgbotapi.NewMessage(user.ChatID, text)
 		msg.ParseMode = "Markdown"
 		_, err := tn.bot.Send(msg)

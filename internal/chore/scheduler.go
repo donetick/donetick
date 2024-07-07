@@ -22,12 +22,24 @@ func scheduleNextDueDate(chore *chModel.Chore, completedDate time.Time) (*time.T
 	if chore.FrequencyType == "once" {
 		return nil, nil
 	}
+
 	if chore.NextDueDate != nil {
 		// no due date set, use the current date
 
 		baseDate = chore.NextDueDate.UTC()
 	} else {
 		baseDate = completedDate.UTC()
+	}
+	if chore.FrequencyType == "day_of_the_month" || chore.FrequencyType == "days_of_the_week" || chore.FrequencyType == "interval" {
+		// time in frequency metadata stored as RFC3339 format like  `2024-07-07T13:27:00-04:00`
+		// parse it to time.Time:
+		t, err := time.Parse(time.RFC3339, frequencyMetadata.Time)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing time in frequency metadata")
+		}
+		// set the time to the time in the frequency metadata:
+		baseDate = time.Date(baseDate.Year(), baseDate.Month(), baseDate.Day(), t.Hour(), t.Minute(), 0, 0, t.Location())
+
 	}
 	if chore.IsRolling && chore.NextDueDate.Before(completedDate) {
 		// we need to check if chore due date is before the completed date to handle this senario:

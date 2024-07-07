@@ -802,14 +802,33 @@ func (h *Handler) completeChore(c *gin.Context) {
 		})
 		return
 	}
+	var nextDueDate *time.Time
+	if chore.FrequencyType == "adaptive" {
+		history, err := h.choreRepo.GetChoreHistoryWithLimit(c, chore.ID, 5)
+		if err != nil {
+			c.JSON(500, gin.H{
+				"error": "Error getting chore history",
+			})
+			return
+		}
+		nextDueDate, err = scheduleAdaptiveNextDueDate(chore, completedDate, history)
+		if err != nil {
+			log.Printf("Error scheduling next due date: %s", err)
+			c.JSON(500, gin.H{
+				"error": "Error scheduling next due date",
+			})
+			return
+		}
 
-	nextDueDate, err := scheduleNextDueDate(chore, completedDate)
-	if err != nil {
-		log.Printf("Error scheduling next due date: %s", err)
-		c.JSON(500, gin.H{
-			"error": "Error scheduling next due date",
-		})
-		return
+	} else {
+		nextDueDate, err = scheduleNextDueDate(chore, completedDate)
+		if err != nil {
+			log.Printf("Error scheduling next due date: %s", err)
+			c.JSON(500, gin.H{
+				"error": "Error scheduling next due date",
+			})
+			return
+		}
 	}
 	choreHistory, err := h.choreRepo.GetChoreHistory(c, chore.ID)
 	if err != nil {

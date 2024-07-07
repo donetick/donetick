@@ -80,5 +80,6 @@ type ChoreDetail struct {
 	LastCompletedDate   *time.Time `json:"lastCompletedDate" gorm:"column:last_completed_date"`
 	LastCompletedBy     *int       `json:"lastCompletedBy" gorm:"column:last_completed_by"`
 	TotalCompletedCount int        `json:"totalCompletedCount" gorm:"column:total_completed"`
+	Notes               *string    `json:"notes" gorm:"column:notes"`
 	CreatedBy           int        `json:"createdBy" gorm:"column:created_by"`
 }

@@ -86,7 +86,7 @@ func generateDueNotifications(chore *chModel.Chore, users []*cModel.UserCircleDe
 			TypeID:       1,
 			UserID:       user.ID,
 			TargetID:     fmt.Sprint(user.ChatID),
-			Text:         fmt.Sprintf("📅 Reminder: '%s' is due today and assigned to %s.", chore.Name, assignee.DisplayName),
+			Text:         fmt.Sprintf("📅 Reminder: *%s* is due today and assigned to %s.", chore.Name, assignee.DisplayName),
 		}
 		notifications = append(notifications, notification)
 	}
@@ -141,7 +141,7 @@ func generateOverdueNotifications(chore *chModel.Chore, users []*cModel.UserCirc
 				TypeID:       2,
 				UserID:       user.ID,
 				TargetID:     fmt.Sprint(user.ChatID),
-				Text:         fmt.Sprintf("🚨  '%s' is now %d hours overdue. Please complete it as soon as possible. (Assigned to %s)", chore.Name, hours, assignee.DisplayName),
+				Text:         fmt.Sprintf("🚨 *%s* is now %d hours overdue. Please complete it as soon as possible. (Assigned to %s)", chore.Name, hours, assignee.DisplayName),
 			}
 			notifications = append(notifications, notification)
 		}

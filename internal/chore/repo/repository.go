@@ -234,6 +234,7 @@ func (r *ChoreRepository) GetChoreDetailByID(c context.Context, choreID int, cir
         chores.assigned_to,
         chores.created_by,
         recent_history.last_completed_date,
+		recent_history.notes,
         recent_history.last_assigned_to as last_completed_by,
         COUNT(chore_histories.id) as total_completed`).
 		Joins("LEFT JOIN chore_histories ON chores.id = chore_histories.chore_id").
@@ -241,7 +242,9 @@ func (r *ChoreRepository) GetChoreDetailByID(c context.Context, choreID int, cir
         SELECT 
             chore_id, 
             assigned_to AS last_assigned_to, 
-            completed_at AS last_completed_date
+            completed_at AS last_completed_date,
+			notes
+			
         FROM chore_histories
         WHERE (chore_id, completed_at) IN (
             SELECT chore_id, MAX(completed_at)
@@ -250,7 +253,7 @@ func (r *ChoreRepository) GetChoreDetailByID(c context.Context, choreID int, cir
         )
     ) AS recent_history ON chores.id = recent_history.chore_id`).
 		Where("chores.id = ? and chores.circle_id = ?", choreID, circleID).
-		Group("chores.id, recent_history.last_completed_date, recent_history.last_assigned_to").
+		Group("chores.id, recent_history.last_completed_date, recent_history.last_assigned_to, recent_history.notes").
 		First(&choreDetail).Error; err != nil {
 		return nil, err
 

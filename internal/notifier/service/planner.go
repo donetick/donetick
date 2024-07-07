@@ -112,7 +112,7 @@ func generatePreDueNotifications(chore *chModel.Chore, users []*cModel.UserCircl
 			TypeID:       3,
 			UserID:       user.ID,
 			TargetID:     fmt.Sprint(user.ChatID),
-			Text:         fmt.Sprintf("📢 Heads up! Chore '%s' is due soon (on %s) and assigned to %s.", chore.Name, chore.NextDueDate.Format("January 2nd"), assignee.DisplayName),
+			Text:         fmt.Sprintf("📢 Heads up! *%s* is due soon (on %s) and assigned to %s.", chore.Name, chore.NextDueDate.Format("January 2nd"), assignee.DisplayName),
 		}
 		notifications = append(notifications, notification)
 

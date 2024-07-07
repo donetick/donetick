@@ -488,7 +488,7 @@ func (h *Handler) editChore(c *gin.Context) {
 	go func() {
 		h.nPlanner.GenerateNotifications(c, updatedChore)
 	}()
-	if oldChore.ThingChore.ThingID != 0 {
+	if oldChore.ThingChore != nil {
 		// TODO: Add check to see if dissociation is necessary
 		h.tRepo.DissociateThingWithChore(c, oldChore.ThingChore.ThingID, oldChore.ID)
 
@@ -562,6 +562,8 @@ func (h *Handler) deleteChore(c *gin.Context) {
 		return
 	}
 	h.nRepo.DeleteAllChoreNotifications(id)
+	h.tRepo.DissociateChoreWithThing(c, id)
+
 	c.JSON(200, gin.H{
 		"message": "Chore deleted successfully",
 	})
@@ -800,14 +802,33 @@ func (h *Handler) completeChore(c *gin.Context) {
 		})
 		return
 	}
+	var nextDueDate *time.Time
+	if chore.FrequencyType == "adaptive" {
+		history, err := h.choreRepo.GetChoreHistoryWithLimit(c, chore.ID, 5)
+		if err != nil {
+			c.JSON(500, gin.H{
+				"error": "Error getting chore history",
+			})
+			return
+		}
+		nextDueDate, err = scheduleAdaptiveNextDueDate(chore, completedDate, history)
+		if err != nil {
+			log.Printf("Error scheduling next due date: %s", err)
+			c.JSON(500, gin.H{
+				"error": "Error scheduling next due date",
+			})
+			return
+		}
 
-	nextDueDate, err := scheduleNextDueDate(chore, completedDate)
-	if err != nil {
-		log.Printf("Error scheduling next due date: %s", err)
-		c.JSON(500, gin.H{
-			"error": "Error scheduling next due date",
-		})
-		return
+	} else {
+		nextDueDate, err = scheduleNextDueDate(chore, completedDate)
+		if err != nil {
+			log.Printf("Error scheduling next due date: %s", err)
+			c.JSON(500, gin.H{
+				"error": "Error scheduling next due date",
+			})
+			return
+		}
 	}
 	choreHistory, err := h.choreRepo.GetChoreHistory(c, chore.ID)
 	if err != nil {
@@ -868,6 +889,37 @@ func (h *Handler) GetChoreHistory(c *gin.Context) {
 
 	c.JSON(200, gin.H{
 		"res": choreHistory,
+	})
+}
+
+func (h *Handler) GetChoreDetail(c *gin.Context) {
+
+	currentUser, ok := auth.CurrentUser(c)
+	if !ok {
+		c.JSON(500, gin.H{
+			"error": "Error getting current user",
+		})
+		return
+	}
+	rawID := c.Param("id")
+	id, err := strconv.Atoi(rawID)
+	if err != nil {
+		c.JSON(400, gin.H{
+			"error": "Invalid ID",
+		})
+		return
+	}
+
+	detailed, err := h.choreRepo.GetChoreDetailByID(c, id, currentUser.CircleID)
+	if err != nil {
+		c.JSON(500, gin.H{
+			"error": "Error getting chore history",
+		})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"res": detailed,
 	})
 }
 
@@ -957,6 +1009,7 @@ func Routes(router *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware) {
 		choresRoutes.PUT("/", h.editChore)
 		choresRoutes.POST("/", h.createChore)
 		choresRoutes.GET("/:id", h.getChore)
+		choresRoutes.GET("/:id/details", h.GetChoreDetail)
 		choresRoutes.GET("/:id/history", h.GetChoreHistory)
 		choresRoutes.POST("/:id/do", h.completeChore)
 		choresRoutes.POST("/:id/skip", h.skipChore)

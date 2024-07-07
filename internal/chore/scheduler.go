@@ -47,6 +47,7 @@ func scheduleNextDueDate(chore *chModel.Chore, completedDate time.Time) (*time.T
 	} else if chore.FrequencyType == "yearly" {
 		nextDueDate = baseDate.AddDate(1, 0, 0)
 	} else if chore.FrequencyType == "adaptive" {
+
 		// TODO: calculate next due date based on the history of the chore
 		// calculate the difference between the due date and now in days:
 		diff := completedDate.UTC().Sub(chore.NextDueDate.UTC())
@@ -127,6 +128,33 @@ func scheduleNextDueDate(chore *chModel.Chore, completedDate time.Time) (*time.T
 	}
 	return &nextDueDate, nil
 
+}
+
+func scheduleAdaptiveNextDueDate(chore *chModel.Chore, completedDate time.Time, history []*chModel.ChoreHistory) (*time.Time, error) {
+	//  will generate due date base on history and the different between the completed date and the due date
+	// the more recent the higher weight
+	if len(history) <= 1 {
+		if chore.NextDueDate != nil {
+			diff := completedDate.UTC().Sub(chore.NextDueDate.UTC())
+			nextDueDate := completedDate.UTC().Add(diff)
+			return &nextDueDate, nil
+		}
+		return nil, nil
+	}
+	var weight float64
+	var totalWeight float64
+	var nextDueDate time.Time
+	for i := 0; i < len(history)-1; i++ {
+		delay := history[i].CompletedAt.UTC().Sub(history[i+1].CompletedAt.UTC()).Seconds()
+		weight = delay * float64(len(history)-i)
+		totalWeight += weight
+	}
+	// calculate the average delay
+	averageDelay := totalWeight / float64(len(history)-1)
+	// calculate the difference between the completed date and the due date
+	nextDueDate = completedDate.UTC().Add(time.Duration(averageDelay) * time.Second)
+
+	return &nextDueDate, nil
 }
 
 func RemoveAssigneeAndReassign(chore *chModel.Chore, userID int) {

@@ -2,6 +2,7 @@ package database
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	"gorm.io/driver/postgres"
@@ -33,7 +34,12 @@ func NewDatabase(cfg *config.Config) (*gorm.DB, error) {
 
 	default:
 
-		db, err = gorm.Open(sqlite.Open("donetick.db"), &gorm.Config{})
+		path := os.Getenv("DT_SQLITE_PATH")
+		if path == "" {
+			db, err = gorm.Open(sqlite.Open("donetick.db"), &gorm.Config{})
+		} else {
+			db, err = gorm.Open(sqlite.Open(path), &gorm.Config{})
+		}
 
 	}
 

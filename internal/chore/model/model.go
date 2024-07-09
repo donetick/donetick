@@ -47,6 +47,7 @@ type FrequencyMetadata struct {
 	Days   []*string `json:"days,omitempty"`
 	Months []*string `json:"months,omitempty"`
 	Unit   *string   `json:"unit,omitempty"`
+	Time   string    `json:"time,omitempty"`
 }
 
 type NotificationMetadata struct {

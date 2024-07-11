@@ -93,9 +93,14 @@ func NewConfig() *Config {
 		},
 	}
 }
-
+func configEnvironmentOverrides(Config *Config) {
+	if os.Getenv("DONETICK_TELEGRAM_TOKEN") != "" {
+		Config.Telegram.Token = os.Getenv("DONETICK_TELEGRAM_TOKEN")
+	}
+}
 func LoadConfig() *Config {
-	// read evniroment variable FORWARD_ENV and see if it's equal local then load local (config/local.yaml) using viper:
+	// set the config name based on the environment:
+
 	if os.Getenv("CA_ENV") == "local" {
 		viper.SetConfigName("local")
 	} else if os.Getenv("CA_ENV") == "prod" {
@@ -120,7 +125,7 @@ func LoadConfig() *Config {
 		panic(err)
 	}
 	fmt.Printf("--ConfigLoad name : %s ", config.Name)
-
+	configEnvironmentOverrides(&config)
 	return &config
 
 	// return LocalConfig()

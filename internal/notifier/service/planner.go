@@ -62,6 +62,9 @@ func (n *NotificationPlanner) GenerateNotifications(c context.Context, chore *ch
 	if mt.Nagging {
 		notifications = append(notifications, generateOverdueNotifications(chore, assignees)...)
 	}
+	if mt.CircleGroup {
+		notifications = append(notifications, generateCircleGroupNotifications(chore, mt)...)
+	}
 
 	n.nRepo.BatchInsertNotifications(notifications)
 	return true
@@ -149,4 +152,49 @@ func generateOverdueNotifications(chore *chModel.Chore, users []*cModel.UserCirc
 
 	return notifications
 
+}
+
+func generateCircleGroupNotifications(chore *chModel.Chore, mt *chModel.NotificationMetadata) []*nModel.Notification {
+	var notifications []*nModel.Notification
+	if !mt.CircleGroup || mt.CircleGroupID == nil || *mt.CircleGroupID == 0 {
+		return notifications
+	}
+	if mt.DueDate {
+		notifications = append(notifications, &nModel.Notification{
+			ChoreID:      chore.ID,
+			IsSent:       false,
+			ScheduledFor: *chore.NextDueDate,
+			CreatedAt:    time.Now().UTC(),
+			TypeID:       1,
+			TargetID:     fmt.Sprint(*mt.CircleGroupID),
+			Text:         fmt.Sprintf("📅 Reminder: *%s* is due today.", chore.Name),
+		})
+	}
+	if mt.PreDue {
+		notifications = append(notifications, &nModel.Notification{
+			ChoreID:      chore.ID,
+			IsSent:       false,
+			ScheduledFor: *chore.NextDueDate,
+			CreatedAt:    time.Now().UTC().Add(-time.Hour * 3),
+			TypeID:       3,
+			TargetID:     fmt.Sprint(*mt.CircleGroupID),
+			Text:         fmt.Sprintf("📢 Heads up! *%s* is due soon (on %s).", chore.Name, chore.NextDueDate.Format("January 2nd")),
+		})
+	}
+	if mt.Nagging {
+		for _, hours := range []int{24, 48, 72} {
+			scheduleTime := chore.NextDueDate.Add(time.Hour * time.Duration(hours))
+			notifications = append(notifications, &nModel.Notification{
+				ChoreID:      chore.ID,
+				IsSent:       false,
+				ScheduledFor: scheduleTime,
+				CreatedAt:    time.Now().UTC(),
+				TypeID:       2,
+				TargetID:     fmt.Sprint(*mt.CircleGroupID),
+				Text:         fmt.Sprintf("🚨 *%s* is now %d hours overdue. Please complete it as soon as possible.", chore.Name, hours),
+			})
+		}
+	}
+
+	return notifications
 }

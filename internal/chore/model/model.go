@@ -51,10 +51,12 @@ type FrequencyMetadata struct {
 }
 
 type NotificationMetadata struct {
-	DueDate    bool `json:"dueDate,omitempty"`
-	Completion bool `json:"completion,omitempty"`
-	Nagging    bool `json:"nagging,omitempty"`
-	PreDue     bool `json:"predue,omitempty"`
+	DueDate       bool   `json:"dueDate,omitempty"`
+	Completion    bool   `json:"completion,omitempty"`
+	Nagging       bool   `json:"nagging,omitempty"`
+	PreDue        bool   `json:"predue,omitempty"`
+	CircleGroup   bool   `json:"circleGroup,omitempty"`
+	CircleGroupID *int64 `json:"circleGroupID,omitempty"`
 }
 
 type Tag struct {

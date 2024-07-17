@@ -683,12 +683,7 @@ func (h *Handler) skipChore(c *gin.Context) {
 		})
 		return
 	}
-	if err := h.choreRepo.UpsertChore(c, chore); err != nil {
-		c.JSON(500, gin.H{
-			"error": "Error skipping chore",
-		})
-		return
-	}
+
 	c.JSON(200, gin.H{
 		"res": chore,
 	})
@@ -861,7 +856,7 @@ func (h *Handler) completeChore(c *gin.Context) {
 		return
 	}
 	go func() {
-		h.notifier.SendChoreCompletion(c, chore, []*uModel.User{currentUser})
+		h.notifier.SendChoreCompletion(c, chore, currentUser)
 		h.nPlanner.GenerateNotifications(c, updatedChore)
 	}()
 	c.JSON(200, gin.H{

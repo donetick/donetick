@@ -2,6 +2,7 @@ package telegram
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strconv"
 
@@ -49,22 +50,38 @@ func (tn *TelegramNotifier) SendChoreReminder(c context.Context, chore *chModel.
 	}
 }
 
-func (tn *TelegramNotifier) SendChoreCompletion(c context.Context, chore *chModel.Chore, users []*uModel.User) {
+func (tn *TelegramNotifier) SendChoreCompletion(c context.Context, chore *chModel.Chore, user *uModel.User) {
 	log := logging.FromContext(c)
-	for _, user := range users {
-		if user.ChatID == 0 {
-			continue
+	var mt *chModel.NotificationMetadata
+	if err := json.Unmarshal([]byte(*chore.NotificationMetadata), &mt); err != nil {
+		log.Error("Error unmarshalling notification metadata", err)
+	}
+
+	targets := []int64{}
+	if user.ChatID != 0 {
+		targets = append(targets, user.ChatID)
+	}
+	if mt.CircleGroup && mt.CircleGroupID != nil {
+		// attempt to parse it:
+
+		if *mt.CircleGroupID != 0 {
+			targets = append(targets, *mt.CircleGroupID)
 		}
-		text := fmt.Sprintf("🎉 *%s* is completed! is off the list, %s! 🌟 ", chore.Name, user.DisplayName)
-		msg := tgbotapi.NewMessage(user.ChatID, text)
+
+	}
+
+	text := fmt.Sprintf("🎉 *%s* is completed! is off the list, %s! 🌟 ", chore.Name, user.DisplayName)
+	for _, target := range targets {
+		msg := tgbotapi.NewMessage(target, text)
+
 		msg.ParseMode = "Markdown"
 		_, err := tn.bot.Send(msg)
 		if err != nil {
 			log.Error("Error sending message to user: ", err)
 			log.Debug("Error sending message, chore: ", chore.Name, " user: ", user.DisplayName, " chatID: ", user.ChatID, " user id: ", user.ID)
 		}
-
 	}
+
 }
 
 func (tn *TelegramNotifier) SendChoreOverdue(c context.Context, chore *chModel.Chore, users []*uModel.User) {

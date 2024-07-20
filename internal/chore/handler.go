@@ -655,9 +655,17 @@ func (h *Handler) updateAssignee(c *gin.Context) {
 func (h *Handler) skipChore(c *gin.Context) {
 	rawID := c.Param("id")
 	id, err := strconv.Atoi(rawID)
+
 	if err != nil {
 		c.JSON(400, gin.H{
 			"error": "Invalid ID",
+		})
+		return
+	}
+	currentUser, ok := auth.CurrentUser(c)
+	if !ok {
+		c.JSON(500, gin.H{
+			"error": "Error getting current user",
 		})
 		return
 	}
@@ -669,23 +677,31 @@ func (h *Handler) skipChore(c *gin.Context) {
 		})
 		return
 	}
-	newDueDate, err := scheduleNextDueDate(chore, chore.NextDueDate.UTC())
+	nextDueDate, err := scheduleNextDueDate(chore, chore.NextDueDate.UTC())
 	if err != nil {
 		c.JSON(500, gin.H{
 			"error": "Error scheduling next due date",
 		})
 		return
 	}
-	chore.NextDueDate = newDueDate
-	if err := h.choreRepo.UpsertChore(c, chore); err != nil {
+
+	nextAssigedTo := chore.AssignedTo
+	if err := h.choreRepo.CompleteChore(c, chore, nil, currentUser.ID, nextDueDate, nil, nextAssigedTo); err != nil {
 		c.JSON(500, gin.H{
-			"error": "Error skipping chore",
+			"error": "Error completing chore",
+		})
+		return
+	}
+	updatedChore, err := h.choreRepo.GetChore(c, id)
+	if err != nil {
+		c.JSON(500, gin.H{
+			"error": "Error getting chore",
 		})
 		return
 	}
 
 	c.JSON(200, gin.H{
-		"res": chore,
+		"res": updatedChore,
 	})
 }
 
@@ -842,7 +858,7 @@ func (h *Handler) completeChore(c *gin.Context) {
 		return
 	}
 
-	if err := h.choreRepo.CompleteChore(c, chore, additionalNotes, currentUser.ID, nextDueDate, completedDate, nextAssignedTo); err != nil {
+	if err := h.choreRepo.CompleteChore(c, chore, additionalNotes, currentUser.ID, nextDueDate, &completedDate, nextAssignedTo); err != nil {
 		c.JSON(500, gin.H{
 			"error": "Error completing chore",
 		})
@@ -918,6 +934,137 @@ func (h *Handler) GetChoreDetail(c *gin.Context) {
 	})
 }
 
+func (h *Handler) ModifyHistory(c *gin.Context) {
+
+	currentUser, ok := auth.CurrentUser(c)
+	if !ok {
+		c.JSON(500, gin.H{
+			"error": "Error getting current user",
+		})
+		return
+	}
+
+	rawID := c.Param("id")
+	choreID, err := strconv.Atoi(rawID)
+	if err != nil {
+		c.JSON(400, gin.H{
+			"error": "Invalid Chore ID",
+		})
+		return
+	}
+	type ModifyHistoryReq struct {
+		CompletedAt *time.Time `json:"completedAt"`
+		DueDate     *time.Time `json:"dueDate"`
+		Notes       *string    `json:"notes"`
+	}
+
+	var req ModifyHistoryReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		log.Print(err)
+		c.JSON(400, gin.H{
+			"error": "Invalid request",
+		})
+		return
+	}
+	rawHistoryID := c.Param("history_id")
+	historyID, err := strconv.Atoi(rawHistoryID)
+	if err != nil {
+		c.JSON(400, gin.H{
+			"error": "Invalid History ID",
+		})
+		return
+	}
+
+	history, err := h.choreRepo.GetChoreHistoryByID(c, choreID, historyID)
+	if err != nil {
+		c.JSON(500, gin.H{
+			"error": "Error getting chore history",
+		})
+		return
+	}
+
+	if currentUser.ID != history.CompletedBy || currentUser.ID != history.AssignedTo {
+		c.JSON(403, gin.H{
+			"error": "You are not allowed to modify this history",
+		})
+		return
+	}
+	if req.CompletedAt != nil {
+		history.CompletedAt = req.CompletedAt
+	}
+	if req.DueDate != nil {
+		history.DueDate = req.DueDate
+	}
+	if req.Notes != nil {
+		history.Note = req.Notes
+	}
+
+	if err := h.choreRepo.UpdateChoreHistory(c, history); err != nil {
+		c.JSON(500, gin.H{
+			"error": "Error updating history",
+		})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"res": history,
+	})
+}
+
+func (h *Handler) DeleteHistory(c *gin.Context) {
+
+	currentUser, ok := auth.CurrentUser(c)
+	if !ok {
+		c.JSON(500, gin.H{
+			"error": "Error getting current user",
+		})
+		return
+	}
+
+	rawID := c.Param("id")
+	choreID, err := strconv.Atoi(rawID)
+	if err != nil {
+		c.JSON(400, gin.H{
+			"error": "Invalid Chore ID",
+		})
+		return
+	}
+
+	rawHistoryID := c.Param("history_id")
+	historyID, err := strconv.Atoi(rawHistoryID)
+	if err != nil {
+		c.JSON(400, gin.H{
+			"error": "Invalid History ID",
+		})
+		return
+	}
+
+	history, err := h.choreRepo.GetChoreHistoryByID(c, choreID, historyID)
+	if err != nil {
+		c.JSON(500, gin.H{
+			"error": "Error getting chore history",
+		})
+		return
+	}
+
+	if currentUser.ID != history.CompletedBy || currentUser.ID != history.AssignedTo {
+		c.JSON(403, gin.H{
+			"error": "You are not allowed to delete this history",
+		})
+		return
+	}
+
+	if err := h.choreRepo.DeleteChoreHistory(c, historyID); err != nil {
+		c.JSON(500, gin.H{
+			"error": "Error deleting history",
+		})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"message": "History deleted successfully",
+	})
+}
 func checkNextAssignee(chore *chModel.Chore, choresHistory []*chModel.ChoreHistory, performerID int) (int, error) {
 	// copy the history to avoid modifying the original:
 	history := make([]*chModel.ChoreHistory, len(choresHistory))
@@ -1006,6 +1153,8 @@ func Routes(router *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware) {
 		choresRoutes.GET("/:id", h.getChore)
 		choresRoutes.GET("/:id/details", h.GetChoreDetail)
 		choresRoutes.GET("/:id/history", h.GetChoreHistory)
+		choresRoutes.PUT("/:id/history/:history_id", h.ModifyHistory)
+		choresRoutes.DELETE("/:id/history/:history_id", h.DeleteHistory)
 		choresRoutes.POST("/:id/do", h.completeChore)
 		choresRoutes.POST("/:id/skip", h.skipChore)
 		choresRoutes.PUT("/:id/assignee", h.updateAssignee)

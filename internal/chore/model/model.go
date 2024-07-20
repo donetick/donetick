@@ -36,11 +36,12 @@ type ChoreAssignees struct {
 type ChoreHistory struct {
 	ID          int        `json:"id" gorm:"primary_key"`                  // Unique identifier
 	ChoreID     int        `json:"choreId" gorm:"column:chore_id"`         // The chore this history is for
-	CompletedAt time.Time  `json:"completedAt" gorm:"column:completed_at"` // When the chore was completed
+	CompletedAt *time.Time `json:"completedAt" gorm:"column:completed_at"` // When the chore was completed
 	CompletedBy int        `json:"completedBy" gorm:"column:completed_by"` // Who completed the chore
 	AssignedTo  int        `json:"assignedTo" gorm:"column:assigned_to"`   // Who the chore was assigned to
 	Note        *string    `json:"notes" gorm:"column:notes"`              // Notes about the chore
 	DueDate     *time.Time `json:"dueDate" gorm:"column:due_date"`         // When the chore was due
+	UpdatedAt   *time.Time `json:"updatedAt" gorm:"column:updated_at"`     // When the record was last updated
 }
 
 type FrequencyMetadata struct {

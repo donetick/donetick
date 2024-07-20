@@ -73,7 +73,7 @@ func (r *ChoreRepository) IsChoreOwner(c context.Context, choreID int, userID in
 // 	return chores, nil
 // }
 
-func (r *ChoreRepository) CompleteChore(c context.Context, chore *chModel.Chore, note *string, userID int, dueDate *time.Time, completedDate time.Time, nextAssignedTo int) error {
+func (r *ChoreRepository) CompleteChore(c context.Context, chore *chModel.Chore, note *string, userID int, dueDate *time.Time, completedDate *time.Time, nextAssignedTo int) error {
 	err := r.db.WithContext(c).Transaction(func(tx *gorm.DB) error {
 		ch := &chModel.ChoreHistory{
 			ChoreID:     chore.ID,
@@ -117,6 +117,22 @@ func (r *ChoreRepository) GetChoreHistoryWithLimit(c context.Context, choreID in
 		return nil, err
 	}
 	return histories, nil
+}
+
+func (r *ChoreRepository) GetChoreHistoryByID(c context.Context, choreID int, historyID int) (*chModel.ChoreHistory, error) {
+	var history chModel.ChoreHistory
+	if err := r.db.WithContext(c).Where("id = ? and chore_id = ? ", historyID, choreID).First(&history).Error; err != nil {
+		return nil, err
+	}
+	return &history, nil
+}
+
+func (r *ChoreRepository) UpdateChoreHistory(c context.Context, history *chModel.ChoreHistory) error {
+	return r.db.WithContext(c).Save(history).Error
+}
+
+func (r *ChoreRepository) DeleteChoreHistory(c context.Context, historyID int) error {
+	return r.db.WithContext(c).Delete(&chModel.ChoreHistory{}, historyID).Error
 }
 
 func (r *ChoreRepository) UpdateChoreAssignees(c context.Context, assignees []*chModel.ChoreAssignees) error {

@@ -1097,12 +1097,12 @@ func checkNextAssignee(chore *chModel.Chore, choresHistory []*chModel.ChoreHisto
 			}
 		}
 
-		minChores := math.MaxInt64
+		var minChores int64 = math.MaxInt64
 		for assignee, numChores := range assigneeChores {
 			// if this is the first assignee or if the number of
 			// chores assigned to this assignee is less than the current minimum
-			if numChores < minChores {
-				minChores = numChores
+			if int64(numChores) < minChores {
+				minChores = int64(numChores)
 				// set the next assignee to this assignee
 				nextAssignee = assignee
 			}
@@ -1119,12 +1119,13 @@ func checkNextAssignee(chore *chModel.Chore, choresHistory []*chModel.ChoreHisto
 		}
 
 		// max Int value
-		minChores := math.MaxInt64
+		var minChores int64 = math.MaxInt64
+
 		for assignee, numChores := range assigneeChores {
 			// if this is the first assignee or if the number of
 			// chores completed by this assignee is less than the current minimum
-			if numChores < minChores {
-				minChores = numChores
+			if int64(numChores) < minChores {
+				minChores = int64(numChores)
 				// set the next assignee to this assignee
 				nextAssignee = assignee
 			}

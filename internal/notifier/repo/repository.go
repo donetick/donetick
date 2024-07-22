@@ -36,7 +36,7 @@ func (r *NotificationRepository) GetPendingNotificaiton(c context.Context, lookb
 	var notifications []*nModel.Notification
 	start := time.Now().UTC().Add(-lookback)
 	end := time.Now().UTC()
-	if err := r.db.Debug().Where("is_sent = ? AND scheduled_for < ? AND scheduled_for > ?", false, end, start).Find(&notifications).Error; err != nil {
+	if err := r.db.Where("is_sent = ? AND scheduled_for < ? AND scheduled_for > ?", false, end, start).Find(&notifications).Error; err != nil {
 		return nil, err
 	}
 	return notifications, nil

@@ -18,7 +18,7 @@ server:
   cors_allow_origins:
     - "http://localhost:5173"
     - "http://localhost:7926"
-  serve_frontend: false
+  serve_frontend: true
 scheduler_jobs:
   due_job: 30m
   overdue_job: 3h

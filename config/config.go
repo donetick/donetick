@@ -80,7 +80,7 @@ type EmailConfig struct {
 func NewConfig() *Config {
 	return &Config{
 		Telegram: TelegramConfig{
-			Token: "REMOVED",
+			Token: "",
 		},
 		Database: DatabaseConfig{
 			Type:      "sqlite",

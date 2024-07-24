@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"net/http"
 
+	"donetick.com/core/config"
 	"github.com/gin-gonic/gin"
 )
 
@@ -12,22 +13,26 @@ import (
 var embeddedFiles embed.FS
 
 type Handler struct {
+	ServeFrontend bool
 }
 
-func NewHandler() *Handler {
-	return &Handler{}
+func NewHandler(config *config.Config) *Handler {
+	return &Handler{
+		ServeFrontend: config.Server.ServeFrontend,
+	}
 }
 
 func Routes(router *gin.Engine, h *Handler) {
+	if h.ServeFrontend {
+		router.Use(staticMiddleware("dist"))
+		router.Static("/assets", "dist/assets")
 
-	router.Use(staticMiddleware("dist"))
-	router.Static("/assets", "dist/assets")
-
-	// Gzip compression middleware
-	router.Group("/assets").Use(func(c *gin.Context) {
-		c.Header("Cache-Control", "max-age=31536000, immutable")
-		c.Next()
-	})
+		// Gzip compression middleware
+		router.Group("/assets").Use(func(c *gin.Context) {
+			c.Header("Cache-Control", "max-age=31536000, immutable")
+			c.Next()
+		})
+	}
 
 }
 

@@ -48,6 +48,7 @@ type ServerConfig struct {
 	ReadTimeout      time.Duration `mapstructure:"read_timeout" yaml:"read_timeout"`
 	WriteTimeout     time.Duration `mapstructure:"write_timeout" yaml:"write_timeout"`
 	CorsAllowOrigins []string      `mapstructure:"cors_allow_origins" yaml:"cors_allow_origins"`
+	ServeFrontend    bool          `mapstructure:"serve_frontend" yaml:"serve_frontend"`
 }
 
 type SchedulerConfig struct {
@@ -105,6 +106,8 @@ func LoadConfig() *Config {
 		viper.SetConfigName("local")
 	} else if os.Getenv("CA_ENV") == "prod" {
 		viper.SetConfigName("prod")
+	} else if os.Getenv("CA_ENV") == "selfhosted" {
+		viper.SetConfigName("selfhosted")
 	} else {
 		viper.SetConfigName("local")
 	}

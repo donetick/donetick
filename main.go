@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"donetick.com/core/config"
+	"donetick.com/core/frontend"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/fx"
@@ -77,6 +78,8 @@ func main() {
 		fx.Provide(thing.NewWebhook),
 		fx.Provide(thing.NewHandler),
 
+		fx.Provide(frontend.NewHandler),
+
 		// fx.Invoke(RunApp),
 		fx.Invoke(
 			chore.Routes,
@@ -84,6 +87,7 @@ func main() {
 			circle.Routes,
 			thing.Routes,
 			thing.Webhooks,
+			frontend.Routes,
 
 			func(r *gin.Engine) {},
 		),

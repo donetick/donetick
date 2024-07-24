@@ -102,17 +102,17 @@ func configEnvironmentOverrides(Config *Config) {
 func LoadConfig() *Config {
 	// set the config name based on the environment:
 
-	if os.Getenv("CA_ENV") == "local" {
+	if os.Getenv("DT_ENV") == "local" {
 		viper.SetConfigName("local")
-	} else if os.Getenv("CA_ENV") == "prod" {
+	} else if os.Getenv("DT_ENV") == "prod" {
 		viper.SetConfigName("prod")
-	} else if os.Getenv("CA_ENV") == "selfhosted" {
+	} else if os.Getenv("DT_ENV") == "selfhosted" {
 		viper.SetConfigName("selfhosted")
 	} else {
 		viper.SetConfigName("local")
 	}
 	// get logger and log the current environment:
-	fmt.Printf("--ConfigLoad config for environment: %s ", os.Getenv("CA_ENV"))
+	fmt.Printf("--ConfigLoad config for environment: %s ", os.Getenv("DT_ENV"))
 
 	viper.AddConfigPath("./config")
 	viper.SetConfigType("yaml")

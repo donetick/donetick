@@ -26,11 +26,11 @@ jobs:
           node-version: '16'
       - name: Install Dependencies
         run: |
-          cd frontend
+          cd frontend-code
           npm install
       - name: Build Frontend
         run: |
-          cd frontend
+          cd frontend-code
           npm run build
       - name: Copy Frontend
         run: |

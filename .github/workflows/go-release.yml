@@ -13,10 +13,10 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-      - name: Checkout Frontebd
+      - name: Checkout Frontend
         uses: actions/checkout@v4
         with:
-          repository: 'donetick/donetick-frontend'
+          repository: 'donetick/frontend'
           token: ${{ secrets.GITHUB_TOKEN }}
           path: 'frontend'
       # build frontend 

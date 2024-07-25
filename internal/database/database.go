@@ -6,12 +6,12 @@ import (
 	"time"
 
 	"gorm.io/driver/postgres"
-	"gorm.io/driver/sqlite" // Sqlite driver based on CGO
+	// "gorm.io/driver/sqlite" // Sqlite driver based on CGO
 	"gorm.io/gorm/logger"
 
-	// "github.com/glebarez/sqlite" // Pure go SQLite driver, checkout https://github.com/glebarez/sqlite for details
 	"donetick.com/core/config"
 	"donetick.com/core/logging"
+	"github.com/glebarez/sqlite" // Pure go SQLite driver, checkout https://github.com/glebarez/sqlite for details
 	"gorm.io/gorm"
 )
 

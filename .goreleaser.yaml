@@ -17,7 +17,7 @@ version: 2
 
 builds:
   - env:
-      - CGO_ENABLED=0
+      - CGO_ENABLED=1
     goos:
       - linux
       # - windows
@@ -37,6 +37,9 @@ archives:
     format_overrides:
       - goos: windows
         format: zip
+    files:
+      - src: "config/selfhosted.yaml"
+        dst: "config/local.yaml"
 
 changelog:
   sort: asc

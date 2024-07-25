@@ -1,4 +1,4 @@
-name: "local"
+name: "selhosted"
 is_done_tick_dot_com: false
 telegram:
   token: ""

@@ -18,7 +18,7 @@ jobs:
         with:
           repository: 'donetick/frontend'
           token: ${{ secrets.GITHUB_TOKEN }}
-          path: 'frontend'
+          path: 'frontend-code'
       # build frontend 
       - name: Install Node.js
         uses: actions/setup-node@v2
@@ -34,7 +34,7 @@ jobs:
           npm run build
       - name: Copy Frontend
         run: |
-          cp -r frontend/dist core/frontend/dist
+          cp -r frontend-code/dist frontend/dist
 
       - name: Set up Go
         uses: actions/setup-go@v5

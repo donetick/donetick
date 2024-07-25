@@ -5,14 +5,36 @@ permissions:
   
 on:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - dev
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+      - name: Checkout Frontebd
+        uses: actions/checkout@v4
+        with:
+          repository: 'donetick/donetick-frontend'
+          token: ${{ secrets.GITHUB_TOKEN }}
+          path: 'frontend'
+      # build frontend 
+      - name: Install Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '16'
+      - name: Install Dependencies
+        run: |
+          cd frontend
+          npm install
+      - name: Build Frontend
+        run: |
+          cd frontend
+          npm run build
+      - name: Copy Frontend
+        run: |
+          cp -r frontend/dist core/frontend/dist
 
       - name: Set up Go
         uses: actions/setup-go@v5

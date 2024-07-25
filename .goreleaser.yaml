@@ -21,7 +21,7 @@ builds:
     goos:
       - linux
       # - windows
-      # - darwin
+      - darwin
 
 archives:
   - format: tar.gz

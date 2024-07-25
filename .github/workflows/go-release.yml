@@ -34,7 +34,7 @@ jobs:
           npm run build
       - name: Copy Frontend
         run: |
-          cp -r frontend-code/dist ./frontend/dist
+          cp -r frontend-code/dist/ ./frontend/dist
 
       - name: Set up Go
         uses: actions/setup-go@v5

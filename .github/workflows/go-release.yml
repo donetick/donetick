@@ -35,8 +35,8 @@ jobs:
 
       - name: Copy Frontend
         run: |
-          rm -rf ./frontend/dist/*
-          cp -r frontend-code/dist/ ./frontend/dist
+          rm -rf ./frontend/dist
+          cp -r frontend-code/dist ./frontend/dist
       - name: List all folders
         run: |
           ls -R

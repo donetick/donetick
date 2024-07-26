@@ -32,27 +32,30 @@ jobs:
         run: |
           cd frontend-code
           npm run build
-      - name: Copy Frontend
+      - name: List all folders
         run: |
-          rm -rf ./frontend/dist/*
-          cp -r frontend-code/dist/ ./frontend/dist
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: 1.22
-          check-latest: true
-          cache: true 
+          ls -R
+      # - name: Copy Frontend
+      #   run: |
+      #     rm -rf ./frontend/dist/*
+      #     cp -r frontend-code/dist/ ./frontend/dist
+      # - name: Set up Go
+      #   uses: actions/setup-go@v5
+      #   with:
+      #     go-version: 1.22
+      #     check-latest: true
+      #     cache: true 
 
-      - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v6
-        with:
-          # either 'goreleaser' (default) or 'goreleaser-pro'
-          distribution: goreleaser
-          # 'latest', 'nightly', or a semver
-          version: latest
-          args: release --clean --skip=validate
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Your GoReleaser Pro key, if you are using the 'goreleaser-pro' distribution
-          # GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
+      # - name: Run GoReleaser
+      #   uses: goreleaser/goreleaser-action@v6
+      #   with:
+      #     # either 'goreleaser' (default) or 'goreleaser-pro'
+      #     distribution: goreleaser
+      #     # 'latest', 'nightly', or a semver
+      #     version: latest
+      #     args: release --clean --skip=validate
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #     # Your GoReleaser Pro key, if you are using the 'goreleaser-pro' distribution
+      #     # GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
           

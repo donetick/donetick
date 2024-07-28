@@ -31,7 +31,7 @@ jobs:
       - name: Build Frontend
         run: |
           cd frontend-code
-          npm run build
+          npm run build --mode selfhosted
 
       - name: Copy Frontend
         run: |

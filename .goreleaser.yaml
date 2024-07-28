@@ -38,9 +38,10 @@ archives:
       - goos: windows
         format: zip
     files:
-      - src: "config/selfhosted.yaml"
+      - src: "config/local.yaml"
         dst: "config/local.yaml"
-
+      - src: "config/selfhosted.yaml"
+        dst: "config/selfhosted.yaml"
 changelog:
   sort: asc
   filters:

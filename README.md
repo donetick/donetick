@@ -1,5 +1,5 @@
 
-![Logo](assets/image.png)
+![Logo](assets/logo.png)
 
 
 ## Donetick service

@@ -16,9 +16,10 @@ type User struct {
 	UpdatedAt   time.Time `json:"updated_at" gorm:"column:updated_at"`    // Updated at
 	Disabled    bool      `json:"disabled" gorm:"column:disabled"`        // Disabled
 	// Email    string `json:"email" gorm:"column:email"`       // Email
-	CustomerID   *string `gorm:"column:customer_id;<-:false"`                      // read one column
-	Subscription *string `json:"subscription" gorm:"column:subscription;<-:false"` // read one column
-	Expiration   *string `json:"expiration" gorm:"column:expiration;<-:false"`     // read one column
+	CustomerID              *string                  `gorm:"column:customer_id;<-:false"`                      // read only column
+	Subscription            *string                  `json:"subscription" gorm:"column:subscription;<-:false"` // read only column
+	Expiration              *string                  `json:"expiration" gorm:"column:expiration;<-:false"`     // read only column
+	UserNotificationTargets []UserNotificationTarget `json:"-" gorm:"foreignKey:UserID;references:ID"`
 }
 
 type UserPasswordReset struct {
@@ -36,3 +37,20 @@ type APIToken struct {
 	Token     string    `json:"token" gorm:"column:token;index"`    // Index on token
 	CreatedAt time.Time `json:"createdAt" gorm:"column:created_at"`
 }
+
+type UserNotificationTarget struct {
+	ID        int                  `json:"id" gorm:"primary_key"`              // Unique identifier
+	UserID    int                  `json:"userId" gorm:"column:user_id;index"` // Index on userID
+	Type      UserNotificationType `json:"type" gorm:"column:type"`            // Type
+	TargetID  string               `json:"targetId" gorm:"column:target_id"`   // Target ID
+	CreatedAt time.Time            `json:"createdAt" gorm:"column:created_at"`
+}
+
+type UserNotificationType int8
+
+const (
+	_ UserNotificationType = iota
+	Android
+	IOS
+	Telegram
+)

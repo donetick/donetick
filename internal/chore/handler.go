@@ -33,7 +33,7 @@ type ThingTrigger struct {
 
 type ChoreReq struct {
 	Name                 string                        `json:"name" binding:"required"`
-	FrequencyType        string                        `json:"frequencyType"`
+	FrequencyType        chModel.FrequencyType         `json:"frequencyType"`
 	ID                   int                           `json:"id"`
 	DueDate              string                        `json:"dueDate"`
 	Assignees            []chModel.ChoreAssignees      `json:"assignees"`

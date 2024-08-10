@@ -594,6 +594,13 @@ func (h *Handler) deleteChore(c *gin.Context) {
 // }
 
 func (h *Handler) updateAssignee(c *gin.Context) {
+	currentUser, ok := auth.CurrentUser(c)
+	if !ok {
+		c.JSON(500, gin.H{
+			"error": "Error getting current user",
+		})
+		return
+	}
 	rawID := c.Param("id")
 	id, err := strconv.Atoi(rawID)
 	if err != nil {
@@ -603,8 +610,7 @@ func (h *Handler) updateAssignee(c *gin.Context) {
 		return
 	}
 	type AssigneeReq struct {
-		AssignedTo int `json:"assignedTo" binding:"required"`
-		UpdatedBy  int `json:"updatedBy" binding:"required"`
+		Assignee int `json:"assignee" binding:"required"`
 	}
 
 	var assigneeReq AssigneeReq
@@ -626,7 +632,7 @@ func (h *Handler) updateAssignee(c *gin.Context) {
 	assigneeFound := false
 	for _, assignee := range chore.Assignees {
 
-		if assignee.UserID == assigneeReq.AssignedTo {
+		if assignee.UserID == assigneeReq.Assignee {
 			assigneeFound = true
 			break
 		}
@@ -638,8 +644,8 @@ func (h *Handler) updateAssignee(c *gin.Context) {
 		return
 	}
 
-	chore.UpdatedBy = assigneeReq.UpdatedBy
-	chore.AssignedTo = assigneeReq.AssignedTo
+	chore.UpdatedBy = currentUser.ID
+	chore.AssignedTo = assigneeReq.Assignee
 	if err := h.choreRepo.UpsertChore(c, chore); err != nil {
 		c.JSON(500, gin.H{
 			"error": "Error updating assignee",

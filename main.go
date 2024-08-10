@@ -114,7 +114,8 @@ func newServer(lc fx.Lifecycle, cfg *config.Config, db *gorm.DB, notifier *notif
 	}
 	config := cors.DefaultConfig()
 	if cfg.IsDoneTickDotCom {
-		config.AllowOrigins = cfg.Server.CorsAllowOrigins
+		// config.AllowOrigins = cfg.Server.CorsAllowOrigins
+		config.AllowAllOrigins = true
 	} else {
 		config.AllowAllOrigins = true
 	}

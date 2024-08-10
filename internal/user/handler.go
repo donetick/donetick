@@ -486,6 +486,32 @@ func (h *Handler) DeleteUserToken(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{})
 }
 
+func (h *Handler) UpdateNotificationTarget(c *gin.Context) {
+	currentUser, ok := auth.CurrentUser(c)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get current user"})
+		return
+	}
+
+	type Request struct {
+		Type  uModel.UserNotificationType `json:"type" binding:"required"`
+		Token string                      `json:"token" binding:"required"`
+	}
+
+	var req Request
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		return
+	}
+
+	err := h.userRepo.UpdateNotificationTarget(c, currentUser.ID, req.Token, req.Type)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update notification target"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{})
+}
 func Routes(router *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware, limiter *limiter.Limiter) {
 
 	userRoutes := router.Group("users")
@@ -497,6 +523,7 @@ func Routes(router *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware, limiter 
 		userRoutes.POST("/tokens", h.CreateLongLivedToken)
 		userRoutes.GET("/tokens", h.GetAllUserToken)
 		userRoutes.DELETE("/tokens/:id", h.DeleteUserToken)
+		userRoutes.PUT("/targets", h.UpdateNotificationTarget)
 	}
 
 	authRoutes := router.Group("auth")

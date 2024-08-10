@@ -21,6 +21,7 @@ func Migration(db *gorm.DB) error {
 		tModel.ThingChore{},
 		tModel.ThingHistory{},
 		uModel.APIToken{},
+		uModel.UserNotificationTarget{},
 	); err != nil {
 		return err
 	}

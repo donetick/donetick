@@ -6,10 +6,26 @@ import (
 	tModel "donetick.com/core/internal/thing/model"
 )
 
+type FrequencyType string
+
+const (
+	FrequancyTypeOnce          FrequencyType = "once"
+	FrequancyTypeDaily         FrequencyType = "daily"
+	FrequancyTypeWeekly        FrequencyType = "weekly"
+	FrequancyTypeMonthly       FrequencyType = "monthly"
+	FrequancyTypeYearly        FrequencyType = "yearly"
+	FrequancyTypeAdaptive      FrequencyType = "adaptive"
+	FrequancyTypeIntervel      FrequencyType = "interval"
+	FrequancyTypeDayOfTheWeek  FrequencyType = "days_of_the_week"
+	FrequancyTypeDayOfTheMonth FrequencyType = "day_of_the_month"
+	FrequancyTypeTrigger       FrequencyType = "trigger"
+	FrequancyTypeNoRepeat      FrequencyType = "no_repeat"
+)
+
 type Chore struct {
 	ID                   int                `json:"id" gorm:"primary_key"`
 	Name                 string             `json:"name" gorm:"column:name"`                                      // Chore description
-	FrequencyType        string             `json:"frequencyType" gorm:"column:frequency_type"`                   // "daily", "weekly", "monthly", "yearly", "adaptive",or "custom"
+	FrequencyType        FrequencyType      `json:"frequencyType" gorm:"column:frequency_type"`                   // "daily", "weekly", "monthly", "yearly", "adaptive",or "custom"
 	Frequency            int                `json:"frequency" gorm:"column:frequency"`                            // Number of days, weeks, months, or years between chores
 	FrequencyMetadata    *string            `json:"frequencyMetadata" gorm:"column:frequency_meta"`               // Additional frequency information
 	NextDueDate          *time.Time         `json:"nextDueDate" gorm:"column:next_due_date;index"`                // When the chore is due

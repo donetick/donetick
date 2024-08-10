@@ -158,3 +158,7 @@ func (r *UserRepository) GetAllUserTokens(c context.Context, userID int) ([]*uMo
 func (r *UserRepository) DeleteAPIToken(c context.Context, userID int, tokenID string) error {
 	return r.db.WithContext(c).Where("id = ? AND user_id = ?", tokenID, userID).Delete(&uModel.APIToken{}).Error
 }
+
+func (r *UserRepository) UpdateNotificationTarget(c context.Context, userID int, targetID string, targetType uModel.UserNotificationType) error {
+	return r.db.WithContext(c).Model(&uModel.UserNotificationTarget{}).Where("user_id = ? AND type = ?", userID, targetType).Update("target_id", targetID).Error
+}

@@ -1134,13 +1134,38 @@ func checkNextAssignee(chore *chModel.Chore, choresHistory []*chModel.ChoreHisto
 		nextAssignee = chore.Assignees[rand.Intn(len(chore.Assignees))].UserID
 	case "keep_last_assigned":
 		// keep the last assignee
-		nextAssignee = history[len(history)-1].AssignedTo
+		nextAssignee = chore.AssignedTo
+	case "random_except_last_assigned":
+		var lastAssigned = chore.AssignedTo
+		AssigneesCopy := make([]chModel.ChoreAssignees, len(chore.Assignees))
+		copy(AssigneesCopy, chore.Assignees)
+		var removeLastAssigned = remove(AssigneesCopy, lastAssigned)
+		nextAssignee = removeLastAssigned[rand.Intn(len(removeLastAssigned))].UserID
 
 	default:
 		return chore.AssignedTo, fmt.Errorf("invalid assign strategy")
 
 	}
 	return nextAssignee, nil
+}
+
+func remove(s []chModel.ChoreAssignees, i int) []chModel.ChoreAssignees {
+	var removalIndex = indexOf(s, i)
+	if removalIndex == -1 {
+		return s
+	}
+
+	s[removalIndex] = s[len(s)-1]
+	return s[:len(s)-1]
+}
+
+func indexOf(arr []chModel.ChoreAssignees, value int) int {
+	for i, v := range arr {
+		if v.UserID == value {
+			return i
+		}
+	}
+	return -1 // Return -1 if the value is not found
 }
 
 func Routes(router *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware) {

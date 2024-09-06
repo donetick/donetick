@@ -1,5 +1,5 @@
 # Stage 1: Build the application
-FROM golang:1.22 AS builder
+FROM golang:1.22-alpine AS builder
 
 WORKDIR /usr/src/app
 
@@ -13,7 +13,7 @@ RUN CGO_ENABLED=1 GOOS=linux go build -ldflags="-s -w" -buildvcs=false -o /donet
 FROM alpine:latest
 
 # Install necessary CA certificates
-RUN apk --no-cache add ca-certificates
+RUN apk --no-cache add ca-certificates libc6-compat
 
 # Copy the binary and config folder from the builder stage
 COPY --from=builder /donetick /donetick

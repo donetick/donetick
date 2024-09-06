@@ -51,3 +51,4 @@ jobs:
         run: |
           docker push ${{ secrets.DOCKER_USERNAME }}/donetick:${{ github.sha }}
           docker push ${{ secrets.DOCKER_USERNAME }}/donetick:latest
+          docker push ${{ secrets.DOCKER_USERNAME }}/donetick

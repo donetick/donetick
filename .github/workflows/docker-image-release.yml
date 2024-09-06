@@ -15,13 +15,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # Download the latest release binary from GitHub releases
-      - name: Download latest release binary
-        run: |
-          latest_release=$(curl --silent "https://api.github.com/repos/donetick/donetick/releases/latest" | jq -r '.tag_name')
-          curl -L "https://github.com/donetick/donetick/releases/download/${latest_release}/donetick_Linux_x86_64.tar.gz" -o donetick_Linux_x86_64.tar.gz
-          tar -xzf donetick_Linux_x86_64.tar.gz
-          chmod +x ./donetick
+      # # Download the latest release binary from GitHub releases
+      # - name: Download latest release binary
+      #   run: |
+      #     latest_release=$(curl --silent "https://api.github.com/repos/donetick/donetick/releases/latest" | jq -r '.tag_name')
+      #     curl -L "https://github.com/donetick/donetick/releases/download/${latest_release}/donetick_Linux_x86_64.tar.gz" -o donetick_Linux_x86_64.tar.gz
+      #     tar -xzf donetick_Linux_x86_64.tar.gz
+      #     chmod +x ./donetick
 
 
     

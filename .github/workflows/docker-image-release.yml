@@ -44,9 +44,9 @@ jobs:
       # Build and tag Docker image
       - name: Build Docker image
         run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/donetick:${{ github.sha }} .
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/donetick:latest .
 
       # Push Docker image
       - name: Push Docker image
         run: |
-          docker push ${{ secrets.DOCKER_USERNAME }}/donetick
+          docker push ${{ secrets.DOCKER_USERNAME }}/donetick:latest

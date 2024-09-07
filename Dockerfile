@@ -1,13 +1,12 @@
 # Stage 1: Build the application
-FROM golang:1.22 AS builder
+FROM alpine:latest AS builder
 
 WORKDIR /usr/src/app
 
-COPY go.mod go.sum ./
-RUN go mod download && go mod verify
+RUN apk --no-cache add curl jq
 
-COPY . .
-RUN CGO_ENABLED=1 GOOS=linux go build -ldflags="-s -w" -buildvcs=false -o /donetick
+RUN latest_release=$(curl --silent "https://api.github.com/repos/donetick/donetick/releases/latest" | jq -r .tag_name) && \
+curl -fL "https://github.com/donetick/donetick/releases/download/${latest_release}/donetick_Linux_x86_64.tar.gz" | tar -xz -C .
 
 # Stage 2: Create a smaller runtime image
 FROM alpine:latest
@@ -16,7 +15,7 @@ FROM alpine:latest
 RUN apk --no-cache add ca-certificates libc6-compat
 
 # Copy the binary and config folder from the builder stage
-COPY --from=builder /donetick /donetick
+COPY --from=builder /usr/src/app/donetick /donetick
 COPY --from=builder /usr/src/app/config /config
 
 # Set environment variables

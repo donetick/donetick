@@ -115,7 +115,7 @@ func generatePreDueNotifications(chore *chModel.Chore, users []*cModel.UserCircl
 			TypeID:       3,
 			UserID:       user.ID,
 			TargetID:     fmt.Sprint(user.ChatID),
-			Text:         fmt.Sprintf("📢 Heads up! *%s* is due soon (on %s) and assigned to %s.", chore.Name, chore.NextDueDate.Format("January 2nd"), assignee.DisplayName),
+			Text:         fmt.Sprintf("📢 Heads up! *%s* is due soon (on %s) and assigned to %s.", chore.Name, chore.NextDueDate, assignee.DisplayName),
 		}
 		notifications = append(notifications, notification)
 
@@ -178,7 +178,7 @@ func generateCircleGroupNotifications(chore *chModel.Chore, mt *chModel.Notifica
 			CreatedAt:    time.Now().UTC().Add(-time.Hour * 3),
 			TypeID:       3,
 			TargetID:     fmt.Sprint(*mt.CircleGroupID),
-			Text:         fmt.Sprintf("📢 Heads up! *%s* is due soon (on %s).", chore.Name, chore.NextDueDate.Format("January 2nd")),
+			Text:         fmt.Sprintf("📢 Heads up! *%s* is due soon (on %s).", chore.Name, chore.NextDueDate),
 		})
 	}
 	if mt.Nagging {

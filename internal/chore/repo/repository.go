@@ -249,6 +249,7 @@ func (r *ChoreRepository) GetChoreDetailByID(c context.Context, choreID int, cir
         chores.next_due_date, 
         chores.assigned_to,
         chores.created_by,
+		chores.priority,
         recent_history.last_completed_date,
 		recent_history.notes,
         recent_history.last_assigned_to as last_completed_by,

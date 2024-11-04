@@ -43,6 +43,8 @@ type Chore struct {
 	CreatedBy            int                `json:"createdBy" gorm:"column:created_by"`                           // Who created the chore
 	UpdatedBy            int                `json:"updatedBy" gorm:"column:updated_by"`                           // Who last updated the chore
 	ThingChore           *tModel.ThingChore `json:"thingChore" gorm:"foreignkey:chore_id;references:id;<-:false"` // ThingChore relationship
+	Status               int                `json:"status" gorm:"column:status"`
+	Priority             int                `json:"priority" gorm:"column:priority"`
 }
 type ChoreAssignees struct {
 	ID      int `json:"-" gorm:"primary_key"`
@@ -100,6 +102,7 @@ type ChoreDetail struct {
 	LastCompletedDate   *time.Time `json:"lastCompletedDate" gorm:"column:last_completed_date"`
 	LastCompletedBy     *int       `json:"lastCompletedBy" gorm:"column:last_completed_by"`
 	TotalCompletedCount int        `json:"totalCompletedCount" gorm:"column:total_completed"`
+	Priority            int        `json:"priority" gorm:"column:priority"`
 	Notes               *string    `json:"notes" gorm:"column:notes"`
 	CreatedBy           int        `json:"createdBy" gorm:"column:created_by"`
 }

@@ -1017,6 +1017,65 @@ func (h *Handler) ModifyHistory(c *gin.Context) {
 	})
 }
 
+func (h *Handler) updatePriority(c *gin.Context) {
+	type PriorityReq struct {
+		Priority *int `json:"priority" binding:"required,gt=-1"`
+	}
+
+	currrentUser, ok := auth.CurrentUser(c)
+	if !ok {
+		c.JSON(500, gin.H{
+			"error": "Error getting current user",
+		})
+		return
+	}
+
+	var priorityReq PriorityReq
+	if err := c.ShouldBindJSON(&priorityReq); err != nil {
+		log.Print(err)
+		c.JSON(400, gin.H{
+			"error": "Invalid request",
+		})
+		return
+	}
+
+	rawID := c.Param("id")
+	id, err := strconv.Atoi(rawID)
+	if err != nil {
+		c.JSON(400, gin.H{
+			"error": "Invalid ID",
+		})
+		return
+	}
+
+	chore, err := h.choreRepo.GetChore(c, id)
+	if err != nil {
+		c.JSON(500, gin.H{
+			"error": "Error getting chore",
+		})
+		return
+	}
+
+	if currrentUser.ID != chore.CreatedBy {
+		c.JSON(403, gin.H{
+			"error": "You are not allowed to update this chore",
+		})
+		return
+	}
+
+	chore.Priority = *priorityReq.Priority
+	if err := h.choreRepo.UpsertChore(c, chore); err != nil {
+		c.JSON(500, gin.H{
+			"error": "Error updating priority",
+		})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"res": chore,
+	})
+}
+
 func (h *Handler) DeleteHistory(c *gin.Context) {
 
 	currentUser, ok := auth.CurrentUser(c)
@@ -1156,6 +1215,7 @@ func Routes(router *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware) {
 	{
 		choresRoutes.GET("/", h.getChores)
 		choresRoutes.PUT("/", h.editChore)
+		choresRoutes.PUT("/:id/priority", h.updatePriority)
 		choresRoutes.POST("/", h.createChore)
 		choresRoutes.GET("/:id", h.getChore)
 		choresRoutes.GET("/:id/details", h.GetChoreDetail)

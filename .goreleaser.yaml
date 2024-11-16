@@ -20,9 +20,9 @@ builds:
       - CGO_ENABLED=0
     goos:
       - linux
-      # - windows
       - darwin
-
+      - armhf
+  
 archives:
   - format: tar.gz
     # this name template makes the OS and Arch compatible with the results of `uname`.

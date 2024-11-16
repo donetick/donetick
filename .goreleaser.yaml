@@ -20,9 +20,15 @@ builds:
       - CGO_ENABLED=0
     goos:
       - linux
-      # - windows
       - darwin
 
+    targets:
+      - linux_amd64_v1
+      - darwin_arm64
+      - darwin_amd64
+      - linux_arm_6
+      - linux_arm_7
+  
 archives:
   - format: tar.gz
     # this name template makes the OS and Arch compatible with the results of `uname`.

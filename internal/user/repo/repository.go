@@ -162,3 +162,7 @@ func (r *UserRepository) DeleteAPIToken(c context.Context, userID int, tokenID s
 func (r *UserRepository) UpdateNotificationTarget(c context.Context, userID int, targetID string, targetType uModel.UserNotificationType) error {
 	return r.db.WithContext(c).Model(&uModel.UserNotificationTarget{}).Where("user_id = ? AND type = ?", userID, targetType).Update("target_id", targetID).Error
 }
+
+func (r *UserRepository) UpdatePasswordByUserId(c context.Context, userID int, password string) error {
+	return r.db.WithContext(c).Model(&uModel.User{}).Where("id = ?", userID).Update("password", password).Error
+}

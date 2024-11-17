@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"time"
 
+	"donetick.com/core/config"
 	auth "donetick.com/core/internal/authorization"
 	cModel "donetick.com/core/internal/circle/model"
 	cRepo "donetick.com/core/internal/circle/repo"
@@ -25,18 +26,20 @@ import (
 )
 
 type Handler struct {
-	userRepo   *uRepo.UserRepository
-	circleRepo *cRepo.CircleRepository
-	jwtAuth    *jwt.GinJWTMiddleware
-	email      *email.EmailSender
+	userRepo         *uRepo.UserRepository
+	circleRepo       *cRepo.CircleRepository
+	jwtAuth          *jwt.GinJWTMiddleware
+	email            *email.EmailSender
+	isDonetickDotCom bool
 }
 
-func NewHandler(ur *uRepo.UserRepository, cr *cRepo.CircleRepository, jwtAuth *jwt.GinJWTMiddleware, email *email.EmailSender) *Handler {
+func NewHandler(ur *uRepo.UserRepository, cr *cRepo.CircleRepository, jwtAuth *jwt.GinJWTMiddleware, email *email.EmailSender, config *config.Config) *Handler {
 	return &Handler{
-		userRepo:   ur,
-		circleRepo: cr,
-		jwtAuth:    jwtAuth,
-		email:      email,
+		userRepo:         ur,
+		circleRepo:       cr,
+		jwtAuth:          jwtAuth,
+		email:            email,
+		isDonetickDotCom: config.IsDoneTickDotCom,
 	}
 }
 
@@ -512,6 +515,51 @@ func (h *Handler) UpdateNotificationTarget(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{})
 }
+
+func (h *Handler) updateUserPasswordLoggedInOnly(c *gin.Context) {
+	if h.isDonetickDotCom {
+		// only enable this feature for self-hosted instances
+		c.JSON(http.StatusForbidden, gin.H{"error": "This action is not allowed on donetick.com"})
+		return
+	}
+	logger := logging.FromContext(c)
+	type RequestBody struct {
+		Password string `json:"password" binding:"required,min=8,max=32"`
+	}
+	var body RequestBody
+	if err := c.ShouldBindJSON(&body); err != nil {
+		logger.Errorw("user.handler.resetAccountPassword failed to bind", "err", err)
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid request",
+		})
+		return
+	}
+
+	currentUser, ok := auth.CurrentUser(c)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get current user"})
+		return
+	}
+
+	password, err := auth.EncodePassword(body.Password)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Unable to process password",
+		})
+		return
+	}
+
+	err = h.userRepo.UpdatePasswordByUserId(c.Request.Context(), currentUser.ID, password)
+	if err != nil {
+		logger.Errorw("account.handler.resetAccountPassword failed to reset password", "err", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Unable to reset password",
+		})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{})
+}
+
 func Routes(router *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware, limiter *limiter.Limiter) {
 
 	userRoutes := router.Group("users")
@@ -524,6 +572,8 @@ func Routes(router *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware, limiter 
 		userRoutes.GET("/tokens", h.GetAllUserToken)
 		userRoutes.DELETE("/tokens/:id", h.DeleteUserToken)
 		userRoutes.PUT("/targets", h.UpdateNotificationTarget)
+		userRoutes.PUT("change_password", h.updateUserPasswordLoggedInOnly)
+
 	}
 
 	authRoutes := router.Group("auth")

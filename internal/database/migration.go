@@ -4,8 +4,6 @@ import (
 	"embed"
 	"fmt"
 	"os"
-	"path/filepath"
-	"runtime"
 
 	"donetick.com/core/config"
 	chModel "donetick.com/core/internal/chore/model"
@@ -66,12 +64,4 @@ func MigrationScripts(gormDB *gorm.DB, cfg *config.Config) error {
 	}
 	fmt.Printf("Applied %d migrations!\n", n)
 	return nil
-}
-
-func migrationDir() string {
-	_, filename, _, ok := runtime.Caller(1)
-	if !ok {
-		return ""
-	}
-	return filepath.Join(filepath.Dir(filename), "../../migrations")
 }

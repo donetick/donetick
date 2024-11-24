@@ -1,6 +1,7 @@
 package database
 
 import (
+	"embed"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -16,6 +17,9 @@ import (
 	migrate "github.com/rubenv/sql-migrate"
 	"gorm.io/gorm"
 )
+
+//go:embed migrations/*.sql
+var embeddedMigrations embed.FS
 
 func Migration(db *gorm.DB) error {
 	if err := db.AutoMigrate(uModel.User{}, chModel.Chore{},
@@ -41,8 +45,9 @@ func Migration(db *gorm.DB) error {
 }
 
 func MigrationScripts(gormDB *gorm.DB, cfg *config.Config) error {
-	migrations := &migrate.FileMigrationSource{
-		Dir: migrationDir(),
+	migrations := &migrate.EmbedFileSystemMigrationSource{
+		FileSystem: embeddedMigrations,
+		Root:       "migrations",
 	}
 
 	path := os.Getenv("DT_SQLITE_PATH")

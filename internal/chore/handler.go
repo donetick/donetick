@@ -15,6 +15,7 @@ import (
 	chModel "donetick.com/core/internal/chore/model"
 	chRepo "donetick.com/core/internal/chore/repo"
 	cRepo "donetick.com/core/internal/circle/repo"
+	lRepo "donetick.com/core/internal/label/repo"
 	nRepo "donetick.com/core/internal/notifier/repo"
 	nps "donetick.com/core/internal/notifier/service"
 	telegram "donetick.com/core/internal/notifier/telegram"
@@ -29,6 +30,10 @@ type ThingTrigger struct {
 	ID           int    `json:"thingID" binding:"required"`
 	TriggerState string `json:"triggerState" binding:"required"`
 	Condition    string `json:"condition"`
+}
+
+type LabelReq struct {
+	LabelID int `json:"id" binding:"required"`
 }
 
 type ChoreReq struct {
@@ -46,6 +51,7 @@ type ChoreReq struct {
 	Notification         bool                          `json:"notification"`
 	NotificationMetadata *chModel.NotificationMetadata `json:"notificationMetadata"`
 	Labels               []string                      `json:"labels"`
+	LabelsV2             *[]LabelReq                   `json:"labelsV2"`
 	ThingTrigger         *ThingTrigger                 `json:"thingTrigger"`
 }
 type Handler struct {
@@ -55,10 +61,11 @@ type Handler struct {
 	nPlanner   *nps.NotificationPlanner
 	nRepo      *nRepo.NotificationRepository
 	tRepo      *tRepo.ThingRepository
+	lRepo      *lRepo.LabelRepository
 }
 
 func NewHandler(cr *chRepo.ChoreRepository, circleRepo *cRepo.CircleRepository, nt *telegram.TelegramNotifier,
-	np *nps.NotificationPlanner, nRepo *nRepo.NotificationRepository, tRepo *tRepo.ThingRepository) *Handler {
+	np *nps.NotificationPlanner, nRepo *nRepo.NotificationRepository, tRepo *tRepo.ThingRepository, lRepo *lRepo.LabelRepository) *Handler {
 	return &Handler{
 		choreRepo:  cr,
 		circleRepo: circleRepo,
@@ -66,6 +73,7 @@ func NewHandler(cr *chRepo.ChoreRepository, circleRepo *cRepo.CircleRepository, 
 		nPlanner:   np,
 		nRepo:      nRepo,
 		tRepo:      tRepo,
+		lRepo:      lRepo,
 	}
 }
 
@@ -262,6 +270,17 @@ func (h *Handler) createChore(c *gin.Context) {
 		})
 	}
 
+	labelsV2 := make([]int, len(*choreReq.LabelsV2))
+	for i, label := range *choreReq.LabelsV2 {
+		labelsV2[i] = int(label.LabelID)
+	}
+	if err := h.lRepo.AssignLabelsToChore(c, createdChore.ID, currentUser.ID, currentUser.CircleID, labelsV2, []int{}); err != nil {
+		c.JSON(500, gin.H{
+			"error": "Error adding labels",
+		})
+		return
+	}
+
 	if err := h.choreRepo.UpdateChoreAssignees(c, choreAssignees); err != nil {
 		c.JSON(500, gin.H{
 			"error": "Error adding chore assignees",
@@ -440,6 +459,38 @@ func (h *Handler) editChore(c *gin.Context) {
 		labels := strings.Join(escapedLabels, ",")
 		stringLabels = &labels
 	}
+
+	// Create a map to store the existing labels for quick lookup
+	oldLabelsMap := make(map[int]struct{})
+	for _, oldLabel := range *oldChore.LabelsV2 {
+		oldLabelsMap[oldLabel.ID] = struct{}{}
+	}
+	newLabelMap := make(map[int]struct{})
+	for _, newLabel := range *choreReq.LabelsV2 {
+		newLabelMap[newLabel.LabelID] = struct{}{}
+	}
+	// check what labels need to be added and what labels need to be deleted:
+	labelsV2ToAdd := make([]int, 0)
+	labelsV2ToBeRemoved := make([]int, 0)
+
+	for _, label := range *choreReq.LabelsV2 {
+		if _, ok := oldLabelsMap[label.LabelID]; !ok {
+			labelsV2ToAdd = append(labelsV2ToAdd, label.LabelID)
+		}
+	}
+	for _, oldLabel := range *oldChore.LabelsV2 {
+		if _, ok := newLabelMap[oldLabel.ID]; !ok {
+			labelsV2ToBeRemoved = append(labelsV2ToBeRemoved, oldLabel.ID)
+		}
+	}
+
+	if err := h.lRepo.AssignLabelsToChore(c, choreReq.ID, currentUser.ID, currentUser.CircleID, labelsV2ToAdd, labelsV2ToBeRemoved); err != nil {
+		c.JSON(500, gin.H{
+			"error": "Error adding labels",
+		})
+		return
+	}
+
 	updatedChore := &chModel.Chore{
 		ID:                choreReq.ID,
 		Name:              choreReq.Name,

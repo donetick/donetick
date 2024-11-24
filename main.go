@@ -8,6 +8,7 @@ import (
 
 	"donetick.com/core/config"
 	"donetick.com/core/frontend"
+	"donetick.com/core/migrations"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/fx"
@@ -21,6 +22,9 @@ import (
 	cRepo "donetick.com/core/internal/circle/repo"
 	"donetick.com/core/internal/database"
 	"donetick.com/core/internal/email"
+	label "donetick.com/core/internal/label"
+	lRepo "donetick.com/core/internal/label/repo"
+
 	notifier "donetick.com/core/internal/notifier"
 	nRepo "donetick.com/core/internal/notifier/repo"
 	nps "donetick.com/core/internal/notifier/service"
@@ -31,7 +35,6 @@ import (
 	uRepo "donetick.com/core/internal/user/repo"
 	"donetick.com/core/internal/utils"
 	"donetick.com/core/logging"
-	"donetick.com/core/migration"
 )
 
 func main() {
@@ -75,6 +78,10 @@ func main() {
 		// things
 		fx.Provide(tRepo.NewThingRepository),
 
+		// Labels:
+		fx.Provide(lRepo.NewLabelRepository),
+		fx.Provide(label.NewHandler),
+
 		fx.Provide(thing.NewWebhook),
 		fx.Provide(thing.NewHandler),
 
@@ -87,6 +94,7 @@ func main() {
 			circle.Routes,
 			thing.Routes,
 			thing.Webhooks,
+			label.Routes,
 			frontend.Routes,
 
 			func(r *gin.Engine) {},
@@ -127,7 +135,12 @@ func newServer(lc fx.Lifecycle, cfg *config.Config, db *gorm.DB, notifier *notif
 	lc.Append(fx.Hook{
 		OnStart: func(context.Context) error {
 			if cfg.Database.Migration {
-				migration.Migration(db)
+				database.Migration(db)
+				migrations.Run(context.Background(), db)
+				err := database.MigrationScripts(db, cfg)
+				if err != nil {
+					panic(err)
+				}
 			}
 			notifier.Start(context.Background())
 			go func() {

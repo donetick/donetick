@@ -37,6 +37,7 @@ type Chore struct {
 	Notification         bool               `json:"notification" gorm:"column:notification"`                      // Whether the chore has notification
 	NotificationMetadata *string            `json:"notificationMetadata" gorm:"column:notification_meta"`         // Additional notification information
 	Labels               *string            `json:"labels" gorm:"column:labels"`                                  // Labels for the chore
+	LabelsV2             *[]Label           `json:"labelsV2" gorm:"many2many:chore_labels"`                       // Labels for the chore
 	CircleID             int                `json:"circleId" gorm:"column:circle_id;index"`                       // The circle this chore is in
 	CreatedAt            time.Time          `json:"createdAt" gorm:"column:created_at"`                           // When the chore was created
 	UpdatedAt            time.Time          `json:"updatedAt" gorm:"column:updated_at"`                           // When the chore was last updated
@@ -83,16 +84,6 @@ type Tag struct {
 	Name string `json:"name" gorm:"column:name;unique"`
 }
 
-// type ChoreTag struct {
-// 	ChoreID int `json:"choreId" gorm:"primaryKey;autoIncrement:false"`
-// 	TagID   int `json:"tagId" gorm:"primaryKey;autoIncrement:false"`
-// }
-
-// type CircleTag struct {
-// 	CircleID int `json:"circleId" gorm:"primaryKey;autoIncrement:false"`
-// 	TagID    int `json:"tagId" gorm:"primaryKey;autoIncrement:false"`
-// }
-
 type ChoreDetail struct {
 	ID                  int        `json:"id" gorm:"column:id"`
 	Name                string     `json:"name" gorm:"column:name"`
@@ -105,4 +96,19 @@ type ChoreDetail struct {
 	Priority            int        `json:"priority" gorm:"column:priority"`
 	Notes               *string    `json:"notes" gorm:"column:notes"`
 	CreatedBy           int        `json:"createdBy" gorm:"column:created_by"`
+}
+
+type Label struct {
+	ID        int    `json:"id" gorm:"primary_key"`
+	Name      string `json:"name" gorm:"column:name"`
+	Color     string `json:"color" gorm:"column:color"`
+	CircleID  *int   `json:"-" gorm:"column:circle_id"`
+	CreatedBy int    `json:"created_by" gorm:"column:created_by"`
+}
+
+type ChoreLabels struct {
+	ChoreID int `json:"choreId" gorm:"primaryKey;autoIncrement:false"`
+	LabelID int `json:"labelId" gorm:"primaryKey;autoIncrement:false"`
+	UserID  int `json:"userId" gorm:"primaryKey;autoIncrement:false"`
+	Label   Label
 }

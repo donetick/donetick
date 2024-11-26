@@ -11,11 +11,41 @@ An open-source, user-friendly app for managing tasks and chores, featuring custo
 - Progress Tracking: Track the completion status of tasks and view historical data.
 - API Integration 
 
+
+## Selfhosted : 
+Release binary included everything needed to be up and running, as even the frontend file served 
+### Using Docker run :
+1. pull the latest image using: `docker pull donetick/donetick`
+2. run the container `DT_ENV=selfhosted docker run -v /path/to/host/data:/usr/src/app/data -p 2021:2021 donetick/donetick`
+
+
+### Using Docker Compose:
+You can use the following template 
+```yaml
+services:
+  donetick:
+    image: donetick/donetick
+    container_name: donetick
+    restart: unless-stopped
+    ports:
+      - 2021:2021 # needed for serving backend and frontend
+    volumes:
+      - ./data:/usr/src/app/data # database file stored (sqlite database)
+      - ./config:/config # configration file like selfhosted.yaml
+    environment:
+      - DT_ENV=selfhosted # this tell donetick to load ./config/selfhosted.yaml for the configuration file
+
+```
+
+### Using binary:
+
+
 ## Development Environment 
 1. Clone the repository:
 2. Navigate to the project directory: `cd donetick`
 3. Download dependency `go mod download`
 4. Run locally `go run .`
+
 
 ## Contributing
 Contributions are welcome! If you would like to contribute to Donetick, please follow these steps:
@@ -27,6 +57,6 @@ Contributions are welcome! If you would like to contribute to Donetick, please f
 
 
 ## License
-This project is licensed under the  License. See the [LICENSE](LICENSE) file for more details. I might consider changing it later to something else
+This project is licensed under the AGPLv3. See the [LICENSE](LICENSE) file for more details. I might consider changing it later to something else
 
 

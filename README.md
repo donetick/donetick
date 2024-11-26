@@ -38,6 +38,10 @@ services:
 ```
 
 ### Using binary:
+1. Navigate to [Release]
+2. Download the appropiate file for you arch/os
+3. cd into the extracted folder
+4. run `./donetick` and you can specify the env as `DT_ENV=selfhosted`
 
 
 ## Development Environment 

@@ -73,16 +73,18 @@ func (r *LabelRepository) AssignLabelsToChore(ctx context.Context, choreID int, 
 		})
 	}
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-
-		if err := r.db.WithContext(ctx).Where("chore_id = ? AND user_id = ? AND label_id IN (?)", choreID, userID, toBeRemoved).Delete(&chModel.ChoreLabels{}).Error; err != nil {
-			return err
+		if len(toBeRemoved) > 0 {
+			if err := r.db.WithContext(ctx).Where("chore_id = ? AND user_id = ? AND label_id IN (?)", choreID, userID, toBeRemoved).Delete(&chModel.ChoreLabels{}).Error; err != nil {
+				return err
+			}
 		}
-
-		if err := r.db.WithContext(ctx).Clauses(clause.OnConflict{
-			Columns:   []clause.Column{{Name: "chore_id"}, {Name: "label_id"}, {Name: "user_id"}},
-			DoNothing: true,
-		}).Create(&choreLabels).Error; err != nil {
-			return err
+		if len(toBeAdded) > 0 {
+			if err := r.db.WithContext(ctx).Clauses(clause.OnConflict{
+				Columns:   []clause.Column{{Name: "chore_id"}, {Name: "label_id"}, {Name: "user_id"}},
+				DoNothing: true,
+			}).Create(&choreLabels).Error; err != nil {
+				return err
+			}
 		}
 		return nil
 	})

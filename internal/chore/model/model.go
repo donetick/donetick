@@ -107,8 +107,8 @@ type Label struct {
 }
 
 type ChoreLabels struct {
-	ChoreID int `json:"choreId" gorm:"primaryKey;autoIncrement:false"`
-	LabelID int `json:"labelId" gorm:"primaryKey;autoIncrement:false"`
-	UserID  int `json:"userId" gorm:"primaryKey;autoIncrement:false"`
+	ChoreID int `json:"choreId" gorm:"primaryKey;autoIncrement:false;not null"`
+	LabelID int `json:"labelId" gorm:"primaryKey;autoIncrement:false;not null"`
+	UserID  int `json:"userId" gorm:"primaryKey;autoIncrement:false;not null"`
 	Label   Label
 }

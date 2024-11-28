@@ -16,7 +16,10 @@ An open-source, user-friendly app for managing tasks and chores, featuring custo
 Release binary included everything needed to be up and running, as even the frontend file served 
 ### Using Docker run :
 1. pull the latest image using: `docker pull donetick/donetick`
-2. run the container `DT_ENV=selfhosted docker run -v /path/to/host/data:/usr/src/app/data -p 2021:2021 donetick/donetick`
+2. run the container and replace `/path/to/host/data` with where you want to place attach the volumne for the sqlite db `DT_ENV=selfhosted DT_SQLITE_PATH=/donetick-data/donetick.db docker run -v /path/to/host/data:/donetick-data -p 2021:2021 donetick/donetick`
+
+
+
 
 
 ### Using Docker Compose:
@@ -30,10 +33,11 @@ services:
     ports:
       - 2021:2021 # needed for serving backend and frontend
     volumes:
-      - ./data:/usr/src/app/data # database file stored (sqlite database)
+      - ./data:/donetick-data # database file stored (sqlite database)
       - ./config:/config # configration file like selfhosted.yaml
     environment:
       - DT_ENV=selfhosted # this tell donetick to load ./config/selfhosted.yaml for the configuration file
+      - DT_SQLITE_PATH=/donetick-data/donetick.db 
 
 ```
 

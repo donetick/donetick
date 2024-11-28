@@ -1070,10 +1070,10 @@ func (h *Handler) ModifyHistory(c *gin.Context) {
 
 func (h *Handler) updatePriority(c *gin.Context) {
 	type PriorityReq struct {
-		Priority *int `json:"priority" binding:"required,gt=-1"`
+		Priority *int `json:"priority" binding:"required,gt=-1,lt=5"`
 	}
 
-	currrentUser, ok := auth.CurrentUser(c)
+	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
 		c.JSON(500, gin.H{
 			"error": "Error getting current user",
@@ -1099,23 +1099,7 @@ func (h *Handler) updatePriority(c *gin.Context) {
 		return
 	}
 
-	chore, err := h.choreRepo.GetChore(c, id)
-	if err != nil {
-		c.JSON(500, gin.H{
-			"error": "Error getting chore",
-		})
-		return
-	}
-
-	if currrentUser.ID != chore.CreatedBy {
-		c.JSON(403, gin.H{
-			"error": "You are not allowed to update this chore",
-		})
-		return
-	}
-
-	chore.Priority = *priorityReq.Priority
-	if err := h.choreRepo.UpsertChore(c, chore); err != nil {
+	if err := h.choreRepo.UpdateChorePriority(c, currentUser.ID, id, *priorityReq.Priority); err != nil {
 		c.JSON(500, gin.H{
 			"error": "Error updating priority",
 		})
@@ -1123,7 +1107,7 @@ func (h *Handler) updatePriority(c *gin.Context) {
 	}
 
 	c.JSON(200, gin.H{
-		"res": chore,
+		"message": "Priority updated successfully",
 	})
 }
 

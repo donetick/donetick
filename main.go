@@ -85,11 +85,14 @@ func main() {
 		fx.Provide(thing.NewWebhook),
 		fx.Provide(thing.NewHandler),
 
+		fx.Provide(chore.NewAPI),
+
 		fx.Provide(frontend.NewHandler),
 
 		// fx.Invoke(RunApp),
 		fx.Invoke(
 			chore.Routes,
+			chore.APIs,
 			user.Routes,
 			circle.Routes,
 			thing.Routes,

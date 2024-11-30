@@ -51,7 +51,12 @@ func (tn *TelegramNotifier) SendChoreReminder(c context.Context, chore *chModel.
 }
 
 func (tn *TelegramNotifier) SendChoreCompletion(c context.Context, chore *chModel.Chore, user *uModel.User) {
+
 	log := logging.FromContext(c)
+	if tn == nil {
+		log.Error("Telegram bot is not initialized, Skipping sending message")
+		return
+	}
 	var mt *chModel.NotificationMetadata
 	if err := json.Unmarshal([]byte(*chore.NotificationMetadata), &mt); err != nil {
 		log.Error("Error unmarshalling notification metadata", err)

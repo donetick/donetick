@@ -191,6 +191,7 @@ func handleUserLeavingCircle(h *Handler, c *gin.Context, leavingUser *uModel.Use
 
 	h.choreRepo.UpdateChores(c, userAssignedCircleChores)
 	h.choreRepo.RemoveChoreAssigneeByCircleID(c, leavingUser.ID, leavingUser.CircleID)
+	h.circleRepo.AssignDefaultCircle(c, leavingUser.ID)
 	return nil
 }
 

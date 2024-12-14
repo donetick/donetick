@@ -26,6 +26,15 @@ func (m MigrateChatIdToNotificationTarget20241212) Down(ctx context.Context, db 
 
 func (m MigrateChatIdToNotificationTarget20241212) Up(ctx context.Context, db *gorm.DB) error {
 	log := logging.FromContext(ctx)
+	// if UserNotificationTarget table already exists drop it and recreate it:
+	if err := db.Migrator().DropTable(&uModel.UserNotificationTarget{}); err != nil {
+		log.Errorf("Failed to drop user_notification_targets table: %v", err)
+	}
+
+	// Create UserNotificationTarget table
+	if err := db.AutoMigrate(&uModel.UserNotificationTarget{}); err != nil {
+		log.Errorf("Failed to create user_notification_targets table: %v", err)
+	}
 
 	// Start a transaction
 	return db.Transaction(func(tx *gorm.DB) error {

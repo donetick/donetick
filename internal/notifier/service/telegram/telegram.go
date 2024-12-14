@@ -3,6 +3,7 @@ package telegram
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
 
@@ -27,26 +28,6 @@ func NewTelegramNotifier(config *config.Config) *TelegramNotifier {
 
 	return &TelegramNotifier{
 		bot: bot,
-	}
-}
-
-func (tn *TelegramNotifier) SendChoreReminder(c context.Context, chore *chModel.Chore, users []*uModel.User) {
-	for _, user := range users {
-		var assignee *uModel.User
-		if user.ID == chore.AssignedTo {
-			if user.ChatID == 0 {
-				continue
-			}
-			assignee = user
-			text := fmt.Sprintf("*%s* is due today and assigned to *%s*", chore.Name, assignee.DisplayName)
-			msg := tgbotapi.NewMessage(user.ChatID, text)
-			msg.ParseMode = "Markdown"
-			_, err := tn.bot.Send(msg)
-			if err != nil {
-				fmt.Println("Error sending message to user: ", err)
-			}
-			break
-		}
 	}
 }
 
@@ -89,54 +70,17 @@ func (tn *TelegramNotifier) SendChoreCompletion(c context.Context, chore *chMode
 
 }
 
-func (tn *TelegramNotifier) SendChoreOverdue(c context.Context, chore *chModel.Chore, users []*uModel.User) {
-	log := logging.FromContext(c)
-	for _, user := range users {
-		if user.ChatID == 0 {
-			continue
-		}
-		text := fmt.Sprintf("*%s* is overdue and assigned to *%s*", chore.Name, user.DisplayName)
-		msg := tgbotapi.NewMessage(user.ChatID, text)
-		msg.ParseMode = "Markdown"
-		_, err := tn.bot.Send(msg)
-		if err != nil {
-			log.Error("Error sending message to user: ", err)
-			log.Debug("Error sending message, chore: ", chore.Name, " user: ", user.DisplayName, " chatID: ", user.ChatID, " user id: ", user.ID)
-		}
-	}
-}
-
-func (tn *TelegramNotifier) SendChorePreDue(c context.Context, chore *chModel.Chore, users []*uModel.User) {
-	log := logging.FromContext(c)
-	for _, user := range users {
-		if user.ID != chore.AssignedTo {
-			continue
-		}
-		if user.ChatID == 0 {
-			continue
-		}
-		text := fmt.Sprintf("*%s* is due tomorrow and assigned to *%s*", chore.Name, user.DisplayName)
-		msg := tgbotapi.NewMessage(user.ChatID, text)
-		msg.ParseMode = "Markdown"
-		_, err := tn.bot.Send(msg)
-		if err != nil {
-			log.Error("Error sending message to user: ", err)
-			log.Debug("Error sending message, chore: ", chore.Name, " user: ", user.DisplayName, " chatID: ", user.ChatID, " user id: ", user.ID)
-		}
-	}
-}
-
-func (tn *TelegramNotifier) SendNotification(c context.Context, notification *nModel.Notification) {
+func (tn *TelegramNotifier) SendNotification(c context.Context, notification *nModel.Notification) error {
 
 	log := logging.FromContext(c)
 	if notification.TargetID == "" {
 		log.Error("Notification target ID is empty")
-		return
+		return errors.New("Notification target ID is empty")
 	}
 	chatID, err := strconv.ParseInt(notification.TargetID, 10, 64)
 	if err != nil {
 		log.Error("Error parsing chatID: ", err)
-		return
+		return err
 	}
 
 	msg := tgbotapi.NewMessage(chatID, notification.Text)
@@ -145,5 +89,7 @@ func (tn *TelegramNotifier) SendNotification(c context.Context, notification *nM
 	if err != nil {
 		log.Error("Error sending message to user: ", err)
 		log.Debug("Error sending message, notification: ", notification.Text, " chatID: ", chatID)
+		return err
 	}
+	return nil
 }

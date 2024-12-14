@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"donetick.com/core/config"
+	nModel "donetick.com/core/internal/notifier/model"
 	uModel "donetick.com/core/internal/user/model"
 	"donetick.com/core/logging"
 	"gorm.io/gorm"
@@ -54,11 +55,11 @@ func (r *UserRepository) CreateUser(c context.Context, user *uModel.User) (*uMod
 func (r *UserRepository) GetUserByUsername(c context.Context, username string) (*uModel.User, error) {
 	var user *uModel.User
 	if r.isDonetickDotCom {
-		if err := r.db.WithContext(c).Table("users u").Select("u.*, ss.status as  subscription, ss.expired_at as expiration").Joins("left join stripe_customers sc on sc.user_id = u.id ").Joins("left join stripe_subscriptions ss on sc.customer_id = ss.customer_id").Where("username = ?", username).First(&user).Error; err != nil {
+		if err := r.db.WithContext(c).Preload("UserNotificationTargets").Table("users u").Select("u.*, ss.status as  subscription, ss.expired_at as expiration").Joins("left join stripe_customers sc on sc.user_id = u.id ").Joins("left join stripe_subscriptions ss on sc.customer_id = ss.customer_id").Where("username = ?", username).First(&user).Error; err != nil {
 			return nil, err
 		}
 	} else {
-		if err := r.db.WithContext(c).Table("users u").Select("u.*, 'active' as  subscription, '2999-12-31' as expiration").Where("username = ?", username).First(&user).Error; err != nil {
+		if err := r.db.WithContext(c).Preload("UserNotificationTargets").Table("users u").Select("u.*, 'active' as  subscription, '2999-12-31' as expiration").Where("username = ?", username).First(&user).Error; err != nil {
 			return nil, err
 		}
 	}
@@ -159,10 +160,22 @@ func (r *UserRepository) DeleteAPIToken(c context.Context, userID int, tokenID s
 	return r.db.WithContext(c).Where("id = ? AND user_id = ?", tokenID, userID).Delete(&uModel.APIToken{}).Error
 }
 
-func (r *UserRepository) UpdateNotificationTarget(c context.Context, userID int, targetID string, targetType uModel.UserNotificationType) error {
-	return r.db.WithContext(c).Model(&uModel.UserNotificationTarget{}).Where("user_id = ? AND type = ?", userID, targetType).Update("target_id", targetID).Error
+func (r *UserRepository) UpdateNotificationTarget(c context.Context, userID int, targetID string, targetType nModel.NotificationType) error {
+	return r.db.WithContext(c).Save(&uModel.UserNotificationTarget{
+		UserID:    userID,
+		TargetID:  targetID,
+		Type:      targetType,
+		CreatedAt: time.Now().UTC(),
+	}).Error
 }
 
+func (r *UserRepository) DeleteNotificationTarget(c context.Context, userID int) error {
+	return r.db.WithContext(c).Where("user_id = ?", userID).Delete(&uModel.UserNotificationTarget{}).Error
+}
+
+func (r *UserRepository) UpdateNotificationTargetForAllNotifications(c context.Context, userID int, targetID string, targetType nModel.NotificationType) error {
+	return r.db.WithContext(c).Model(&nModel.Notification{}).Where("user_id = ?", userID).Update("target_id", targetID).Update("type", targetType).Error
+}
 func (r *UserRepository) UpdatePasswordByUserId(c context.Context, userID int, password string) error {
 	return r.db.WithContext(c).Model(&uModel.User{}).Where("id = ?", userID).Update("password", password).Error
 }

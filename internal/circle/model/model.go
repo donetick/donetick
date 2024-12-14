@@ -1,6 +1,10 @@
 package circle
 
-import "time"
+import (
+	"time"
+
+	nModel "donetick.com/core/internal/notifier/model"
+)
 
 type Circle struct {
 	ID         int       `json:"id" gorm:"primary_key"`                 // Unique identifier
@@ -29,7 +33,8 @@ type UserCircle struct {
 
 type UserCircleDetail struct {
 	UserCircle
-	Username    string `json:"username" gorm:"column:username"`
-	DisplayName string `json:"displayName" gorm:"column:display_name"`
-	ChatID      int    `json:"chatID" gorm:"column:chat_id"`
+	Username         string                  `json:"username" gorm:"column:username"`
+	DisplayName      string                  `json:"displayName" gorm:"column:display_name"`
+	NotificationType nModel.NotificationType `json:"-" gorm:"column:notification_type"`
+	TargetID         string                  `json:"-" gorm:"column:target_id"` // Target ID
 }

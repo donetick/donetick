@@ -16,9 +16,9 @@ import (
 	chRepo "donetick.com/core/internal/chore/repo"
 	cRepo "donetick.com/core/internal/circle/repo"
 	lRepo "donetick.com/core/internal/label/repo"
+	"donetick.com/core/internal/notifier"
 	nRepo "donetick.com/core/internal/notifier/repo"
 	nps "donetick.com/core/internal/notifier/service"
-	telegram "donetick.com/core/internal/notifier/telegram"
 	tRepo "donetick.com/core/internal/thing/repo"
 	uModel "donetick.com/core/internal/user/model"
 	"donetick.com/core/logging"
@@ -57,14 +57,14 @@ type ChoreReq struct {
 type Handler struct {
 	choreRepo  *chRepo.ChoreRepository
 	circleRepo *cRepo.CircleRepository
-	notifier   *telegram.TelegramNotifier
+	notifier   *notifier.Notifier
 	nPlanner   *nps.NotificationPlanner
 	nRepo      *nRepo.NotificationRepository
 	tRepo      *tRepo.ThingRepository
 	lRepo      *lRepo.LabelRepository
 }
 
-func NewHandler(cr *chRepo.ChoreRepository, circleRepo *cRepo.CircleRepository, nt *telegram.TelegramNotifier,
+func NewHandler(cr *chRepo.ChoreRepository, circleRepo *cRepo.CircleRepository, nt *notifier.Notifier,
 	np *nps.NotificationPlanner, nRepo *nRepo.NotificationRepository, tRepo *tRepo.ThingRepository, lRepo *lRepo.LabelRepository) *Handler {
 	return &Handler{
 		choreRepo:  cr,
@@ -928,10 +928,12 @@ func (h *Handler) completeChore(c *gin.Context) {
 		})
 		return
 	}
-	go func() {
-		h.notifier.SendChoreCompletion(c, chore, currentUser)
-		h.nPlanner.GenerateNotifications(c, updatedChore)
-	}()
+	// go func() {
+
+	// 	h.notifier.SendChoreCompletion(c, chore, currentUser)
+	// }()
+	h.nPlanner.GenerateNotifications(c, updatedChore)
+
 	c.JSON(200, gin.H{
 		"res": updatedChore,
 	})

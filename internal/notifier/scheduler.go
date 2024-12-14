@@ -8,7 +8,6 @@ import (
 	"donetick.com/core/config"
 	chRepo "donetick.com/core/internal/chore/repo"
 	nRepo "donetick.com/core/internal/notifier/repo"
-	notifier "donetick.com/core/internal/notifier/telegram"
 	uRepo "donetick.com/core/internal/user/repo"
 	"donetick.com/core/logging"
 )
@@ -23,12 +22,12 @@ type Scheduler struct {
 	choreRepo        *chRepo.ChoreRepository
 	userRepo         *uRepo.UserRepository
 	stopChan         chan bool
-	notifier         *notifier.TelegramNotifier
+	notifier         *Notifier
 	notificationRepo *nRepo.NotificationRepository
 	SchedulerJobs    config.SchedulerConfig
 }
 
-func NewScheduler(cfg *config.Config, ur *uRepo.UserRepository, cr *chRepo.ChoreRepository, n *notifier.TelegramNotifier, nr *nRepo.NotificationRepository) *Scheduler {
+func NewScheduler(cfg *config.Config, ur *uRepo.UserRepository, cr *chRepo.ChoreRepository, n *Notifier, nr *nRepo.NotificationRepository) *Scheduler {
 	return &Scheduler{
 		choreRepo:        cr,
 		userRepo:         ur,
@@ -43,12 +42,23 @@ func (s *Scheduler) Start(c context.Context) {
 	log := logging.FromContext(c)
 	log.Debug("Scheduler started")
 	go s.runScheduler(c, " NOTIFICATION_SCHEDULER ", s.loadAndSendNotificationJob, 3*time.Minute)
+	go s.runScheduler(c, " NOTIFICATION_CLEANUP ", s.cleanupSentNotifications, 24*time.Hour*30)
+}
+func (s *Scheduler) cleanupSentNotifications(c context.Context) (time.Duration, error) {
+	log := logging.FromContext(c)
+	deleteBefore := time.Now().UTC().Add(-time.Hour * 24 * 30)
+	err := s.notificationRepo.DeleteSentNotifications(c, deleteBefore)
+	if err != nil {
+		log.Error("Error deleting sent notifications", err)
+		return time.Duration(0), err
+	}
+	return time.Duration(0), nil
 }
 
 func (s *Scheduler) loadAndSendNotificationJob(c context.Context) (time.Duration, error) {
 	log := logging.FromContext(c)
 	startTime := time.Now()
-	getAllPendingNotifications, err := s.notificationRepo.GetPendingNotificaiton(c, time.Minute*15)
+	getAllPendingNotifications, err := s.notificationRepo.GetPendingNotificaiton(c, time.Minute*900)
 	log.Debug("Getting pending notifications", " count ", len(getAllPendingNotifications))
 
 	if err != nil {
@@ -57,7 +67,11 @@ func (s *Scheduler) loadAndSendNotificationJob(c context.Context) (time.Duration
 	}
 
 	for _, notification := range getAllPendingNotifications {
-		s.notifier.SendNotification(c, notification)
+		err := s.notifier.SendNotification(c, notification)
+		if err != nil {
+			log.Error("Error sending notification", err)
+			continue
+		}
 		notification.IsSent = true
 	}
 
@@ -78,7 +92,7 @@ func (s *Scheduler) runScheduler(c context.Context, jobName string, job func(c c
 			if err != nil {
 				logging.FromContext(c).Error("Error running scheduler job", err)
 			}
-			logging.FromContext(c).Debug("Scheduler job completed", jobName, " time", elapsedTime.String())
+			logging.FromContext(c).Debug("Scheduler job completed", jobName, " time: ", elapsedTime.String())
 		}
 		time.Sleep(interval)
 	}

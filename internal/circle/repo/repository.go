@@ -4,6 +4,7 @@ import (
 	"context"
 
 	cModel "donetick.com/core/internal/circle/model"
+	uModel "donetick.com/core/internal/user/model"
 	"gorm.io/gorm"
 )
 
@@ -40,8 +41,13 @@ func (r *CircleRepository) AddUserToCircle(c context.Context, circleUser *cModel
 
 func (r *CircleRepository) GetCircleUsers(c context.Context, circleID int) ([]*cModel.UserCircleDetail, error) {
 	var circleUsers []*cModel.UserCircleDetail
-	// join user table to get user details like username and display name:
-	if err := r.db.WithContext(c).Raw("SELECT * FROM user_circles LEFT JOIN users on users.id = user_circles.user_id WHERE user_circles.circle_id = ?", circleID).Scan(&circleUsers).Error; err != nil {
+	if err := r.db.WithContext(c).
+		Table("user_circles uc").
+		Select("uc.*, u.username, u.display_name, u.chat_id,  unt.user_id as user_id, unt.target_id as target_id, unt.type as notification_type").
+		Joins("left join users u on u.id = uc.user_id").
+		Joins("left join user_notification_targets unt on unt.user_id = u.id").
+		Where("uc.circle_id = ?", circleID).
+		Scan(&circleUsers).Error; err != nil {
 		return nil, err
 	}
 	return circleUsers, nil
@@ -114,4 +120,21 @@ func (r *CircleRepository) GetCircleAdmins(c context.Context, circleID int) ([]*
 		return nil, err
 	}
 	return circleAdmins, nil
+}
+
+func (r *CircleRepository) GetDefaultCircle(c context.Context, userID int) (*cModel.Circle, error) {
+	var circle cModel.Circle
+	if err := r.db.WithContext(c).Raw("SELECT circles.* FROM circles LEFT JOIN user_circles on circles.id = user_circles.circle_id WHERE user_circles.user_id = ? AND user_circles.role = 'admin'", userID).Scan(&circle).Error; err != nil {
+		return nil, err
+	}
+	return &circle, nil
+}
+
+func (r *CircleRepository) AssignDefaultCircle(c context.Context, userID int) error {
+	defaultCircle, err := r.GetDefaultCircle(c, userID)
+	if err != nil {
+		return err
+	}
+
+	return r.db.WithContext(c).Model(&uModel.User{}).Where("id = ?", userID).Update("circle_id", defaultCircle.ID).Error
 }

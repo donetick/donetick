@@ -28,7 +28,8 @@ import (
 	notifier "donetick.com/core/internal/notifier"
 	nRepo "donetick.com/core/internal/notifier/repo"
 	nps "donetick.com/core/internal/notifier/service"
-	telegram "donetick.com/core/internal/notifier/telegram"
+	"donetick.com/core/internal/notifier/service/pushover"
+	telegram "donetick.com/core/internal/notifier/service/telegram"
 	"donetick.com/core/internal/thing"
 	tRepo "donetick.com/core/internal/thing/repo"
 	"donetick.com/core/internal/user"
@@ -64,7 +65,9 @@ func main() {
 		fx.Provide(nps.NewNotificationPlanner),
 
 		// add notifier
+		fx.Provide(pushover.NewPushover),
 		fx.Provide(telegram.NewTelegramNotifier),
+		fx.Provide(notifier.NewNotifier),
 
 		// Rate limiter
 		fx.Provide(utils.NewRateLimiter),

@@ -9,18 +9,24 @@ import (
 )
 
 type Config struct {
-	Name             string          `mapstructure:"name" yaml:"name"`
-	Telegram         TelegramConfig  `mapstructure:"telegram" yaml:"telegram"`
-	Database         DatabaseConfig  `mapstructure:"database" yaml:"database"`
-	Jwt              JwtConfig       `mapstructure:"jwt" yaml:"jwt"`
-	Server           ServerConfig    `mapstructure:"server" yaml:"server"`
-	SchedulerJobs    SchedulerConfig `mapstructure:"scheduler_jobs" yaml:"scheduler_jobs"`
-	EmailConfig      EmailConfig     `mapstructure:"email" yaml:"email"`
-	StripeConfig     StripeConfig    `mapstructure:"stripe" yaml:"stripe"`
-	IsDoneTickDotCom bool            `mapstructure:"is_done_tick_dot_com" yaml:"is_done_tick_dot_com"`
+	Name                   string          `mapstructure:"name" yaml:"name"`
+	Telegram               TelegramConfig  `mapstructure:"telegram" yaml:"telegram"`
+	Pushover               PushoverConfig  `mapstructure:"pushover" yaml:"pushover"`
+	Database               DatabaseConfig  `mapstructure:"database" yaml:"database"`
+	Jwt                    JwtConfig       `mapstructure:"jwt" yaml:"jwt"`
+	Server                 ServerConfig    `mapstructure:"server" yaml:"server"`
+	SchedulerJobs          SchedulerConfig `mapstructure:"scheduler_jobs" yaml:"scheduler_jobs"`
+	EmailConfig            EmailConfig     `mapstructure:"email" yaml:"email"`
+	StripeConfig           StripeConfig    `mapstructure:"stripe" yaml:"stripe"`
+	IsDoneTickDotCom       bool            `mapstructure:"is_done_tick_dot_com" yaml:"is_done_tick_dot_com"`
+	IsUserCreationDisabled bool            `mapstructure:"is_user_creation_disabled" yaml:"is_user_creation_disabled"`
 }
 
 type TelegramConfig struct {
+	Token string `mapstructure:"token" yaml:"token"`
+}
+
+type PushoverConfig struct {
 	Token string `mapstructure:"token" yaml:"token"`
 }
 
@@ -98,6 +104,13 @@ func configEnvironmentOverrides(Config *Config) {
 	if os.Getenv("DONETICK_TELEGRAM_TOKEN") != "" {
 		Config.Telegram.Token = os.Getenv("DONETICK_TELEGRAM_TOKEN")
 	}
+	if os.Getenv("DONETICK_PUSHOVER_TOKEN") != "" {
+		Config.Pushover.Token = os.Getenv("DONETICK_PUSHOVER_TOKEN")
+	}
+	if os.Getenv("DONETICK_DISABLE_SIGNUP") == "true" {
+		Config.IsUserCreationDisabled = true
+	}
+
 }
 func LoadConfig() *Config {
 	// set the config name based on the environment:

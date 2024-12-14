@@ -41,3 +41,7 @@ func (r *NotificationRepository) GetPendingNotificaiton(c context.Context, lookb
 	}
 	return notifications, nil
 }
+
+func (r *NotificationRepository) DeleteSentNotifications(c context.Context, since time.Time) error {
+	return r.db.WithContext(c).Where("is_sent = ? AND scheduled_for < ?", true, since).Delete(&nModel.Notification{}).Error
+}

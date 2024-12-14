@@ -14,6 +14,7 @@ import (
 	cModel "donetick.com/core/internal/circle/model"
 	cRepo "donetick.com/core/internal/circle/repo"
 	"donetick.com/core/internal/email"
+	nModel "donetick.com/core/internal/notifier/model"
 	uModel "donetick.com/core/internal/user/model"
 	uRepo "donetick.com/core/internal/user/repo"
 	"donetick.com/core/internal/utils"
@@ -26,20 +27,22 @@ import (
 )
 
 type Handler struct {
-	userRepo         *uRepo.UserRepository
-	circleRepo       *cRepo.CircleRepository
-	jwtAuth          *jwt.GinJWTMiddleware
-	email            *email.EmailSender
-	isDonetickDotCom bool
+	userRepo               *uRepo.UserRepository
+	circleRepo             *cRepo.CircleRepository
+	jwtAuth                *jwt.GinJWTMiddleware
+	email                  *email.EmailSender
+	isDonetickDotCom       bool
+	IsUserCreationDisabled bool
 }
 
 func NewHandler(ur *uRepo.UserRepository, cr *cRepo.CircleRepository, jwtAuth *jwt.GinJWTMiddleware, email *email.EmailSender, config *config.Config) *Handler {
 	return &Handler{
-		userRepo:         ur,
-		circleRepo:       cr,
-		jwtAuth:          jwtAuth,
-		email:            email,
-		isDonetickDotCom: config.IsDoneTickDotCom,
+		userRepo:               ur,
+		circleRepo:             cr,
+		jwtAuth:                jwtAuth,
+		email:                  email,
+		isDonetickDotCom:       config.IsDoneTickDotCom,
+		IsUserCreationDisabled: config.IsUserCreationDisabled,
 	}
 }
 
@@ -68,6 +71,12 @@ func (h *Handler) GetAllUsers() gin.HandlerFunc {
 }
 
 func (h *Handler) signUp(c *gin.Context) {
+	if h.IsUserCreationDisabled {
+		c.JSON(403, gin.H{
+			"error": "User creation is disabled",
+		})
+		return
+	}
 
 	type SignUpReq struct {
 		Username    string `json:"username" binding:"required,min=4,max=20"`
@@ -497,8 +506,8 @@ func (h *Handler) UpdateNotificationTarget(c *gin.Context) {
 	}
 
 	type Request struct {
-		Type  uModel.UserNotificationType `json:"type" binding:"required"`
-		Token string                      `json:"token" binding:"required"`
+		Type   nModel.NotificationType `json:"type"`
+		Target string                  `json:"target" binding:"required"`
 	}
 
 	var req Request
@@ -506,10 +515,25 @@ func (h *Handler) UpdateNotificationTarget(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 		return
 	}
+	if req.Type == nModel.NotificationTypeNone {
+		err := h.userRepo.DeleteNotificationTarget(c, currentUser.ID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete notification target"})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{})
+		return
+	}
 
-	err := h.userRepo.UpdateNotificationTarget(c, currentUser.ID, req.Token, req.Type)
+	err := h.userRepo.UpdateNotificationTarget(c, currentUser.ID, req.Target, req.Type)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update notification target"})
+		return
+	}
+
+	err = h.userRepo.UpdateNotificationTargetForAllNotifications(c, currentUser.ID, req.Target, req.Type)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update notification target for all notifications"})
 		return
 	}
 
@@ -579,11 +603,12 @@ func Routes(router *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware, limiter 
 	authRoutes := router.Group("auth")
 	authRoutes.Use(utils.RateLimitMiddleware(limiter))
 	{
+		authRoutes.POST("/:provider/callback", h.thirdPartyAuthCallback)
 		authRoutes.POST("/", h.signUp)
 		authRoutes.POST("login", auth.LoginHandler)
 		authRoutes.GET("refresh", auth.RefreshHandler)
-		authRoutes.POST("/:provider/callback", h.thirdPartyAuthCallback)
 		authRoutes.POST("reset", h.resetPassword)
 		authRoutes.POST("password", h.updateUserPassword)
 	}
+
 }

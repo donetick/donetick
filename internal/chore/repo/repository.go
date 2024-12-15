@@ -52,7 +52,15 @@ func (r *ChoreRepository) GetChore(c context.Context, choreID int) (*chModel.Cho
 func (r *ChoreRepository) GetChores(c context.Context, circleID int, userID int) ([]*chModel.Chore, error) {
 	var chores []*chModel.Chore
 	// if err := r.db.WithContext(c).Preload("Assignees").Where("is_active = ?", true).Order("next_due_date asc").Find(&chores, "circle_id = ?", circleID).Error; err != nil {
-	if err := r.db.WithContext(c).Preload("Assignees").Preload("LabelsV2").Joins("left join chore_assignees on chores.id = chore_assignees.chore_id").Where("chores.circle_id = ? AND (chores.created_by = ? OR chore_assignees.user_id = ?)", circleID, userID, userID).Group("chores.id").Order("next_due_date asc").Find(&chores, "circle_id = ?", circleID).Error; err != nil {
+	if err := r.db.WithContext(c).Preload("Assignees").Preload("LabelsV2").Joins("left join chore_assignees on chores.id = chore_assignees.chore_id").Where("chores.circle_id = ? AND (chores.created_by = ? OR chore_assignees.user_id = ?)", circleID, userID, userID).Group("chores.id").Order("next_due_date asc").Find(&chores, "circle_id = ? AND is_active = ?", circleID, true).Error; err != nil {
+		return nil, err
+	}
+	return chores, nil
+}
+
+func (r *ChoreRepository) GetArchivedChores(c context.Context, circleID int, userID int) ([]*chModel.Chore, error) {
+	var chores []*chModel.Chore
+	if err := r.db.WithContext(c).Preload("Assignees").Preload("LabelsV2").Joins("left join chore_assignees on chores.id = chore_assignees.chore_id").Where("chores.circle_id = ? AND (chores.created_by = ? OR chore_assignees.user_id = ?)", circleID, userID, userID).Group("chores.id").Order("next_due_date asc").Find(&chores, "circle_id = ? AND is_active = ?", circleID, false).Error; err != nil {
 		return nil, err
 	}
 	return chores, nil

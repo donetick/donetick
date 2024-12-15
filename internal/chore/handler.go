@@ -98,6 +98,26 @@ func (h *Handler) getChores(c *gin.Context) {
 	})
 }
 
+func (h *Handler) getArchivedChores(c *gin.Context) {
+	u, ok := auth.CurrentUser(c)
+	if !ok {
+		c.JSON(500, gin.H{
+			"error": "Error getting current circle",
+		})
+		return
+	}
+	chores, err := h.choreRepo.GetArchivedChores(c, u.CircleID, u.ID)
+	if err != nil {
+		c.JSON(500, gin.H{
+			"error": "Error getting chores",
+		})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"res": chores,
+	})
+}
 func (h *Handler) getChore(c *gin.Context) {
 
 	currentUser, ok := auth.CurrentUser(c)
@@ -1251,6 +1271,7 @@ func Routes(router *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware) {
 	choresRoutes.Use(auth.MiddlewareFunc())
 	{
 		choresRoutes.GET("/", h.getChores)
+		choresRoutes.GET("/archived", h.getArchivedChores)
 		choresRoutes.PUT("/", h.editChore)
 		choresRoutes.PUT("/:id/priority", h.updatePriority)
 		choresRoutes.POST("/", h.createChore)

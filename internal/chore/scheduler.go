@@ -42,14 +42,6 @@ func scheduleNextDueDate(chore *chModel.Chore, completedDate time.Time) (*time.T
 		baseDate = time.Date(baseDate.Year(), baseDate.Month(), baseDate.Day(), t.Hour(), t.Minute(), 0, 0, t.Location())
 
 	}
-	if chore.IsRolling && chore.NextDueDate.Before(completedDate) {
-		// we need to check if chore due date is before the completed date to handle this senario:
-		// if user trying to complete chore due in future (multiple time for insance) due date will be calculated
-		//  from the last completed date and due date change only in seconds.
-		// this make sure that the due date is always in future if the chore is rolling
-
-		baseDate = completedDate.UTC()
-	}
 
 	if chore.FrequencyType == "daily" {
 		nextDueDate = baseDate.AddDate(0, 0, 1)

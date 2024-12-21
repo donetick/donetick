@@ -841,6 +841,70 @@ func (h *Handler) updateDueDate(c *gin.Context) {
 		"res": chore,
 	})
 }
+func (h *Handler) archiveChore(c *gin.Context) {
+	rawID := c.Param("id")
+	id, err := strconv.Atoi(rawID)
+
+	if err != nil {
+		c.JSON(400, gin.H{
+			"error": "Invalid ID",
+		})
+		return
+	}
+	currentUser, ok := auth.CurrentUser(c)
+	if !ok {
+		c.JSON(500, gin.H{
+			"error": "Error getting current user",
+		})
+		return
+	}
+
+	err = h.choreRepo.ArchiveChore(c, id, currentUser.ID)
+
+	if err != nil {
+		c.JSON(500, gin.H{
+			"error": "Error archiving chore",
+		})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"message": "Chore archived successfully",
+	})
+}
+
+func (h *Handler) UnarchiveChore(c *gin.Context) {
+	rawID := c.Param("id")
+	id, err := strconv.Atoi(rawID)
+
+	if err != nil {
+		c.JSON(400, gin.H{
+			"error": "Invalid ID",
+		})
+		return
+	}
+	currentUser, ok := auth.CurrentUser(c)
+	if !ok {
+		c.JSON(500, gin.H{
+			"error": "Error getting current user",
+		})
+		return
+	}
+
+	err = h.choreRepo.UnarchiveChore(c, id, currentUser.ID)
+
+	if err != nil {
+		c.JSON(500, gin.H{
+			"error": "Error unarchiving chore",
+		})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"message": "Chore archived successfully",
+	})
+}
+
 func (h *Handler) completeChore(c *gin.Context) {
 	type CompleteChoreReq struct {
 		Note string `json:"note"`
@@ -1272,6 +1336,7 @@ func Routes(router *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware) {
 	{
 		choresRoutes.GET("/", h.getChores)
 		choresRoutes.GET("/archived", h.getArchivedChores)
+
 		choresRoutes.PUT("/", h.editChore)
 		choresRoutes.PUT("/:id/priority", h.updatePriority)
 		choresRoutes.POST("/", h.createChore)
@@ -1284,6 +1349,8 @@ func Routes(router *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware) {
 		choresRoutes.POST("/:id/skip", h.skipChore)
 		choresRoutes.PUT("/:id/assignee", h.updateAssignee)
 		choresRoutes.PUT("/:id/dueDate", h.updateDueDate)
+		choresRoutes.PUT("/:id/archive", h.archiveChore)
+		choresRoutes.PUT("/:id/unarchive", h.UnarchiveChore)
 		choresRoutes.DELETE("/:id", h.deleteChore)
 	}
 

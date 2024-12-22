@@ -293,3 +293,11 @@ func (r *ChoreRepository) GetChoreDetailByID(c context.Context, choreID int, cir
 	}
 	return &choreDetail, nil
 }
+
+func (r *ChoreRepository) ArchiveChore(c context.Context, choreID int, userID int) error {
+	return r.db.WithContext(c).Model(&chModel.Chore{}).Where("id = ? and created_by = ?", choreID, userID).Update("is_active", false).Error
+}
+
+func (r *ChoreRepository) UnarchiveChore(c context.Context, choreID int, userID int) error {
+	return r.db.WithContext(c).Model(&chModel.Chore{}).Where("id = ? and created_by = ?", choreID, userID).Update("is_active", true).Error
+}

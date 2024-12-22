@@ -1,29 +1,62 @@
+![Donetick Logo](assets/logo.png)
 
-![Logo](assets/logo.png)
-## What is Donetick
-An open-source, user-friendly app for managing tasks and chores, featuring customizable options to help you and others stay organized
+# Donetick
 
-## Features Highlights
-- Task and Chore Management: Easily create, edit, and manage tasks and chores for yourself or your group.
-- Build with sharing in mind: you give people access to you group and you can assign each other tasks. only those assigned to task or chore can see it
-- Assignee Assignment: Assign tasks to specific individuals with ability rotate them automatically using customizable strategies like randomly, least completed,etc..
-- Recurring Tasks: Schedule tasks to repeat daily, weekly, monthly, or yearly or something to trigger on specific day of month or day of the week. if you are not sure you can have adaptive recurring task where it does figure it out base on historical completion 
-- Progress Tracking: Track the completion status of tasks and view historical data.
-- API Integration 
+> **Simplify Tasks & Chores, Together!**
 
+Donetick is an open-source, user-friendly app designed to help you organize tasks and chores effectively.featuring customizable options to help you and others stay organized
 
-## Selfhosted : 
-Release binary included everything needed to be up and running, as even the frontend file served 
-### Using Docker run :
-1. pull the latest image using: `docker pull donetick/donetick`
-2. run the container and replace `/path/to/host/data` with where you want to place attach the volumne for the sqlite db `DT_ENV=selfhosted DT_SQLITE_PATH=/donetick-data/donetick.db docker run -v /path/to/host/data:/donetick-data -p 2021:2021 donetick/donetick`
+---
+
+## ✨ Features
 
 
+🏰 Group-Based Task Management: Create and manage tasks for solo or with your family or friends in shared circles.
+
+🔄 Smart Assignments: Assign tasks to individuals with rotation strategies like random or least completed.
+
+⏰ Recurring Tasks: Automate task scheduling with flexible recurrence options:
+
+Daily, weekly, monthly, or yearly.
+
+Custom triggers based on specific days or adaptive patterns using historical completion data.
+
+📈 Progress Tracking: Monitor completion rates and view historical data to track trends.
+
+📢 NFC Tag Support: Write NFC tags to trigger tasks instantly by scanning.
+
+📧 Notifications: Stay on top of tasks with reminders sent via Telegram or Pushover.
+
+📦 Integration:
+
+Trigger tasks using external systems through API.
+
+View tasks directly in supported platforms (e.g., Home Assistant with a custom component).
+
+💿 Labels for Organization: Group and organize tasks with labels. Labels can also be shared within the same group for better collaboration.
+
+🛠️ "Things" Integration: Use entities (numbers, strings, booleans) to trigger tasks, track values, or connect with external systems via webhooks.
 
 
+---
 
-### Using Docker Compose:
-You can use the following template 
+## 🚀 Quick Start
+make sure you update the `config/selfhosted.yaml` 
+### Using Docker
+1. **Pull the latest image:**
+   ```bash
+   docker pull donetick/donetick
+   ```
+2. **Run the container:** Replace `/path/to/host/data` with your preferred data directory:
+   ```bash
+   docker run -v /path/to/host/data:/donetick-data -p 2021:2021 \
+     -e DT_ENV=selfhosted \
+     -e DT_SQLITE_PATH=/donetick-data/donetick.db \
+     donetick/donetick
+   ```
+
+### Using Docker Compose
+Use this template to set up Donetick with Docker Compose:
 ```yaml
 services:
   donetick:
@@ -31,40 +64,85 @@ services:
     container_name: donetick
     restart: unless-stopped
     ports:
-      - 2021:2021 # needed for serving backend and frontend
+      - 2021:2021
     volumes:
-      - ./data:/donetick-data # database file stored (sqlite database)
-      - ./config:/config # configration file like selfhosted.yaml
+      - ./data:/donetick-data
+      - ./config:/config
     environment:
-      - DT_ENV=selfhosted # this tell donetick to load ./config/selfhosted.yaml for the configuration file
-      - DT_SQLITE_PATH=/donetick-data/donetick.db 
-
+      - DT_ENV=selfhosted
+      - DT_SQLITE_PATH=/donetick-data/donetick.db
+      
 ```
 
-### Using binary:
-1. Navigate to [Release]
-2. Download the appropiate file for you arch/os
-3. cd into the extracted folder
-4. run `./donetick` and you can specify the env as `DT_ENV=selfhosted`
+
+### Using the Binary
+1. **Download the latest release** from the [Releases](https://github.com/donetick/donetick/releases) page.
+2. **Extract the file** and navigate to the folder:
+   ```bash
+   cd path/to/extracted-folder
+   ```
+3. **Run Donetick:**
+   ```bash
+   DT_ENV=selfhosted ./donetick 
+   ```
+
+---
 
 
-## Development Environment 
+
+## 🛠️ Development Environment
+
 1. Clone the repository:
-2. Navigate to the project directory: `cd donetick`
-3. Download dependency `go mod download`
-4. Run locally `go run .`
+   ```bash
+   git clone https://github.com/donetick/donetick.git
+   ```
+2. Navigate to the project directory:
+   ```bash
+   cd donetick
+   ```
+3. Install dependencies:
+   ```bash
+   go mod download
+   ```
+4. Run the app locally:
+   ```bash
+   go run .
+   ```
 
+---
 
-## Contributing
-Contributions are welcome! If you would like to contribute to Donetick, please follow these steps:
-1. Fork the repository
-2. Create a new branch: `git checkout -b feature/your-feature-name`
-3. Make your changes and commit them: `git commit -m 'Add some feature'`
-4. Push to the branch: `git push origin feature/your-feature-name`
-5. Submit a pull request
+## 🤝 Contributing
 
+Contributions are welcome! If you want to work on something that is not listed as an issue, please open a [Discussion](https://github.com/donetick/donetick/discussions) first to ensure it aligns with our goals and to avoid any unnecessary effort!
 
-## License
-This project is licensed under the AGPLv3. See the [LICENSE](LICENSE) file for more details. I might consider changing it later to something else
+if you have an idea also feel free to use the [Discussion](https://github.com/donetick/donetick/discussions)
+1. Pick an issue or open discuss about the contribution
+2. Fork the repository.
+3. Create a new branch:
+   ```bash
+   git checkout -b feature/your-feature-name
+   ```
+4. Make your changes and commit them:
+   ```bash
+   git commit -m 'Add a new feature'
+   ```
+5. Push your branch:
+   ```bash
+   git push origin feature/your-feature-name
+   ```
+6. Submit a pull request.
 
+---
+
+## 🔒 License
+
+This project is licensed under the **AGPLv3**. See the [LICENSE](LICENSE) file for more details.
+
+---
+
+## 💡 Support Donetick
+
+ If you find it helpful, consider supporting us by starring the repository, contributing code, or sharing feedback!  
+
+---
 

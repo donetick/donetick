@@ -1,8 +1,15 @@
-![Donetick Logo](assets/logo.png)
 
-# Donetick
 
-> **Simplify Tasks & Chores, Together!**
+<div style="display: flex; align-items: center;">
+  <img src="assets/icon.png" alt="drawing" width="45"/>
+  <h1 style="margin: 10px 0 0 10px;">Donetick</h1>
+</div>
+
+**Simplify Tasks & Chores, Together!**
+
+![Screenshot](assets/screenshot.png)
+
+
 
 Donetick is an open-source, user-friendly app designed to help you organize tasks and chores effectively.featuring customizable options to help you and others stay organized
 

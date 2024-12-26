@@ -20,10 +20,9 @@ Donetick is an open-source, user-friendly app designed to help you organize task
 🔄 Smart Assignments: Assign tasks to individuals with rotation strategies like random or least completed.
 
 ⏰ Recurring Tasks: Automate task scheduling with flexible recurrence options:
-
 Daily, weekly, monthly, or yearly.
 
-Custom triggers based on specific days or adaptive patterns using historical completion data.
+📅 Custom triggers based on specific days or adaptive patterns using historical completion data.
 
 📈 Progress Tracking: Monitor completion rates and view historical data to track trends.
 
@@ -31,11 +30,8 @@ Custom triggers based on specific days or adaptive patterns using historical com
 
 📧 Notifications: Stay on top of tasks with reminders sent via Telegram or Pushover.
 
-📦 Integration:
-
-Trigger tasks using external systems through API.
-
-View tasks directly in supported platforms (e.g., Home Assistant with a custom component).
+📦 Integration: Trigger tasks using external systems through API like
+viewing tasks directly in supported platforms (e.g., Home Assistant with a custom component).
 
 💿 Labels for Organization: Group and organize tasks with labels. Labels can also be shared within the same group for better collaboration.
 

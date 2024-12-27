@@ -23,6 +23,8 @@ func (n *Notification) IsValid() bool {
 			return false
 		}
 		return true
+	case NotificationTypeMqtt:
+		return true
 	default:
 		return false
 	}
@@ -34,4 +36,5 @@ const (
 	NotificationTypeNone NotificationType = iota
 	NotificationTypeTelegram
 	NotificationTypePushover
+	NotificationTypeMqtt
 )

@@ -5,6 +5,14 @@ telegram:
   token: ""
 pushover:
   token: ""
+mqtt:
+  host: ""
+  port: 8883
+  use_tls: true
+  username: ""
+  password: ""
+  client_id: "donetick"
+  topic: "donetick"
 database:
   type: "sqlite"
   migration: true

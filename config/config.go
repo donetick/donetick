@@ -12,6 +12,7 @@ type Config struct {
 	Name                   string          `mapstructure:"name" yaml:"name"`
 	Telegram               TelegramConfig  `mapstructure:"telegram" yaml:"telegram"`
 	Pushover               PushoverConfig  `mapstructure:"pushover" yaml:"pushover"`
+	Mqtt                   MqttConfig      `mapstructure:"mqtt" yaml:"mqtt"`
 	Database               DatabaseConfig  `mapstructure:"database" yaml:"database"`
 	Jwt                    JwtConfig       `mapstructure:"jwt" yaml:"jwt"`
 	Server                 ServerConfig    `mapstructure:"server" yaml:"server"`
@@ -28,6 +29,16 @@ type TelegramConfig struct {
 
 type PushoverConfig struct {
 	Token string `mapstructure:"token" yaml:"token"`
+}
+
+type MqttConfig struct {
+	Host     string `mapstructure:"host" yaml:"host"`
+	Port     int    `mapstructure:"port" yaml:"port"`
+	UseTls   bool   `mapstructure:"use_tls" yaml:"use_tls"`
+	Username string `mapstructure:"username" yaml:"username"`
+	Password string `mapstructure:"password" yaml:"password"`
+	ClientId string `mapstructure:"client_id" yaml:"client_id"`
+	Topic    string `mapstructure:"topic" yaml:"topic"`
 }
 
 type DatabaseConfig struct {

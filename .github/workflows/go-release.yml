@@ -17,14 +17,15 @@ jobs:
       - name: Checkout Frontend
         uses: actions/checkout@v4
         with:
-          repository: 'donetick/frontend'
+          repository: '${{ vars.FRONTEND_REPO }}'
+          ref: ${{ vars.FRONTEND_REF }}
           token: ${{ secrets.GITHUB_TOKEN }}
           path: 'frontend-code'
       # build frontend 
       - name: Install Node.js
         uses: actions/setup-node@v2
         with:
-          node-version: '16'
+          node-version: '20'
       - name: Install Dependencies
         run: |
           cd frontend-code
@@ -49,15 +50,11 @@ jobs:
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
         with:
-          # either 'goreleaser' (default) or 'goreleaser-pro'
           distribution: goreleaser
-          # 'latest', 'nightly', or a semver
           version: latest
           args: release --clean --skip=validate
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Your GoReleaser Pro key, if you are using the 'goreleaser-pro' distribution
-          # GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
 
       # Log in to Docker Hub
       - name: Log in to Docker Hub

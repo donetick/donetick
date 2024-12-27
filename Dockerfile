@@ -5,7 +5,7 @@ WORKDIR /usr/src/app
 
 RUN apk --no-cache add curl jq
 
-RUN latest_release=$(curl --silent "https://api.github.com/repos/donetick/donetick/releases/latest" | jq -r .tag_name) && \
+RUN latest_release=$(curl --silent "https://api.github.com/repos/dkhalife/donetick/releases/latest" | jq -r .tag_name) && \
     set -ex; \
     apkArch="$(apk --print-arch)"; \
     case "$apkArch" in \

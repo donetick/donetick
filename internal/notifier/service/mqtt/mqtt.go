@@ -36,7 +36,7 @@ func NewMqttNotifier(config *config.Config) *MqttNotifier {
 func (m *MqttNotifier) SendNotification(c context.Context, notification *nModel.Notification) error {
 	log := logging.FromContext(c)
 
-	token := m.client.Publish(m.topic, 0, false, "testing").WaitTimeout(time.Second * 4)
+	token := m.client.Publish(m.topic, 0, false, notification.Text).WaitTimeout(time.Second * 4)
 	if token {
 		log.Info("Mqtt notification delivered")
 		return nil

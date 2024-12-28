@@ -8,6 +8,14 @@ pushover:
 database:
   type: "sqlite"
   migration: true
+mqtt:
+  host: ""
+  port: 1883
+  use_tls: false
+  username: ""
+  password: ""
+  client_id: "donetick"
+  topic: "donetick"
 jwt:
   secret: "secret"
   session_time: 168h

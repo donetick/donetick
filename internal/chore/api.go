@@ -36,7 +36,7 @@ func (h *API) GetAllChores(c *gin.Context) {
 		c.JSON(401, gin.H{"error": "Unauthorized"})
 		return
 	}
-	chores, err := h.choreRepo.GetChores(c, user.CircleID, user.ID)
+	chores, err := h.choreRepo.GetChores(c, user.CircleID, user.ID, false)
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return

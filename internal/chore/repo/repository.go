@@ -8,6 +8,7 @@ import (
 
 	config "donetick.com/core/config"
 	chModel "donetick.com/core/internal/chore/model"
+	cModel "donetick.com/core/internal/circle/model"
 	"gorm.io/gorm"
 )
 
@@ -49,10 +50,13 @@ func (r *ChoreRepository) GetChore(c context.Context, choreID int) (*chModel.Cho
 	return &chore, nil
 }
 
-func (r *ChoreRepository) GetChores(c context.Context, circleID int, userID int) ([]*chModel.Chore, error) {
+func (r *ChoreRepository) GetChores(c context.Context, circleID int, userID int, includeArchived bool) ([]*chModel.Chore, error) {
 	var chores []*chModel.Chore
-	// if err := r.db.WithContext(c).Preload("Assignees").Where("is_active = ?", true).Order("next_due_date asc").Find(&chores, "circle_id = ?", circleID).Error; err != nil {
-	if err := r.db.WithContext(c).Preload("Assignees").Preload("LabelsV2").Joins("left join chore_assignees on chores.id = chore_assignees.chore_id").Where("chores.circle_id = ? AND (chores.created_by = ? OR chore_assignees.user_id = ?)", circleID, userID, userID).Group("chores.id").Order("next_due_date asc").Find(&chores, "circle_id = ? AND is_active = ?", circleID, true).Error; err != nil {
+	query := r.db.WithContext(c).Preload("Assignees").Preload("LabelsV2").Joins("left join chore_assignees on chores.id = chore_assignees.chore_id").Where("chores.circle_id = ? AND (chores.created_by = ? OR chore_assignees.user_id = ?)", circleID, userID, userID).Group("chores.id").Order("next_due_date asc")
+	if !includeArchived {
+		query = query.Where("chores.is_active = ?", true)
+	}
+	if err := query.Find(&chores, "circle_id = ?", circleID).Error; err != nil {
 		return nil, err
 	}
 	return chores, nil
@@ -98,6 +102,7 @@ func (r *ChoreRepository) CompleteChore(c context.Context, chore *chModel.Chore,
 			AssignedTo:  chore.AssignedTo,
 			DueDate:     chore.NextDueDate,
 			Note:        note,
+			Points:      chore.Points,
 		}
 		if err := tx.Create(ch).Error; err != nil {
 			return err
@@ -113,6 +118,12 @@ func (r *ChoreRepository) CompleteChore(c context.Context, chore *chModel.Chore,
 		// Perform the update operation once, using the prepared updates map.
 		if err := tx.Model(&chModel.Chore{}).Where("id = ?", chore.ID).Updates(updates).Error; err != nil {
 			return err
+		}
+		// Update UserCirclee Points :
+		if chore.Points != nil && *chore.Points > 0 {
+			if err := tx.Debug().Model(&cModel.UserCircle{}).Where("user_id = ? AND circle_id = ?", userID, chore.CircleID).Update("points", gorm.Expr("points + ?", chore.Points)).Error; err != nil {
+				return err
+			}
 		}
 
 		return nil
@@ -266,6 +277,7 @@ func (r *ChoreRepository) GetChoreDetailByID(c context.Context, choreID int, cir
         chores.assigned_to,
         chores.created_by,
 		chores.priority,
+		chores.completion_window,
         recent_history.last_completed_date,
 		recent_history.notes,
         recent_history.last_assigned_to as last_completed_by,
@@ -300,4 +312,14 @@ func (r *ChoreRepository) ArchiveChore(c context.Context, choreID int, userID in
 
 func (r *ChoreRepository) UnarchiveChore(c context.Context, choreID int, userID int) error {
 	return r.db.WithContext(c).Model(&chModel.Chore{}).Where("id = ? and created_by = ?", choreID, userID).Update("is_active", true).Error
+}
+
+func (r *ChoreRepository) GetChoresHistoryByUserID(c context.Context, userID int, circleID int, days int, includeCircle bool) ([]*chModel.ChoreHistory, error) {
+
+	var chores []*chModel.ChoreHistory
+	since := time.Now().AddDate(0, 0, days*-1)
+	if err := r.db.WithContext(c).Where("completed_by = ? AND completed_at > ?", userID, since).Order("completed_at desc").Find(&chores).Error; err != nil {
+		return nil, err
+	}
+	return chores, nil
 }

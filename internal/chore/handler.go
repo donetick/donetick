@@ -53,6 +53,8 @@ type ChoreReq struct {
 	Labels               []string                      `json:"labels"`
 	LabelsV2             *[]LabelReq                   `json:"labelsV2"`
 	ThingTrigger         *ThingTrigger                 `json:"thingTrigger"`
+	Points               *int                          `json:"points"`
+	CompletionWindow     *int                          `json:"completionWindow"`
 }
 type Handler struct {
 	choreRepo  *chRepo.ChoreRepository
@@ -85,7 +87,13 @@ func (h *Handler) getChores(c *gin.Context) {
 		})
 		return
 	}
-	chores, err := h.choreRepo.GetChores(c, u.CircleID, u.ID)
+	includeArchived := false
+
+	if c.Query("includeArchived") == "true" {
+		includeArchived = true
+	}
+
+	chores, err := h.choreRepo.GetChores(c, u.CircleID, u.ID, includeArchived)
 	if err != nil {
 		c.JSON(500, gin.H{
 			"error": "Error getting chores",
@@ -271,6 +279,8 @@ func (h *Handler) createChore(c *gin.Context) {
 		CreatedBy:            currentUser.ID,
 		CreatedAt:            time.Now().UTC(),
 		CircleID:             currentUser.CircleID,
+		Points:               choreReq.Points,
+		CompletionWindow:     choreReq.CompletionWindow,
 	}
 	id, err := h.choreRepo.CreateChore(c, createdChore)
 	createdChore.ID = id
@@ -530,6 +540,8 @@ func (h *Handler) editChore(c *gin.Context) {
 		UpdatedBy:            currentUser.ID,
 		CreatedBy:            oldChore.CreatedBy,
 		CreatedAt:            oldChore.CreatedAt,
+		Points:               choreReq.Points,
+		CompletionWindow:     choreReq.CompletionWindow,
 	}
 	if err := h.choreRepo.UpsertChore(c, updatedChore); err != nil {
 		c.JSON(500, gin.H{
@@ -954,6 +966,16 @@ func (h *Handler) completeChore(c *gin.Context) {
 		})
 		return
 	}
+	// confirm that the chore in completion window:
+	if chore.CompletionWindow != nil {
+		if completedDate.After(chore.NextDueDate.Add(time.Hour * time.Duration(*chore.CompletionWindow))) {
+			c.JSON(400, gin.H{
+				"error": "Chore is out of completion window",
+			})
+			return
+		}
+	}
+
 	var nextDueDate *time.Time
 	if chore.FrequencyType == "adaptive" {
 		history, err := h.choreRepo.GetChoreHistoryWithLimit(c, chore.ID, 5)
@@ -1197,6 +1219,45 @@ func (h *Handler) updatePriority(c *gin.Context) {
 	})
 }
 
+func (h *Handler) getChoresHistory(c *gin.Context) {
+
+	currentUser, ok := auth.CurrentUser(c)
+	if !ok {
+		c.JSON(500, gin.H{
+			"error": "Error getting current user",
+		})
+		return
+	}
+	durationRaw := c.Query("limit")
+	if durationRaw == "" {
+		durationRaw = "7"
+	}
+
+	duration, err := strconv.Atoi(durationRaw)
+	if err != nil {
+		c.JSON(400, gin.H{
+			"error": "Invalid duration",
+		})
+		return
+	}
+	includeCircleRaw := c.Query("members")
+	includeCircle := false
+	if includeCircleRaw == "true" {
+		includeCircle = true
+	}
+
+	choreHistories, err := h.choreRepo.GetChoresHistoryByUserID(c, currentUser.ID, currentUser.CircleID, duration, includeCircle)
+	if err != nil {
+		c.JSON(500, gin.H{
+			"error": "Error getting chore history",
+		})
+		return
+	}
+	c.JSON(200, gin.H{
+		"res": choreHistories,
+	})
+}
+
 func (h *Handler) DeleteHistory(c *gin.Context) {
 
 	currentUser, ok := auth.CurrentUser(c)
@@ -1361,7 +1422,7 @@ func Routes(router *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware) {
 	{
 		choresRoutes.GET("/", h.getChores)
 		choresRoutes.GET("/archived", h.getArchivedChores)
-
+		choresRoutes.GET("/history", h.getChoresHistory)
 		choresRoutes.PUT("/", h.editChore)
 		choresRoutes.PUT("/:id/priority", h.updatePriority)
 		choresRoutes.POST("/", h.createChore)

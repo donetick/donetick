@@ -46,6 +46,8 @@ type Chore struct {
 	ThingChore           *tModel.ThingChore `json:"thingChore" gorm:"foreignkey:chore_id;references:id;<-:false"` // ThingChore relationship
 	Status               int                `json:"status" gorm:"column:status"`
 	Priority             int                `json:"priority" gorm:"column:priority"`
+	CompletionWindow     *int               `json:"completionWindow,omitempty" gorm:"column:completion_window"` // Number seconds before the chore is due that it can be completed
+	Points               *int               `json:"points,omitempty" gorm:"column:points"`                      // Points for completing the chore
 }
 type ChoreAssignees struct {
 	ID      int `json:"-" gorm:"primary_key"`
@@ -53,15 +55,26 @@ type ChoreAssignees struct {
 	UserID  int `json:"userId" gorm:"column:user_id;uniqueIndex:idx_chore_user"` // The user this assignee is for
 }
 type ChoreHistory struct {
-	ID          int        `json:"id" gorm:"primary_key"`                  // Unique identifier
-	ChoreID     int        `json:"choreId" gorm:"column:chore_id"`         // The chore this history is for
-	CompletedAt *time.Time `json:"completedAt" gorm:"column:completed_at"` // When the chore was completed
-	CompletedBy int        `json:"completedBy" gorm:"column:completed_by"` // Who completed the chore
-	AssignedTo  int        `json:"assignedTo" gorm:"column:assigned_to"`   // Who the chore was assigned to
-	Note        *string    `json:"notes" gorm:"column:notes"`              // Notes about the chore
-	DueDate     *time.Time `json:"dueDate" gorm:"column:due_date"`         // When the chore was due
-	UpdatedAt   *time.Time `json:"updatedAt" gorm:"column:updated_at"`     // When the record was last updated
+	ID          int                `json:"id" gorm:"primary_key"`                  // Unique identifier
+	ChoreID     int                `json:"choreId" gorm:"column:chore_id"`         // The chore this history is for
+	CompletedAt *time.Time         `json:"completedAt" gorm:"column:completed_at"` // When the chore was completed
+	CompletedBy int                `json:"completedBy" gorm:"column:completed_by"` // Who completed the chore
+	AssignedTo  int                `json:"assignedTo" gorm:"column:assigned_to"`   // Who the chore was assigned to
+	Note        *string            `json:"notes" gorm:"column:notes"`              // Notes about the chore
+	DueDate     *time.Time         `json:"dueDate" gorm:"column:due_date"`         // When the chore was due
+	UpdatedAt   *time.Time         `json:"updatedAt" gorm:"column:updated_at"`     // When the record was last updated
+	Status      ChoreHistoryStatus `json:"status" gorm:"column:status"`            // Status of the chore
+	Points      *int               `json:"points,omitempty" gorm:"column:points"`  // Points for completing the chore
 }
+type ChoreHistoryStatus int8
+
+const (
+	ChoreHistoryStatusPending       ChoreHistoryStatus = 0
+	ChoreHistoryStatusCompleted     ChoreHistoryStatus = 1
+	ChoreHistoryStatusCompletedLate ChoreHistoryStatus = 2
+	ChoreHistoryStatusMissed        ChoreHistoryStatus = 3
+	ChoreHistoryStatusSkipped       ChoreHistoryStatus = 4
+)
 
 type FrequencyMetadata struct {
 	Days   []*string `json:"days,omitempty"`
@@ -96,6 +109,7 @@ type ChoreDetail struct {
 	Priority            int        `json:"priority" gorm:"column:priority"`
 	Notes               *string    `json:"notes" gorm:"column:notes"`
 	CreatedBy           int        `json:"createdBy" gorm:"column:created_by"`
+	CompletionWindow    *int       `json:"completionWindow,omitempty" gorm:"column:completion_window"`
 }
 
 type Label struct {

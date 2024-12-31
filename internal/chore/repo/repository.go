@@ -8,6 +8,7 @@ import (
 
 	config "donetick.com/core/config"
 	chModel "donetick.com/core/internal/chore/model"
+	cModel "donetick.com/core/internal/circle/model"
 	"gorm.io/gorm"
 )
 
@@ -117,6 +118,12 @@ func (r *ChoreRepository) CompleteChore(c context.Context, chore *chModel.Chore,
 		// Perform the update operation once, using the prepared updates map.
 		if err := tx.Model(&chModel.Chore{}).Where("id = ?", chore.ID).Updates(updates).Error; err != nil {
 			return err
+		}
+		// Update UserCirclee Points :
+		if chore.Points != nil && *chore.Points > 0 {
+			if err := tx.Debug().Model(&cModel.UserCircle{}).Where("user_id = ? AND circle_id = ?", userID, chore.CircleID).Update("points", gorm.Expr("points + ?", chore.Points)).Error; err != nil {
+				return err
+			}
 		}
 
 		return nil
@@ -270,6 +277,7 @@ func (r *ChoreRepository) GetChoreDetailByID(c context.Context, choreID int, cir
         chores.assigned_to,
         chores.created_by,
 		chores.priority,
+		chores.completion_window,
         recent_history.last_completed_date,
 		recent_history.notes,
         recent_history.last_assigned_to as last_completed_by,

@@ -109,6 +109,7 @@ type ChoreDetail struct {
 	Priority            int        `json:"priority" gorm:"column:priority"`
 	Notes               *string    `json:"notes" gorm:"column:notes"`
 	CreatedBy           int        `json:"createdBy" gorm:"column:created_by"`
+	CompletionWindow    *int       `json:"completionWindow,omitempty" gorm:"column:completion_window"`
 }
 
 type Label struct {

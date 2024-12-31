@@ -54,6 +54,7 @@ type ChoreReq struct {
 	LabelsV2             *[]LabelReq                   `json:"labelsV2"`
 	ThingTrigger         *ThingTrigger                 `json:"thingTrigger"`
 	Points               *int                          `json:"points"`
+	CompletionWindow     *int                          `json:"completionWindow"`
 }
 type Handler struct {
 	choreRepo  *chRepo.ChoreRepository
@@ -279,6 +280,7 @@ func (h *Handler) createChore(c *gin.Context) {
 		CreatedAt:            time.Now().UTC(),
 		CircleID:             currentUser.CircleID,
 		Points:               choreReq.Points,
+		CompletionWindow:     choreReq.CompletionWindow,
 	}
 	id, err := h.choreRepo.CreateChore(c, createdChore)
 	createdChore.ID = id
@@ -539,6 +541,7 @@ func (h *Handler) editChore(c *gin.Context) {
 		CreatedBy:            oldChore.CreatedBy,
 		CreatedAt:            oldChore.CreatedAt,
 		Points:               choreReq.Points,
+		CompletionWindow:     choreReq.CompletionWindow,
 	}
 	if err := h.choreRepo.UpsertChore(c, updatedChore); err != nil {
 		c.JSON(500, gin.H{
@@ -963,6 +966,16 @@ func (h *Handler) completeChore(c *gin.Context) {
 		})
 		return
 	}
+	// confirm that the chore in completion window:
+	if chore.CompletionWindow != nil {
+		if completedDate.After(chore.NextDueDate.Add(time.Hour * time.Duration(*chore.CompletionWindow))) {
+			c.JSON(400, gin.H{
+				"error": "Chore is out of completion window",
+			})
+			return
+		}
+	}
+
 	var nextDueDate *time.Time
 	if chore.FrequencyType == "adaptive" {
 		history, err := h.choreRepo.GetChoreHistoryWithLimit(c, chore.ID, 5)
@@ -1227,7 +1240,7 @@ func (h *Handler) getChoresHistory(c *gin.Context) {
 		})
 		return
 	}
-	includeCircleRaw := c.Query("all")
+	includeCircleRaw := c.Query("members")
 	includeCircle := false
 	if includeCircleRaw == "true" {
 		includeCircle = true

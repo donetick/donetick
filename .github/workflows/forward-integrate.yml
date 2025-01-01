@@ -1,0 +1,117 @@
+name: Forward Integrate
+
+on:
+  schedule:
+  - cron: '0 * * * *'
+  workflow_dispatch:
+
+jobs:
+  merge-main:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      new-commits: ${{ steps.check-changes.outputs.new-commits }}
+    steps:
+    - name: Checkout main branch
+      uses: actions/checkout@v2
+      with:
+        ref: main
+        fetch-depth: 0
+        token: ${{ secrets.WORKFLOW_TOKEN }}
+    - name: Check for existing automerge branches
+      run: |
+        if git ls-remote --heads origin | grep -q "refs/heads/automerge/upstream/to/main/"; then
+          echo "An existing automerge branch already exists."
+          exit 1
+        fi
+    - name: Fetch upstream
+      run: |
+        git remote add upstream https://github.com/donetick/donetick.git
+        git fetch upstream main
+    - name: Create new branch
+      id: create-branch
+      run: |
+        BRANCH_NAME="automerge/upstream/to/main/$(date +%Y%m%d%H%M%S)"
+        git checkout -b $BRANCH_NAME origin/main
+        echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_OUTPUT
+    - name: Merge upstream/main into local main
+      id: merge
+      env:
+        GITHUB_TOKEN: ${{ secrets.WORKFLOW_TOKEN }}
+      run: |
+        git config --global user.email "automerge@dkhalife.com"
+        git config --global user.name "AutoMerge"
+        git merge upstream/main --no-edit
+    - name: Check for changes
+      id: check-changes
+      run: |
+        if [ -z "$(git diff origin/main..HEAD)" ]; then
+          echo "new-commits=false" >> $GITHUB_OUTPUT
+        else
+          echo "new-commits=true" >> $GITHUB_OUTPUT
+        fi
+    - name: Push changes
+      if: steps.check-changes.outputs.new-commits == 'true'
+      run: |
+        git push --force origin ${{ steps.create-branch.outputs.BRANCH_NAME }}
+    - name: Create pull request
+      if: steps.check-changes.outputs.new-commits == 'true'
+      env:
+        GH_TOKEN: ${{ secrets.WORKFLOW_TOKEN }}
+        BRANCH_NAME: ${{ steps.create-branch.outputs.BRANCH_NAME }}
+      run: |
+        gh repo set-default dkhalife/donetick
+        gh pr create --base main --head $BRANCH_NAME --fill --title "[AutoMerge] FI from upstream/main to main"
+
+  merge-develop:
+    needs: merge-main
+    runs-on: ubuntu-latest
+    if: ${{ needs.merge-main.outputs.new-commits == 'false' }}
+    steps:
+    - name: Checkout develop branch
+      uses: actions/checkout@v2
+      with:
+        ref: develop
+        fetch-depth: 0
+        token: ${{ secrets.WORKFLOW_TOKEN }}
+    - name: Check for existing automerge branches
+      run: |
+        if git ls-remote --heads origin | grep -q "refs/heads/automerge/main/to/develop/"; then
+          echo "An existing automerge branch already exists."
+          exit 1
+        fi
+    - name: Create new branch
+      id: create-branch
+      run: |
+        BRANCH_NAME="automerge/main/to/develop/$(date +%Y%m%d%H%M%S)"
+        git checkout -b $BRANCH_NAME origin/develop
+        echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_OUTPUT
+    - name: Merge main into local develop
+      id: merge
+      env:
+        GITHUB_TOKEN: ${{ secrets.WORKFLOW_TOKEN }}
+      run: |
+        git config --global user.email "automerge@dkhalife.com"
+        git config --global user.name "AutoMerge"
+        git merge origin/main --no-edit
+    - name: Check for changes
+      id: check-changes
+      run: |
+        if [ -z "$(git diff origin/develop..HEAD)" ]; then
+          echo "new-commits=false" >> $GITHUB_OUTPUT
+        else
+          echo "new-commits=true" >> $GITHUB_OUTPUT
+        fi
+    - name: Push changes
+      if: steps.check-changes.outputs.new-commits == 'true'
+      run: |
+        git push --force origin ${{ steps.create-branch.outputs.BRANCH_NAME }}
+    - name: Create pull request
+      if: steps.check-changes.outputs.new-commits == 'true'
+      env:
+        GH_TOKEN: ${{ secrets.WORKFLOW_TOKEN }}
+        BRANCH_NAME: ${{ steps.create-branch.outputs.BRANCH_NAME }}
+      run: |
+        gh repo set-default dkhalife/donetick
+        gh pr create --base develop --head $BRANCH_NAME --fill --title "[AutoMerge] FI from main to develop"

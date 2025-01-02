@@ -56,22 +56,23 @@ jobs:
           args: release --clean --skip=validate
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Your GoReleaser Pro key, if you are using the 'goreleaser-pro' distribution
-          # GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
+      # I added QEMU Emulation support for non-native architectures and also Buildx to enables multi-architecture. not sure if there is better/faster way to do this
+      - name: Set up QEMU 
+        uses: docker/setup-qemu-action@v3
 
-      # Log in to Docker Hub
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Log in to Docker Hub
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      # Build and tag Docker image
-      - name: Build Docker image
-        run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/donetick:latest .
-
-      # Push Docker image
-      - name: Push Docker image
-        run: |
-          docker push ${{ secrets.DOCKER_USERNAME }}/donetick:latest 
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/donetick:latest, ${{ secrets.DOCKER_USERNAME }}/donetick:${{ github.ref_name }}
+          platforms: linux/amd64,linux/arm64,linux/arm/v7

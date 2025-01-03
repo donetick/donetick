@@ -42,7 +42,9 @@ func scheduleNextDueDate(chore *chModel.Chore, completedDate time.Time) (*time.T
 		baseDate = time.Date(baseDate.Year(), baseDate.Month(), baseDate.Day(), t.Hour(), t.Minute(), 0, 0, t.Location())
 
 	}
-
+	if chore.IsRolling {
+		baseDate = completedDate.UTC()
+	}
 	if chore.FrequencyType == "daily" {
 		nextDueDate = baseDate.AddDate(0, 0, 1)
 	} else if chore.FrequencyType == "weekly" {

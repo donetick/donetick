@@ -279,7 +279,7 @@ func (h *Handler) DeleteThing(c *gin.Context) {
 }
 func Routes(r *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware) {
 
-	thingRoutes := r.Group("things")
+	thingRoutes := r.Group("api/v1/things")
 	thingRoutes.Use(auth.MiddlewareFunc())
 	{
 		thingRoutes.POST("", h.CreateThing)

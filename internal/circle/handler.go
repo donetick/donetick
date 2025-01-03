@@ -427,7 +427,7 @@ func (h *Handler) AcceptJoinRequest(c *gin.Context) {
 func Routes(router *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware) {
 	log.Println("Registering routes")
 
-	circleRoutes := router.Group("circles")
+	circleRoutes := router.Group("api/v1/circles")
 	circleRoutes.Use(auth.MiddlewareFunc())
 	{
 		circleRoutes.GET("/members", h.GetCircleMembers)

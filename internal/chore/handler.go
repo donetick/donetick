@@ -195,14 +195,17 @@ func (h *Handler) createChore(c *gin.Context) {
 	}
 
 	circleUsers, err := h.circleRepo.GetCircleUsers(c, currentUser.CircleID)
+	if err != nil {
+		log.Print(err)
+		c.JSON(500, gin.H{"error": "Error getting circle users"})
+		return
+	}
 	for _, assignee := range choreReq.Assignees {
 		userFound := false
 		for _, circleUser := range circleUsers {
 			if assignee.UserID == circleUser.UserID {
 				userFound = true
-
 				break
-
 			}
 		}
 		if !userFound {

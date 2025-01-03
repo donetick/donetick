@@ -10,6 +10,14 @@ Donetick is an open-source, user-friendly app designed to help you organize task
 ![Screenshot](assets/screenshot.png)
 
 
+![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/donetick/donetick/go-release.yml)
+![GitHub release (latest by date)](https://img.shields.io/github/v/release/donetick/donetick)
+![Docker Pulls](https://img.shields.io/docker/pulls/donetick/donetick)
+
+
+[![Discord](https://img.shields.io/discord/1272383484509421639)](https://discord.gg/6hSH6F33q7)
+[![Reddit](https://img.shields.io/reddit/subreddit-subscribers/donetick)](https://www.reddit.com/r/donetick)
+
 ---
 
 ## ✨ Features
@@ -140,9 +148,17 @@ This project is licensed under the **AGPLv3**. See the [LICENSE](LICENSE) file f
 
 ---
 
+## 💬 Join the Discussion
+For ideas or feature requests, please use GitHub Discussions. We also have a Discord server and a subreddit for those who prefer those platforms!
+
+<img alt="Discord" src="https://img.shields.io/discord/1272383484509421639">
+<img alt="Reddit" src="https://img.shields.io/reddit/subreddit-subscribers/donetick">
+<img alt="GitHub Discussions" src="https://img.shields.io/github/discussions/donetick/donetick">
+
+---
+
 ## 💡 Support Donetick
 
  If you find it helpful, consider supporting us by starring the repository, contributing code, or sharing feedback!  
 
 ---
-

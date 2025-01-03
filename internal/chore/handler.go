@@ -1392,7 +1392,7 @@ func checkNextAssignee(chore *chModel.Chore, choresHistory []*chModel.ChoreHisto
 
 func Routes(router *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware) {
 
-	choresRoutes := router.Group("chores")
+	choresRoutes := router.Group("api/v1/chores")
 	choresRoutes.Use(auth.MiddlewareFunc())
 	{
 		choresRoutes.GET("/", h.getChores)

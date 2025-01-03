@@ -164,7 +164,7 @@ func validateUserAndThing(c *gin.Context, h *Webhook) (*tModel.Thing, bool) {
 
 func Webhooks(cfg *config.Config, w *Webhook, r *gin.Engine, auth *jwt.GinJWTMiddleware) {
 
-	thingsAPI := r.Group("webhooks/things")
+	thingsAPI := r.Group("eapi/v1/things")
 
 	thingsAPI.Use(utils.TimeoutMiddleware(cfg.Server.WriteTimeout))
 	{

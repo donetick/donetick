@@ -1417,7 +1417,7 @@ func indexOf(arr []chModel.ChoreAssignees, value int) int {
 
 func Routes(router *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware) {
 
-	choresRoutes := router.Group("chores")
+	choresRoutes := router.Group("api/v1/chores")
 	choresRoutes.Use(auth.MiddlewareFunc())
 	{
 		choresRoutes.GET("/", h.getChores)

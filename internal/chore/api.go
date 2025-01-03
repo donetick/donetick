@@ -46,7 +46,7 @@ func (h *API) GetAllChores(c *gin.Context) {
 
 func APIs(cfg *config.Config, api *API, r *gin.Engine, auth *jwt.GinJWTMiddleware, limiter *limiter.Limiter) {
 
-	thingsAPI := r.Group("api/v1/chore")
+	thingsAPI := r.Group("eapi/v1/chore")
 
 	thingsAPI.Use(utils.TimeoutMiddleware(cfg.Server.WriteTimeout), utils.RateLimitMiddleware(limiter))
 	{

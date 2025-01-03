@@ -151,9 +151,11 @@ This project is licensed under the **AGPLv3**. See the [LICENSE](LICENSE) file f
 ## 💬 Join the Discussion
 For ideas or feature requests, please use GitHub Discussions. We also have a Discord server and a subreddit for those who prefer those platforms!
 
-<img alt="Discord" src="https://img.shields.io/discord/1272383484509421639">
-<img alt="Reddit" src="https://img.shields.io/reddit/subreddit-subscribers/donetick">
-<img alt="GitHub Discussions" src="https://img.shields.io/github/discussions/donetick/donetick">
+
+[![Discord](https://img.shields.io/discord/1272383484509421639)](https://discord.gg/6hSH6F33q7)
+[![Reddit](https://img.shields.io/reddit/subreddit-subscribers/donetick)](https://www.reddit.com/r/donetick)
+
+[![Github Discussion](https://img.shields.io/github/discussions/donetick/donetick)](https://github.com/donetick/donetick/discussions)
 
 ---
 

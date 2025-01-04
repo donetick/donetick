@@ -1,0 +1,42 @@
+name: Release
+
+on:
+  workflow_dispatch:
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.WORKFLOW_TOKEN }}
+    - name: Get the latest tag
+      id: get_latest_tag
+      env:
+        GH_TOKEN: ${{ secrets.WORKFLOW_TOKEN }}
+      run: |
+        gh repo set-default dkhalife/donetick
+        latest_tag=$(gh release view --json tagName -q .tagName)
+        echo "::set-output name=latest_tag::$latest_tag"
+    - name: Bump version
+      id: bump_version
+      run: |
+        latest_tag=${{ steps.get_latest_tag.outputs.latest_tag }}
+        IFS='.' read -r -a version_parts <<< "${latest_tag#v}"
+        major=${version_parts[0]}
+        minor=${version_parts[1]}
+        patch=${version_parts[2]}
+        new_patch=$((patch + 1))
+        new_tag="v${major}.${minor}.${new_patch}"
+        echo "::set-output name=new_tag::$new_tag"
+    - name: Create and push new tag
+      run: |
+        new_tag=${{ steps.bump_version.outputs.new_tag }}
+        git config user.name "github-actions"
+        git config user.email "github-actions@github.com"
+        git tag $new_tag
+        git push origin $new_tag

@@ -17,8 +17,9 @@ jobs:
       - name: Checkout Frontend
         uses: actions/checkout@v4
         with:
-          repository: 'donetick/frontend'
+          repository: '${{ vars.FRONTEND_REPO }}'
           token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ vars.FRONTEND_REF }}
           path: 'frontend-code'
       # build frontend 
       - name: Install Node.js

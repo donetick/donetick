@@ -81,14 +81,16 @@ func generateDueNotifications(chore *chModel.Chore, users []*cModel.UserCircleDe
 	}
 	for _, user := range users {
 		notification := &nModel.Notification{
-			ChoreID:      chore.ID,
-			IsSent:       false,
-			ScheduledFor: *chore.NextDueDate,
-			CreatedAt:    time.Now().UTC(),
-			TypeID:       user.NotificationType,
-			UserID:       user.ID,
-			TargetID:     user.TargetID,
-			Text:         fmt.Sprintf("📅 Reminder: *%s* is due today and assigned to %s.", chore.Name, assignee.DisplayName),
+			ChoreID:       chore.ID,
+			IsSent:        false,
+			ScheduledFor:  *chore.NextDueDate,
+			CreatedAt:     time.Now().UTC(),
+			TypeID:        user.NotificationType,
+			UserID:        user.ID,
+			TargetID:      user.TargetID,
+			WebhookURL:    user.WebhookURL,
+			WebhookMethod: user.WebhookMethod,
+			Text:          fmt.Sprintf("📅 Reminder: *%s* is due today and assigned to %s.", chore.Name, assignee.DisplayName),
 		}
 		if notification.IsValid() {
 			notifications = append(notifications, notification)
@@ -109,14 +111,16 @@ func generatePreDueNotifications(chore *chModel.Chore, users []*cModel.UserCircl
 	notifications := make([]*nModel.Notification, 0)
 	for _, user := range users {
 		notification := &nModel.Notification{
-			ChoreID:      chore.ID,
-			IsSent:       false,
-			ScheduledFor: *chore.NextDueDate,
-			CreatedAt:    time.Now().UTC().Add(-time.Hour * 3),
-			TypeID:       user.NotificationType,
-			UserID:       user.ID,
-			TargetID:     user.TargetID,
-			Text:         fmt.Sprintf("📢 Heads up! *%s* is due soon (on %s) and assigned to %s.", chore.Name, chore.NextDueDate.Format("January 2nd"), assignee.DisplayName),
+			ChoreID:       chore.ID,
+			IsSent:        false,
+			ScheduledFor:  *chore.NextDueDate,
+			CreatedAt:     time.Now().UTC().Add(-time.Hour * 3),
+			TypeID:        user.NotificationType,
+			UserID:        user.ID,
+			TargetID:      user.TargetID,
+			WebhookURL:    user.WebhookURL,
+			WebhookMethod: user.WebhookMethod,
+			Text:          fmt.Sprintf("📢 Heads up! *%s* is due soon (on %s) and assigned to %s.", chore.Name, chore.NextDueDate.Format("January 2nd"), assignee.DisplayName),
 		}
 		if notification.IsValid() {
 			notifications = append(notifications, notification)
@@ -140,14 +144,16 @@ func generateOverdueNotifications(chore *chModel.Chore, users []*cModel.UserCirc
 		scheduleTime := chore.NextDueDate.Add(time.Hour * time.Duration(hours))
 		for _, user := range users {
 			notification := &nModel.Notification{
-				ChoreID:      chore.ID,
-				IsSent:       false,
-				ScheduledFor: scheduleTime,
-				CreatedAt:    time.Now().UTC(),
-				TypeID:       user.NotificationType,
-				UserID:       user.ID,
-				TargetID:     fmt.Sprint(user.TargetID),
-				Text:         fmt.Sprintf("🚨 *%s* is now %d hours overdue. Please complete it as soon as possible. (Assigned to %s)", chore.Name, hours, assignee.DisplayName),
+				ChoreID:       chore.ID,
+				IsSent:        false,
+				ScheduledFor:  scheduleTime,
+				CreatedAt:     time.Now().UTC(),
+				TypeID:        user.NotificationType,
+				UserID:        user.ID,
+				TargetID:      fmt.Sprint(user.TargetID),
+				WebhookURL:    user.WebhookURL,
+				WebhookMethod: user.WebhookMethod,
+				Text:          fmt.Sprintf("🚨 *%s* is now %d hours overdue. Please complete it as soon as possible. (Assigned to %s)", chore.Name, hours, assignee.DisplayName),
 			}
 			if notification.IsValid() {
 				notifications = append(notifications, notification)
@@ -172,7 +178,9 @@ func generateCircleGroupNotifications(chore *chModel.Chore, mt *chModel.Notifica
 			CreatedAt:    time.Now().UTC(),
 			TypeID:       1,
 			TargetID:     fmt.Sprint(*mt.CircleGroupID),
-			Text:         fmt.Sprintf("📅 Reminder: *%s* is due today.", chore.Name),
+			//WebhookURL:    ?.WebhookURL,
+			//WebhookMethod: ?.WebhookMethod,
+			Text: fmt.Sprintf("📅 Reminder: *%s* is due today.", chore.Name),
 		}
 		if notification.IsValid() {
 			notifications = append(notifications, notification)
@@ -187,7 +195,9 @@ func generateCircleGroupNotifications(chore *chModel.Chore, mt *chModel.Notifica
 			CreatedAt:    time.Now().UTC().Add(-time.Hour * 3),
 			TypeID:       3,
 			TargetID:     fmt.Sprint(*mt.CircleGroupID),
-			Text:         fmt.Sprintf("📢 Heads up! *%s* is due soon (on %s).", chore.Name, chore.NextDueDate.Format("January 2nd")),
+			//WebhookURL:    ?.WebhookURL,
+			//WebhookMethod: ?.WebhookMethod,
+			Text: fmt.Sprintf("📢 Heads up! *%s* is due soon (on %s).", chore.Name, chore.NextDueDate.Format("January 2nd")),
 		}
 		if notification.IsValid() {
 			notifications = append(notifications, notification)
@@ -204,7 +214,9 @@ func generateCircleGroupNotifications(chore *chModel.Chore, mt *chModel.Notifica
 				CreatedAt:    time.Now().UTC(),
 				TypeID:       2,
 				TargetID:     fmt.Sprint(*mt.CircleGroupID),
-				Text:         fmt.Sprintf("🚨 *%s* is now %d hours overdue. Please complete it as soon as possible.", chore.Name, hours),
+				//WebhookURL:    ?.WebhookURL,
+				//WebhookMethod: ?.WebhookMethod,
+				Text: fmt.Sprintf("🚨 *%s* is now %d hours overdue. Please complete it as soon as possible.", chore.Name, hours),
 			}
 			if notification.IsValid() {
 				notifications = append(notifications, notification)

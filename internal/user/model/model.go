@@ -43,8 +43,10 @@ type APIToken struct {
 }
 
 type UserNotificationTarget struct {
-	UserID    int                     `json:"userId" gorm:"column:user_id;index;primaryKey"` // Index on userID
-	Type      nModel.NotificationType `json:"type" gorm:"column:type"`                       // Type
-	TargetID  string                  `json:"target_id" gorm:"column:target_id"`             // Target ID
-	CreatedAt time.Time               `json:"-" gorm:"column:created_at"`
+	UserID        int                     `json:"userId" gorm:"column:user_id;index;primaryKey"` // Index on userID
+	Type          nModel.NotificationType `json:"type" gorm:"column:type"`                       // Type
+	TargetID      string                  `json:"target_id" gorm:"column:target_id"`             // Target ID
+	WebhookURL    string                  `json:"webhook_url" gorm:"column:webhook_url"`         // Webhook URL
+	WebhookMethod nModel.WebhookMethod    `json:"webhook_method" gorm:"column:webhook_method"`   // Webhook Method
+	CreatedAt     time.Time               `json:"-" gorm:"column:created_at"`
 }

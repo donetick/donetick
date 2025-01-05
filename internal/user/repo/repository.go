@@ -160,12 +160,14 @@ func (r *UserRepository) DeleteAPIToken(c context.Context, userID int, tokenID s
 	return r.db.WithContext(c).Where("id = ? AND user_id = ?", tokenID, userID).Delete(&uModel.APIToken{}).Error
 }
 
-func (r *UserRepository) UpdateNotificationTarget(c context.Context, userID int, targetID string, targetType nModel.NotificationType) error {
+func (r *UserRepository) UpdateNotificationTarget(c context.Context, userID int, targetID string, targetType nModel.NotificationType, webhookMethod nModel.WebhookMethod, WebhookURL string) error {
 	return r.db.WithContext(c).Save(&uModel.UserNotificationTarget{
-		UserID:    userID,
-		TargetID:  targetID,
-		Type:      targetType,
-		CreatedAt: time.Now().UTC(),
+		UserID:        userID,
+		TargetID:      targetID,
+		Type:          targetType,
+		CreatedAt:     time.Now().UTC(),
+		WebhookURL:    WebhookURL,
+		WebhookMethod: webhookMethod,
 	}).Error
 }
 
@@ -173,7 +175,7 @@ func (r *UserRepository) DeleteNotificationTarget(c context.Context, userID int)
 	return r.db.WithContext(c).Where("user_id = ?", userID).Delete(&uModel.UserNotificationTarget{}).Error
 }
 
-func (r *UserRepository) UpdateNotificationTargetForAllNotifications(c context.Context, userID int, targetID string, targetType nModel.NotificationType) error {
+func (r *UserRepository) UpdateNotificationTargetForAllNotifications(c context.Context, userID int, targetID string, targetType nModel.NotificationType, webhookMethod nModel.WebhookMethod, WebhookURL string) error {
 	return r.db.WithContext(c).Model(&nModel.Notification{}).Where("user_id = ?", userID).Update("target_id", targetID).Update("type", targetType).Error
 }
 func (r *UserRepository) UpdatePasswordByUserId(c context.Context, userID int, password string) error {

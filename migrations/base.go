@@ -60,7 +60,7 @@ func Run(ctx context.Context, db *gorm.DB) error {
 		db.Model(&Migration{}).Where("id = ?", migration.ID()).Count(&count)
 		if count > 0 {
 			skippedCount++
-			log.Debug("Skipping migration %s as it is already applied", migration.ID())
+			log.Debugf("Skipping migration %s as it is already applied", migration.ID())
 			continue
 		}
 

@@ -507,7 +507,7 @@ func (h *Handler) UpdateNotificationTarget(c *gin.Context) {
 
 	type Request struct {
 		Type   nModel.NotificationType `json:"type"`
-		Target string                  `json:"target" binding:"required"`
+		Target string                  `json:"target"`
 	}
 
 	var req Request

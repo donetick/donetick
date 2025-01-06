@@ -110,7 +110,7 @@ func TestScheduleNextDueDateBasic(t *testing.T) {
 				IsRolling:         false,
 			},
 			completedAt: choreTime,
-			expected:    choreTime.AddDate(0, 0, 14).UTC().Truncate(time.Hour).Add(30 * time.Minute), // Same Minute as Metadata time?
+			expected:    truncateToDay(choreTime.AddDate(0, 0, 14).UTC()).Add(18 * time.Hour).Add(30 * time.Minute), // Note: Same Hour and Minute as Metadata time
 		},
 		{
 			Name: "14 days interval Completed late",
@@ -122,7 +122,7 @@ func TestScheduleNextDueDateBasic(t *testing.T) {
 				IsRolling:         false,
 			},
 			completedAt: choreTime.AddDate(0, 0, 1),
-			expected:    choreTime.AddDate(0, 0, 14).UTC().Truncate(time.Hour).Add(30 * time.Minute), // Same Minute as Metadata time?
+			expected:    truncateToDay(choreTime.AddDate(0, 0, 14).UTC()).Add(18 * time.Hour).Add(30 * time.Minute), // Note: Same Hour and Minute as Metadata time
 		},
 
 		//
@@ -142,6 +142,10 @@ func TestScheduleNextDueDateBasic(t *testing.T) {
 			}
 		})
 	}
+}
+
+func truncateToDay(t time.Time) time.Time {
+	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
 }
 
 func TestScheduleNextDueDateDayOfTheWeek(t *testing.T) {

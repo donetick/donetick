@@ -26,11 +26,11 @@ func scheduleNextDueDate(chore *chModel.Chore, completedDate time.Time) (*time.T
 
 	if chore.NextDueDate != nil {
 		// no due date set, use the current date
-
 		baseDate = chore.NextDueDate.UTC()
 	} else {
 		baseDate = completedDate.UTC()
 	}
+
 	if chore.FrequencyType == "day_of_the_month" || chore.FrequencyType == "days_of_the_week" || chore.FrequencyType == "interval" {
 		// time in frequency metadata stored as RFC3339 format like  `2024-07-07T13:27:00-04:00`
 		// parse it to time.Time:

@@ -2,6 +2,7 @@ package chore
 
 import (
 	"encoding/json"
+	"fmt"
 	"testing"
 	"time"
 
@@ -11,10 +12,13 @@ import (
 func TestScheduleNextDueDateBasic(t *testing.T) {
 	choreTime := time.Now()
 	freqencyMetadataBytes := `{"time":"2024-07-07T14:30:00-04:00"}`
+	intervalFreqencyMetadataBytes := `{"time":"2024-07-07T14:30:00-04:00", "unit": "days"}`
 
 	testTable := []struct {
-		chore    *chModel.Chore
-		expected time.Time
+		Name        string
+		chore       *chModel.Chore
+		completedAt time.Time
+		expected    time.Time
 	}{
 		{
 			chore: &chModel.Chore{
@@ -22,7 +26,28 @@ func TestScheduleNextDueDateBasic(t *testing.T) {
 				NextDueDate:       &choreTime,
 				FrequencyMetadata: &freqencyMetadataBytes,
 			},
-			expected: choreTime.AddDate(0, 0, 1),
+			completedAt: choreTime,
+			expected:    choreTime.AddDate(0, 0, 1),
+		},
+		{ // Completed 1 day late
+			chore: &chModel.Chore{
+				FrequencyType:     chModel.FrequancyTypeDaily,
+				NextDueDate:       &choreTime,
+				FrequencyMetadata: &freqencyMetadataBytes,
+			},
+			completedAt: choreTime.AddDate(0, 0, 1),
+			expected:    choreTime.AddDate(0, 0, 1),
+		},
+		{
+			Name: "Rolling completed 1 day late",
+			chore: &chModel.Chore{
+				FrequencyType:     chModel.FrequancyTypeDaily,
+				NextDueDate:       &choreTime,
+				FrequencyMetadata: &freqencyMetadataBytes,
+				IsRolling:         true,
+			},
+			completedAt: choreTime.AddDate(0, 0, 1),
+			expected:    choreTime.AddDate(0, 0, 1+1),
 		},
 		{
 			chore: &chModel.Chore{
@@ -30,7 +55,8 @@ func TestScheduleNextDueDateBasic(t *testing.T) {
 				NextDueDate:       &choreTime,
 				FrequencyMetadata: &freqencyMetadataBytes,
 			},
-			expected: choreTime.AddDate(0, 0, 7),
+			completedAt: choreTime,
+			expected:    choreTime.AddDate(0, 0, 7),
 		},
 		{
 			chore: &chModel.Chore{
@@ -38,7 +64,8 @@ func TestScheduleNextDueDateBasic(t *testing.T) {
 				NextDueDate:       &choreTime,
 				FrequencyMetadata: &freqencyMetadataBytes,
 			},
-			expected: choreTime.AddDate(0, 1, 0),
+			completedAt: choreTime,
+			expected:    choreTime.AddDate(0, 1, 0),
 		},
 		{
 			chore: &chModel.Chore{
@@ -46,23 +73,79 @@ func TestScheduleNextDueDateBasic(t *testing.T) {
 				NextDueDate:       &choreTime,
 				FrequencyMetadata: &freqencyMetadataBytes,
 			},
-			expected: choreTime.AddDate(1, 0, 0),
+			completedAt: choreTime,
+			expected:    choreTime.AddDate(1, 0, 0),
+		},
+		{
+			Name: "14 days interval Rolling Completed in time",
+			chore: &chModel.Chore{
+				FrequencyType:     chModel.FrequancyTypeIntervel,
+				NextDueDate:       &choreTime,
+				FrequencyMetadata: &intervalFreqencyMetadataBytes,
+				Frequency:         14,
+				IsRolling:         true,
+			},
+			completedAt: choreTime,
+			expected:    choreTime.AddDate(0, 0, 14),
+		},
+		{
+			Name: "14 days interval Rolling Completed late",
+			chore: &chModel.Chore{
+				FrequencyType:     chModel.FrequancyTypeIntervel,
+				NextDueDate:       &choreTime,
+				FrequencyMetadata: &intervalFreqencyMetadataBytes,
+				Frequency:         14,
+				IsRolling:         true,
+			},
+			completedAt: choreTime.AddDate(0, 0, 1),
+			expected:    choreTime.AddDate(0, 0, 14+1),
+		},
+		{
+			Name: "14 days interval Completed in time",
+			chore: &chModel.Chore{
+				FrequencyType:     chModel.FrequancyTypeIntervel,
+				NextDueDate:       &choreTime,
+				FrequencyMetadata: &intervalFreqencyMetadataBytes,
+				Frequency:         14,
+				IsRolling:         false,
+			},
+			completedAt: choreTime,
+			expected:    truncateToDay(choreTime.AddDate(0, 0, 14).UTC()).Add(18 * time.Hour).Add(30 * time.Minute), // Note: Same Hour and Minute as Metadata time
+		},
+		{
+			Name: "14 days interval Completed late",
+			chore: &chModel.Chore{
+				FrequencyType:     chModel.FrequancyTypeIntervel,
+				NextDueDate:       &choreTime,
+				FrequencyMetadata: &intervalFreqencyMetadataBytes,
+				Frequency:         14,
+				IsRolling:         false,
+			},
+			completedAt: choreTime.AddDate(0, 0, 1),
+			expected:    truncateToDay(choreTime.AddDate(0, 0, 14).UTC()).Add(18 * time.Hour).Add(30 * time.Minute), // Note: Same Hour and Minute as Metadata time
 		},
 
 		//
 	}
-	for _, tt := range testTable {
-		t.Run(string(tt.chore.FrequencyType), func(t *testing.T) {
+	for i, tt := range testTable {
+		t.Run(fmt.Sprintf("%s %s %d", tt.chore.FrequencyType, tt.Name, i), func(t *testing.T) {
 
-			actual, err := scheduleNextDueDate(tt.chore, choreTime)
+			actual, err := scheduleNextDueDate(tt.chore, tt.completedAt)
 			if err != nil {
 				t.Errorf("Error: %v", err)
+				t.FailNow()
 			}
-			if actual != nil && actual.UTC().Format(time.RFC3339) != tt.expected.UTC().Format(time.RFC3339) {
+			if actual == nil {
+				t.Errorf("Expected: %v, Error: Actual missing", tt.expected)
+			} else if actual.UTC().Format(time.RFC3339) != tt.expected.UTC().Format(time.RFC3339) {
 				t.Errorf("Expected: %v, Actual: %v", tt.expected, actual)
 			}
 		})
 	}
+}
+
+func truncateToDay(t time.Time) time.Time {
+	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
 }
 
 func TestScheduleNextDueDateDayOfTheWeek(t *testing.T) {

@@ -75,7 +75,6 @@ services:
       - 2021:2021
     volumes:
       - ./data:/donetick-data
-      - ./config:/config
     environment:
       - DT_ENV=selfhosted
       - DT_SQLITE_PATH=/donetick-data/donetick.db

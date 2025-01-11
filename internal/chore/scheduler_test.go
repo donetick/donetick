@@ -22,7 +22,7 @@ func TestScheduleNextDueDateBasic(t *testing.T) {
 	}{
 		{
 			chore: &chModel.Chore{
-				FrequencyType:     chModel.FrequancyTypeDaily,
+				FrequencyType:     chModel.FrequencyTypeDaily,
 				NextDueDate:       &choreTime,
 				FrequencyMetadata: &freqencyMetadataBytes,
 			},
@@ -31,7 +31,7 @@ func TestScheduleNextDueDateBasic(t *testing.T) {
 		},
 		{ // Completed 1 day late
 			chore: &chModel.Chore{
-				FrequencyType:     chModel.FrequancyTypeDaily,
+				FrequencyType:     chModel.FrequencyTypeDaily,
 				NextDueDate:       &choreTime,
 				FrequencyMetadata: &freqencyMetadataBytes,
 			},
@@ -41,7 +41,7 @@ func TestScheduleNextDueDateBasic(t *testing.T) {
 		{
 			Name: "Rolling completed 1 day late",
 			chore: &chModel.Chore{
-				FrequencyType:     chModel.FrequancyTypeDaily,
+				FrequencyType:     chModel.FrequencyTypeDaily,
 				NextDueDate:       &choreTime,
 				FrequencyMetadata: &freqencyMetadataBytes,
 				IsRolling:         true,
@@ -51,7 +51,7 @@ func TestScheduleNextDueDateBasic(t *testing.T) {
 		},
 		{
 			chore: &chModel.Chore{
-				FrequencyType:     chModel.FrequancyTypeWeekly,
+				FrequencyType:     chModel.FrequencyTypeWeekly,
 				NextDueDate:       &choreTime,
 				FrequencyMetadata: &freqencyMetadataBytes,
 			},
@@ -60,7 +60,7 @@ func TestScheduleNextDueDateBasic(t *testing.T) {
 		},
 		{
 			chore: &chModel.Chore{
-				FrequencyType:     chModel.FrequancyTypeMonthly,
+				FrequencyType:     chModel.FrequencyTypeMonthly,
 				NextDueDate:       &choreTime,
 				FrequencyMetadata: &freqencyMetadataBytes,
 			},
@@ -69,7 +69,7 @@ func TestScheduleNextDueDateBasic(t *testing.T) {
 		},
 		{
 			chore: &chModel.Chore{
-				FrequencyType:     chModel.FrequancyTypeYearly,
+				FrequencyType:     chModel.FrequencyTypeYearly,
 				NextDueDate:       &choreTime,
 				FrequencyMetadata: &freqencyMetadataBytes,
 			},
@@ -79,7 +79,7 @@ func TestScheduleNextDueDateBasic(t *testing.T) {
 		{
 			Name: "14 days interval Rolling Completed in time",
 			chore: &chModel.Chore{
-				FrequencyType:     chModel.FrequancyTypeIntervel,
+				FrequencyType:     chModel.FrequencyTypeIntervel,
 				NextDueDate:       &choreTime,
 				FrequencyMetadata: &intervalFreqencyMetadataBytes,
 				Frequency:         14,
@@ -91,7 +91,7 @@ func TestScheduleNextDueDateBasic(t *testing.T) {
 		{
 			Name: "14 days interval Rolling Completed late",
 			chore: &chModel.Chore{
-				FrequencyType:     chModel.FrequancyTypeIntervel,
+				FrequencyType:     chModel.FrequencyTypeIntervel,
 				NextDueDate:       &choreTime,
 				FrequencyMetadata: &intervalFreqencyMetadataBytes,
 				Frequency:         14,
@@ -103,7 +103,7 @@ func TestScheduleNextDueDateBasic(t *testing.T) {
 		{
 			Name: "14 days interval Completed in time",
 			chore: &chModel.Chore{
-				FrequencyType:     chModel.FrequancyTypeIntervel,
+				FrequencyType:     chModel.FrequencyTypeIntervel,
 				NextDueDate:       &choreTime,
 				FrequencyMetadata: &intervalFreqencyMetadataBytes,
 				Frequency:         14,
@@ -115,7 +115,7 @@ func TestScheduleNextDueDateBasic(t *testing.T) {
 		{
 			Name: "14 days interval Completed late",
 			chore: &chModel.Chore{
-				FrequencyType:     chModel.FrequancyTypeIntervel,
+				FrequencyType:     chModel.FrequencyTypeIntervel,
 				NextDueDate:       &choreTime,
 				FrequencyMetadata: &intervalFreqencyMetadataBytes,
 				Frequency:         14,
@@ -194,7 +194,7 @@ func TestScheduleNextDueDateDayOfTheWeek(t *testing.T) {
 	}{
 		{
 			chore: &chModel.Chore{
-				FrequencyType: chModel.FrequancyTypeDayOfTheWeek,
+				FrequencyType: chModel.FrequencyTypeDayOfTheWeek,
 				NextDueDate:   &nextSaturday,
 			},
 			frequencyMetadata: &chModel.FrequencyMetadata{
@@ -206,7 +206,7 @@ func TestScheduleNextDueDateDayOfTheWeek(t *testing.T) {
 		},
 		{
 			chore: &chModel.Chore{
-				FrequencyType: chModel.FrequancyTypeDayOfTheWeek,
+				FrequencyType: chModel.FrequencyTypeDayOfTheWeek,
 				NextDueDate:   &nextMonday,
 			},
 			frequencyMetadata: &chModel.FrequencyMetadata{

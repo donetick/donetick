@@ -39,4 +39,6 @@ type UserCircleDetail struct {
 	DisplayName      string                  `json:"displayName" gorm:"column:display_name"`
 	NotificationType nModel.NotificationType `json:"-" gorm:"column:notification_type"`
 	TargetID         string                  `json:"-" gorm:"column:target_id"` // Target ID
+	WebhookURL       string                  `json:"webhook_url" gorm:"column:webhook_url"`
+	WebhookMethod    nModel.WebhookMethod    `json:"webhook_method" gorm:"column:webhook_method"`
 }

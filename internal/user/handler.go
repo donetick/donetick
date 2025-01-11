@@ -506,8 +506,10 @@ func (h *Handler) UpdateNotificationTarget(c *gin.Context) {
 	}
 
 	type Request struct {
-		Type   nModel.NotificationType `json:"type"`
-		Target string                  `json:"target"`
+		Type          nModel.NotificationType `json:"type"`
+		Target        string                  `json:"target"`
+		WebhookMethod nModel.WebhookMethod    `json:"webhook_method"`
+		WebhookURL    string                  `json:"webhook_url"`
 	}
 
 	var req Request
@@ -525,13 +527,13 @@ func (h *Handler) UpdateNotificationTarget(c *gin.Context) {
 		return
 	}
 
-	err := h.userRepo.UpdateNotificationTarget(c, currentUser.ID, req.Target, req.Type)
+	err := h.userRepo.UpdateNotificationTarget(c, currentUser.ID, req.Target, req.Type, req.WebhookMethod, req.WebhookURL)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update notification target"})
 		return
 	}
 
-	err = h.userRepo.UpdateNotificationTargetForAllNotifications(c, currentUser.ID, req.Target, req.Type)
+	err = h.userRepo.UpdateNotificationTargetForAllNotifications(c, currentUser.ID, req.Target, req.Type, req.WebhookMethod, req.WebhookURL)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update notification target for all notifications"})
 		return

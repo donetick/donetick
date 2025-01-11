@@ -43,7 +43,7 @@ func (r *CircleRepository) GetCircleUsers(c context.Context, circleID int) ([]*c
 	var circleUsers []*cModel.UserCircleDetail
 	if err := r.db.WithContext(c).
 		Table("user_circles uc").
-		Select("uc.*, u.username, u.display_name, u.chat_id,  unt.user_id as user_id, unt.target_id as target_id, unt.type as notification_type").
+		Select("uc.*, u.username, u.display_name, u.chat_id,  unt.user_id as user_id, unt.target_id as target_id, unt.type as notification_type, unt.webhook_url, unt.webhook_method").
 		Joins("left join users u on u.id = uc.user_id").
 		Joins("left join user_notification_targets unt on unt.user_id = u.id").
 		Where("uc.circle_id = ?", circleID).

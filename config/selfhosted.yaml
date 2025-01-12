@@ -14,8 +14,8 @@ jwt:
   max_refresh: 168h
 server:
   port: 2021
-  read_timeout: 2s
-  write_timeout: 1s
+  read_timeout: 10s
+  write_timeout: 10ss
   rate_period: 60s
   rate_limit: 300
   cors_allow_origins:

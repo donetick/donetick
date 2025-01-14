@@ -85,15 +85,7 @@ func (r *ChoreRepository) IsChoreOwner(c context.Context, choreID int, userID in
 	return err
 }
 
-// func (r *ChoreRepository) ListChores(circleID int) ([]*chModel.Chore, error) {
-// 	var chores []*Chore
-// 	if err := r.db.WithContext(c).Find(&chores).Where("is_active = ?", true).Order("next_due_date").Error; err != nil {
-// 		return nil, err
-// 	}
-// 	return chores, nil
-// }
-
-func (r *ChoreRepository) CompleteChore(c context.Context, chore *chModel.Chore, note *string, userID int, dueDate *time.Time, completedDate *time.Time, nextAssignedTo int) error {
+func (r *ChoreRepository) CompleteChore(c context.Context, chore *chModel.Chore, note *string, userID int, dueDate *time.Time, completedDate *time.Time, nextAssignedTo int, applyPoints bool) error {
 	err := r.db.WithContext(c).Transaction(func(tx *gorm.DB) error {
 		ch := &chModel.ChoreHistory{
 			ChoreID:     chore.ID,
@@ -102,17 +94,18 @@ func (r *ChoreRepository) CompleteChore(c context.Context, chore *chModel.Chore,
 			AssignedTo:  chore.AssignedTo,
 			DueDate:     chore.NextDueDate,
 			Note:        note,
-			Points:      chore.Points,
 		}
 		if err := tx.Create(ch).Error; err != nil {
 			return err
 		}
 		updates := map[string]interface{}{}
 		updates["next_due_date"] = dueDate
+		updates["status"] = chModel.ChoreStatusNoStatus
 
 		if dueDate != nil {
 			updates["assigned_to"] = nextAssignedTo
 		} else {
+			// one time task
 			updates["is_active"] = false
 		}
 		// Perform the update operation once, using the prepared updates map.
@@ -120,8 +113,8 @@ func (r *ChoreRepository) CompleteChore(c context.Context, chore *chModel.Chore,
 			return err
 		}
 		// Update UserCirclee Points :
-		if chore.Points != nil && *chore.Points > 0 {
-			if err := tx.Debug().Model(&cModel.UserCircle{}).Where("user_id = ? AND circle_id = ?", userID, chore.CircleID).Update("points", gorm.Expr("points + ?", chore.Points)).Error; err != nil {
+		if applyPoints && chore.Points != nil && *chore.Points > 0 {
+			if err := tx.Model(&cModel.UserCircle{}).Where("user_id = ? AND circle_id = ?", userID, chore.CircleID).Update("points", gorm.Expr("points + ?", chore.Points)).Error; err != nil {
 				return err
 			}
 		}
@@ -322,4 +315,8 @@ func (r *ChoreRepository) GetChoresHistoryByUserID(c context.Context, userID int
 		return nil, err
 	}
 	return chores, nil
+}
+
+func (r *ChoreRepository) UpdateChoreStatus(c context.Context, choreID int, userId int, status chModel.Status) error {
+	return r.db.WithContext(c).Model(&chModel.Chore{}).Where("id = ?", choreID).Where("created_by = ? ", userId).Update("status", status).Error
 }

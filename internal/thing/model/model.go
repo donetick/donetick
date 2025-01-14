@@ -28,3 +28,9 @@ type ThingChore struct {
 	TriggerState string `json:"triggerState" gorm:"column:trigger_state"`
 	Condition    string `json:"condition" gorm:"column:condition"`
 }
+
+type ThingTrigger struct {
+	ID           int    `json:"thingID" binding:"required"`
+	TriggerState string `json:"triggerState" binding:"required"`
+	Condition    string `json:"condition"`
+}

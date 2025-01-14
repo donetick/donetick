@@ -3,7 +3,9 @@ package model
 import (
 	"time"
 
+	lModel "donetick.com/core/internal/label/model"
 	tModel "donetick.com/core/internal/thing/model"
+	thingModel "donetick.com/core/internal/thing/model"
 )
 
 type FrequencyType string
@@ -22,6 +24,16 @@ const (
 	FrequancyTypeNoRepeat      FrequencyType = "no_repeat"
 )
 
+type AssignmentStrategy string
+
+const (
+	AssignmentStrategyRandom                   AssignmentStrategy = "random"
+	AssignmentStrategyLeastAssigned            AssignmentStrategy = "least_assigned"
+	AssignmentStrategyLeastCompleted           AssignmentStrategy = "least_completed"
+	AssignmentStrategyKeepLastAssigned         AssignmentStrategy = "keep_last_assigned"
+	AssignmentStrategyRandomExceptLastAssigned AssignmentStrategy = "random_except_last_assigned"
+)
+
 type Chore struct {
 	ID                   int                `json:"id" gorm:"primary_key"`
 	Name                 string             `json:"name" gorm:"column:name"`                                      // Chore description
@@ -32,7 +44,7 @@ type Chore struct {
 	IsRolling            bool               `json:"isRolling" gorm:"column:is_rolling"`                           // Whether the chore is rolling
 	AssignedTo           int                `json:"assignedTo" gorm:"column:assigned_to"`                         // Who the chore is assigned to
 	Assignees            []ChoreAssignees   `json:"assignees" gorm:"foreignkey:ChoreID;references:ID"`            // Assignees of the chore
-	AssignStrategy       string             `json:"assignStrategy" gorm:"column:assign_strategy"`                 // How the chore is assigned
+	AssignStrategy       AssignmentStrategy `json:"assignStrategy" gorm:"column:assign_strategy"`                 // How the chore is assigned
 	IsActive             bool               `json:"isActive" gorm:"column:is_active"`                             // Whether the chore is active
 	Notification         bool               `json:"notification" gorm:"column:notification"`                      // Whether the chore has notification
 	NotificationMetadata *string            `json:"notificationMetadata" gorm:"column:notification_meta"`         // Additional notification information
@@ -44,11 +56,21 @@ type Chore struct {
 	CreatedBy            int                `json:"createdBy" gorm:"column:created_by"`                           // Who created the chore
 	UpdatedBy            int                `json:"updatedBy" gorm:"column:updated_by"`                           // Who last updated the chore
 	ThingChore           *tModel.ThingChore `json:"thingChore" gorm:"foreignkey:chore_id;references:id;<-:false"` // ThingChore relationship
-	Status               int                `json:"status" gorm:"column:status"`
+	Status               Status             `json:"status" gorm:"column:status"`
 	Priority             int                `json:"priority" gorm:"column:priority"`
 	CompletionWindow     *int               `json:"completionWindow,omitempty" gorm:"column:completion_window"` // Number seconds before the chore is due that it can be completed
 	Points               *int               `json:"points,omitempty" gorm:"column:points"`                      // Points for completing the chore
+	Description          *string            `json:"description,omitempty" gorm:"type:text;column:description"`  // Description of the chore
 }
+
+type Status int8
+
+const (
+	ChoreStatusNoStatus   Status = 0
+	ChoreStatusInProgress Status = 1
+	ChoreStatusPaused     Status = 2
+)
+
 type ChoreAssignees struct {
 	ID      int `json:"-" gorm:"primary_key"`
 	ChoreID int `json:"-" gorm:"column:chore_id;uniqueIndex:idx_chore_user"`     // The chore this assignee is for
@@ -69,11 +91,9 @@ type ChoreHistory struct {
 type ChoreHistoryStatus int8
 
 const (
-	ChoreHistoryStatusPending       ChoreHistoryStatus = 0
-	ChoreHistoryStatusCompleted     ChoreHistoryStatus = 1
-	ChoreHistoryStatusCompletedLate ChoreHistoryStatus = 2
-	ChoreHistoryStatusMissed        ChoreHistoryStatus = 3
-	ChoreHistoryStatusSkipped       ChoreHistoryStatus = 4
+	ChoreHistoryStatusPending   ChoreHistoryStatus = 0
+	ChoreHistoryStatusCompleted ChoreHistoryStatus = 1
+	ChoreHistoryStatusSkipped   ChoreHistoryStatus = 2
 )
 
 type FrequencyMetadata struct {
@@ -125,4 +145,26 @@ type ChoreLabels struct {
 	LabelID int `json:"labelId" gorm:"primaryKey;autoIncrement:false;not null"`
 	UserID  int `json:"userId" gorm:"primaryKey;autoIncrement:false;not null"`
 	Label   Label
+}
+
+type ChoreReq struct {
+	Name                 string                   `json:"name" binding:"required"`
+	FrequencyType        FrequencyType            `json:"frequencyType"`
+	ID                   int                      `json:"id"`
+	DueDate              string                   `json:"dueDate"`
+	Assignees            []ChoreAssignees         `json:"assignees"`
+	AssignStrategy       AssignmentStrategy       `json:"assignStrategy" binding:"required"`
+	AssignedTo           int                      `json:"assignedTo"`
+	IsRolling            bool                     `json:"isRolling"`
+	IsActive             bool                     `json:"isActive"`
+	Frequency            int                      `json:"frequency"`
+	FrequencyMetadata    *FrequencyMetadata       `json:"frequencyMetadata"`
+	Notification         bool                     `json:"notification"`
+	NotificationMetadata *NotificationMetadata    `json:"notificationMetadata"`
+	Labels               []string                 `json:"labels"`
+	LabelsV2             *[]lModel.LabelReq       `json:"labelsV2"`
+	ThingTrigger         *thingModel.ThingTrigger `json:"thingTrigger"`
+	Points               *int                     `json:"points"`
+	CompletionWindow     *int                     `json:"completionWindow"`
+	Description          *string                  `json:"description"`
 }

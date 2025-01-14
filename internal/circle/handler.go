@@ -11,6 +11,7 @@ import (
 	chRepo "donetick.com/core/internal/chore/repo"
 	cModel "donetick.com/core/internal/circle/model"
 	cRepo "donetick.com/core/internal/circle/repo"
+	pRepo "donetick.com/core/internal/points/repo"
 	uModel "donetick.com/core/internal/user/model"
 	uRepo "donetick.com/core/internal/user/repo"
 	"donetick.com/core/logging"
@@ -22,13 +23,15 @@ type Handler struct {
 	circleRepo *cRepo.CircleRepository
 	userRepo   *uRepo.UserRepository
 	choreRepo  *chRepo.ChoreRepository
+	pointRepo  *pRepo.PointsRepository
 }
 
-func NewHandler(cr *cRepo.CircleRepository, ur *uRepo.UserRepository, c *chRepo.ChoreRepository) *Handler {
+func NewHandler(cr *cRepo.CircleRepository, ur *uRepo.UserRepository, c *chRepo.ChoreRepository, pr *pRepo.PointsRepository) *Handler {
 	return &Handler{
 		circleRepo: cr,
 		userRepo:   ur,
 		choreRepo:  c,
+		pointRepo:  pr,
 	}
 }
 
@@ -424,6 +427,112 @@ func (h *Handler) AcceptJoinRequest(c *gin.Context) {
 	})
 }
 
+func (h *Handler) RedeemPoints(c *gin.Context) {
+	type RedeemPointsRequest struct {
+		Points int `json:"points"`
+		UserID int `json:"userId"`
+	}
+
+	log := logging.FromContext(c)
+	currentUser, ok := auth.CurrentUser(c)
+	if !ok {
+		c.JSON(500, gin.H{
+			"error": "Error getting current user",
+		})
+		return
+	}
+	// parse body:
+	var redeemReq RedeemPointsRequest
+
+	if err := c.ShouldBind(&redeemReq); err != nil {
+		c.JSON(400, gin.H{
+			"error": "Invalid request",
+		})
+		return
+
+	}
+
+	if redeemReq.Points <= 0 {
+		c.JSON(400, gin.H{
+			"error": "Invalid request",
+		})
+		return
+	}
+	circleIdRaw := c.Param("id")
+
+	circleID, err := strconv.Atoi(circleIdRaw)
+	if err != nil {
+		log.Error("Error redeeming points: invalid circle id")
+		c.JSON(400, gin.H{
+			"error": "Invalid request: invalid circle id",
+		})
+		return
+	}
+	if circleID != currentUser.CircleID {
+		log.Error("You are not a member of this circle")
+		c.JSON(400, gin.H{
+			"error": "You are not a member of this circle",
+		})
+		return
+	}
+	members, err := h.circleRepo.GetCircleUsers(c, currentUser.CircleID)
+	if err != nil {
+		log.Error("Error getting circle admins:", err)
+		c.JSON(500, gin.H{
+			"error": "Error getting circle admins",
+		})
+		return
+	}
+	isAdmin := false
+	isValidMember := false
+	var member *cModel.UserCircleDetail
+	for _, user := range members {
+		if user.UserID == currentUser.ID && user.Role == "admin" {
+			isAdmin = true
+		}
+		if user.UserID == redeemReq.UserID {
+			isValidMember = true
+			member = user
+		}
+
+	}
+
+	if !isAdmin {
+		log.Error("Error redeeming points: user is not an admin of this circle")
+		c.JSON(403, gin.H{
+			"error": "You are not an admin of this circle",
+		})
+		return
+	}
+	if !isValidMember {
+		log.Error("Error redeeming points: user is not a member of this circle")
+		c.JSON(400, gin.H{
+			"error": "User is not a member of this circle",
+		})
+		return
+	}
+	if member.Points-redeemReq.Points < 0 {
+		log.Error("Error redeeming points: user does not have enough points")
+		c.JSON(400, gin.H{
+			"error": "User does not have enough points",
+		})
+		return
+	}
+
+	err = h.circleRepo.RedeemPoints(c, currentUser.CircleID, currentUser.ID, redeemReq.Points, currentUser.ID)
+	if err != nil {
+		log.Error("Error redeeming points:", err)
+		c.JSON(500, gin.H{
+			"error": "Error redeeming points",
+		})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"res": "Points redeemed successfully",
+	})
+}
+
 func Routes(router *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware) {
 	log.Println("Registering routes")
 
@@ -437,6 +546,7 @@ func Routes(router *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware) {
 		circleRoutes.POST("/join", h.JoinCircle)
 		circleRoutes.DELETE("/leave", h.LeaveCircle)
 		circleRoutes.DELETE("/:id/members/delete", h.DeleteCircleMember)
+		circleRoutes.POST("/:id/members/points/redeem", h.RedeemPoints)
 
 	}
 

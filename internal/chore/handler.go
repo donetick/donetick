@@ -26,36 +26,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type ThingTrigger struct {
-	ID           int    `json:"thingID" binding:"required"`
-	TriggerState string `json:"triggerState" binding:"required"`
-	Condition    string `json:"condition"`
-}
-
-type LabelReq struct {
-	LabelID int `json:"id" binding:"required"`
-}
-
-type ChoreReq struct {
-	Name                 string                        `json:"name" binding:"required"`
-	FrequencyType        chModel.FrequencyType         `json:"frequencyType"`
-	ID                   int                           `json:"id"`
-	DueDate              string                        `json:"dueDate"`
-	Assignees            []chModel.ChoreAssignees      `json:"assignees"`
-	AssignStrategy       string                        `json:"assignStrategy" binding:"required"`
-	AssignedTo           int                           `json:"assignedTo"`
-	IsRolling            bool                          `json:"isRolling"`
-	IsActive             bool                          `json:"isActive"`
-	Frequency            int                           `json:"frequency"`
-	FrequencyMetadata    *chModel.FrequencyMetadata    `json:"frequencyMetadata"`
-	Notification         bool                          `json:"notification"`
-	NotificationMetadata *chModel.NotificationMetadata `json:"notificationMetadata"`
-	Labels               []string                      `json:"labels"`
-	LabelsV2             *[]LabelReq                   `json:"labelsV2"`
-	ThingTrigger         *ThingTrigger                 `json:"thingTrigger"`
-	Points               *int                          `json:"points"`
-	CompletionWindow     *int                          `json:"completionWindow"`
-}
 type Handler struct {
 	choreRepo  *chRepo.ChoreRepository
 	circleRepo *cRepo.CircleRepository
@@ -185,7 +155,7 @@ func (h *Handler) createChore(c *gin.Context) {
 		return
 	}
 	// Validate chore:
-	var choreReq ChoreReq
+	var choreReq chModel.ChoreReq
 	if err := c.ShouldBindJSON(&choreReq); err != nil {
 		log.Print(err)
 		c.JSON(400, gin.H{
@@ -281,6 +251,7 @@ func (h *Handler) createChore(c *gin.Context) {
 		CircleID:             currentUser.CircleID,
 		Points:               choreReq.Points,
 		CompletionWindow:     choreReq.CompletionWindow,
+		Description:          choreReq.Description,
 	}
 	id, err := h.choreRepo.CreateChore(c, createdChore)
 	createdChore.ID = id
@@ -299,18 +270,18 @@ func (h *Handler) createChore(c *gin.Context) {
 			UserID:  assignee.UserID,
 		})
 	}
-
-	labelsV2 := make([]int, len(*choreReq.LabelsV2))
-	for i, label := range *choreReq.LabelsV2 {
-		labelsV2[i] = int(label.LabelID)
+	if choreReq.LabelsV2 != nil {
+		labelsV2 := make([]int, len(*choreReq.LabelsV2))
+		for i, label := range *choreReq.LabelsV2 {
+			labelsV2[i] = int(label.LabelID)
+		}
+		if err := h.lRepo.AssignLabelsToChore(c, createdChore.ID, currentUser.ID, currentUser.CircleID, labelsV2, []int{}); err != nil {
+			c.JSON(500, gin.H{
+				"error": "Error adding labels",
+			})
+			return
+		}
 	}
-	if err := h.lRepo.AssignLabelsToChore(c, createdChore.ID, currentUser.ID, currentUser.CircleID, labelsV2, []int{}); err != nil {
-		c.JSON(500, gin.H{
-			"error": "Error adding labels",
-		})
-		return
-	}
-
 	if err := h.choreRepo.UpdateChoreAssignees(c, choreAssignees); err != nil {
 		c.JSON(500, gin.H{
 			"error": "Error adding chore assignees",
@@ -339,7 +310,7 @@ func (h *Handler) editChore(c *gin.Context) {
 		return
 	}
 
-	var choreReq ChoreReq
+	var choreReq chModel.ChoreReq
 	if err := c.ShouldBindJSON(&choreReq); err != nil {
 		log.Print(err)
 		c.JSON(400, gin.H{
@@ -542,6 +513,7 @@ func (h *Handler) editChore(c *gin.Context) {
 		CreatedAt:            oldChore.CreatedAt,
 		Points:               choreReq.Points,
 		CompletionWindow:     choreReq.CompletionWindow,
+		Description:          choreReq.Description,
 	}
 	if err := h.choreRepo.UpsertChore(c, updatedChore); err != nil {
 		c.JSON(500, gin.H{
@@ -586,7 +558,7 @@ func (h *Handler) editChore(c *gin.Context) {
 	})
 }
 
-func HandleThingAssociation(choreReq ChoreReq, h *Handler, c *gin.Context, currentUser *uModel.User) bool {
+func HandleThingAssociation(choreReq chModel.ChoreReq, h *Handler, c *gin.Context, currentUser *uModel.User) bool {
 	if choreReq.ThingTrigger != nil {
 		thing, err := h.tRepo.GetThingByID(c, choreReq.ThingTrigger.ID)
 		if err != nil {
@@ -741,6 +713,61 @@ func (h *Handler) updateAssignee(c *gin.Context) {
 	})
 }
 
+func (h *Handler) updateChoreStatus(c *gin.Context) {
+	type StatusReq struct {
+		Status *chModel.Status `json:"status" binding:"required"`
+	}
+
+	var statusReq StatusReq
+
+	if err := c.ShouldBindJSON(&statusReq); err != nil {
+		c.JSON(400, gin.H{
+			"error": "Invalid request",
+		})
+	}
+
+	rawID := c.Param("id")
+	id, err := strconv.Atoi(rawID)
+	if err != nil {
+		c.JSON(400, gin.H{
+			"error": "Invalid ID",
+		})
+		return
+	}
+
+	currentUser, ok := auth.CurrentUser(c)
+	if !ok {
+		c.JSON(500, gin.H{
+			"error": "Error getting current user",
+		})
+		return
+	}
+
+	chore, err := h.choreRepo.GetChore(c, id)
+	if err != nil {
+		c.JSON(500, gin.H{
+			"error": "Error getting chore",
+		})
+		return
+	}
+	if chore.CircleID != currentUser.CircleID {
+
+		c.JSON(403, gin.H{
+			"error": "You are not allowed to start this chore",
+		})
+		return
+	}
+	if err := h.choreRepo.UpdateChoreStatus(c, chore.ID, currentUser.ID, *statusReq.Status); err != nil {
+
+		c.JSON(500, gin.H{
+			"error": "Error starting chore",
+		})
+		return
+	}
+	c.JSON(200, gin.H{})
+
+}
+
 func (h *Handler) skipChore(c *gin.Context) {
 	rawID := c.Param("id")
 	id, err := strconv.Atoi(rawID)
@@ -775,7 +802,7 @@ func (h *Handler) skipChore(c *gin.Context) {
 	}
 
 	nextAssigedTo := chore.AssignedTo
-	if err := h.choreRepo.CompleteChore(c, chore, nil, currentUser.ID, nextDueDate, nil, nextAssigedTo); err != nil {
+	if err := h.choreRepo.CompleteChore(c, chore, nil, currentUser.ID, nextDueDate, nil, nextAssigedTo, false); err != nil {
 		c.JSON(500, gin.H{
 			"error": "Error completing chore",
 		})
@@ -1021,7 +1048,7 @@ func (h *Handler) completeChore(c *gin.Context) {
 		return
 	}
 
-	if err := h.choreRepo.CompleteChore(c, chore, additionalNotes, currentUser.ID, nextDueDate, &completedDate, nextAssignedTo); err != nil {
+	if err := h.choreRepo.CompleteChore(c, chore, additionalNotes, currentUser.ID, nextDueDate, &completedDate, nextAssignedTo, true); err != nil {
 		c.JSON(500, gin.H{
 			"error": "Error completing chore",
 		})
@@ -1408,6 +1435,7 @@ func Routes(router *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware) {
 		choresRoutes.DELETE("/:id/history/:history_id", h.DeleteHistory)
 		choresRoutes.POST("/:id/do", h.completeChore)
 		choresRoutes.POST("/:id/skip", h.skipChore)
+		choresRoutes.PUT("/:id/status", h.updateChoreStatus)
 		choresRoutes.PUT("/:id/assignee", h.updateAssignee)
 		choresRoutes.PUT("/:id/dueDate", h.updateDueDate)
 		choresRoutes.PUT("/:id/archive", h.archiveChore)

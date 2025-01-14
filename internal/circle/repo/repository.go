@@ -2,8 +2,10 @@ package repo
 
 import (
 	"context"
+	"time"
 
 	cModel "donetick.com/core/internal/circle/model"
+	pModel "donetick.com/core/internal/points"
 	uModel "donetick.com/core/internal/user/model"
 	"gorm.io/gorm"
 )
@@ -137,4 +139,27 @@ func (r *CircleRepository) AssignDefaultCircle(c context.Context, userID int) er
 	}
 
 	return r.db.WithContext(c).Model(&uModel.User{}).Where("id = ?", userID).Update("circle_id", defaultCircle.ID).Error
+}
+
+func (r *CircleRepository) RedeemPoints(c context.Context, circleID int, userID int, points int, createdBy int) error {
+	err := r.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Model(&cModel.UserCircle{}).Where("user_id = ? AND circle_id = ?", userID, circleID).Update("points_redeemed", gorm.Expr("points_redeemed + ?", points)).Error; err != nil {
+			return err
+		}
+		if err := tx.Create(&pModel.PointsHistory{
+			Action:    pModel.PointsHistoryActionRedeem,
+			CircleID:  circleID,
+			UserID:    userID,
+			Points:    points,
+			CreatedAt: time.Now().UTC(),
+			CreatedBy: createdBy,
+		}).Error; err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	return nil
 }

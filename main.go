@@ -30,6 +30,7 @@ import (
 	nps "donetick.com/core/internal/notifier/service"
 	"donetick.com/core/internal/notifier/service/pushover"
 	telegram "donetick.com/core/internal/notifier/service/telegram"
+	pRepo "donetick.com/core/internal/points/repo"
 	"donetick.com/core/internal/thing"
 	tRepo "donetick.com/core/internal/thing/repo"
 	"donetick.com/core/internal/user"
@@ -80,6 +81,9 @@ func main() {
 
 		// things
 		fx.Provide(tRepo.NewThingRepository),
+
+		// points
+		fx.Provide(pRepo.NewPointsRepository),
 
 		// Labels:
 		fx.Provide(lRepo.NewLabelRepository),

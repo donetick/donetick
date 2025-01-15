@@ -141,6 +141,8 @@ func LoadConfig() *Config {
 		panic(err)
 	}
 	fmt.Printf("--ConfigLoad name : %s ", config.Name)
+	viper.SetEnvPrefix("DT")
+	viper.AutomaticEnv()
 	configEnvironmentOverrides(&config)
 	return &config
 

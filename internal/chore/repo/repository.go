@@ -70,8 +70,18 @@ func (r *ChoreRepository) GetArchivedChores(c context.Context, circleID int, use
 	return chores, nil
 }
 func (r *ChoreRepository) DeleteChore(c context.Context, id int) error {
-	r.db.WithContext(c).Where("chore_id = ?", id).Delete(&chModel.ChoreAssignees{})
-	return r.db.WithContext(c).Delete(&chModel.Chore{}, id).Error
+	return r.db.WithContext(c).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("chore_id = ?", id).Delete(&chModel.ChoreAssignees{}).Error; err != nil {
+			return err
+		}
+		if err := tx.Delete(&chModel.ChoreHistory{}, "chore_id = ?", id).Error; err != nil {
+			return err
+		}
+		if err := tx.Delete(&chModel.Chore{}, id).Error; err != nil {
+			return err
+		}
+		return nil
+	})
 }
 
 func (r *ChoreRepository) SoftDelete(c context.Context, id int, userID int) error {
@@ -153,6 +163,9 @@ func (r *ChoreRepository) UpdateChoreHistory(c context.Context, history *chModel
 
 func (r *ChoreRepository) DeleteChoreHistory(c context.Context, historyID int) error {
 	return r.db.WithContext(c).Delete(&chModel.ChoreHistory{}, historyID).Error
+}
+func (r *ChoreRepository) DeleteChoreHistoryByChoreID(c context.Context, tx, choreID int) error {
+	return r.db.WithContext(c).Delete(&chModel.ChoreHistory{}, "chore_id = ?", choreID).Error
 }
 
 func (r *ChoreRepository) UpdateChoreAssignees(c context.Context, assignees []*chModel.ChoreAssignees) error {
@@ -264,7 +277,8 @@ func (r *ChoreRepository) GetChoreDetailByID(c context.Context, choreID int, cir
 		Table("chores").
 		Select(`
         chores.id, 
-        chores.name, 
+        chores.name,
+		chores.description, 
         chores.frequency_type, 
         chores.next_due_date, 
         chores.assigned_to,

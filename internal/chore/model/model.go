@@ -120,6 +120,7 @@ type Tag struct {
 type ChoreDetail struct {
 	ID                  int        `json:"id" gorm:"column:id"`
 	Name                string     `json:"name" gorm:"column:name"`
+	Description         *string    `json:"description" gorm:"column:description"`
 	FrequencyType       string     `json:"frequencyType" gorm:"column:frequency_type"`
 	NextDueDate         *time.Time `json:"nextDueDate" gorm:"column:next_due_date"`
 	AssignedTo          int        `json:"assignedTo" gorm:"column:assigned_to"`

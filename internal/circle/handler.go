@@ -519,7 +519,7 @@ func (h *Handler) RedeemPoints(c *gin.Context) {
 		return
 	}
 
-	err = h.circleRepo.RedeemPoints(c, currentUser.CircleID, currentUser.ID, redeemReq.Points, currentUser.ID)
+	err = h.circleRepo.RedeemPoints(c, currentUser.CircleID, redeemReq.UserID, redeemReq.Points, currentUser.ID)
 	if err != nil {
 		log.Error("Error redeeming points:", err)
 		c.JSON(500, gin.H{

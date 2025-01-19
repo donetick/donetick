@@ -5,7 +5,7 @@
 
 **Simplify Tasks & Chores, Together!**
 
-Donetick is an open-source, user-friendly app designed to help you organize tasks and chores effectively.featuring customizable options to help you and others stay organized
+Donetick is an open-source, user-friendly app designed to help you organize tasks and chores effectively. featuring customizable options to help you and others stay organized
 
 ![Screenshot](assets/screenshot.png)
 
@@ -23,7 +23,9 @@ Donetick is an open-source, user-friendly app designed to help you organize task
 ## ✨ Features
 
 
-🏰 Group-Based Task Management: Create and manage tasks for solo or with your family or friends in shared circles.
+🏰 Group-Based Task Management: Create and manage tasks solo or with your family or friends in shared circles.
+
+✨ One-Sentence Task Creation[Experimental] : Create tasks by simply describing them in a sentence. Donetick intelligently extracts dates, times, and recurrence patterns from your natural language. For example, "Change water filter every 6 months" or "Take the trash out every Monday and Tuesday at 6:15 pm" will automatically generate the correct tasks.
 
 🔄 Smart Assignments: Assign tasks to individuals with rotation strategies like random or least completed.
 
@@ -49,7 +51,13 @@ viewing tasks directly in supported platforms (e.g., Home Assistant with a custo
 ---
 
 ## 🚀 Quick Start
-make sure you update the `config/selfhosted.yaml` 
+> [!NOTE]
+> Before running the application, ensure you have a valid `selfhosted.yaml` configuration file. 
+> If you don't have one, create a `selfhosted.yaml` file based on the example provided [here](https://github.com/donetick/donetick/blob/main/config/selfhosted.yaml).
+> Place the `selfhosted.yaml` file in the `/config` directory within your application's root directory 
+
+
+
 ### Using Docker
 1. **Pull the latest image:**
    ```bash

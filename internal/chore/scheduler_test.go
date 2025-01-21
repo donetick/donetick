@@ -1,229 +1,311 @@
 package chore
 
 import (
-	"encoding/json"
 	"testing"
 	"time"
 
 	chModel "donetick.com/core/internal/chore/model"
 )
 
-func TestScheduleNextDueDateBasic(t *testing.T) {
-	choreTime := time.Now()
-	freqencyMetadataBytes := `{"time":"2024-07-07T14:30:00-04:00"}`
 
-	testTable := []struct {
-		chore    *chModel.Chore
-		expected time.Time
-	}{
-		{
-			chore: &chModel.Chore{
-				FrequencyType:     chModel.FrequancyTypeDaily,
-				NextDueDate:       &choreTime,
-				FrequencyMetadata: &freqencyMetadataBytes,
-			},
-			expected: choreTime.AddDate(0, 0, 1),
-		},
-		{
-			chore: &chModel.Chore{
-				FrequencyType:     chModel.FrequancyTypeWeekly,
-				NextDueDate:       &choreTime,
-				FrequencyMetadata: &freqencyMetadataBytes,
-			},
-			expected: choreTime.AddDate(0, 0, 7),
-		},
-		{
-			chore: &chModel.Chore{
-				FrequencyType:     chModel.FrequancyTypeMonthly,
-				NextDueDate:       &choreTime,
-				FrequencyMetadata: &freqencyMetadataBytes,
-			},
-			expected: choreTime.AddDate(0, 1, 0),
-		},
-		{
-			chore: &chModel.Chore{
-				FrequencyType:     chModel.FrequancyTypeYearly,
-				NextDueDate:       &choreTime,
-				FrequencyMetadata: &freqencyMetadataBytes,
-			},
-			expected: choreTime.AddDate(1, 0, 0),
-		},
+type scheduleTest struct {
+	name          string
+	chore         chModel.Chore
+	completedDate time.Time
+	want          *time.Time
+	wantErr       bool
+	wantErrMsg    string
+}
 
-		//
+func TestScheduleNextDueDateBasicTests(t *testing.T) {
+	// location, err := time.LoadLocation("America/New_York")
+	location, err := time.LoadLocation("UTC")
+	if err != nil {
+		t.Fatalf("error loading location: %v", err)
 	}
-	for _, tt := range testTable {
-		t.Run(string(tt.chore.FrequencyType), func(t *testing.T) {
 
-			actual, err := scheduleNextDueDate(tt.chore, choreTime)
-			if err != nil {
-				t.Errorf("Error: %v", err)
+	now := time.Date(2025, 1, 2, 0, 15, 0, 0, location)
+	tests := []scheduleTest{
+		{
+			name: "Daily",
+			chore: chModel.Chore{
+				FrequencyType:     chModel.FrequencyTypeDaily,
+				FrequencyMetadata: jsonPtr(`{"time":"2024-07-07T14:30:00-04:00"}`),
+			},
+			completedDate: now,
+			want:          timePtr(now.AddDate(0, 0, 1)),
+		},
+		{
+			name: "Daily - (IsRolling)",
+			chore: chModel.Chore{
+				FrequencyType:     chModel.FrequencyTypeDaily,
+				FrequencyMetadata: jsonPtr(`{"time":"2024-07-07T14:30:00-04:00"}`),
+			},
+			completedDate: now.AddDate(0, 1, 0),
+			want:          timePtr(now.AddDate(0, 1, 1)),
+		},
+
+		{
+			name: "Weekly",
+			chore: chModel.Chore{
+				FrequencyType:     chModel.FrequencyTypeWeekly,
+				FrequencyMetadata: jsonPtr(`{"time":"2024-07-07T14:30:00-04:00"}`),
+			},
+			completedDate: now,
+			want:          timePtr(now.AddDate(0, 0, 7)),
+		},
+		{
+			name: "Weekly - (IsRolling)",
+			chore: chModel.Chore{
+				FrequencyType:     chModel.FrequencyTypeWeekly,
+				FrequencyMetadata: jsonPtr(`{"time":"2024-07-07T14:30:00-04:00"}`),
+			},
+			completedDate: now.AddDate(1, 0, 0),
+			want:          timePtr(now.AddDate(1, 0, 7)),
+		},
+		{
+			name: "Monthly",
+			chore: chModel.Chore{
+				FrequencyType:     chModel.FrequencyTypeMonthly,
+				FrequencyMetadata: jsonPtr(`{"time":"2024-07-07T14:30:00-04:00"}`),
+			},
+			completedDate: now,
+			want:          timePtr(now.AddDate(0, 1, 0)),
+		},
+		{
+			name: "Monthly - (IsRolling)",
+			chore: chModel.Chore{
+				FrequencyType:     chModel.FrequencyTypeMonthly,
+				FrequencyMetadata: jsonPtr(`{"time":"2024-07-07T14:30:00-04:00"}`),
+			},
+			completedDate: now.AddDate(0, 0, 2),
+			want:          timePtr(now.AddDate(0, 1, 2)),
+		},
+		{
+			name: "Yearly",
+			chore: chModel.Chore{
+				FrequencyType:     chModel.FrequencyTypeYearly,
+				FrequencyMetadata: jsonPtr(`{"time":"2024-07-07T14:30:00-04:00"}`),
+			},
+			completedDate: now,
+			want:          timePtr(now.AddDate(1, 0, 0)),
+		},
+		{
+			name: "Yearly - (IsRolling)",
+			chore: chModel.Chore{
+				FrequencyType:     chModel.FrequencyTypeYearly,
+				FrequencyMetadata: jsonPtr(`{"time":"2024-07-07T14:30:00-04:00"}`),
+			},
+			completedDate: now.AddDate(0, 0, 2),
+			want:          timePtr(now.AddDate(1, 0, 2)),
+		},
+	}
+	executeTestTable(t, tests)
+}
+
+func TestScheduleNextDueDateInterval(t *testing.T) {
+	// location, err := time.LoadLocation("America/New_York")
+	location, err := time.LoadLocation("UTC")
+	if err != nil {
+		t.Fatalf("error loading location: %v", err)
+	}
+
+	now := time.Date(2025, 1, 2, 0, 15, 0, 0, location)
+	tests := []scheduleTest{
+		{
+			name: "Interval - 2 Days",
+			chore: chModel.Chore{
+				FrequencyType:     chModel.FrequencyTypeInterval,
+				Frequency:         2,
+				FrequencyMetadata: jsonPtr(`{"unit": "days","time":"2024-07-07T14:30:00-04:00"}`),
+			},
+			completedDate: now,
+			want:          timePtr(truncateToDay(now.AddDate(0, 0, 2)).Add(14*time.Hour + 30*time.Minute)),
+		},
+		{
+			name: "Interval - 4 Weeks",
+			chore: chModel.Chore{
+				FrequencyType:     chModel.FrequencyTypeInterval,
+				Frequency:         4,
+				FrequencyMetadata: jsonPtr(`{"unit": "weeks","time":"2024-07-07T14:30:00-04:00"}`),
+			},
+			completedDate: now,
+			want:          timePtr(truncateToDay(now.AddDate(0, 0, 4*7)).Add(14*time.Hour + 30*time.Minute)),
+		},
+		{
+			name: "Interval - 3 Months",
+			chore: chModel.Chore{
+				FrequencyType:      chModel.FrequencyTypeInterval,
+				Frequency:         3,
+				FrequencyMetadata: jsonPtr(`{"unit": "months","time":"2024-07-07T14:30:00-04:00"}`),
+			},
+			completedDate: now,
+			want:          timePtr(truncateToDay(now.AddDate(0, 3, 0)).Add(14*time.Hour + 30*time.Minute)),
+		},
+		{
+			name: "Interval - 2 Years",
+			chore: chModel.Chore{
+				FrequencyType:     chModel.FrequencyTypeInterval,
+				Frequency:         2,
+				FrequencyMetadata: jsonPtr(`{"unit": "years","time":"2024-07-07T14:30:00-04:00"}`),
+			},
+			completedDate: now,
+			want:          timePtr(truncateToDay(now.AddDate(2, 0, 0)).Add(14*time.Hour + 30*time.Minute)),
+		},
+	}
+	executeTestTable(t, tests)
+}
+
+func TestScheduleNextDueDateDayOfWeek(t *testing.T) {
+	// location, err := time.LoadLocation("America/New_York")
+	location, err := time.LoadLocation("UTC")
+	if err != nil {
+		t.Fatalf("error loading location: %v", err)
+	}
+
+	now := time.Date(2025, 1, 2, 0, 15, 0, 0, location)
+	tests := []scheduleTest{
+		{
+			name: "Days of the week - next Monday",
+			chore: chModel.Chore{
+				FrequencyType:  chModel.FrequencyTypeDayOfTheWeek,
+
+				FrequencyMetadata: jsonPtr(`{"days": ["monday"], "time": "2025-01-20T18:00:00-05:00"}`),
+			},
+			completedDate: now,
+			want: func() *time.Time {
+				// Calculate next Monday at 18:00 EST
+				nextMonday := now.AddDate(0, 0, (int(time.Monday)-int(now.Weekday())+7)%7)
+				nextMonday = truncateToDay(nextMonday).Add(18*time.Hour + 0*time.Minute)
+				return &nextMonday
+			}(),
+		},
+		{
+			name: "Days of the week - next Monday(IsRolling)",
+			chore: chModel.Chore{
+				FrequencyType:     chModel.FrequencyTypeDayOfTheWeek,
+				IsRolling:         true,
+				FrequencyMetadata: jsonPtr(`{"days": ["monday"], "time": "2025-01-20T18:00:00-05:00"}`),
+			},
+
+			completedDate: now.AddDate(0, 1, 0),
+			want: func() *time.Time {
+				// Calculate next Thursday at 18:00 EST
+				completedDate := now.AddDate(0, 1, 0)
+				nextMonday := completedDate.AddDate(0, 0, (int(time.Monday)-int(completedDate.Weekday())+7)%7)
+				nextMonday = truncateToDay(nextMonday).Add(18*time.Hour + 0*time.Minute)
+				return &nextMonday
+			}(),
+		},
+	}
+	executeTestTable(t, tests)
+}
+
+func TestScheduleNextDueDateDayOfMonth(t *testing.T) {
+	// location, err := time.LoadLocation("America/New_York")
+	location, err := time.LoadLocation("UTC")
+	if err != nil {
+		t.Fatalf("error loading location: %v", err)
+	}
+
+	now := time.Date(2025, 1, 2, 0, 15, 0, 0, location)
+	tests := []scheduleTest{
+		{
+			name: "Day of the month - 15th of January",
+			chore: chModel.Chore{
+				FrequencyType:      chModel.FrequencyTypeDayOfTheMonth,
+				Frequency:         15,
+				FrequencyMetadata: jsonPtr(`{ "unit": "days", "time": "2025-01-20T18:00:00-05:00", "days": [], "months": [ "january" ] }`),
+			},
+			completedDate: now,
+			want:          timePtr(time.Date(2025, 1, 15, 18, 0, 0, 0, location)),
+		},
+		{
+			name: "Day of the month - 15th of January(isRolling)",
+			chore: chModel.Chore{
+				FrequencyType:      chModel.FrequencyTypeDayOfTheMonth
+				Frequency:         15,
+				FrequencyMetadata: jsonPtr(`{ "unit": "days", "time": "2025-01-20T18:00:00-05:00", "days": [], "months": [ "january" ] }`),
+			},
+			completedDate: now.AddDate(1, 1, 0),
+			want:          timePtr(time.Date(2027, 1, 15, 18, 0, 0, 0, location)),
+		},
+	}
+	executeTestTable(t, tests)
+
+}
+
+func TestScheduleNextDueDateErrors(t *testing.T) {
+	// location, err := time.LoadLocation("America/New_York")
+	location, err := time.LoadLocation("UTC")
+	if err != nil {
+		t.Fatalf("error loading location: %v", err)
+	}
+
+	now := time.Date(2025, 1, 2, 0, 15, 0, 0, location)
+	tests := []scheduleTest{
+		{
+			name: "Invalid frequency Metadata",
+			chore: chModel.Chore{
+				FrequencyType:     "invalid",
+				FrequencyMetadata: jsonPtr(``),
+			},
+			completedDate: now,
+			wantErr:       true,
+			wantErrMsg:    "error unmarshalling frequency metadata: unexpected end of JSON input",
+		},
+	}
+	executeTestTable(t, tests)
+}
+func TestScheduleNextDueDate(t *testing.T) {
+
+}
+
+func executeTestTable(t *testing.T, tests []scheduleTest) {
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := scheduleNextDueDate(&tt.chore, tt.completedDate)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("testcase: %s", tt.name)
+				t.Errorf("scheduleNextDueDate() error = %v, wantErr %v", err, tt.wantErr)
+				return
 			}
-			if actual != nil && actual.UTC().Format(time.RFC3339) != tt.expected.UTC().Format(time.RFC3339) {
-				t.Errorf("Expected: %v, Actual: %v", tt.expected, actual)
+
+			if tt.wantErr {
+				if err.Error() != tt.wantErrMsg {
+					t.Errorf("testcase: %s", tt.name)
+					t.Errorf("scheduleNextDueDate() error message = %v, wantErrMsg %v", err.Error(), tt.wantErrMsg)
+				}
+				return
+			}
+
+			if !equalTime(got, tt.want) {
+				t.Errorf("testcase: %s", tt.name)
+				t.Errorf("scheduleNextDueDate() = %v, want %v", got, tt.want)
+
 			}
 		})
 	}
 }
-
-func TestScheduleNextDueDateDayOfTheWeek(t *testing.T) {
-	choreTime := time.Now()
-
-	Monday := "monday"
-	Wednesday := "wednesday"
-
-	timeOfChore := "2024-07-07T16:30:00-04:00"
-	getExpectedTime := func(choreTime time.Time, timeOfChore string) time.Time {
-		t, err := time.Parse(time.RFC3339, timeOfChore)
-		if err != nil {
-			return time.Time{}
-		}
-		return time.Date(choreTime.Year(), choreTime.Month(), choreTime.Day(), t.Hour(), t.Minute(), 0, 0, t.Location())
+func equalTime(t1, t2 *time.Time) bool {
+	if t1 == nil && t2 == nil {
+		return true
 	}
-	nextSaturday := choreTime.AddDate(0, 0, 1)
-	for nextSaturday.Weekday() != time.Saturday {
-		nextSaturday = nextSaturday.AddDate(0, 0, 1)
+	if t1 == nil || t2 == nil {
+		return false
 	}
-
-	nextMonday := choreTime.AddDate(0, 0, 1)
-	for nextMonday.Weekday() != time.Monday {
-		nextMonday = nextMonday.AddDate(0, 0, 1)
-	}
-
-	nextTuesday := choreTime.AddDate(0, 0, 1)
-	for nextTuesday.Weekday() != time.Tuesday {
-		nextTuesday = nextTuesday.AddDate(0, 0, 1)
-	}
-
-	nextWednesday := choreTime.AddDate(0, 0, 1)
-	for nextWednesday.Weekday() != time.Wednesday {
-		nextWednesday = nextWednesday.AddDate(0, 0, 1)
-	}
-
-	nextThursday := choreTime.AddDate(0, 0, 1)
-	for nextThursday.Weekday() != time.Thursday {
-		nextThursday = nextThursday.AddDate(0, 0, 1)
-	}
-
-	testTable := []struct {
-		chore             *chModel.Chore
-		frequencyMetadata *chModel.FrequencyMetadata
-		expected          time.Time
-	}{
-		{
-			chore: &chModel.Chore{
-				FrequencyType: chModel.FrequancyTypeDayOfTheWeek,
-				NextDueDate:   &nextSaturday,
-			},
-			frequencyMetadata: &chModel.FrequencyMetadata{
-				Time: timeOfChore,
-				Days: []*string{&Monday, &Wednesday},
-			},
-
-			expected: getExpectedTime(nextMonday, timeOfChore),
-		},
-		{
-			chore: &chModel.Chore{
-				FrequencyType: chModel.FrequancyTypeDayOfTheWeek,
-				NextDueDate:   &nextMonday,
-			},
-			frequencyMetadata: &chModel.FrequencyMetadata{
-				Time: timeOfChore,
-				Days: []*string{&Monday, &Wednesday},
-			},
-			expected: getExpectedTime(nextWednesday, timeOfChore),
-		},
-	}
-	for _, tt := range testTable {
-		t.Run(string(tt.chore.FrequencyType), func(t *testing.T) {
-			bytesFrequencyMetadata, err := json.Marshal(tt.frequencyMetadata)
-			stringFrequencyMetadata := string(bytesFrequencyMetadata)
-
-			if err != nil {
-				t.Errorf("Error: %v", err)
-			}
-			tt.chore.FrequencyMetadata = &stringFrequencyMetadata
-			actual, err := scheduleNextDueDate(tt.chore, choreTime)
-
-			if err != nil {
-				t.Errorf("Error: %v", err)
-			}
-			if actual != nil && actual.UTC().Format(time.RFC3339) != tt.expected.UTC().Format(time.RFC3339) {
-				t.Errorf("Expected: %v, Actual: %v", tt.expected, actual)
-			}
-		})
-	}
+	return t1.Equal(*t2)
 }
-func TestScheduleAdaptiveNextDueDate(t *testing.T) {
-	getTimeFromDate := func(timeOfChore string) *time.Time {
-		t, err := time.Parse(time.RFC3339, timeOfChore)
-		if err != nil {
-			return nil
-		}
-		return &t
-	}
-	testTable := []struct {
-		description  string
-		history      []*chModel.ChoreHistory
-		chore        *chModel.Chore
-		expected     *time.Time
-		completeDate *time.Time
-	}{
-		{
-			description: "Every Two days",
-			chore: &chModel.Chore{
-				NextDueDate: getTimeFromDate("2024-07-13T01:30:00-00:00"),
-			},
-			history: []*chModel.ChoreHistory{
-				{
-					CompletedAt: getTimeFromDate("2024-07-11T01:30:00-00:00"),
-				},
-				// {
-				// 	CompletedAt: getTimeFromDate("2024-07-09T01:30:00-00:00"),
-				// },
-				// {
-				// 	CompletedAt: getTimeFromDate("2024-07-07T01:30:00-00:00"),
-				// },
-			},
-			expected: getTimeFromDate("2024-07-15T01:30:00-00:00"),
-		},
-		{
-			description: "Every 8 days",
-			chore: &chModel.Chore{
-				NextDueDate: getTimeFromDate("2024-07-13T01:30:00-00:00"),
-			},
-			history: []*chModel.ChoreHistory{
-				{
-					CompletedAt: getTimeFromDate("2024-07-05T01:30:00-00:00"),
-				},
-				{
-					CompletedAt: getTimeFromDate("2024-06-27T01:30:00-00:00"),
-				},
-			},
-			expected: getTimeFromDate("2024-07-21T01:30:00-00:00"),
-		},
-		{
-			description: "40 days with limit Data",
-			chore: &chModel.Chore{
-				NextDueDate: getTimeFromDate("2024-07-13T01:30:00-00:00"),
-			},
-			history: []*chModel.ChoreHistory{
-				{CompletedAt: getTimeFromDate("2024-06-03T01:30:00-00:00")},
-			},
-			expected: getTimeFromDate("2024-08-22T01:30:00-00:00"),
-		},
-	}
-	for _, tt := range testTable {
-		t.Run(tt.description, func(t *testing.T) {
-			expectedNextDueDate := tt.expected
 
-			actualNextDueDate, err := scheduleAdaptiveNextDueDate(tt.chore, *tt.chore.NextDueDate, tt.history)
-			if err != nil {
-				t.Errorf("Error: %v", err)
-			}
+func timePtr(t time.Time) *time.Time {
+	return &t
+}
 
-			if actualNextDueDate == nil || !actualNextDueDate.Equal(*expectedNextDueDate) {
-				t.Errorf("Expected: %v, Actual: %v", expectedNextDueDate, actualNextDueDate)
-			}
-		})
-	}
+func jsonPtr(s string) *string {
+	return &s
+}
+
+func truncateToDay(t time.Time) time.Time {
+	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
 }

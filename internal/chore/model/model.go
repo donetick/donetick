@@ -17,7 +17,7 @@ const (
 	FrequencyTypeMonthly       FrequencyType = "monthly"
 	FrequencyTypeYearly        FrequencyType = "yearly"
 	FrequencyTypeAdaptive      FrequencyType = "adaptive"
-	FrequencyTypeIntervel      FrequencyType = "interval"
+	FrequencyTypeInterval      FrequencyType = "interval"
 	FrequencyTypeDayOfTheWeek  FrequencyType = "days_of_the_week"
 	FrequencyTypeDayOfTheMonth FrequencyType = "day_of_the_month"
 	FrequencyTypeTrigger       FrequencyType = "trigger"

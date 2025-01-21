@@ -1,0 +1,48 @@
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  enable:
+    - govet
+    - errcheck
+    - staticcheck
+    - gosimple
+    - unused
+    - ineffassign
+    - unused
+    - typecheck
+    - gofmt
+    - goimports
+    - gocyclo
+    - dupl
+    - misspell
+    - unconvert
+    - nakedret
+    - goconst
+    - gocritic
+
+linters-settings:
+  gofmt:
+    simplify: true
+
+  gocyclo:
+    min-complexity: 15
+
+  dupl:
+    threshold: 100
+
+  misspell:
+    locale: US
+
+issues:
+  exclude-use-default: false
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  exclude-rules:
+    - linters:
+        - errcheck
+      text: ".*error return value not checked.*"
+    - linters:
+        - dupl
+      text: ".*duplicate of.*"

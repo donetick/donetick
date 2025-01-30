@@ -610,5 +610,13 @@ func Routes(router *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware, limiter 
 		authRoutes.POST("reset", h.resetPassword)
 		authRoutes.POST("password", h.updateUserPassword)
 	}
-
+	pingRoutes := router.Group("api/v1/ping")
+	pingRoutes.Use(utils.RateLimitMiddleware(limiter))
+	{
+		pingRoutes.GET("/", func(c *gin.Context) {
+			c.JSON(200, gin.H{
+				"message": "pong",
+			})
+		})
+	}
 }

@@ -18,6 +18,7 @@ type Config struct {
 	SchedulerJobs          SchedulerConfig `mapstructure:"scheduler_jobs" yaml:"scheduler_jobs"`
 	EmailConfig            EmailConfig     `mapstructure:"email" yaml:"email"`
 	StripeConfig           StripeConfig    `mapstructure:"stripe" yaml:"stripe"`
+	OAuth2Config           OAuth2Config    `mapstructure:"oauth2" yaml:"oauth2"`
 	IsDoneTickDotCom       bool            `mapstructure:"is_done_tick_dot_com" yaml:"is_done_tick_dot_com"`
 	IsUserCreationDisabled bool            `mapstructure:"is_user_creation_disabled" yaml:"is_user_creation_disabled"`
 }
@@ -84,6 +85,16 @@ type EmailConfig struct {
 	AppHost string `mapstructure:"appHost"`
 }
 
+type OAuth2Config struct {
+	ClientID     string `mapstructure:"client_id" yaml:"client_id"`
+	ClientSecret string `mapstructure:"client_secret" yaml:"client_secret"`
+	RedirectURL  string `mapstructure:"redirect_url" yaml:"redirect_url"`
+	Scopes       []string
+	AuthURL      string `mapstructure:"auth_url" yaml:"auth_url"`
+	TokenURL     string `mapstructure:"token_url" yaml:"token_url"`
+	UserInfoURL  string `mapstructure:"user_info_url" yaml:"user_info_url"`
+}
+
 func NewConfig() *Config {
 	return &Config{
 		Telegram: TelegramConfig{
@@ -126,9 +137,12 @@ func LoadConfig() *Config {
 	}
 	// get logger and log the current environment:
 	fmt.Printf("--ConfigLoad config for environment: %s ", os.Getenv("DT_ENV"))
+	viper.SetEnvPrefix("DT")
+	viper.AutomaticEnv()
 
 	viper.AddConfigPath("./config")
 	viper.SetConfigType("yaml")
+
 	err := viper.ReadInConfig()
 	// print a useful error:
 	if err != nil {
@@ -141,9 +155,11 @@ func LoadConfig() *Config {
 		panic(err)
 	}
 	fmt.Printf("--ConfigLoad name : %s ", config.Name)
-	viper.SetEnvPrefix("DT")
-	viper.AutomaticEnv()
+
+	// bind all the environment variables to the config:
+
 	configEnvironmentOverrides(&config)
+	panic(config.OAuth2Config.ClientID)
 	return &config
 
 	// return LocalConfig()

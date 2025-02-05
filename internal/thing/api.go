@@ -16,7 +16,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type Webhook struct {
+type API struct {
 	choreRepo  *chRepo.ChoreRepository
 	circleRepo *cRepo.CircleRepository
 	thingRepo  *tRepo.ThingRepository
@@ -24,9 +24,9 @@ type Webhook struct {
 	tRepo      *tRepo.ThingRepository
 }
 
-func NewWebhook(cr *chRepo.ChoreRepository, circleRepo *cRepo.CircleRepository,
-	thingRepo *tRepo.ThingRepository, userRepo *uRepo.UserRepository, tRepo *tRepo.ThingRepository) *Webhook {
-	return &Webhook{
+func NewAPI(cr *chRepo.ChoreRepository, circleRepo *cRepo.CircleRepository,
+	thingRepo *tRepo.ThingRepository, userRepo *uRepo.UserRepository, tRepo *tRepo.ThingRepository) *API {
+	return &API{
 		choreRepo:  cr,
 		circleRepo: circleRepo,
 		thingRepo:  thingRepo,
@@ -35,7 +35,7 @@ func NewWebhook(cr *chRepo.ChoreRepository, circleRepo *cRepo.CircleRepository,
 	}
 }
 
-func (h *Webhook) UpdateThingState(c *gin.Context) {
+func (h *API) UpdateThingState(c *gin.Context) {
 	thing, shouldReturn := validateUserAndThing(c, h)
 	if shouldReturn {
 		return
@@ -60,7 +60,7 @@ func (h *Webhook) UpdateThingState(c *gin.Context) {
 	c.JSON(200, gin.H{})
 }
 
-func (h *Webhook) ChangeThingState(c *gin.Context) {
+func (h *API) ChangeThingState(c *gin.Context) {
 	thing, shouldReturn := validateUserAndThing(c, h)
 	if shouldReturn {
 		return
@@ -109,7 +109,7 @@ func (h *Webhook) ChangeThingState(c *gin.Context) {
 	c.JSON(200, gin.H{"state": thing.State})
 }
 
-func WebhookEvaluateTriggerAndScheduleDueDate(h *Webhook, c *gin.Context, thing *tModel.Thing) bool {
+func WebhookEvaluateTriggerAndScheduleDueDate(h *API, c *gin.Context, thing *tModel.Thing) bool {
 	// handler should be interface to not duplicate both WebhookEvaluateTriggerAndScheduleDueDate and EvaluateTriggerAndScheduleDueDate
 	// this is bad code written Saturday at 2:25 AM
 
@@ -134,7 +134,7 @@ func WebhookEvaluateTriggerAndScheduleDueDate(h *Webhook, c *gin.Context, thing 
 	return false
 }
 
-func validateUserAndThing(c *gin.Context, h *Webhook) (*tModel.Thing, bool) {
+func validateUserAndThing(c *gin.Context, h *API) (*tModel.Thing, bool) {
 	apiToken := c.GetHeader("secretkey")
 	if apiToken == "" {
 		c.JSON(401, gin.H{"error": "Unauthorized"})
@@ -162,7 +162,7 @@ func validateUserAndThing(c *gin.Context, h *Webhook) (*tModel.Thing, bool) {
 	return thing, false
 }
 
-func Webhooks(cfg *config.Config, w *Webhook, r *gin.Engine, auth *jwt.GinJWTMiddleware) {
+func APIs(cfg *config.Config, w *API, r *gin.Engine, auth *jwt.GinJWTMiddleware) {
 
 	thingsAPI := r.Group("eapi/v1/things")
 

@@ -35,3 +35,10 @@ email:
   key: 
   email:  
   appHost:  
+oauth2:
+  client_id: 
+  client_secret: 
+  auth_url: 
+  token_url: 
+  user_info_url: 
+  redirect_url: 

@@ -52,6 +52,7 @@ func main() {
 
 		// fx.Provide(config.NewConfig),
 		fx.Provide(auth.NewAuthMiddleware),
+		fx.Provide(auth.NewIdentityProvider),
 
 		// fx.Provide(NewBot),
 		fx.Provide(database.NewDatabase),
@@ -89,7 +90,7 @@ func main() {
 		fx.Provide(lRepo.NewLabelRepository),
 		fx.Provide(label.NewHandler),
 
-		fx.Provide(thing.NewWebhook),
+		fx.Provide(thing.NewAPI),
 		fx.Provide(thing.NewHandler),
 
 		fx.Provide(chore.NewAPI),
@@ -103,7 +104,7 @@ func main() {
 			user.Routes,
 			circle.Routes,
 			thing.Routes,
-			thing.Webhooks,
+			thing.APIs,
 			label.Routes,
 			frontend.Routes,
 

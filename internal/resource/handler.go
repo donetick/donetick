@@ -35,7 +35,7 @@ func (h *Handler) getResource(c *gin.Context) {
 	})
 }
 
-func (h *Handler) RegisterRoutes(r *gin.RouterGroup, authMiddleware *jwt.GinJWTMiddleware) {
+func (h *Handler) Routes(r *gin.RouterGroup, authMiddleware *jwt.GinJWTMiddleware) {
 	resourceRoutes := r.Group("api/v1/resource")
 
 	// skip resource endpoint for donetick.com

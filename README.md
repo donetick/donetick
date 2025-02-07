@@ -47,7 +47,7 @@ viewing tasks directly in supported platforms (e.g., Home Assistant with a custo
 
 🛠️ "Things" Integration: Use entities (numbers, strings, booleans) to trigger tasks, track values, or connect with external systems via webhooks.
 
-🔑 SSO/OIDC SupportIntegrate with identity providers using Single Sign-On and OpenID Connect.
+🔑 SSO/OIDC Support: Integrate with identity providers using Single Sign-On and OpenID Connect.
 
 
 ---

@@ -427,7 +427,7 @@ func (h *Handler) editChore(c *gin.Context) {
 		})
 		return
 	}
-	if currentUser.ID != oldChore.CreatedBy {
+	if !oldChore.CanEdit(currentUser.ID, circleUsers) {
 		c.JSON(403, gin.H{
 			"error": "You are not allowed to edit this chore",
 		})

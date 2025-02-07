@@ -158,9 +158,6 @@ func LoadConfig() *Config {
 		panic(err)
 	}
 	fmt.Printf("--ConfigLoad name : %s ", config.Name)
-	panic(config.OAuth2Config.ClientID)
-
-	// bind all the environment variables to the config:
 
 	configEnvironmentOverrides(&config)
 	return &config

@@ -25,7 +25,7 @@ Donetick is an open-source, user-friendly app designed to help you organize task
 
 🏰 Group-Based Task Management: Create and manage tasks solo or with your family or friends in shared circles.
 
-✨ One-Sentence Task Creation[Experimental] : Create tasks by simply describing them in a sentence. Donetick intelligently extracts dates, times, and recurrence patterns from your natural language. For example, "Change water filter every 6 months" or "Take the trash out every Monday and Tuesday at 6:15 pm" will automatically generate the correct tasks.
+✨ One-Sentence Task Creation[Experimental] : Create tasks by simply describing them in a sentence. Donetick will extracts dates, times, and recurrence patterns from your natural language."Take the trash out every Monday and Tuesday at 6:15 pm" will automatically generate the correct task.
 
 🔄 Smart Assignments: Assign tasks to individuals with rotation strategies like random or least completed.
 
@@ -46,6 +46,8 @@ viewing tasks directly in supported platforms (e.g., Home Assistant with a custo
 💿 Labels for Organization: Group and organize tasks with labels. Labels can also be shared within the same group for better collaboration.
 
 🛠️ "Things" Integration: Use entities (numbers, strings, booleans) to trigger tasks, track values, or connect with external systems via webhooks.
+
+🔑 SSO/OIDC SupportIntegrate with identity providers using Single Sign-On and OpenID Connect.
 
 
 ---

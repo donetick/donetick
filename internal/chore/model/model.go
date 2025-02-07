@@ -3,6 +3,7 @@ package model
 import (
 	"time"
 
+	cModel "donetick.com/core/internal/circle/model"
 	lModel "donetick.com/core/internal/label/model"
 	tModel "donetick.com/core/internal/thing/model"
 	thingModel "donetick.com/core/internal/thing/model"
@@ -168,4 +169,16 @@ type ChoreReq struct {
 	Points               *int                     `json:"points"`
 	CompletionWindow     *int                     `json:"completionWindow"`
 	Description          *string                  `json:"description"`
+}
+
+func (c *Chore) CanEdit(userID int, circleUsers []*cModel.UserCircleDetail) bool {
+	if c.CreatedBy == userID {
+		return true
+	}
+	for _, cu := range circleUsers {
+		if cu.UserID == userID && cu.Role == "admin" {
+			return true
+		}
+	}
+	return false
 }

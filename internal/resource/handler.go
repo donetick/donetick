@@ -4,6 +4,7 @@ import (
 	"donetick.com/core/config"
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
+	"github.com/ulule/limiter/v3"
 )
 
 type Resource struct {
@@ -35,7 +36,7 @@ func (h *Handler) getResource(c *gin.Context) {
 	})
 }
 
-func (h *Handler) Routes(r *gin.RouterGroup, authMiddleware *jwt.GinJWTMiddleware) {
+func Routes(r *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware, limiter *limiter.Limiter) {
 	resourceRoutes := r.Group("api/v1/resource")
 
 	// skip resource endpoint for donetick.com

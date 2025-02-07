@@ -24,6 +24,7 @@ import (
 	"donetick.com/core/internal/email"
 	label "donetick.com/core/internal/label"
 	lRepo "donetick.com/core/internal/label/repo"
+	"donetick.com/core/internal/resource"
 
 	notifier "donetick.com/core/internal/notifier"
 	nRepo "donetick.com/core/internal/notifier/repo"
@@ -53,6 +54,7 @@ func main() {
 		// fx.Provide(config.NewConfig),
 		fx.Provide(auth.NewAuthMiddleware),
 		fx.Provide(auth.NewIdentityProvider),
+		fx.Provide(resource.NewHandler),
 
 		// fx.Provide(NewBot),
 		fx.Provide(database.NewDatabase),
@@ -107,6 +109,7 @@ func main() {
 			thing.APIs,
 			label.Routes,
 			frontend.Routes,
+			resource.Routes,
 
 			func(r *gin.Engine) {},
 		),

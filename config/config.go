@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/spf13/viper"
@@ -86,13 +87,14 @@ type EmailConfig struct {
 }
 
 type OAuth2Config struct {
-	ClientID     string `mapstructure:"client_id" yaml:"client_id"`
-	ClientSecret string `mapstructure:"client_secret" yaml:"client_secret"`
-	RedirectURL  string `mapstructure:"redirect_url" yaml:"redirect_url"`
-	Scopes       []string
-	AuthURL      string `mapstructure:"auth_url" yaml:"auth_url"`
-	TokenURL     string `mapstructure:"token_url" yaml:"token_url"`
-	UserInfoURL  string `mapstructure:"user_info_url" yaml:"user_info_url"`
+	ClientID     string   `mapstructure:"client_id" yaml:"client_id"`
+	ClientSecret string   `mapstructure:"client_secret" yaml:"client_secret"`
+	RedirectURL  string   `mapstructure:"redirect_url" yaml:"redirect_url"`
+	Scopes       []string `mapstructure:"scopes" yaml:"scopes"`
+	AuthURL      string   `mapstructure:"auth_url" yaml:"auth_url"`
+	TokenURL     string   `mapstructure:"token_url" yaml:"token_url"`
+	UserInfoURL  string   `mapstructure:"user_info_url" yaml:"user_info_url"`
+	Name         string   `mapstructure:"name" yaml:"name"`
 }
 
 func NewConfig() *Config {
@@ -138,6 +140,7 @@ func LoadConfig() *Config {
 	// get logger and log the current environment:
 	fmt.Printf("--ConfigLoad config for environment: %s ", os.Getenv("DT_ENV"))
 	viper.SetEnvPrefix("DT")
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	viper.AutomaticEnv()
 
 	viper.AddConfigPath("./config")
@@ -155,11 +158,11 @@ func LoadConfig() *Config {
 		panic(err)
 	}
 	fmt.Printf("--ConfigLoad name : %s ", config.Name)
+	panic(config.OAuth2Config.ClientID)
 
 	// bind all the environment variables to the config:
 
 	configEnvironmentOverrides(&config)
-	panic(config.OAuth2Config.ClientID)
 	return &config
 
 	// return LocalConfig()

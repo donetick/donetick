@@ -42,3 +42,4 @@ oauth2:
   token_url: 
   user_info_url: 
   redirect_url: 
+  name: 

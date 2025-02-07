@@ -5,6 +5,7 @@ import (
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
 )
+
 type Resource struct {
 	Idp identityProvider `json:"identity_provider" binding:"omitempty"`
 }
@@ -27,14 +28,22 @@ func NewHandler(cfg *config.Config) *Handler {
 func (h *Handler) getResource(c *gin.Context) {
 	c.JSON(200, &Resource{
 		Idp: identityProvider{
-		// skip resource endpoint for donetick.com
+			Auth_url:  h.config.OAuth2Config.AuthURL,
+			Client_ID: h.config.OAuth2Config.ClientID,
+			Name:      h.config.OAuth2Config.Name,
+		},
+	})
+}
+
+func (h *Handler) RegisterRoutes(r *gin.RouterGroup, authMiddleware *jwt.GinJWTMiddleware) {
+	resourceRoutes := r.Group("api/v1/resource")
+
+	// skip resource endpoint for donetick.com
+	if h.config.IsDoneTickDotCom {
 		resourceRoutes.GET("", func(c *gin.Context) {
 			c.JSON(200, gin.H{})
 		})
 		return
 	}
-
-		resourceRoutes.GET("", h.getResource)
-	}
-
+	resourceRoutes.GET("", h.getResource)
 }

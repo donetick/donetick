@@ -44,13 +44,12 @@ func (i *IdentityProvider) ExchangeToken(ctx context.Context, code string) (stri
 			TokenURL: i.config.TokenURL,
 		},
 	}
-
 	token, err := conf.Exchange(ctx, code)
 	if err != nil {
 		return "", err
 	}
 
-	accessToken, ok := token.Extra("access_token").(string)
+	accessToken, ok := token.AccessToken, token.Valid()
 	if !ok {
 		return "", errors.New("access token not found")
 	}

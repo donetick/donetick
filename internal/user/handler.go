@@ -294,14 +294,16 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 		}
 
 		token, err := h.identityProvider.ExchangeToken(c, req.Code)
+
 		if err != nil {
-			logger.Errorw("account.handler.thirdPartyAuthCallback (oauth2) failed to exchange token", "err", err)
+			logger.Error("account.handler.thirdPartyAuthCallback (oauth2) failed to exchange token", "err", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to exchange token"})
 			return
 		}
+
 		claims, err := h.identityProvider.GetUserInfo(c, token)
 		if err != nil {
-			logger.Errorw("account.handler.thirdPartyAuthCallback (oauth2) failed to get claims", "err", err)
+			logger.Error("account.handler.thirdPartyAuthCallback (oauth2) failed to get claims", "err", err)
 		}
 
 		acc, err := h.userRepo.FindByEmail(c, claims.Email)
@@ -310,7 +312,7 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 			password := auth.GenerateRandomPassword(12)
 			encodedPassword, err := auth.EncodePassword(password)
 			if err != nil {
-				logger.Errorw("account.handler.thirdPartyAuthCallback (oauth2) password encoding failed", "err", err)
+				logger.Error("account.handler.thirdPartyAuthCallback (oauth2) password encoding failed", "err", err)
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Password encoding failed"})
 				return
 			}
@@ -370,16 +372,13 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 		h.jwtAuth.Authenticator(c)
 		tokenString, expire, err := h.jwtAuth.TokenGenerator(acc)
 		if err != nil {
-			logger.Errorw("Unable to Generate a Token")
+			logger.Error("Unable to Generate a Token")
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": "Unable to Generate a Token",
 			})
 			return
 		}
 		c.JSON(http.StatusOK, gin.H{"token": tokenString, "expire": expire})
-		return
-	default:
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid provider"})
 		return
 	}
 }
@@ -712,14 +711,5 @@ func Routes(router *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware, limiter 
 		authRoutes.GET("refresh", auth.RefreshHandler)
 		authRoutes.POST("reset", h.resetPassword)
 		authRoutes.POST("password", h.updateUserPassword)
-	}
-	pingRoutes := router.Group("api/v1/ping")
-	pingRoutes.Use(utils.RateLimitMiddleware(limiter))
-	{
-		pingRoutes.GET("/", func(c *gin.Context) {
-			c.JSON(200, gin.H{
-				"message": "pong",
-			})
-		})
 	}
 }

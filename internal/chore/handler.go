@@ -427,7 +427,7 @@ func (h *Handler) editChore(c *gin.Context) {
 		})
 		return
 	}
-	if currentUser.ID != oldChore.CreatedBy {
+	if !oldChore.CanEdit(currentUser.ID, circleUsers) {
 		c.JSON(403, gin.H{
 			"error": "You are not allowed to edit this chore",
 		})
@@ -998,7 +998,7 @@ func (h *Handler) completeChore(c *gin.Context) {
 	}
 	// confirm that the chore in completion window:
 	if chore.CompletionWindow != nil {
-		if completedDate.After(chore.NextDueDate.Add(time.Hour * time.Duration(*chore.CompletionWindow))) {
+		if completedDate.Before(chore.NextDueDate.Add(time.Hour * time.Duration(*chore.CompletionWindow))) {
 			c.JSON(400, gin.H{
 				"error": "Chore is out of completion window",
 			})

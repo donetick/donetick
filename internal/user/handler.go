@@ -31,16 +31,18 @@ type Handler struct {
 	circleRepo             *cRepo.CircleRepository
 	jwtAuth                *jwt.GinJWTMiddleware
 	email                  *email.EmailSender
+	identityProvider       *auth.IdentityProvider
 	isDonetickDotCom       bool
 	IsUserCreationDisabled bool
 }
 
-func NewHandler(ur *uRepo.UserRepository, cr *cRepo.CircleRepository, jwtAuth *jwt.GinJWTMiddleware, email *email.EmailSender, config *config.Config) *Handler {
+func NewHandler(ur *uRepo.UserRepository, cr *cRepo.CircleRepository, jwtAuth *jwt.GinJWTMiddleware, email *email.EmailSender, idp *auth.IdentityProvider, config *config.Config) *Handler {
 	return &Handler{
 		userRepo:               ur,
 		circleRepo:             cr,
 		jwtAuth:                jwtAuth,
 		email:                  email,
+		identityProvider:       idp,
 		isDonetickDotCom:       config.IsDoneTickDotCom,
 		IsUserCreationDisabled: config.IsUserCreationDisabled,
 	}
@@ -178,7 +180,8 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 	provider := c.Param("provider")
 	logger.Infow("account.handler.thirdPartyAuthCallback", "provider", provider)
 
-	if provider == "google" {
+	switch provider {
+	case "google":
 		c.Set("auth_provider", "3rdPartyAuth")
 		type OAuthRequest struct {
 			Token    string `json:"token" binding:"required"`
@@ -219,7 +222,7 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 				Image:       userinfo.Picture,
 				Password:    encodedPassword,
 				DisplayName: userinfo.GivenName,
-				Provider:    2,
+				Provider:    uModel.AuthProviderGoogle,
 			}
 			createdUser, err := h.userRepo.CreateUser(c, acc)
 			if err != nil {
@@ -271,6 +274,105 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 		tokenString, expire, err := h.jwtAuth.TokenGenerator(acc)
 		if err != nil {
 			logger.Errorw("Unable to Generate a Token")
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "Unable to Generate a Token",
+			})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"token": tokenString, "expire": expire})
+		return
+	case "oauth2":
+		c.Set("auth_provider", "3rdPartyAuth")
+		// Read the ID token from the request bod
+		type Request struct {
+			Code string `json:"code"`
+		}
+		var req Request
+		if err := c.BindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+			return
+		}
+
+		token, err := h.identityProvider.ExchangeToken(c, req.Code)
+
+		if err != nil {
+			logger.Error("account.handler.thirdPartyAuthCallback (oauth2) failed to exchange token", "err", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to exchange token"})
+			return
+		}
+
+		claims, err := h.identityProvider.GetUserInfo(c, token)
+		if err != nil {
+			logger.Error("account.handler.thirdPartyAuthCallback (oauth2) failed to get claims", "err", err)
+		}
+
+		acc, err := h.userRepo.FindByEmail(c, claims.Email)
+		if err != nil {
+			// Create user
+			password := auth.GenerateRandomPassword(12)
+			encodedPassword, err := auth.EncodePassword(password)
+			if err != nil {
+				logger.Error("account.handler.thirdPartyAuthCallback (oauth2) password encoding failed", "err", err)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Password encoding failed"})
+				return
+			}
+			acc = &uModel.User{
+				Username:    claims.Email,
+				Email:       claims.Email,
+				Password:    encodedPassword,
+				DisplayName: claims.DisplayName,
+				Provider:    uModel.AuthProviderOAuth2,
+			}
+			createdUser, err := h.userRepo.CreateUser(c, acc)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{
+					"error": "Unable to create user",
+				})
+				return
+
+			}
+			// Create Circle for the user:
+			userCircle, err := h.circleRepo.CreateCircle(c, &cModel.Circle{
+				Name:       claims.DisplayName + "'s circle",
+				CreatedAt:  time.Now(),
+				UpdatedAt:  time.Now(),
+				InviteCode: utils.GenerateInviteCode(c),
+			})
+
+			if err != nil {
+				c.JSON(500, gin.H{
+					"error": "Error creating circle",
+				})
+				return
+			}
+
+			if err := h.circleRepo.AddUserToCircle(c, &cModel.UserCircle{
+				UserID:    createdUser.ID,
+				CircleID:  userCircle.ID,
+				Role:      "admin",
+				IsActive:  true,
+				CreatedAt: time.Now(),
+				UpdatedAt: time.Now(),
+			}); err != nil {
+				c.JSON(500, gin.H{
+					"error": "Error adding user to circle",
+				})
+				return
+			}
+			createdUser.CircleID = userCircle.ID
+			if err := h.userRepo.UpdateUser(c, createdUser); err != nil {
+				c.JSON(500, gin.H{
+					"error": "Error updating user",
+				})
+				return
+			}
+		}
+		// ... (JWT generation and response)
+		c.Set("user_account", acc)
+		h.jwtAuth.Authenticator(c)
+		tokenString, expire, err := h.jwtAuth.TokenGenerator(acc)
+		if err != nil {
+			logger.Error("Unable to Generate a Token")
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": "Unable to Generate a Token",
 			})
@@ -609,14 +711,5 @@ func Routes(router *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware, limiter 
 		authRoutes.GET("refresh", auth.RefreshHandler)
 		authRoutes.POST("reset", h.resetPassword)
 		authRoutes.POST("password", h.updateUserPassword)
-	}
-	pingRoutes := router.Group("api/v1/ping")
-	pingRoutes.Use(utils.RateLimitMiddleware(limiter))
-	{
-		pingRoutes.GET("/", func(c *gin.Context) {
-			c.JSON(200, gin.H{
-				"message": "pong",
-			})
-		})
 	}
 }

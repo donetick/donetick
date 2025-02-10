@@ -75,9 +75,9 @@ func (r *UserRepository) UpdateUserCircle(c context.Context, userID, circleID in
 	return r.db.WithContext(c).Model(&uModel.User{}).Where("id = ?", userID).Update("circle_id", circleID).Error
 }
 
-func (r *UserRepository) FindByEmail(c context.Context, email string) (*uModel.User, error) {
-	var user *uModel.User
-	if err := r.db.WithContext(c).Where("email = ?", email).First(&user).Error; err != nil {
+func (r *UserRepository) FindByEmail(c context.Context, email string) (*uModel.UserDetails, error) {
+	var user *uModel.UserDetails
+	if err := r.db.WithContext(c).Table("users u").Select("u.*, c.webhook_url as webhook_url").Joins("left join circles c on c.id = u.circle_id").Where("email = ?", email).First(&user).Error; err != nil {
 		return nil, err
 	}
 	return user, nil

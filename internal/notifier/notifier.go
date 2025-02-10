@@ -45,10 +45,6 @@ func (n *Notifier) SendNotification(c context.Context, notification *nModel.Noti
 	if err != nil {
 		log.Error("Failed to send notification", "err", err)
 	}
-	if notification.RawEvent != nil && notification.WebhookURL != nil {
-		// if we have a webhook url, we should send the event to the webhook
-		n.eventsProducer.NotificaitonEvent(c, *notification.WebhookURL, notification.RawEvent)
-	}
 
 	return nil
 }

@@ -216,7 +216,7 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 			// create a random password for the user using crypto/rand:
 			password := auth.GenerateRandomPassword(12)
 			encodedPassword, err := auth.EncodePassword(password)
-			acc = &uModel.User{
+			account := &uModel.User{
 				Username:    userinfo.Id,
 				Email:       userinfo.Email,
 				Image:       userinfo.Picture,
@@ -224,7 +224,7 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 				DisplayName: userinfo.GivenName,
 				Provider:    uModel.AuthProviderGoogle,
 			}
-			createdUser, err := h.userRepo.CreateUser(c, acc)
+			createdUser, err := h.userRepo.CreateUser(c, account)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{
 					"error": "Unable to create user",
@@ -316,14 +316,14 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Password encoding failed"})
 				return
 			}
-			acc = &uModel.User{
+			account := &uModel.User{
 				Username:    claims.Email,
 				Email:       claims.Email,
 				Password:    encodedPassword,
 				DisplayName: claims.DisplayName,
 				Provider:    uModel.AuthProviderOAuth2,
 			}
-			createdUser, err := h.userRepo.CreateUser(c, acc)
+			createdUser, err := h.userRepo.CreateUser(c, account)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{
 					"error": "Unable to create user",

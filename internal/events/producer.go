@@ -24,13 +24,13 @@ const (
 type EventType string
 
 const (
-	EventTypeUnknown         EventType = ""
-	EventTypeChoreCreated    EventType = "CREATED"
-	EventTypeChoreReminder   EventType = "REMINDER"
-	EventTypeChoreUpdated    EventType = "UPDATED"
-	EventTypeChoreCompleted  EventType = "COMPLETED"
-	EventTypeChoreReassigned EventType = "REASSIGNED"
-	EventTypeChoreSkipped    EventType = "SKIPPED"
+	EventTypeUnknown        EventType = ""
+	EventTypeTaskCreated    EventType = "task.created"
+	EventTypeTaskReminder   EventType = "task.reminder"
+	EventTypeTaskUpdated    EventType = "task.updated"
+	EventTypeTaskCompleted  EventType = "task.completed"
+	EventTypeTaskReassigned EventType = "task.reassigned"
+	EventTypeTaskSkipped    EventType = "task.skipped"
 )
 
 type Event struct {
@@ -122,7 +122,7 @@ func (p *EventsProducer) ChoreCompleted(ctx context.Context, webhookURL *string,
 	}
 
 	event := Event{
-		Type:      EventTypeChoreCompleted,
+		Type:      EventTypeTaskCompleted,
 		URL:       *webhookURL,
 		Timestamp: time.Now(),
 		Data: ChoreData{Chore: chore,
@@ -140,7 +140,7 @@ func (p *EventsProducer) ChoreSkipped(ctx context.Context, webhookURL *string, c
 	}
 
 	event := Event{
-		Type:      EventTypeChoreSkipped,
+		Type:      EventTypeTaskSkipped,
 		URL:       *webhookURL,
 		Timestamp: time.Now(),
 		Data: ChoreData{Chore: chore,
@@ -151,13 +151,13 @@ func (p *EventsProducer) ChoreSkipped(ctx context.Context, webhookURL *string, c
 	p.publishEvent(event)
 }
 
-func (p *EventsProducer) NotificaitonEvent(ctx context.Context, url string, event interface{}) {
+func (p *EventsProducer) NotificationEvent(ctx context.Context, url string, event interface{}) {
 	// print the event and the url :
 	p.logger.Debug("Sending notification event")
 
 	p.publishEvent(Event{
 		URL:       url,
-		Type:      EventTypeChoreReminder,
+		Type:      EventTypeTaskReminder,
 		Timestamp: time.Now(),
 		Data:      event,
 	})

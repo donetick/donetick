@@ -20,16 +20,16 @@ type signIn struct {
 	Password string `form:"password" json:"password" binding:"required"`
 }
 
-func CurrentUser(c *gin.Context) (*uModel.User, bool) {
+func CurrentUser(c *gin.Context) (*uModel.UserDetails, bool) {
 	data, ok := c.Get(identityKey)
 	if !ok {
 		return nil, false
 	}
-	acc, ok := data.(*uModel.User)
+	acc, ok := data.(*uModel.UserDetails)
 	return acc, ok
 }
 
-func MustCurrentUser(c *gin.Context) *uModel.User {
+func MustCurrentUser(c *gin.Context) *uModel.UserDetails {
 	acc, ok := CurrentUser(c)
 	if ok {
 		return acc
@@ -45,7 +45,7 @@ func NewAuthMiddleware(cfg *config.Config, userRepo *uRepo.UserRepository) (*jwt
 		MaxRefresh:  cfg.Jwt.MaxRefresh, // 7 days as long as their token is valid they can refresh it
 		IdentityKey: identityKey,
 		PayloadFunc: func(data interface{}) jwt.MapClaims {
-			if u, ok := data.(*uModel.User); ok {
+			if u, ok := data.(*uModel.UserDetails); ok {
 				return jwt.MapClaims{
 					identityKey: u.Username,
 				}
@@ -85,22 +85,25 @@ func NewAuthMiddleware(cfg *config.Config, userRepo *uRepo.UserRepository) (*jwt
 					}
 					return nil, jwt.ErrFailedAuthentication
 				}
-				return &uModel.User{
-					ID:        user.ID,
-					Username:  user.Username,
-					Password:  "",
-					Image:     user.Image,
-					CreatedAt: user.CreatedAt,
-					UpdatedAt: user.UpdatedAt,
-					Disabled:  user.Disabled,
-					CircleID:  user.CircleID,
+				return &uModel.UserDetails{
+					User: uModel.User{
+						ID:        user.ID,
+						Username:  user.Username,
+						Password:  "",
+						Image:     user.Image,
+						CreatedAt: user.CreatedAt,
+						UpdatedAt: user.UpdatedAt,
+						Disabled:  user.Disabled,
+						CircleID:  user.CircleID,
+					},
+					WebhookURL: user.WebhookURL,
 				}, nil
 			case "3rdPartyAuth":
 				// we should only reach this stage if a handler mannually call authenticator with it's context:
 
-				var authObject *uModel.User
+				var authObject *uModel.UserDetails
 				v := c.Value("user_account")
-				authObject = v.(*uModel.User)
+				authObject = v.(*uModel.UserDetails)
 
 				return authObject, nil
 
@@ -111,7 +114,7 @@ func NewAuthMiddleware(cfg *config.Config, userRepo *uRepo.UserRepository) (*jwt
 
 		Authorizator: func(data interface{}, c *gin.Context) bool {
 
-			if _, ok := data.(*uModel.User); ok {
+			if _, ok := data.(*uModel.UserDetails); ok {
 				return true
 			}
 			return false

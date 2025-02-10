@@ -2,6 +2,7 @@ package pushover
 
 import (
 	"context"
+	"errors"
 
 	"donetick.com/core/config"
 	nModel "donetick.com/core/internal/notifier/model"
@@ -22,7 +23,10 @@ func NewPushover(cfg *config.Config) *Pushover {
 	}
 }
 
-func (p *Pushover) SendNotification(c context.Context, notification *nModel.Notification) error {
+func (p *Pushover) SendNotification(c context.Context, notification *nModel.NotificationDetails) error {
+	if notification.TargetID == "" {
+		return errors.New("unable to send notification, targetID is empty")
+	}
 	log := logging.FromContext(c)
 	recipient := pushover.NewRecipient(notification.TargetID)
 	message := pushover.NewMessageWithTitle(notification.Text, "Donetick")

@@ -25,6 +25,10 @@ type User struct {
 	Expiration              *string                `json:"expiration" gorm:"column:expiration;<-:false"`     // read only column
 	UserNotificationTargets UserNotificationTarget `json:"notification_target" gorm:"foreignKey:UserID;references:ID"`
 }
+type UserDetails struct {
+	User
+	WebhookURL *string `json:"webhookURL" gorm:"column:webhook_url;<-:false"` // read only column
+}
 
 type UserPasswordReset struct {
 	ID             int       `gorm:"column:id"`
@@ -43,10 +47,10 @@ type APIToken struct {
 }
 
 type UserNotificationTarget struct {
-	UserID    int                     `json:"userId" gorm:"column:user_id;index;primaryKey"` // Index on userID
-	Type      nModel.NotificationType `json:"type" gorm:"column:type"`                       // Type
-	TargetID  string                  `json:"target_id" gorm:"column:target_id"`             // Target ID
-	CreatedAt time.Time               `json:"-" gorm:"column:created_at"`
+	UserID    int                         `json:"userId" gorm:"column:user_id;index;primaryKey"` // Index on userID
+	Type      nModel.NotificationPlatform `json:"type" gorm:"column:type"`                       // Type
+	TargetID  string                      `json:"target_id" gorm:"column:target_id"`             // Target ID
+	CreatedAt time.Time                   `json:"-" gorm:"column:created_at"`
 }
 type AuthProviderType int
 

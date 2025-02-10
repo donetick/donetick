@@ -52,7 +52,7 @@ func (m MigrateChatIdToNotificationTarget20241212) Up(ctx context.Context, db *g
 			notificationTargets = append(notificationTargets, uModel.UserNotificationTarget{
 				UserID:   user.ID,
 				TargetID: fmt.Sprint(user.ChatID),
-				Type:     nModel.NotificationTypeTelegram,
+				Type:     nModel.NotificationPlatformTelegram,
 			})
 		}
 

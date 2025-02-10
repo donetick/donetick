@@ -23,7 +23,7 @@ func (r *NotificationRepository) DeleteAllChoreNotifications(choreID int) error 
 func (r *NotificationRepository) BatchInsertNotifications(notifications []*nModel.Notification) error {
 	return r.db.Create(&notifications).Error
 }
-func (r *NotificationRepository) MarkNotificationsAsSent(notifications []*nModel.Notification) error {
+func (r *NotificationRepository) MarkNotificationsAsSent(notifications []*nModel.NotificationDetails) error {
 	// Extract IDs from notifications
 	var ids []int
 	for _, notification := range notifications {
@@ -32,11 +32,15 @@ func (r *NotificationRepository) MarkNotificationsAsSent(notifications []*nModel
 	// Use the extracted IDs in the Where clause
 	return r.db.Model(&nModel.Notification{}).Where("id IN (?)", ids).Update("is_sent", true).Error
 }
-func (r *NotificationRepository) GetPendingNotificaiton(c context.Context, lookback time.Duration) ([]*nModel.Notification, error) {
-	var notifications []*nModel.Notification
+func (r *NotificationRepository) GetPendingNotificaiton(c context.Context, lookback time.Duration) ([]*nModel.NotificationDetails, error) {
+	var notifications []*nModel.NotificationDetails
 	start := time.Now().UTC().Add(-lookback)
 	end := time.Now().UTC()
-	if err := r.db.Where("is_sent = ? AND scheduled_for < ? AND scheduled_for > ?", false, end, start).Find(&notifications).Error; err != nil {
+	if err := r.db.Table("notifications").
+		Select("notifications.*, circles.webhook_url as webhook_url").
+		Joins("left join circles on circles.id = notifications.circle_id").
+		Where("notifications.is_sent = ? AND notifications.scheduled_for < ? AND notifications.scheduled_for > ?", false, end, start).
+		Find(&notifications).Error; err != nil {
 		return nil, err
 	}
 	return notifications, nil

@@ -15,6 +15,7 @@ import (
 	chModel "donetick.com/core/internal/chore/model"
 	chRepo "donetick.com/core/internal/chore/repo"
 	cRepo "donetick.com/core/internal/circle/repo"
+	"donetick.com/core/internal/events"
 	lRepo "donetick.com/core/internal/label/repo"
 	"donetick.com/core/internal/notifier"
 	nRepo "donetick.com/core/internal/notifier/repo"
@@ -27,25 +28,28 @@ import (
 )
 
 type Handler struct {
-	choreRepo  *chRepo.ChoreRepository
-	circleRepo *cRepo.CircleRepository
-	notifier   *notifier.Notifier
-	nPlanner   *nps.NotificationPlanner
-	nRepo      *nRepo.NotificationRepository
-	tRepo      *tRepo.ThingRepository
-	lRepo      *lRepo.LabelRepository
+	choreRepo     *chRepo.ChoreRepository
+	circleRepo    *cRepo.CircleRepository
+	notifier      *notifier.Notifier
+	nPlanner      *nps.NotificationPlanner
+	nRepo         *nRepo.NotificationRepository
+	tRepo         *tRepo.ThingRepository
+	lRepo         *lRepo.LabelRepository
+	eventProducer *events.EventsProducer
 }
 
 func NewHandler(cr *chRepo.ChoreRepository, circleRepo *cRepo.CircleRepository, nt *notifier.Notifier,
-	np *nps.NotificationPlanner, nRepo *nRepo.NotificationRepository, tRepo *tRepo.ThingRepository, lRepo *lRepo.LabelRepository) *Handler {
+	np *nps.NotificationPlanner, nRepo *nRepo.NotificationRepository, tRepo *tRepo.ThingRepository, lRepo *lRepo.LabelRepository,
+	ep *events.EventsProducer) *Handler {
 	return &Handler{
-		choreRepo:  cr,
-		circleRepo: circleRepo,
-		notifier:   nt,
-		nPlanner:   np,
-		nRepo:      nRepo,
-		tRepo:      tRepo,
-		lRepo:      lRepo,
+		choreRepo:     cr,
+		circleRepo:    circleRepo,
+		notifier:      nt,
+		nPlanner:      np,
+		nRepo:         nRepo,
+		tRepo:         tRepo,
+		lRepo:         lRepo,
+		eventProducer: ep,
 	}
 }
 
@@ -294,7 +298,7 @@ func (h *Handler) createChore(c *gin.Context) {
 	go func() {
 		h.nPlanner.GenerateNotifications(c, createdChore)
 	}()
-	shouldReturn := HandleThingAssociation(choreReq, h, c, currentUser)
+	shouldReturn := HandleThingAssociation(choreReq, h, c, &currentUser.User)
 	if shouldReturn {
 		return
 	}
@@ -551,7 +555,7 @@ func (h *Handler) editChore(c *gin.Context) {
 		h.tRepo.DissociateThingWithChore(c, oldChore.ThingChore.ThingID, oldChore.ID)
 
 	}
-	shouldReturn := HandleThingAssociation(choreReq, h, c, currentUser)
+	shouldReturn := HandleThingAssociation(choreReq, h, c, &currentUser.User)
 	if shouldReturn {
 		return
 	}
@@ -818,7 +822,7 @@ func (h *Handler) skipChore(c *gin.Context) {
 		})
 		return
 	}
-
+	h.eventProducer.ChoreSkipped(c, currentUser.WebhookURL, updatedChore, &currentUser.User)
 	c.JSON(200, gin.H{
 		"res": updatedChore,
 	})
@@ -1069,7 +1073,7 @@ func (h *Handler) completeChore(c *gin.Context) {
 	// 	h.notifier.SendChoreCompletion(c, chore, currentUser)
 	// }()
 	h.nPlanner.GenerateNotifications(c, updatedChore)
-
+	h.eventProducer.ChoreCompleted(c, currentUser.WebhookURL, chore, &currentUser.User)
 	c.JSON(200, gin.H{
 		"res": updatedChore,
 	})

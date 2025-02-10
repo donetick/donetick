@@ -70,12 +70,10 @@ func (tn *TelegramNotifier) SendChoreCompletion(c context.Context, chore *chMode
 
 }
 
-func (tn *TelegramNotifier) SendNotification(c context.Context, notification *nModel.Notification) error {
-
+func (tn *TelegramNotifier) SendNotification(c context.Context, notification *nModel.NotificationDetails) error {
 	log := logging.FromContext(c)
 	if notification.TargetID == "" {
-		log.Error("Notification target ID is empty")
-		return errors.New("Notification target ID is empty")
+		return errors.New("unable to send notification, targetID is empty")
 	}
 	chatID, err := strconv.ParseInt(notification.TargetID, 10, 64)
 	if err != nil {

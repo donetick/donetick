@@ -20,6 +20,7 @@ type Config struct {
 	EmailConfig            EmailConfig     `mapstructure:"email" yaml:"email"`
 	StripeConfig           StripeConfig    `mapstructure:"stripe" yaml:"stripe"`
 	OAuth2Config           OAuth2Config    `mapstructure:"oauth2" yaml:"oauth2"`
+	WebhookConfig          WebhookConfig   `mapstructure:"webhook" yaml:"webhook"`
 	IsDoneTickDotCom       bool            `mapstructure:"is_done_tick_dot_com" yaml:"is_done_tick_dot_com"`
 	IsUserCreationDisabled bool            `mapstructure:"is_user_creation_disabled" yaml:"is_user_creation_disabled"`
 }
@@ -95,6 +96,11 @@ type OAuth2Config struct {
 	TokenURL     string   `mapstructure:"token_url" yaml:"token_url"`
 	UserInfoURL  string   `mapstructure:"user_info_url" yaml:"user_info_url"`
 	Name         string   `mapstructure:"name" yaml:"name"`
+}
+
+type WebhookConfig struct {
+	Timeout   time.Duration `mapstructure:"timeout" yaml:"timeout" default:"5s"`
+	QueueSize int           `mapstructure:"queue_size" yaml:"queue_size" default:"100"`
 }
 
 func NewConfig() *Config {

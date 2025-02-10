@@ -22,6 +22,7 @@ import (
 	cRepo "donetick.com/core/internal/circle/repo"
 	"donetick.com/core/internal/database"
 	"donetick.com/core/internal/email"
+	"donetick.com/core/internal/events"
 	label "donetick.com/core/internal/label"
 	lRepo "donetick.com/core/internal/label/repo"
 	"donetick.com/core/internal/resource"
@@ -72,6 +73,7 @@ func main() {
 		fx.Provide(pushover.NewPushover),
 		fx.Provide(telegram.NewTelegramNotifier),
 		fx.Provide(notifier.NewNotifier),
+		fx.Provide(events.NewEventsProducer),
 
 		// Rate limiter
 		fx.Provide(utils.NewRateLimiter),
@@ -123,7 +125,7 @@ func main() {
 
 }
 
-func newServer(lc fx.Lifecycle, cfg *config.Config, db *gorm.DB, notifier *notifier.Scheduler) *gin.Engine {
+func newServer(lc fx.Lifecycle, cfg *config.Config, db *gorm.DB, notifier *notifier.Scheduler, eventProducer *events.EventsProducer) *gin.Engine {
 	gin.SetMode(gin.DebugMode)
 	// log when http request is made:
 
@@ -157,6 +159,7 @@ func newServer(lc fx.Lifecycle, cfg *config.Config, db *gorm.DB, notifier *notif
 				}
 			}
 			notifier.Start(context.Background())
+			eventProducer.Start(context.Background())
 			go func() {
 				if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 					log.Fatalf("listen: %s\n", err)

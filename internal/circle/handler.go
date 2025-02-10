@@ -143,7 +143,7 @@ func (h *Handler) LeaveCircle(c *gin.Context) {
 
 	// START : HANDLE USER LEAVING CIRCLE
 	// bulk update chores:
-	if err := handleUserLeavingCircle(h, c, currentUser, orginalCircleID); err != nil {
+	if err := handleUserLeavingCircle(h, c, &currentUser.User, orginalCircleID); err != nil {
 		log.Error("Error handling user leaving circle:", err)
 		c.JSON(500, gin.H{
 			"error": "Error handling user leaving circle",

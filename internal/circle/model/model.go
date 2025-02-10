@@ -14,6 +14,7 @@ type Circle struct {
 	UpdatedAt  time.Time `json:"updated_at" gorm:"column:updated_at"`   // Updated at
 	InviteCode string    `json:"invite_code" gorm:"column:invite_code"` // Invite code
 	Disabled   bool      `json:"disabled" gorm:"column:disabled"`       // Disabled
+	WebhookURL *string   `json:"-" gorm:"column:webhook_url"`           // Webhook URL
 }
 
 type CircleDetail struct {
@@ -35,8 +36,8 @@ type UserCircle struct {
 
 type UserCircleDetail struct {
 	UserCircle
-	Username         string                  `json:"-" gorm:"column:username"`
-	DisplayName      string                  `json:"displayName" gorm:"column:display_name"`
-	NotificationType nModel.NotificationType `json:"-" gorm:"column:notification_type"`
-	TargetID         string                  `json:"-" gorm:"column:target_id"` // Target ID
+	Username         string                      `json:"-" gorm:"column:username"`
+	DisplayName      string                      `json:"displayName" gorm:"column:display_name"`
+	NotificationType nModel.NotificationPlatform `json:"-" gorm:"column:notification_type"`
+	TargetID         string                      `json:"-" gorm:"column:target_id"` // Target ID
 }

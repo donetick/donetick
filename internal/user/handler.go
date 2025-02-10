@@ -518,7 +518,7 @@ func (h *Handler) UpdateUserDetails(c *gin.Context) {
 		user.Image = *req.Image
 	}
 
-	if err := h.userRepo.UpdateUser(c, user); err != nil {
+	if err := h.userRepo.UpdateUser(c, &user.User); err != nil {
 		c.JSON(500, gin.H{
 			"error": "Error updating user",
 		})
@@ -608,8 +608,8 @@ func (h *Handler) UpdateNotificationTarget(c *gin.Context) {
 	}
 
 	type Request struct {
-		Type   nModel.NotificationType `json:"type"`
-		Target string                  `json:"target"`
+		Type   nModel.NotificationPlatform `json:"type"`
+		Target string                      `json:"target"`
 	}
 
 	var req Request
@@ -617,7 +617,7 @@ func (h *Handler) UpdateNotificationTarget(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 		return
 	}
-	if req.Type == nModel.NotificationTypeNone {
+	if req.Type == nModel.NotificationPlatformNone {
 		err := h.userRepo.DeleteNotificationTarget(c, currentUser.ID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete notification target"})

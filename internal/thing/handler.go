@@ -7,6 +7,7 @@ import (
 	auth "donetick.com/core/internal/authorization"
 	chRepo "donetick.com/core/internal/chore/repo"
 	cRepo "donetick.com/core/internal/circle/repo"
+	"donetick.com/core/internal/events"
 	nRepo "donetick.com/core/internal/notifier/repo"
 	nps "donetick.com/core/internal/notifier/service"
 	tModel "donetick.com/core/internal/thing/model"
@@ -17,11 +18,12 @@ import (
 )
 
 type Handler struct {
-	choreRepo  *chRepo.ChoreRepository
-	circleRepo *cRepo.CircleRepository
-	nPlanner   *nps.NotificationPlanner
-	nRepo      *nRepo.NotificationRepository
-	tRepo      *tRepo.ThingRepository
+	choreRepo      *chRepo.ChoreRepository
+	circleRepo     *cRepo.CircleRepository
+	nPlanner       *nps.NotificationPlanner
+	nRepo          *nRepo.NotificationRepository
+	tRepo          *tRepo.ThingRepository
+	eventsProducer *events.EventsProducer
 }
 
 type ThingRequest struct {
@@ -32,13 +34,14 @@ type ThingRequest struct {
 }
 
 func NewHandler(cr *chRepo.ChoreRepository, circleRepo *cRepo.CircleRepository,
-	np *nps.NotificationPlanner, nRepo *nRepo.NotificationRepository, tRepo *tRepo.ThingRepository) *Handler {
+	np *nps.NotificationPlanner, nRepo *nRepo.NotificationRepository, tRepo *tRepo.ThingRepository, eventsProducer *events.EventsProducer) *Handler {
 	return &Handler{
-		choreRepo:  cr,
-		circleRepo: circleRepo,
-		nPlanner:   np,
-		nRepo:      nRepo,
-		tRepo:      tRepo,
+		choreRepo:      cr,
+		circleRepo:     circleRepo,
+		nPlanner:       np,
+		nRepo:          nRepo,
+		tRepo:          tRepo,
+		eventsProducer: eventsProducer,
 	}
 }
 
@@ -95,6 +98,7 @@ func (h *Handler) UpdateThingState(c *gin.Context) {
 		return
 	}
 	thing, err := h.tRepo.GetThingByID(c, thingID)
+	old_state := thing.State
 	if thing.UserID != currentUser.ID {
 		c.JSON(403, gin.H{"error": "Forbidden"})
 		return
@@ -118,6 +122,13 @@ func (h *Handler) UpdateThingState(c *gin.Context) {
 	if shouldReturn {
 		return
 	}
+	h.eventsProducer.ThingsUpdated(c.Request.Context(), *currentUser.WebhookURL, map[string]interface{}{
+		"id":         thing.ID,
+		"name":       thing.Name,
+		"type":       thing.Type,
+		"from_state": old_state,
+		"to_state":   val,
+	})
 
 	c.JSON(200, gin.H{
 		"res": thing,

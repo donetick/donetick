@@ -31,6 +31,7 @@ const (
 	EventTypeTaskCompleted  EventType = "task.completed"
 	EventTypeTaskReassigned EventType = "task.reassigned"
 	EventTypeTaskSkipped    EventType = "task.skipped"
+	EventTypeThingChanged   EventType = "thing.changed"
 )
 
 type Event struct {
@@ -160,5 +161,14 @@ func (p *EventsProducer) NotificationEvent(ctx context.Context, url string, even
 		Type:      EventTypeTaskReminder,
 		Timestamp: time.Now(),
 		Data:      event,
+	})
+}
+
+func (p *EventsProducer) ThingsUpdated(ctx context.Context, url string, data interface{}) {
+	p.publishEvent(Event{
+		URL:       url,
+		Type:      EventTypeThingChanged,
+		Timestamp: time.Now(),
+		Data:      data,
 	})
 }

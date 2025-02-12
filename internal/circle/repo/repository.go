@@ -167,3 +167,7 @@ func (r *CircleRepository) RedeemPoints(c context.Context, circleID int, userID 
 	}
 	return nil
 }
+
+func (r *CircleRepository) SetWebhookURL(c context.Context, circleID int, webhookURL *string) error {
+	return r.db.WithContext(c).Model(&cModel.Circle{}).Where("id = ?", circleID).Update("webhook_url", webhookURL).Error
+}

@@ -14,7 +14,7 @@ type Circle struct {
 	UpdatedAt  time.Time `json:"updated_at" gorm:"column:updated_at"`   // Updated at
 	InviteCode string    `json:"invite_code" gorm:"column:invite_code"` // Invite code
 	Disabled   bool      `json:"disabled" gorm:"column:disabled"`       // Disabled
-	WebhookURL *string   `json:"-" gorm:"column:webhook_url"`           // Webhook URL
+	WebhookURL *string   `json:"webhook_url" gorm:"column:webhook_url"` // Webhook URL
 }
 
 type CircleDetail struct {

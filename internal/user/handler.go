@@ -686,6 +686,51 @@ func (h *Handler) updateUserPasswordLoggedInOnly(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{})
 }
 
+func (h *Handler) setWebhook(c *gin.Context) {
+	currentUser, ok := auth.CurrentUser(c)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get current user"})
+		return
+	}
+
+	type Request struct {
+		URL *string `json:"url"`
+	}
+
+	var req Request
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		return
+	}
+
+	// get circle admins
+	admins, err := h.circleRepo.GetCircleAdmins(c, currentUser.CircleID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get circle details"})
+		return
+	}
+
+	// confirm that the user is an admin:
+	isAdmin := false
+	for _, admin := range admins {
+		if admin.ID == currentUser.ID {
+			isAdmin = true
+			break
+		}
+	}
+	if !isAdmin {
+		c.JSON(http.StatusForbidden, gin.H{"error": "You are not an admin"})
+		return
+	}
+
+	err = h.circleRepo.SetWebhookURL(c, currentUser.CircleID, req.URL)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to set webhook URL"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{})
+}
+
 func Routes(router *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware, limiter *limiter.Limiter) {
 
 	userRoutes := router.Group("api/v1/users")
@@ -697,6 +742,7 @@ func Routes(router *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware, limiter 
 		userRoutes.POST("/tokens", h.CreateLongLivedToken)
 		userRoutes.GET("/tokens", h.GetAllUserToken)
 		userRoutes.DELETE("/tokens/:id", h.DeleteUserToken)
+		userRoutes.PUT("/webhook", h.setWebhook)
 		userRoutes.PUT("/targets", h.UpdateNotificationTarget)
 		userRoutes.PUT("change_password", h.updateUserPasswordLoggedInOnly)
 

@@ -24,14 +24,14 @@ const (
 type EventType string
 
 const (
-	EventTypeUnknown        EventType = ""
-	EventTypeTaskCreated    EventType = "task.created"
-	EventTypeTaskReminder   EventType = "task.reminder"
-	EventTypeTaskUpdated    EventType = "task.updated"
-	EventTypeTaskCompleted  EventType = "task.completed"
-	EventTypeTaskReassigned EventType = "task.reassigned"
-	EventTypeTaskSkipped    EventType = "task.skipped"
-	EventTypeThingChanged   EventType = "thing.changed"
+	EventTypeUnknown EventType = ""
+	// EventTypeTaskCreated    EventType = "task.created"
+	EventTypeTaskReminder EventType = "task.reminder"
+	// EventTypeTaskUpdated    EventType = "task.updated"
+	EventTypeTaskCompleted EventType = "task.completed"
+	// EventTypeTaskReassigned EventType = "task.reassigned"
+	EventTypeTaskSkipped  EventType = "task.skipped"
+	EventTypeThingChanged EventType = "thing.changed"
 )
 
 type Event struct {

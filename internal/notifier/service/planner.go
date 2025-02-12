@@ -28,10 +28,11 @@ func NewNotificationPlanner(nr *nRepo.NotificationRepository, cr *cRepo.CircleRe
 func (n *NotificationPlanner) GenerateNotifications(c context.Context, chore *chModel.Chore) bool {
 	log := logging.FromContext(c)
 	circleMembers, err := n.cRepo.GetCircleUsers(c, chore.CircleID)
-	assignees := make([]*cModel.UserCircleDetail, 0)
+	var assignedUser *cModel.UserCircleDetail
 	for _, member := range circleMembers {
 		if member.UserID == chore.AssignedTo {
-			assignees = append(assignees, member)
+			assignedUser = member
+			break
 		}
 	}
 
@@ -54,13 +55,13 @@ func (n *NotificationPlanner) GenerateNotifications(c context.Context, chore *ch
 		return true
 	}
 	if mt.DueDate {
-		notifications = append(notifications, generateDueNotifications(chore, assignees)...)
+		notifications = append(notifications, generateDueNotifications(chore, assignedUser))
 	}
 	if mt.PreDue {
-		notifications = append(notifications, generatePreDueNotifications(chore, assignees)...)
+		notifications = append(notifications, generatePreDueNotifications(chore, assignedUser))
 	}
 	if mt.Nagging {
-		notifications = append(notifications, generateOverdueNotifications(chore, assignees)...)
+		notifications = append(notifications, generateOverdueNotifications(chore, assignedUser)...)
 	}
 	if mt.CircleGroup {
 		notifications = append(notifications, generateCircleGroupNotifications(chore, mt)...)
@@ -70,117 +71,81 @@ func (n *NotificationPlanner) GenerateNotifications(c context.Context, chore *ch
 	return true
 }
 
-func generateDueNotifications(chore *chModel.Chore, users []*cModel.UserCircleDetail) []*nModel.Notification {
-	notifications := make([]*nModel.Notification, 0)
+func generateDueNotifications(chore *chModel.Chore, assignedUser *cModel.UserCircleDetail) *nModel.Notification {
 
-	var assignee *cModel.UserCircleDetail
-	for _, user := range users {
-		if user.ID == chore.AssignedTo {
-			assignee = user
-			break
-		}
-	}
-	for _, user := range users {
-		notification := &nModel.Notification{
-			ChoreID:      chore.ID,
-			IsSent:       false,
-			ScheduledFor: *chore.NextDueDate,
-			CreatedAt:    time.Now().UTC(),
-			TypeID:       user.NotificationType,
+	notification := &nModel.Notification{
+		ChoreID:      chore.ID,
+		IsSent:       false,
+		ScheduledFor: *chore.NextDueDate,
+		CreatedAt:    time.Now().UTC(),
+		TypeID:       assignedUser.NotificationType,
 
-			UserID:   user.UserID,
-			TargetID: user.TargetID,
-			Text:     fmt.Sprintf("📅 Reminder: *%s* is due today and assigned to %s.", chore.Name, assignee.DisplayName),
-			RawEvent: map[string]interface{}{
-				"id":                chore.ID,
-				"name":              chore.Name,
-				"due_date":          chore.NextDueDate,
-				"assignee":          assignee.DisplayName,
-				"assignee_username": assignee.Username,
-			},
-		}
-		if notification.IsValid() {
-			notifications = append(notifications, notification)
-		}
+		UserID:   assignedUser.UserID,
+		TargetID: assignedUser.TargetID,
+		Text:     fmt.Sprintf("📅 Reminder: *%s* is due today and assigned to %s.", chore.Name, assignedUser.DisplayName),
+		RawEvent: map[string]interface{}{
+			"id":                chore.ID,
+			"name":              chore.Name,
+			"due_date":          chore.NextDueDate,
+			"assignee":          assignedUser.DisplayName,
+			"assignee_username": assignedUser.Username,
+		},
 	}
 
-	return notifications
+	return notification
 }
 
-func generatePreDueNotifications(chore *chModel.Chore, users []*cModel.UserCircleDetail) []*nModel.Notification {
-	var assignee *cModel.UserCircleDetail
-	for _, user := range users {
-		if user.ID == chore.AssignedTo {
-			assignee = user
-			break
-		}
+func generatePreDueNotifications(chore *chModel.Chore, assignedUser *cModel.UserCircleDetail) *nModel.Notification {
+
+	notification := &nModel.Notification{
+		ChoreID:      chore.ID,
+		IsSent:       false,
+		ScheduledFor: *chore.NextDueDate,
+		CreatedAt:    time.Now().UTC().Add(-time.Hour * 3),
+		TypeID:       assignedUser.NotificationType,
+		UserID:       assignedUser.UserID,
+		CircleID:     assignedUser.CircleID,
+		TargetID:     assignedUser.TargetID,
+
+		Text: fmt.Sprintf("📢 Heads up! *%s* is due soon (on %s) and assigned to %s.", chore.Name, chore.NextDueDate.Format("January 2nd"), assignedUser.DisplayName),
+
+		RawEvent: map[string]interface{}{
+			"id":                chore.ID,
+			"name":              chore.Name,
+			"due_date":          chore.NextDueDate,
+			"assignee":          assignedUser.DisplayName,
+			"assignee_username": assignedUser.Username,
+		},
 	}
-	notifications := make([]*nModel.Notification, 0)
-	for _, user := range users {
-		notification := &nModel.Notification{
-			ChoreID:      chore.ID,
-			IsSent:       false,
-			ScheduledFor: *chore.NextDueDate,
-			CreatedAt:    time.Now().UTC().Add(-time.Hour * 3),
-			TypeID:       user.NotificationType,
-			UserID:       user.UserID,
-			CircleID:     user.CircleID,
-			TargetID:     user.TargetID,
 
-			Text: fmt.Sprintf("📢 Heads up! *%s* is due soon (on %s) and assigned to %s.", chore.Name, chore.NextDueDate.Format("January 2nd"), assignee.DisplayName),
-
-			RawEvent: map[string]interface{}{
-				"id":                chore.ID,
-				"name":              chore.Name,
-				"due_date":          chore.NextDueDate,
-				"assignee":          assignee.DisplayName,
-				"assignee_username": assignee.Username,
-			},
-		}
-		if notification.IsValid() {
-			notifications = append(notifications, notification)
-		}
-
-	}
-	return notifications
+	return notification
 
 }
 
-func generateOverdueNotifications(chore *chModel.Chore, users []*cModel.UserCircleDetail) []*nModel.Notification {
-	var assignee *cModel.UserCircleDetail
-	for _, user := range users {
-		if user.ID == chore.AssignedTo {
-			assignee = user
-			break
-		}
-	}
-	notifications := make([]*nModel.Notification, 0)
+func generateOverdueNotifications(chore *chModel.Chore, assignedUser *cModel.UserCircleDetail) []*nModel.Notification {
+	var notifications []*nModel.Notification
 	for _, hours := range []int{24, 48, 72} {
 		scheduleTime := chore.NextDueDate.Add(time.Hour * time.Duration(hours))
-		for _, user := range users {
-			notification := &nModel.Notification{
-				ChoreID:      chore.ID,
-				IsSent:       false,
-				ScheduledFor: scheduleTime,
-				CreatedAt:    time.Now().UTC(),
-				TypeID:       user.NotificationType,
-				UserID:       user.UserID,
-				CircleID:     user.CircleID,
-				TargetID:     fmt.Sprint(user.TargetID),
-				Text:         fmt.Sprintf("🚨 *%s* is now %d hours overdue. Please complete it as soon as possible. (Assigned to %s)", chore.Name, hours, assignee.DisplayName),
-				RawEvent: map[string]interface{}{
-					"id":                chore.ID,
-					"type":              EventTypeOverdue,
-					"name":              chore.Name,
-					"due_date":          chore.NextDueDate,
-					"assignee":          assignee.DisplayName,
-					"assignee_username": assignee.Username,
-				},
-			}
-			if notification.IsValid() {
-				notifications = append(notifications, notification)
-			}
+		notification := &nModel.Notification{
+			ChoreID:      chore.ID,
+			IsSent:       false,
+			ScheduledFor: scheduleTime,
+			CreatedAt:    time.Now().UTC(),
+			TypeID:       assignedUser.NotificationType,
+			UserID:       assignedUser.UserID,
+			CircleID:     assignedUser.CircleID,
+			TargetID:     fmt.Sprint(assignedUser.TargetID),
+			Text:         fmt.Sprintf("🚨 *%s* is now %d hours overdue. Please complete it as soon as possible. (Assigned to %s)", chore.Name, hours, assignedUser.DisplayName),
+			RawEvent: map[string]interface{}{
+				"id":                chore.ID,
+				"type":              EventTypeOverdue,
+				"name":              chore.Name,
+				"due_date":          chore.NextDueDate,
+				"assignee":          assignedUser.DisplayName,
+				"assignee_username": assignedUser.Username,
+			},
 		}
+		notifications = append(notifications, notification)
 	}
 
 	return notifications

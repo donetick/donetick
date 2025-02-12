@@ -30,7 +30,7 @@ func (n *NotificationPlanner) GenerateNotifications(c context.Context, chore *ch
 	circleMembers, err := n.cRepo.GetCircleUsers(c, chore.CircleID)
 	assignees := make([]*cModel.UserCircleDetail, 0)
 	for _, member := range circleMembers {
-		if member.ID == chore.AssignedTo {
+		if member.UserID == chore.AssignedTo {
 			assignees = append(assignees, member)
 		}
 	}
@@ -71,8 +71,9 @@ func (n *NotificationPlanner) GenerateNotifications(c context.Context, chore *ch
 }
 
 func generateDueNotifications(chore *chModel.Chore, users []*cModel.UserCircleDetail) []*nModel.Notification {
-	var assignee *cModel.UserCircleDetail
 	notifications := make([]*nModel.Notification, 0)
+
+	var assignee *cModel.UserCircleDetail
 	for _, user := range users {
 		if user.ID == chore.AssignedTo {
 			assignee = user
@@ -86,10 +87,10 @@ func generateDueNotifications(chore *chModel.Chore, users []*cModel.UserCircleDe
 			ScheduledFor: *chore.NextDueDate,
 			CreatedAt:    time.Now().UTC(),
 			TypeID:       user.NotificationType,
-			UserID:       user.ID,
-			CircleID:     user.CircleID,
-			TargetID:     user.TargetID,
-			Text:         fmt.Sprintf("📅 Reminder: *%s* is due today and assigned to %s.", chore.Name, assignee.DisplayName),
+
+			UserID:   user.UserID,
+			TargetID: user.TargetID,
+			Text:     fmt.Sprintf("📅 Reminder: *%s* is due today and assigned to %s.", chore.Name, assignee.DisplayName),
 			RawEvent: map[string]interface{}{
 				"id":                chore.ID,
 				"name":              chore.Name,
@@ -122,10 +123,12 @@ func generatePreDueNotifications(chore *chModel.Chore, users []*cModel.UserCircl
 			ScheduledFor: *chore.NextDueDate,
 			CreatedAt:    time.Now().UTC().Add(-time.Hour * 3),
 			TypeID:       user.NotificationType,
-			UserID:       user.ID,
+			UserID:       user.UserID,
 			CircleID:     user.CircleID,
 			TargetID:     user.TargetID,
-			Text:         fmt.Sprintf("📢 Heads up! *%s* is due soon (on %s) and assigned to %s.", chore.Name, chore.NextDueDate.Format("January 2nd"), assignee.DisplayName),
+
+			Text: fmt.Sprintf("📢 Heads up! *%s* is due soon (on %s) and assigned to %s.", chore.Name, chore.NextDueDate.Format("January 2nd"), assignee.DisplayName),
+
 			RawEvent: map[string]interface{}{
 				"id":                chore.ID,
 				"name":              chore.Name,
@@ -161,7 +164,7 @@ func generateOverdueNotifications(chore *chModel.Chore, users []*cModel.UserCirc
 				ScheduledFor: scheduleTime,
 				CreatedAt:    time.Now().UTC(),
 				TypeID:       user.NotificationType,
-				UserID:       user.ID,
+				UserID:       user.UserID,
 				CircleID:     user.CircleID,
 				TargetID:     fmt.Sprint(user.TargetID),
 				Text:         fmt.Sprintf("🚨 *%s* is now %d hours overdue. Please complete it as soon as possible. (Assigned to %s)", chore.Name, hours, assignee.DisplayName),

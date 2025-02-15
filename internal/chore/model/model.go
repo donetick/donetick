@@ -182,3 +182,15 @@ func (c *Chore) CanEdit(userID int, circleUsers []*cModel.UserCircleDetail) bool
 	}
 	return false
 }
+
+func (c *Chore) CanComplete(userID int) bool {
+	if c.AssignedTo == userID {
+		return true
+	}
+	for _, a := range c.Assignees {
+		if a.UserID == userID {
+			return true
+		}
+	}
+	return false
+}

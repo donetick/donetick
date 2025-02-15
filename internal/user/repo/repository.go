@@ -140,9 +140,10 @@ func (r *UserRepository) StoreAPIToken(c context.Context, userID int, name strin
 	return token, nil
 }
 
-func (r *UserRepository) GetUserByToken(c context.Context, token string) (*uModel.User, error) {
-	var user *uModel.User
-	if err := r.db.WithContext(c).Table("users u").Select("u.*").Joins("left join api_tokens at on at.user_id = u.id").Where("at.token = ?", token).First(&user).Error; err != nil {
+func (r *UserRepository) GetUserByToken(c context.Context, token string) (*uModel.UserDetails, error) {
+	var user *uModel.UserDetails
+
+	if err := r.db.WithContext(c).Table("users u").Select("u.*, c.webhook_url as webhook_url").Joins("left join api_tokens at on at.user_id = u.id").Joins("left join circles c on c.id = u.circle_id").Where("at.token = ?", token).First(&user).Error; err != nil {
 		return nil, err
 	}
 	return user, nil

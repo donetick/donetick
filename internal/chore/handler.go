@@ -1000,6 +1000,15 @@ func (h *Handler) completeChore(c *gin.Context) {
 		})
 		return
 	}
+
+	// user need to be assigned to the chore to complete it
+	if !chore.CanComplete(currentUser.ID) {
+		c.JSON(400, gin.H{
+			"error": "User is not assigned to chore",
+		})
+		return
+	}
+
 	// confirm that the chore in completion window:
 	if chore.CompletionWindow != nil {
 		if completedDate.Before(chore.NextDueDate.Add(time.Hour * time.Duration(*chore.CompletionWindow))) {

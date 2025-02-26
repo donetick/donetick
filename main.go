@@ -26,6 +26,7 @@ import (
 	label "donetick.com/core/internal/label"
 	lRepo "donetick.com/core/internal/label/repo"
 	"donetick.com/core/internal/resource"
+	spRepo "donetick.com/core/internal/subtask/repo"
 
 	notifier "donetick.com/core/internal/notifier"
 	nRepo "donetick.com/core/internal/notifier/repo"
@@ -89,6 +90,7 @@ func main() {
 
 		// points
 		fx.Provide(pRepo.NewPointsRepository),
+		fx.Provide(spRepo.NewSubTasksRepository),
 
 		// Labels:
 		fx.Provide(lRepo.NewLabelRepository),

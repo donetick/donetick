@@ -5,8 +5,8 @@ import (
 
 	cModel "donetick.com/core/internal/circle/model"
 	lModel "donetick.com/core/internal/label/model"
+	stModel "donetick.com/core/internal/subtask/model"
 	tModel "donetick.com/core/internal/thing/model"
-	thingModel "donetick.com/core/internal/thing/model"
 )
 
 type FrequencyType string
@@ -62,6 +62,7 @@ type Chore struct {
 	CompletionWindow     *int               `json:"completionWindow,omitempty" gorm:"column:completion_window"` // Number seconds before the chore is due that it can be completed
 	Points               *int               `json:"points,omitempty" gorm:"column:points"`                      // Points for completing the chore
 	Description          *string            `json:"description,omitempty" gorm:"type:text;column:description"`  // Description of the chore
+	SubTasks             *[]stModel.SubTask `json:"subTasks,omitempty" gorm:"foreignkey:ChoreID;references:ID"` // Subtasks for the chore
 }
 
 type Status int8
@@ -119,19 +120,20 @@ type Tag struct {
 }
 
 type ChoreDetail struct {
-	ID                  int        `json:"id" gorm:"column:id"`
-	Name                string     `json:"name" gorm:"column:name"`
-	Description         *string    `json:"description" gorm:"column:description"`
-	FrequencyType       string     `json:"frequencyType" gorm:"column:frequency_type"`
-	NextDueDate         *time.Time `json:"nextDueDate" gorm:"column:next_due_date"`
-	AssignedTo          int        `json:"assignedTo" gorm:"column:assigned_to"`
-	LastCompletedDate   *time.Time `json:"lastCompletedDate" gorm:"column:last_completed_date"`
-	LastCompletedBy     *int       `json:"lastCompletedBy" gorm:"column:last_completed_by"`
-	TotalCompletedCount int        `json:"totalCompletedCount" gorm:"column:total_completed"`
-	Priority            int        `json:"priority" gorm:"column:priority"`
-	Notes               *string    `json:"notes" gorm:"column:notes"`
-	CreatedBy           int        `json:"createdBy" gorm:"column:created_by"`
-	CompletionWindow    *int       `json:"completionWindow,omitempty" gorm:"column:completion_window"`
+	ID                  int                `json:"id" gorm:"column:id"`
+	Name                string             `json:"name" gorm:"column:name"`
+	Description         *string            `json:"description" gorm:"column:description"`
+	FrequencyType       string             `json:"frequencyType" gorm:"column:frequency_type"`
+	NextDueDate         *time.Time         `json:"nextDueDate" gorm:"column:next_due_date"`
+	AssignedTo          int                `json:"assignedTo" gorm:"column:assigned_to"`
+	LastCompletedDate   *time.Time         `json:"lastCompletedDate" gorm:"column:last_completed_date"`
+	LastCompletedBy     *int               `json:"lastCompletedBy" gorm:"column:last_completed_by"`
+	TotalCompletedCount int                `json:"totalCompletedCount" gorm:"column:total_completed"`
+	Priority            int                `json:"priority" gorm:"column:priority"`
+	Notes               *string            `json:"notes" gorm:"column:notes"`
+	CreatedBy           int                `json:"createdBy" gorm:"column:created_by"`
+	CompletionWindow    *int               `json:"completionWindow,omitempty" gorm:"column:completion_window"`
+	Subtasks            *[]stModel.SubTask `json:"subTasks,omitempty" gorm:"foreignkey:ChoreID;references:ID"`
 }
 
 type Label struct {
@@ -150,25 +152,27 @@ type ChoreLabels struct {
 }
 
 type ChoreReq struct {
-	Name                 string                   `json:"name" binding:"required"`
-	FrequencyType        FrequencyType            `json:"frequencyType"`
-	ID                   int                      `json:"id"`
-	DueDate              string                   `json:"dueDate"`
-	Assignees            []ChoreAssignees         `json:"assignees"`
-	AssignStrategy       AssignmentStrategy       `json:"assignStrategy" binding:"required"`
-	AssignedTo           int                      `json:"assignedTo"`
-	IsRolling            bool                     `json:"isRolling"`
-	IsActive             bool                     `json:"isActive"`
-	Frequency            int                      `json:"frequency"`
-	FrequencyMetadata    *FrequencyMetadata       `json:"frequencyMetadata"`
-	Notification         bool                     `json:"notification"`
-	NotificationMetadata *NotificationMetadata    `json:"notificationMetadata"`
-	Labels               []string                 `json:"labels"`
-	LabelsV2             *[]lModel.LabelReq       `json:"labelsV2"`
-	ThingTrigger         *thingModel.ThingTrigger `json:"thingTrigger"`
-	Points               *int                     `json:"points"`
-	CompletionWindow     *int                     `json:"completionWindow"`
-	Description          *string                  `json:"description"`
+	Name                 string                `json:"name" binding:"required"`
+	FrequencyType        FrequencyType         `json:"frequencyType"`
+	ID                   int                   `json:"id"`
+	DueDate              string                `json:"dueDate"`
+	Assignees            []ChoreAssignees      `json:"assignees"`
+	AssignStrategy       AssignmentStrategy    `json:"assignStrategy" binding:"required"`
+	AssignedTo           int                   `json:"assignedTo"`
+	IsRolling            bool                  `json:"isRolling"`
+	IsActive             bool                  `json:"isActive"`
+	Frequency            int                   `json:"frequency"`
+	FrequencyMetadata    *FrequencyMetadata    `json:"frequencyMetadata"`
+	Notification         bool                  `json:"notification"`
+	NotificationMetadata *NotificationMetadata `json:"notificationMetadata"`
+	Labels               []string              `json:"labels"`
+	LabelsV2             *[]lModel.LabelReq    `json:"labelsV2"`
+	ThingTrigger         *tModel.ThingTrigger  `json:"thingTrigger"`
+	Points               *int                  `json:"points"`
+	CompletionWindow     *int                  `json:"completionWindow"`
+	Description          *string               `json:"description"`
+	Priority             int                   `json:"priority"`
+	SubTasks             *[]stModel.SubTask    `json:"subTasks"`
 }
 
 func (c *Chore) CanEdit(userID int, circleUsers []*cModel.UserCircleDetail) bool {

@@ -41,6 +41,15 @@ func (n *Notifier) SendNotification(c context.Context, notification *nModel.Noti
 			return nil
 		}
 		err = n.Pushover.SendNotification(c, notification)
+	case nModel.NotificationPlatformWebhook:
+		// TODO: Implement webhook notification
+		// currently we have eventProducer to send events always as a webhook
+		// if NotificationPlatform is selected. this a case to catch
+		// when we only want to send a webhook
+
+	default:
+		log.Error("Unknown notification type", "type", notification.TypeID)
+		return nil
 	}
 	if err != nil {
 		log.Error("Failed to send notification", "err", err)

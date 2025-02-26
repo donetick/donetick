@@ -44,7 +44,7 @@ func (r *ChoreRepository) CreateChore(c context.Context, chore *chModel.Chore) (
 
 func (r *ChoreRepository) GetChore(c context.Context, choreID int) (*chModel.Chore, error) {
 	var chore chModel.Chore
-	if err := r.db.Debug().WithContext(c).Model(&chModel.Chore{}).Preload("Assignees").Preload("ThingChore").Preload("LabelsV2").First(&chore, choreID).Error; err != nil {
+	if err := r.db.Debug().WithContext(c).Model(&chModel.Chore{}).Preload("SubTasks").Preload("Assignees").Preload("ThingChore").Preload("LabelsV2").First(&chore, choreID).Error; err != nil {
 		return nil, err
 	}
 	return &chore, nil
@@ -279,6 +279,7 @@ func (r *ChoreRepository) GetChoreDetailByID(c context.Context, choreID int, cir
 	var choreDetail chModel.ChoreDetail
 	if err := r.db.WithContext(c).
 		Table("chores").
+		Preload("Subtasks").
 		Select(`
         chores.id, 
         chores.name,

@@ -10,6 +10,7 @@ import (
 	cModel "donetick.com/core/internal/circle/model"
 	nModel "donetick.com/core/internal/notifier/model"
 	pModel "donetick.com/core/internal/points"
+	stModel "donetick.com/core/internal/subtask/model"
 	tModel "donetick.com/core/internal/thing/model"
 	uModel "donetick.com/core/internal/user/model" // Pure go SQLite driver, checkout https://github.com/glebarez/sqlite for details
 	migrations "donetick.com/core/migrations"
@@ -37,6 +38,7 @@ func Migration(db *gorm.DB) error {
 		chModel.ChoreLabels{},
 		migrations.Migration{},
 		pModel.PointsHistory{},
+		stModel.SubTask{},
 	); err != nil {
 		return err
 	}

@@ -28,7 +28,8 @@ const (
 	// EventTypeTaskCreated    EventType = "task.created"
 	EventTypeTaskReminder EventType = "task.reminder"
 	// EventTypeTaskUpdated    EventType = "task.updated"
-	EventTypeTaskCompleted EventType = "task.completed"
+	EventTypeTaskCompleted    EventType = "task.completed"
+	EventTypeSubTaskCompleted EventType = "subtask.completed"
 	// EventTypeTaskReassigned EventType = "task.reassigned"
 	EventTypeTaskSkipped  EventType = "task.skipped"
 	EventTypeThingChanged EventType = "thing.changed"
@@ -168,6 +169,19 @@ func (p *EventsProducer) ThingsUpdated(ctx context.Context, url string, data int
 	p.publishEvent(Event{
 		URL:       url,
 		Type:      EventTypeThingChanged,
+		Timestamp: time.Now(),
+		Data:      data,
+	})
+}
+
+func (p *EventsProducer) SubtaskUpdated(ctx context.Context, url *string, data interface{}) {
+	if url == nil {
+		p.logger.Debug("No subscribers for circle, skipping webhook")
+		return
+	}
+	p.publishEvent(Event{
+		URL:       *url,
+		Type:      EventTypeSubTaskCompleted,
 		Timestamp: time.Now(),
 		Data:      data,
 	})

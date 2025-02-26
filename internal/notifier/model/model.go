@@ -36,6 +36,7 @@ const (
 	NotificationPlatformNone NotificationPlatform = iota
 	NotificationPlatformTelegram
 	NotificationPlatformPushover
+	NotificationPlatformWebhook
 )
 
 type JSONB map[string]interface{}

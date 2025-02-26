@@ -91,6 +91,16 @@ func scheduleNextDueDate(chore *chModel.Chore, completedDate time.Time) (*time.T
 		}
 		return nil, fmt.Errorf("no matching day of the week found")
 	case "day_of_the_month":
+		// for day of the month we need to pick the highest between completed date and next due date
+		// when the chore is rolling. i keep forgetting so am writing a detail comment here:
+		// if task due every 15 of jan, and you completed it on the 13 of jan( before the due date ) if we schedule from due date
+		// we will go back to 15 of jan. so we need to pick the highest between the two dates specifically for day of the month
+		if chore.IsRolling && chore.NextDueDate != nil {
+			secondAfterDueDate := chore.NextDueDate.UTC().Add(time.Second)
+			if completedDate.Before(secondAfterDueDate) {
+				baseDate = secondAfterDueDate
+			}
+		}
 		if len(frequencyMetadata.Months) == 0 {
 			return nil, fmt.Errorf("day_of_the_month requires at least one month")
 		}
@@ -101,7 +111,13 @@ func scheduleNextDueDate(chore *chModel.Chore, completedDate time.Time) (*time.T
 
 		// Find the next valid day of the month, considering the year
 		currentMonth := int(baseDate.Month())
-		for i := 0; i < 12; i++ { // Start from 0 to check the current month first
+
+		var startFrom int
+		if chore.NextDueDate != nil && baseDate.Month() == chore.NextDueDate.Month() {
+			startFrom = 1
+		}
+
+		for i := startFrom; i < 12+startFrom; i++ { // Start from 0 to check the current month first
 			nextDueDate := baseDate.AddDate(0, i, 0)
 			nextMonth := (currentMonth + i) % 12 // Use modulo to cycle through months
 			if nextMonth == 0 {

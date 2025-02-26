@@ -16,6 +16,7 @@ import (
 
 	chModel "donetick.com/core/internal/chore/model"
 	cRepo "donetick.com/core/internal/circle/repo"
+	stRepo "donetick.com/core/internal/subtask/repo"
 	uRepo "donetick.com/core/internal/user/repo"
 )
 
@@ -25,15 +26,17 @@ type API struct {
 	circleRepo    *cRepo.CircleRepository
 	nPlanner      *nps.NotificationPlanner
 	eventProducer *events.EventsProducer
+	stRepo        *stRepo.SubTasksRepository
 }
 
-func NewAPI(cr *chRepo.ChoreRepository, userRepo *uRepo.UserRepository, circleRepo *cRepo.CircleRepository, nPlanner *nps.NotificationPlanner, eventProducer *events.EventsProducer) *API {
+func NewAPI(cr *chRepo.ChoreRepository, userRepo *uRepo.UserRepository, circleRepo *cRepo.CircleRepository, nPlanner *nps.NotificationPlanner, eventProducer *events.EventsProducer, stRepo *stRepo.SubTasksRepository) *API {
 	return &API{
 		choreRepo:     cr,
 		userRepo:      userRepo,
 		circleRepo:    circleRepo,
 		nPlanner:      nPlanner,
 		eventProducer: eventProducer,
+		stRepo:        stRepo,
 	}
 }
 
@@ -197,6 +200,10 @@ func (h *API) CompleteChore(c *gin.Context) {
 		})
 		return
 	}
+	if chore.SubTasks != nil && chore.FrequencyType != chModel.FrequencyTypeOnce {
+		h.stRepo.ResetSubtasksCompletion(c, chore.ID)
+	}
+
 	updatedChore, err := h.choreRepo.GetChore(c, choreID)
 	if err != nil {
 		c.JSON(500, gin.H{

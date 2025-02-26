@@ -224,10 +224,24 @@ func TestScheduleNextDueDateDayOfMonth(t *testing.T) {
 			chore: chModel.Chore{
 				FrequencyType:     chModel.FrequencyTypeDayOfTheMonth,
 				Frequency:         15,
+				IsRolling:         true,
 				FrequencyMetadata: jsonPtr(`{ "unit": "days", "time": "2025-01-20T18:00:00-05:00", "days": [], "months": [ "january" ] }`),
 			},
 			completedDate: now.AddDate(1, 1, 0),
 			want:          timePtr(time.Date(2027, 1, 15, 18, 0, 0, 0, location)),
+		},
+		// test if completed before the 15th of the month:
+		{
+			name: "Day of the month - 15th of January(isRolling)(Completed before due date)",
+			chore: chModel.Chore{
+				NextDueDate:       timePtr(time.Date(2025, 1, 15, 18, 0, 0, 0, location)),
+				FrequencyType:     chModel.FrequencyTypeDayOfTheMonth,
+				Frequency:         15,
+				IsRolling:         true,
+				FrequencyMetadata: jsonPtr(`{ "unit": "days", "time": "2025-01-20T18:00:00-05:00", "days": [], "months": [ "january" ] }`),
+			},
+			completedDate: now.AddDate(0, 0, 2),
+			want:          timePtr(time.Date(2026, 1, 15, 18, 0, 0, 0, location)),
 		},
 	}
 	executeTestTable(t, tests)

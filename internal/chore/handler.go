@@ -20,6 +20,8 @@ import (
 	"donetick.com/core/internal/notifier"
 	nRepo "donetick.com/core/internal/notifier/repo"
 	nps "donetick.com/core/internal/notifier/service"
+	stModel "donetick.com/core/internal/subtask/model"
+	stRepo "donetick.com/core/internal/subtask/repo"
 	tRepo "donetick.com/core/internal/thing/repo"
 	uModel "donetick.com/core/internal/user/model"
 	"donetick.com/core/logging"
@@ -36,11 +38,12 @@ type Handler struct {
 	tRepo         *tRepo.ThingRepository
 	lRepo         *lRepo.LabelRepository
 	eventProducer *events.EventsProducer
+	stRepo        *stRepo.SubTasksRepository
 }
 
 func NewHandler(cr *chRepo.ChoreRepository, circleRepo *cRepo.CircleRepository, nt *notifier.Notifier,
 	np *nps.NotificationPlanner, nRepo *nRepo.NotificationRepository, tRepo *tRepo.ThingRepository, lRepo *lRepo.LabelRepository,
-	ep *events.EventsProducer) *Handler {
+	ep *events.EventsProducer, stRepo *stRepo.SubTasksRepository) *Handler {
 	return &Handler{
 		choreRepo:     cr,
 		circleRepo:    circleRepo,
@@ -50,6 +53,7 @@ func NewHandler(cr *chRepo.ChoreRepository, circleRepo *cRepo.CircleRepository, 
 		tRepo:         tRepo,
 		lRepo:         lRepo,
 		eventProducer: ep,
+		stRepo:        stRepo,
 	}
 }
 
@@ -259,6 +263,7 @@ func (h *Handler) createChore(c *gin.Context) {
 		Points:               choreReq.Points,
 		CompletionWindow:     choreReq.CompletionWindow,
 		Description:          choreReq.Description,
+		SubTasks:             choreReq.SubTasks,
 	}
 	id, err := h.choreRepo.CreateChore(c, createdChore)
 	createdChore.ID = id
@@ -268,6 +273,10 @@ func (h *Handler) createChore(c *gin.Context) {
 			"error": "Error creating chore",
 		})
 		return
+	}
+
+	if choreReq.SubTasks != nil {
+		h.stRepo.CreateSubtasks(c, nil, choreReq.SubTasks, createdChore.ID)
 	}
 
 	var choreAssignees []*chModel.ChoreAssignees
@@ -521,6 +530,7 @@ func (h *Handler) editChore(c *gin.Context) {
 		Points:               choreReq.Points,
 		CompletionWindow:     choreReq.CompletionWindow,
 		Description:          choreReq.Description,
+		Priority:             choreReq.Priority,
 	}
 	if err := h.choreRepo.UpsertChore(c, updatedChore); err != nil {
 		c.JSON(500, gin.H{
@@ -528,6 +538,54 @@ func (h *Handler) editChore(c *gin.Context) {
 		})
 		return
 	}
+	if choreReq.SubTasks != nil {
+		ToBeRemoved := []stModel.SubTask{}
+		ToBeAdded := []stModel.SubTask{}
+		if oldChore.SubTasks == nil {
+			oldChore.SubTasks = &[]stModel.SubTask{}
+		}
+		if choreReq.SubTasks == nil {
+			choreReq.SubTasks = &[]stModel.SubTask{}
+		}
+		for _, existedSubTask := range *oldChore.SubTasks {
+			found := false
+			for _, newSubTask := range *choreReq.SubTasks {
+				if existedSubTask.ID == newSubTask.ID {
+					found = true
+					break
+				}
+			}
+			if !found {
+				ToBeRemoved = append(ToBeRemoved, existedSubTask)
+			}
+		}
+
+		for _, newSubTask := range *choreReq.SubTasks {
+			found := false
+			newSubTask.ChoreID = oldChore.ID
+
+			for _, existedSubTask := range *oldChore.SubTasks {
+				if existedSubTask.ID == newSubTask.ID {
+					if existedSubTask.Name != newSubTask.Name || existedSubTask.OrderID != newSubTask.OrderID {
+						// there is a change in the subtask, update it
+						break
+					}
+					found = true
+					break
+				}
+			}
+			if !found {
+				ToBeAdded = append(ToBeAdded, newSubTask)
+			}
+		}
+		if err := h.stRepo.UpdateSubtask(c, oldChore.ID, ToBeRemoved, ToBeAdded); err != nil {
+			c.JSON(500, gin.H{
+				"error": "Error adding subtasks",
+			})
+			return
+		}
+	}
+
 	if len(choreAssigneesToAdd) > 0 {
 		err = h.choreRepo.UpdateChoreAssignees(c, choreAssigneesToAdd)
 
@@ -1077,6 +1135,10 @@ func (h *Handler) completeChore(c *gin.Context) {
 		})
 		return
 	}
+	if updatedChore.SubTasks != nil && updatedChore.FrequencyType != chModel.FrequencyTypeOnce {
+		h.stRepo.ResetSubtasksCompletion(c, updatedChore.ID)
+	}
+
 	// go func() {
 
 	// 	h.notifier.SendChoreCompletion(c, chore, currentUser)
@@ -1355,6 +1417,76 @@ func (h *Handler) DeleteHistory(c *gin.Context) {
 		"message": "History deleted successfully",
 	})
 }
+
+func (h *Handler) UpdateSubtaskCompletedAt(c *gin.Context) {
+	currentUser, ok := auth.CurrentUser(c)
+	if !ok {
+		c.JSON(500, gin.H{
+			"error": "Error getting current user",
+		})
+		return
+	}
+
+	rawID := c.Param("id")
+	choreID, err := strconv.Atoi(rawID)
+	if err != nil {
+		c.JSON(400, gin.H{
+			"error": "Invalid Chore ID",
+		})
+		return
+	}
+
+	type SubtaskReq struct {
+		ID          int        `json:"id"`
+		ChoreID     int        `json:"choreId"`
+		CompletedAt *time.Time `json:"completedAt"`
+	}
+
+	var req SubtaskReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		log.Print(err)
+		c.JSON(400, gin.H{
+			"error": "Invalid request",
+		})
+		return
+	}
+	chore, err := h.choreRepo.GetChore(c, choreID)
+	if err != nil {
+		c.JSON(500, gin.H{
+			"error": "Error getting chore",
+		})
+		return
+	}
+	if !chore.CanComplete(currentUser.ID) {
+		c.JSON(400, gin.H{
+			"error": "User is not assigned to chore",
+		})
+		return
+	}
+	var completedAt *time.Time
+	if req.CompletedAt != nil {
+		completedAt = req.CompletedAt
+	}
+	err = h.stRepo.UpdateSubTaskStatus(c, currentUser.ID, req.ID, completedAt)
+	if err != nil {
+		c.JSON(500, gin.H{
+			"error": "Error getting subtask",
+		})
+		return
+	}
+
+	h.eventProducer.SubtaskUpdated(c, currentUser.WebhookURL,
+		&stModel.SubTask{
+			ID:          req.ID,
+			ChoreID:     req.ChoreID,
+			CompletedAt: completedAt,
+			CompletedBy: currentUser.ID,
+		},
+	)
+	c.JSON(200, gin.H{})
+
+}
+
 func checkNextAssignee(chore *chModel.Chore, choresHistory []*chModel.ChoreHistory, performerID int) (int, error) {
 	// copy the history to avoid modifying the original:
 	history := make([]*chModel.ChoreHistory, len(choresHistory))
@@ -1470,6 +1602,7 @@ func Routes(router *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware) {
 		choresRoutes.PUT("/:id/priority", h.updatePriority)
 		choresRoutes.POST("/", h.createChore)
 		choresRoutes.GET("/:id", h.getChore)
+		choresRoutes.PUT("/:id/subtask", h.UpdateSubtaskCompletedAt)
 		choresRoutes.GET("/:id/details", h.GetChoreDetail)
 		choresRoutes.GET("/:id/history", h.GetChoreHistory)
 		choresRoutes.PUT("/:id/history/:history_id", h.ModifyHistory)

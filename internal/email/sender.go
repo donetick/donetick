@@ -32,7 +32,7 @@ func NewEmailSender(conf *config.Config) *EmailSender {
 func (es *EmailSender) SendVerificationEmail(to, code string) error {
 	// msg := []byte(fmt.Sprintf("To: %s\r\nSubject: %s\r\n\r\n%s\r\n", to, subject, body))
 	msg := gomail.NewMessage()
-	msg.SetHeader("From", "no-reply@donetick.com")
+	msg.SetHeader("From", es.client.Username)
 	msg.SetHeader("To", to)
 	msg.SetHeader("Subject", "Welcome to Donetick! Verifiy you email")
 	// text/html for a html email
@@ -259,7 +259,7 @@ func (es *EmailSender) SendVerificationEmail(to, code string) error {
 
 func (es *EmailSender) SendResetPasswordEmail(c context.Context, to, code string) error {
 	msg := gomail.NewMessage()
-	msg.SetHeader("From", "no-reply@donetick.com")
+	msg.SetHeader("From", es.client.Username)
 	msg.SetHeader("To", to)
 	msg.SetHeader("Subject", "Donetick! Password Reset")
 	htmlBody := `

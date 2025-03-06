@@ -37,7 +37,9 @@ func (r *SubTasksRepository) UpdateSubtask(c context.Context, choreId int, toBeR
 			var insertions []stModel.SubTask
 			var updates []stModel.SubTask
 			for _, subtask := range toBeAdd {
-				if subtask.ID == 0 {
+				if subtask.ID <= 0 {
+					// we interpret this as a new subtask
+					subtask.ID = 0
 					insertions = append(insertions, subtask)
 				} else {
 					updates = append(updates, subtask)
@@ -51,7 +53,14 @@ func (r *SubTasksRepository) UpdateSubtask(c context.Context, choreId int, toBeR
 			}
 			if len(updates) > 0 {
 				for _, subtask := range updates {
-					if err := tx.Model(&stModel.SubTask{}).Where("chore_id = ? AND id = ?", choreId, subtask.ID).Updates(subtask).Error; err != nil {
+					values := map[string]interface{}{
+						"name":         subtask.Name,
+						"order_id":     subtask.OrderID,
+						"completed_at": subtask.CompletedAt,
+						"completed_by": subtask.CompletedBy,
+						"parent_id":    subtask.ParentId,
+					}
+					if err := tx.Model(&stModel.SubTask{}).Where("chore_id = ? AND id = ?", choreId, subtask.ID).Updates(values).Error; err != nil {
 						return err
 					}
 				}
@@ -61,12 +70,28 @@ func (r *SubTasksRepository) UpdateSubtask(c context.Context, choreId int, toBeR
 		return nil
 	})
 }
-
 func (r *SubTasksRepository) DeleteSubtask(c context.Context, tx *gorm.DB, subtaskID int) error {
 	if tx != nil {
-		return tx.Delete(&stModel.SubTask{}, subtaskID).Error
+		return r.deleteSubtaskWithChildren(c, tx, subtaskID)
 	}
-	return r.db.WithContext(c).Delete(&stModel.SubTask{}, subtaskID).Error
+	return r.db.WithContext(c).Transaction(func(tx *gorm.DB) error {
+		return r.deleteSubtaskWithChildren(c, tx, subtaskID)
+	})
+}
+
+func (r *SubTasksRepository) deleteSubtaskWithChildren(c context.Context, tx *gorm.DB, subtaskID int) error {
+	var childSubtasks []stModel.SubTask
+	if err := tx.Where("parent_id = ?", subtaskID).Find(&childSubtasks).Error; err != nil {
+		return err
+	}
+
+	for _, child := range childSubtasks {
+		if err := r.deleteSubtaskWithChildren(c, tx, child.ID); err != nil {
+			return err
+		}
+	}
+
+	return tx.Delete(&stModel.SubTask{}, subtaskID).Error
 }
 
 func (r *SubTasksRepository) UpdateSubTaskStatus(c context.Context, userID int, subtaskID int, completedAt *time.Time) error {

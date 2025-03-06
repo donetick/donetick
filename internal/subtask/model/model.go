@@ -9,4 +9,5 @@ type SubTask struct {
 	Name        string     `json:"name" gorm:"column:name"`
 	CompletedAt *time.Time `json:"completedAt" gorm:"column:completed_at"`
 	CompletedBy int        `json:"completedBy" gorm:"column:completed_by"`
+	ParentId    *int       `json:"parentId" gorm:"column:parent_id"`
 }

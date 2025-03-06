@@ -8,6 +8,12 @@ pushover:
 database:
   type: "sqlite"
   migration: true
+  # these are only required for postgres
+  host: "secret"
+  port: "secret"
+  user: "secret"
+  password: "secret"
+  name: "secret"
 jwt:
   secret: "secret"
   session_time: 168h

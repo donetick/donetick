@@ -5,6 +5,7 @@ import (
 
 	"donetick.com/core/internal/events"
 	nModel "donetick.com/core/internal/notifier/model"
+	"donetick.com/core/internal/notifier/service/discord"
 	pushover "donetick.com/core/internal/notifier/service/pushover"
 	telegram "donetick.com/core/internal/notifier/service/telegram"
 
@@ -14,14 +15,16 @@ import (
 type Notifier struct {
 	Telegram       *telegram.TelegramNotifier
 	Pushover       *pushover.Pushover
+	discord        *discord.DiscordNotifier
 	eventsProducer *events.EventsProducer
 }
 
-func NewNotifier(t *telegram.TelegramNotifier, p *pushover.Pushover, ep *events.EventsProducer) *Notifier {
+func NewNotifier(t *telegram.TelegramNotifier, p *pushover.Pushover, ep *events.EventsProducer, d *discord.DiscordNotifier) *Notifier {
 	return &Notifier{
 		Telegram:       t,
 		Pushover:       p,
 		eventsProducer: ep,
+		discord:        d,
 	}
 }
 
@@ -41,6 +44,13 @@ func (n *Notifier) SendNotification(c context.Context, notification *nModel.Noti
 			return nil
 		}
 		err = n.Pushover.SendNotification(c, notification)
+	case nModel.NotificationPlatformDiscord:
+		if n.discord == nil {
+			log.Error("Discord is not initialized, Skipping sending message")
+			return nil
+		}
+		err = n.discord.SendNotification(c, notification)
+
 	case nModel.NotificationPlatformWebhook:
 		// TODO: Implement webhook notification
 		// currently we have eventProducer to send events always as a webhook

@@ -37,6 +37,7 @@ const (
 	NotificationPlatformTelegram
 	NotificationPlatformPushover
 	NotificationPlatformWebhook
+	NotificationPlatformDiscord
 )
 
 type JSONB map[string]interface{}

@@ -10,7 +10,7 @@ database:
   migration: true
   # these are only required for postgres
   host: "secret"
-  port: "secret"
+  port: 5432
   user: "secret"
   password: "secret"
   name: "secret"

@@ -119,7 +119,7 @@ func TestScheduleNextDueDateInterval(t *testing.T) {
 				FrequencyMetadata: jsonPtr(`{"unit": "days","time":"2024-07-07T14:30:00-04:00"}`),
 			},
 			completedDate: now,
-			want:          timePtr(truncateToDay(now.AddDate(0, 0, 2)).Add(14*time.Hour + 30*time.Minute)),
+			want:          timePtr(truncateToDay(now.AddDate(0, 0, 2)).Add(18*time.Hour + 30*time.Minute)),
 		},
 		{
 			name: "Interval - 4 Weeks",
@@ -129,7 +129,7 @@ func TestScheduleNextDueDateInterval(t *testing.T) {
 				FrequencyMetadata: jsonPtr(`{"unit": "weeks","time":"2024-07-07T14:30:00-04:00"}`),
 			},
 			completedDate: now,
-			want:          timePtr(truncateToDay(now.AddDate(0, 0, 4*7)).Add(14*time.Hour + 30*time.Minute)),
+			want:          timePtr(truncateToDay(now.AddDate(0, 0, 4*7)).Add(18*time.Hour + 30*time.Minute)),
 		},
 		{
 			name: "Interval - 3 Months",
@@ -139,7 +139,7 @@ func TestScheduleNextDueDateInterval(t *testing.T) {
 				FrequencyMetadata: jsonPtr(`{"unit": "months","time":"2024-07-07T14:30:00-04:00"}`),
 			},
 			completedDate: now,
-			want:          timePtr(truncateToDay(now.AddDate(0, 3, 0)).Add(14*time.Hour + 30*time.Minute)),
+			want:          timePtr(truncateToDay(now.AddDate(0, 3, 0)).Add(18*time.Hour + 30*time.Minute)),
 		},
 		{
 			name: "Interval - 2 Years",
@@ -149,7 +149,7 @@ func TestScheduleNextDueDateInterval(t *testing.T) {
 				FrequencyMetadata: jsonPtr(`{"unit": "years","time":"2024-07-07T14:30:00-04:00"}`),
 			},
 			completedDate: now,
-			want:          timePtr(truncateToDay(now.AddDate(2, 0, 0)).Add(14*time.Hour + 30*time.Minute)),
+			want:          timePtr(truncateToDay(now.AddDate(2, 0, 0)).Add(18*time.Hour + 30*time.Minute)),
 		},
 	}
 	executeTestTable(t, tests)
@@ -169,13 +169,13 @@ func TestScheduleNextDueDateDayOfWeek(t *testing.T) {
 			chore: chModel.Chore{
 				FrequencyType: chModel.FrequencyTypeDayOfTheWeek,
 
-				FrequencyMetadata: jsonPtr(`{"days": ["monday"], "time": "2025-01-20T18:00:00-05:00"}`),
+				FrequencyMetadata: jsonPtr(`{"days": ["monday"], "time": "2025-01-20T01:00:00-05:00"}`),
 			},
 			completedDate: now,
 			want: func() *time.Time {
 				// Calculate next Monday at 18:00 EST
 				nextMonday := now.AddDate(0, 0, (int(time.Monday)-int(now.Weekday())+7)%7)
-				nextMonday = truncateToDay(nextMonday).Add(18*time.Hour + 0*time.Minute)
+				nextMonday = truncateToDay(nextMonday).Add(6*time.Hour + 0*time.Minute)
 				return &nextMonday
 			}(),
 		},
@@ -184,7 +184,7 @@ func TestScheduleNextDueDateDayOfWeek(t *testing.T) {
 			chore: chModel.Chore{
 				FrequencyType:     chModel.FrequencyTypeDayOfTheWeek,
 				IsRolling:         true,
-				FrequencyMetadata: jsonPtr(`{"days": ["monday"], "time": "2025-01-20T18:00:00-05:00"}`),
+				FrequencyMetadata: jsonPtr(`{"days": ["monday"], "time": "2025-01-20T01:00:00-05:00"}`),
 			},
 
 			completedDate: now.AddDate(0, 1, 0),
@@ -192,7 +192,7 @@ func TestScheduleNextDueDateDayOfWeek(t *testing.T) {
 				// Calculate next Thursday at 18:00 EST
 				completedDate := now.AddDate(0, 1, 0)
 				nextMonday := completedDate.AddDate(0, 0, (int(time.Monday)-int(completedDate.Weekday())+7)%7)
-				nextMonday = truncateToDay(nextMonday).Add(18*time.Hour + 0*time.Minute)
+				nextMonday = truncateToDay(nextMonday).Add(6*time.Hour + 0*time.Minute)
 				return &nextMonday
 			}(),
 		},
@@ -214,10 +214,10 @@ func TestScheduleNextDueDateDayOfMonth(t *testing.T) {
 			chore: chModel.Chore{
 				FrequencyType:     chModel.FrequencyTypeDayOfTheMonth,
 				Frequency:         15,
-				FrequencyMetadata: jsonPtr(`{ "unit": "days", "time": "2025-01-20T18:00:00-05:00", "days": [], "months": [ "january" ] }`),
+				FrequencyMetadata: jsonPtr(`{ "unit": "days", "time": "2025-01-20T14:00:00-05:00", "days": [], "months": [ "january" ] }`),
 			},
 			completedDate: now,
-			want:          timePtr(time.Date(2025, 1, 15, 18, 0, 0, 0, location)),
+			want:          timePtr(time.Date(2025, 1, 15, 19, 0, 0, 0, location)),
 		},
 		{
 			name: "Day of the month - 15th of January(isRolling)",
@@ -225,10 +225,10 @@ func TestScheduleNextDueDateDayOfMonth(t *testing.T) {
 				FrequencyType:     chModel.FrequencyTypeDayOfTheMonth,
 				Frequency:         15,
 				IsRolling:         true,
-				FrequencyMetadata: jsonPtr(`{ "unit": "days", "time": "2025-01-20T18:00:00-05:00", "days": [], "months": [ "january" ] }`),
+				FrequencyMetadata: jsonPtr(`{ "unit": "days", "time": "2025-01-20T02:00:00-05:00", "days": [], "months": [ "january" ] }`),
 			},
 			completedDate: now.AddDate(1, 1, 0),
-			want:          timePtr(time.Date(2027, 1, 15, 18, 0, 0, 0, location)),
+			want:          timePtr(time.Date(2027, 1, 15, 7, 0, 0, 0, location)),
 		},
 		// test if completed before the 15th of the month:
 		{

@@ -231,7 +231,13 @@ func (h *Handler) createChore(c *gin.Context) {
 		return
 	}
 	stringNotificationMetadata := string(notificationMetadataBytes)
-
+	if stringNotificationMetadata == "null" {
+		// TODO: Clean this update after 0.1.38.. there is a bug in the frontend that sends null instead of empty object
+		// this is a temporary fix to avoid breaking changes
+		// once change we can change notificationMetadataBytes to     var notificationMetadataMap map[string]interface{} to gernerate empty object
+		// and remove this check
+		stringNotificationMetadata = "{}"
+	}
 	var stringLabels *string
 	if len(choreReq.Labels) > 0 {
 		var escapedLabels []string
@@ -243,6 +249,7 @@ func (h *Handler) createChore(c *gin.Context) {
 		stringLabels = &labels
 	}
 	createdChore := &chModel.Chore{
+
 		Name:                 choreReq.Name,
 		FrequencyType:        choreReq.FrequencyType,
 		Frequency:            choreReq.Frequency,
@@ -263,7 +270,6 @@ func (h *Handler) createChore(c *gin.Context) {
 		CompletionWindow:     choreReq.CompletionWindow,
 		Description:          choreReq.Description,
 		SubTasks:             choreReq.SubTasks,
-		Priority:             choreReq.Priority,
 	}
 	id, err := h.choreRepo.CreateChore(c, createdChore)
 	createdChore.ID = id
@@ -464,6 +470,13 @@ func (h *Handler) editChore(c *gin.Context) {
 		return
 	}
 	stringNotificationMetadata := string(notificationMetadataBytes)
+	if stringNotificationMetadata == "null" {
+		// TODO: Clean this update after 0.1.38.. there is a bug in the frontend that sends null instead of empty object
+		// this is a temporary fix to avoid breaking changes
+		// once change we can change notificationMetadataBytes to     var notificationMetadataMap map[string]interface{} to gernerate empty object
+		// and remove this check
+		stringNotificationMetadata = "{}"
+	}
 
 	// escape special characters in labels and store them as a string :
 	var stringLabels *string
@@ -547,7 +560,6 @@ func (h *Handler) editChore(c *gin.Context) {
 		if choreReq.SubTasks == nil {
 			choreReq.SubTasks = &[]stModel.SubTask{}
 		}
-		// check what subtask needed to be removed:
 		for _, existedSubTask := range *oldChore.SubTasks {
 			found := false
 			for _, newSubTask := range *choreReq.SubTasks {
@@ -560,16 +572,14 @@ func (h *Handler) editChore(c *gin.Context) {
 				ToBeRemoved = append(ToBeRemoved, existedSubTask)
 			}
 		}
-		// check what subtask needed to be added or updated:
+
 		for _, newSubTask := range *choreReq.SubTasks {
 			found := false
 			newSubTask.ChoreID = oldChore.ID
 
 			for _, existedSubTask := range *oldChore.SubTasks {
 				if existedSubTask.ID == newSubTask.ID {
-					if existedSubTask.Name != newSubTask.Name ||
-						existedSubTask.OrderID != newSubTask.OrderID ||
-						existedSubTask.ParentId != newSubTask.ParentId {
+					if existedSubTask.Name != newSubTask.Name || existedSubTask.OrderID != newSubTask.OrderID {
 						// there is a change in the subtask, update it
 						break
 					}

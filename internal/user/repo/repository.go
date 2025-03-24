@@ -27,6 +27,15 @@ type UserRepository struct {
 	isDonetickDotCom bool
 }
 
+func (r *UserRepository) GetUser(c context.Context, id int) (*uModel.UserDetails, error) {
+	var user *uModel.UserDetails
+
+	if err := r.db.WithContext(c).Table("users u").Select("u.*, c.webhook_url as webhook_url").Joins("left join circles c on c.id = u.circle_id").Where("u.id = ?", id).First(&user).Error; err != nil {
+		return nil, err
+	}
+	return user, nil
+}
+
 func NewUserRepository(db *gorm.DB, cfg *config.Config) *UserRepository {
 	return &UserRepository{db, cfg.IsDoneTickDotCom}
 }

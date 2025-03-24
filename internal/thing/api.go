@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"donetick.com/core/config"
+	dtAuth "donetick.com/core/internal/authorization"
 	chRepo "donetick.com/core/internal/chore/repo"
 	cRepo "donetick.com/core/internal/circle/repo"
 	tModel "donetick.com/core/internal/thing/model"
@@ -135,21 +136,12 @@ func WebhookEvaluateTriggerAndScheduleDueDate(h *API, c *gin.Context, thing *tMo
 }
 
 func validateUserAndThing(c *gin.Context, h *API) (*tModel.Thing, bool) {
-	apiToken := c.GetHeader("secretkey")
-	if apiToken == "" {
-		c.JSON(401, gin.H{"error": "Unauthorized"})
-		return nil, true
-	}
 	thingID, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		c.JSON(400, gin.H{"error": err.Error()})
 		return nil, true
 	}
-	user, err := h.userRepo.GetUserByToken(c, apiToken)
-	if err != nil {
-		c.JSON(401, gin.H{"error": "Unauthorized"})
-		return nil, true
-	}
+	user, _ := dtAuth.CurrentUser(c)
 	thing, err := h.thingRepo.GetThingByID(c, thingID)
 	if err != nil {
 		c.JSON(400, gin.H{"error": "Invalid thing id"})
@@ -166,6 +158,7 @@ func APIs(cfg *config.Config, w *API, r *gin.Engine, auth *jwt.GinJWTMiddleware)
 
 	thingsAPI := r.Group("eapi/v1/things")
 
+	thingsAPI.Use(dtAuth.TokenValidation(w.userRepo, w.circleRepo))
 	thingsAPI.Use(utils.TimeoutMiddleware(cfg.Server.WriteTimeout))
 	{
 		thingsAPI.GET("/:id/state/change", w.ChangeThingState)

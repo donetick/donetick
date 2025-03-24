@@ -57,6 +57,7 @@ func main() {
 		// fx.Provide(config.NewConfig),
 		fx.Provide(auth.NewAuthMiddleware),
 		fx.Provide(auth.NewIdentityProvider),
+		fx.Provide(auth.TokenValidation),
 		fx.Provide(resource.NewHandler),
 
 		// fx.Provide(NewBot),

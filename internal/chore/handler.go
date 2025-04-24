@@ -948,7 +948,7 @@ func (h *Handler) UnarchiveChore(c *gin.Context) {
 	}
 
 	c.JSON(200, gin.H{
-		"message": "Chore archived successfully",
+		"message": "Chore unarchived successfully",
 	})
 }
 

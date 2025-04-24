@@ -76,6 +76,7 @@ func generateDueNotifications(chore *chModel.Chore, assignedUser *cModel.UserCir
 		TypeID:       assignedUser.NotificationType,
 
 		UserID:   assignedUser.UserID,
+		CircleID: assignedUser.CircleID,
 		TargetID: assignedUser.TargetID,
 		Text:     fmt.Sprintf("📅 Reminder: *%s* is due today and assigned to %s.", chore.Name, assignedUser.DisplayName),
 		RawEvent: map[string]interface{}{
@@ -159,6 +160,7 @@ func generateCircleGroupNotifications(chore *chModel.Chore, mt *chModel.Notifica
 			ScheduledFor: *chore.NextDueDate,
 			CreatedAt:    time.Now().UTC(),
 			TypeID:       1,
+			CircleID:     int(*mt.CircleGroupID),
 			TargetID:     fmt.Sprint(*mt.CircleGroupID),
 			Text:         fmt.Sprintf("📅 Reminder: *%s* is due today.", chore.Name),
 			RawEvent: map[string]interface{}{
@@ -180,6 +182,7 @@ func generateCircleGroupNotifications(chore *chModel.Chore, mt *chModel.Notifica
 			ScheduledFor: *chore.NextDueDate,
 			CreatedAt:    time.Now().UTC().Add(-time.Hour * 3),
 			TypeID:       3,
+			CircleID:     int(*mt.CircleGroupID),
 			TargetID:     fmt.Sprint(*mt.CircleGroupID),
 			Text:         fmt.Sprintf("📢 Heads up! *%s* is due soon (on %s).", chore.Name, chore.NextDueDate.Format("January 2nd")),
 			RawEvent: map[string]interface{}{
@@ -203,6 +206,7 @@ func generateCircleGroupNotifications(chore *chModel.Chore, mt *chModel.Notifica
 				ScheduledFor: scheduleTime,
 				CreatedAt:    time.Now().UTC(),
 				TypeID:       2,
+				CircleID:     int(*mt.CircleGroupID),
 				TargetID:     fmt.Sprint(*mt.CircleGroupID),
 				Text:         fmt.Sprintf("🚨 *%s* is now %d hours overdue. Please complete it as soon as possible.", chore.Name, hours),
 				RawEvent: map[string]interface{}{

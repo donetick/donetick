@@ -7,14 +7,16 @@ import (
 )
 
 type Circle struct {
-	ID         int       `json:"id" gorm:"primary_key"`                 // Unique identifier
-	Name       string    `json:"name" gorm:"column:name"`               // Full name
-	CreatedBy  int       `json:"created_by" gorm:"column:created_by"`   // Created by
-	CreatedAt  time.Time `json:"created_at" gorm:"column:created_at"`   // Created at
-	UpdatedAt  time.Time `json:"updated_at" gorm:"column:updated_at"`   // Updated at
-	InviteCode string    `json:"invite_code" gorm:"column:invite_code"` // Invite code
-	Disabled   bool      `json:"disabled" gorm:"column:disabled"`       // Disabled
-	WebhookURL *string   `json:"webhook_url" gorm:"column:webhook_url"` // Webhook URL
+	ID                 int        `json:"id" gorm:"primary_key"`                 // Unique identifier
+	Name               string     `json:"name" gorm:"column:name"`               // Full name
+	CreatedBy          int        `json:"created_by" gorm:"column:created_by"`   // Created by
+	CreatedAt          time.Time  `json:"created_at" gorm:"column:created_at"`   // Created at
+	UpdatedAt          time.Time  `json:"updated_at" gorm:"column:updated_at"`   // Updated at
+	InviteCode         string     `json:"invite_code" gorm:"column:invite_code"` // Invite code
+	Disabled           bool       `json:"disabled" gorm:"column:disabled"`       // Disabled
+	WebhookURL         *string    `json:"webhook_url" gorm:"column:webhook_url"` // Webhook URL
+	SubscriptionStatus *string    `gorm:"column:status;<-:false"`                // read one column
+	ExpiredAt          *time.Time `gorm:"column:expired_at;<-:false"`            // read one column
 }
 
 type CircleDetail struct {

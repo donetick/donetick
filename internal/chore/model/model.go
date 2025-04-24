@@ -1,6 +1,9 @@
 package model
 
 import (
+	"database/sql/driver"
+	"encoding/json"
+	"errors"
 	"time"
 
 	cModel "donetick.com/core/internal/circle/model"
@@ -36,33 +39,36 @@ const (
 )
 
 type Chore struct {
-	ID                   int                `json:"id" gorm:"primary_key"`
-	Name                 string             `json:"name" gorm:"column:name"`                                      // Chore description
-	FrequencyType        FrequencyType      `json:"frequencyType" gorm:"column:frequency_type"`                   // "daily", "weekly", "monthly", "yearly", "adaptive",or "custom"
-	Frequency            int                `json:"frequency" gorm:"column:frequency"`                            // Number of days, weeks, months, or years between chores
-	FrequencyMetadata    *string            `json:"frequencyMetadata" gorm:"column:frequency_meta"`               // Additional frequency information
-	NextDueDate          *time.Time         `json:"nextDueDate" gorm:"column:next_due_date;index"`                // When the chore is due
-	IsRolling            bool               `json:"isRolling" gorm:"column:is_rolling"`                           // Whether the chore is rolling
-	AssignedTo           int                `json:"assignedTo" gorm:"column:assigned_to"`                         // Who the chore is assigned to
-	Assignees            []ChoreAssignees   `json:"assignees" gorm:"foreignkey:ChoreID;references:ID"`            // Assignees of the chore
-	AssignStrategy       AssignmentStrategy `json:"assignStrategy" gorm:"column:assign_strategy"`                 // How the chore is assigned
-	IsActive             bool               `json:"isActive" gorm:"column:is_active"`                             // Whether the chore is active
-	Notification         bool               `json:"notification" gorm:"column:notification"`                      // Whether the chore has notification
-	NotificationMetadata *string            `json:"notificationMetadata" gorm:"column:notification_meta"`         // Additional notification information
-	Labels               *string            `json:"labels" gorm:"column:labels"`                                  // Labels for the chore
-	LabelsV2             *[]Label           `json:"labelsV2" gorm:"many2many:chore_labels"`                       // Labels for the chore
-	CircleID             int                `json:"circleId" gorm:"column:circle_id;index"`                       // The circle this chore is in
-	CreatedAt            time.Time          `json:"createdAt" gorm:"column:created_at"`                           // When the chore was created
-	UpdatedAt            time.Time          `json:"updatedAt" gorm:"column:updated_at"`                           // When the chore was last updated
-	CreatedBy            int                `json:"createdBy" gorm:"column:created_by"`                           // Who created the chore
-	UpdatedBy            int                `json:"updatedBy" gorm:"column:updated_by"`                           // Who last updated the chore
-	ThingChore           *tModel.ThingChore `json:"thingChore" gorm:"foreignkey:chore_id;references:id;<-:false"` // ThingChore relationship
-	Status               Status             `json:"status" gorm:"column:status"`
-	Priority             int                `json:"priority" gorm:"column:priority"`
-	CompletionWindow     *int               `json:"completionWindow,omitempty" gorm:"column:completion_window"` // Number seconds before the chore is due that it can be completed
-	Points               *int               `json:"points,omitempty" gorm:"column:points"`                      // Points for completing the chore
-	Description          *string            `json:"description,omitempty" gorm:"type:text;column:description"`  // Description of the chore
-	SubTasks             *[]stModel.SubTask `json:"subTasks,omitempty" gorm:"foreignkey:ChoreID;references:ID"` // Subtasks for the chore
+	ID                     int                   `json:"id" gorm:"primary_key"`
+	Name                   string                `json:"name" gorm:"column:name"`                                           // Chore description
+	FrequencyType          FrequencyType         `json:"frequencyType" gorm:"column:frequency_type"`                        // "daily", "weekly", "monthly", "yearly", "adaptive",or "custom"
+	Frequency              int                   `json:"frequency" gorm:"column:frequency"`                                 // Number of days, weeks, months, or years between chores
+	FrequencyMetadata      *string               `json:"-" gorm:"column:frequency_meta"`                                    // TODO: Clean up after v0.1.39
+	FrequencyMetadataV2    *FrequencyMetadata    `json:"frequencyMetadata" gorm:"column:frequency_meta_v2;type:json"`       // Additional frequency information for v2 (if used)
+	NextDueDate            *time.Time            `json:"nextDueDate" gorm:"column:next_due_date;index"`                     // When the chore is due
+	IsRolling              bool                  `json:"isRolling" gorm:"column:is_rolling"`                                // Whether the chore is rolling
+	AssignedTo             int                   `json:"assignedTo" gorm:"column:assigned_to"`                              // Who the chore is assigned to
+	Assignees              []ChoreAssignees      `json:"assignees" gorm:"foreignkey:ChoreID;references:ID"`                 // Assignees of the chore
+	AssignStrategy         AssignmentStrategy    `json:"assignStrategy" gorm:"column:assign_strategy"`                      // How the chore is assigned
+	IsActive               bool                  `json:"isActive" gorm:"column:is_active"`                                  // Whether the chore is active
+	Notification           bool                  `json:"notification" gorm:"column:notification"`                           // Whether the chore has notification
+	NotificationMetadata   *string               `json:"-" gorm:"column:notification_meta"`                                 // TODO: Clean up after v0.1.39
+	NotificationMetadataV2 *NotificationMetadata `json:"notificationMetadata" gorm:"column:notification_meta_v2;type:json"` // Additional notification information
+	Labels                 *string               `json:"labels" gorm:"column:labels"`                                       // Labels for the chore
+	LabelsV2               *[]Label              `json:"labelsV2" gorm:"many2many:chore_labels"`                            // Labels for the chore
+	CircleID               int                   `json:"circleId" gorm:"column:circle_id;index"`                            // The circle this chore is in
+	CreatedAt              time.Time             `json:"createdAt" gorm:"column:created_at"`                                // When the chore was created
+	UpdatedAt              time.Time             `json:"updatedAt" gorm:"column:updated_at"`                                // When the chore was last updated
+	CreatedBy              int                   `json:"createdBy" gorm:"column:created_by"`                                // Who created the chore
+	UpdatedBy              int                   `json:"updatedBy" gorm:"column:updated_by"`                                // Who last updated the chore
+	ThingChore             *tModel.ThingChore    `json:"thingChore" gorm:"foreignkey:chore_id;references:id;<-:false"`      // ThingChore relationship
+	Status                 Status                `json:"status" gorm:"column:status"`
+	Priority               int                   `json:"priority" gorm:"column:priority"`
+	CompletionWindow       *int                  `json:"completionWindow,omitempty" gorm:"column:completion_window"` // Number seconds before the chore is due that it can be completed
+	Points                 *int                  `json:"points,omitempty" gorm:"column:points"`                      // Points for completing the chore
+	Description            *string               `json:"description,omitempty" gorm:"type:text;column:description"`  // Description of the chore
+	SubTasks               *[]stModel.SubTask    `json:"subTasks,omitempty" gorm:"foreignkey:ChoreID;references:ID"` // Subtasks for the chore
+
 }
 
 type Status int8
@@ -99,10 +105,11 @@ const (
 )
 
 type FrequencyMetadata struct {
-	Days   []*string `json:"days,omitempty"`
-	Months []*string `json:"months,omitempty"`
-	Unit   *string   `json:"unit,omitempty"`
-	Time   string    `json:"time,omitempty"`
+	Days     []*string `json:"days,omitempty"`
+	Months   []*string `json:"months,omitempty"`
+	Unit     *string   `json:"unit,omitempty"`
+	Time     string    `json:"time,omitempty"`
+	Timezone string    `json:"timezone,omitempty"`
 }
 
 type NotificationMetadata struct {
@@ -173,18 +180,36 @@ type ChoreReq struct {
 	Description          *string               `json:"description"`
 	Priority             int                   `json:"priority"`
 	SubTasks             *[]stModel.SubTask    `json:"subTasks"`
+	UpdatedAt            *time.Time            `json:"updatedAt,omitempty"` // For internal use only when syncing a chore updated offline
 }
 
-func (c *Chore) CanEdit(userID int, circleUsers []*cModel.UserCircleDetail) bool {
+func (c *Chore) CanEdit(userID int, circleUsers []*cModel.UserCircleDetail, updatedAt *time.Time) error {
+	userHasPermission := false
+	choreCanModified := true
 	if c.CreatedBy == userID {
-		return true
+		userHasPermission = true
 	}
 	for _, cu := range circleUsers {
 		if cu.UserID == userID && cu.Role == "admin" {
-			return true
+			userHasPermission = true
+			break
 		}
 	}
-	return false
+	if updatedAt != nil {
+		// if the chore was updated after the user fetched it for editing, then do not allow editing
+		if c.UpdatedAt.After(*updatedAt) {
+			// this means the chore was modified by someone
+			choreCanModified = false
+		}
+	}
+	if !userHasPermission {
+		return errors.New("user does not have permission to edit this chore")
+	}
+	if !choreCanModified {
+		return errors.New("chore has been modified by another user, please refresh and try again")
+	}
+	return nil
+
 }
 
 func (c *Chore) CanComplete(userID int) bool {
@@ -197,4 +222,41 @@ func (c *Chore) CanComplete(userID int) bool {
 		}
 	}
 	return false
+}
+
+// Implement driver.Valuer to convert the struct to JSON when saving to the database otherwise will
+// get `error converting argument $12 type: unsupported type model.NotificationMetadata,  a struct` need
+// the `Value()` and `Scan()` methods to store and retrieve the `NotificationMetadata` struct in the database as JSON.
+func (n NotificationMetadata) Value() (driver.Value, error) {
+	return json.Marshal(n)
+}
+
+func (n *NotificationMetadata) Scan(value interface{}) error {
+	if value == nil {
+		return nil
+	}
+
+	bytes, ok := value.([]byte)
+	if !ok {
+		return errors.New("type assertion to []byte failed")
+	}
+
+	return json.Unmarshal(bytes, n)
+}
+
+func (f FrequencyMetadata) Value() (driver.Value, error) {
+	return json.Marshal(f)
+}
+
+func (f *FrequencyMetadata) Scan(value interface{}) error {
+	if value == nil {
+		return nil
+	}
+
+	bytes, ok := value.([]byte)
+	if !ok {
+		return errors.New("type assertion to []byte failed")
+	}
+
+	return json.Unmarshal(bytes, f)
 }

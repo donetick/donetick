@@ -1,7 +1,6 @@
 package chore
 
 import (
-	"encoding/json"
 	"fmt"
 	"math"
 	"math/rand"
@@ -26,15 +25,9 @@ func scheduleNextDueDate(chore *chModel.Chore, completedDate time.Time) (*time.T
 		baseDate = completedDate.UTC()
 	}
 
-	frequencyMetadata := chModel.FrequencyMetadata{}
-	err := json.Unmarshal([]byte(*chore.FrequencyMetadata), &frequencyMetadata)
-	if err != nil {
-		return nil, fmt.Errorf("error unmarshalling frequency metadata: %w", err)
-	}
-
 	// Handle time-based frequencies, ensure time is in the future
 	if chore.FrequencyType == "day_of_the_month" || chore.FrequencyType == "days_of_the_week" || chore.FrequencyType == "interval" {
-		t, err := time.Parse(time.RFC3339, frequencyMetadata.Time)
+		t, err := time.Parse(time.RFC3339, chore.FrequencyMetadataV2.Time)
 		if err != nil {
 			return nil, fmt.Errorf("error parsing time in frequency metadata: %w", err)
 		}
@@ -60,7 +53,7 @@ func scheduleNextDueDate(chore *chModel.Chore, completedDate time.Time) (*time.T
 		diff := completedDate.UTC().Sub(chore.NextDueDate.UTC())
 		baseDate = completedDate.UTC().Add(diff)
 	case "interval":
-		switch *frequencyMetadata.Unit {
+		switch *chore.FrequencyMetadataV2.Unit {
 		case "hours":
 			baseDate = baseDate.Add(time.Duration(chore.Frequency) * time.Hour)
 		case "days":
@@ -72,17 +65,17 @@ func scheduleNextDueDate(chore *chModel.Chore, completedDate time.Time) (*time.T
 		case "years":
 			baseDate = baseDate.AddDate(chore.Frequency, 0, 0)
 		default:
-			return nil, fmt.Errorf("invalid frequency unit: %s", *frequencyMetadata.Unit)
+			return nil, fmt.Errorf("invalid frequency unit: %s", *chore.FrequencyMetadataV2.Unit)
 		}
 	case "days_of_the_week":
-		if len(frequencyMetadata.Days) == 0 {
+		if len(chore.FrequencyMetadataV2.Days) == 0 {
 			return nil, fmt.Errorf("days_of_the_week requires at least one day")
 		}
 		// Find the next valid day of the week
 		for i := 1; i <= 7; i++ {
 			nextDueDate := baseDate.AddDate(0, 0, i)
 			nextDay := strings.ToLower(nextDueDate.Weekday().String())
-			for _, day := range frequencyMetadata.Days {
+			for _, day := range chore.FrequencyMetadataV2.Days {
 				if strings.ToLower(*day) == nextDay {
 					return &nextDueDate, nil
 				}
@@ -100,7 +93,7 @@ func scheduleNextDueDate(chore *chModel.Chore, completedDate time.Time) (*time.T
 				baseDate = secondAfterDueDate
 			}
 		}
-		if len(frequencyMetadata.Months) == 0 {
+		if len(chore.FrequencyMetadataV2.Months) == 0 {
 			return nil, fmt.Errorf("day_of_the_month requires at least one month")
 		}
 		// Ensure the day of the month is valid
@@ -132,7 +125,7 @@ func scheduleNextDueDate(chore *chModel.Chore, completedDate time.Time) (*time.T
 
 			nextDueDate = time.Date(nextDueDate.Year(), time.Month(nextMonth), targetDay, nextDueDate.Hour(), nextDueDate.Minute(), 0, 0, time.UTC)
 
-			for _, month := range frequencyMetadata.Months {
+			for _, month := range chore.FrequencyMetadataV2.Months {
 				if strings.ToLower(*month) == strings.ToLower(time.Month(nextMonth).String()) {
 					return &nextDueDate, nil
 				}

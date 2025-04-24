@@ -1,14 +1,11 @@
 package chore
 
 import (
-	"encoding/json"
 	"fmt"
-	"html"
 	"log"
 	"math"
 	"math/rand"
 	"strconv"
-	"strings"
 	"time"
 
 	auth "donetick.com/core/internal/authorization"
@@ -214,62 +211,30 @@ func (h *Handler) createChore(c *gin.Context) {
 
 	}
 
-	freqencyMetadataBytes, err := json.Marshal(choreReq.FrequencyMetadata)
-	if err != nil {
-		c.JSON(500, gin.H{
-			"error": "Error marshalling frequency metadata",
-		})
-		return
-	}
-	stringFrequencyMetadata := string(freqencyMetadataBytes)
-
-	notificationMetadataBytes, err := json.Marshal(choreReq.NotificationMetadata)
-	if err != nil {
-		c.JSON(500, gin.H{
-			"error": "Error marshalling notification metadata",
-		})
-		return
-	}
-	stringNotificationMetadata := string(notificationMetadataBytes)
-	if stringNotificationMetadata == "null" {
-		// TODO: Clean this update after 0.1.38.. there is a bug in the frontend that sends null instead of empty object
-		// this is a temporary fix to avoid breaking changes
-		// once change we can change notificationMetadataBytes to     var notificationMetadataMap map[string]interface{} to gernerate empty object
-		// and remove this check
-		stringNotificationMetadata = "{}"
-	}
-	var stringLabels *string
-	if len(choreReq.Labels) > 0 {
-		var escapedLabels []string
-		for _, label := range choreReq.Labels {
-			escapedLabels = append(escapedLabels, html.EscapeString(label))
-		}
-
-		labels := strings.Join(escapedLabels, ",")
-		stringLabels = &labels
-	}
 	createdChore := &chModel.Chore{
 
-		Name:                 choreReq.Name,
-		FrequencyType:        choreReq.FrequencyType,
-		Frequency:            choreReq.Frequency,
-		FrequencyMetadata:    &stringFrequencyMetadata,
-		NextDueDate:          dueDate,
-		AssignStrategy:       choreReq.AssignStrategy,
-		AssignedTo:           choreReq.AssignedTo,
-		IsRolling:            choreReq.IsRolling,
-		UpdatedBy:            currentUser.ID,
-		IsActive:             true,
-		Notification:         choreReq.Notification,
-		NotificationMetadata: &stringNotificationMetadata,
-		Labels:               stringLabels,
-		CreatedBy:            currentUser.ID,
-		CreatedAt:            time.Now().UTC(),
-		CircleID:             currentUser.CircleID,
-		Points:               choreReq.Points,
-		CompletionWindow:     choreReq.CompletionWindow,
-		Description:          choreReq.Description,
-		SubTasks:             choreReq.SubTasks,
+		Name:                   choreReq.Name,
+		FrequencyType:          choreReq.FrequencyType,
+		Frequency:              choreReq.Frequency,
+		FrequencyMetadata:      nil, // deprecated in favor of FrequencyMetadataV2
+		FrequencyMetadataV2:    choreReq.FrequencyMetadata,
+		NextDueDate:            dueDate,
+		AssignStrategy:         choreReq.AssignStrategy,
+		AssignedTo:             choreReq.AssignedTo,
+		IsRolling:              choreReq.IsRolling,
+		UpdatedBy:              currentUser.ID,
+		IsActive:               true,
+		Notification:           choreReq.Notification,
+		NotificationMetadata:   nil, // deprecated in favor of NotificationMetadataV2
+		NotificationMetadataV2: choreReq.NotificationMetadata,
+		Labels:                 nil, // deprecated in favor of LabelsV2
+		CreatedBy:              currentUser.ID,
+		CreatedAt:              time.Now().UTC(),
+		CircleID:               currentUser.CircleID,
+		Points:                 choreReq.Points,
+		CompletionWindow:       choreReq.CompletionWindow,
+		Description:            choreReq.Description,
+		SubTasks:               choreReq.SubTasks,
 	}
 	id, err := h.choreRepo.CreateChore(c, createdChore)
 	createdChore.ID = id
@@ -282,7 +247,7 @@ func (h *Handler) createChore(c *gin.Context) {
 	}
 
 	if choreReq.SubTasks != nil {
-		h.stRepo.CreateSubtasks(c, nil, choreReq.SubTasks, createdChore.ID)
+		h.stRepo.UpdateSubtask(c, createdChore.ID, nil, *choreReq.SubTasks)
 	}
 
 	var choreAssignees []*chModel.ChoreAssignees
@@ -446,48 +411,11 @@ func (h *Handler) editChore(c *gin.Context) {
 		})
 		return
 	}
-	if !oldChore.CanEdit(currentUser.ID, circleUsers) {
+	if err := oldChore.CanEdit(currentUser.ID, circleUsers, choreReq.UpdatedAt); err != nil {
 		c.JSON(403, gin.H{
-			"error": "You are not allowed to edit this chore",
+			"error": fmt.Sprintf("You cannot edit this chore: %s", err.Error()),
 		})
 		return
-	}
-	freqencyMetadataBytes, err := json.Marshal(choreReq.FrequencyMetadata)
-	if err != nil {
-		c.JSON(500, gin.H{
-			"error": "Error marshalling frequency metadata",
-		})
-		return
-	}
-
-	stringFrequencyMetadata := string(freqencyMetadataBytes)
-
-	notificationMetadataBytes, err := json.Marshal(choreReq.NotificationMetadata)
-	if err != nil {
-		c.JSON(500, gin.H{
-			"error": "Error marshalling notification metadata",
-		})
-		return
-	}
-	stringNotificationMetadata := string(notificationMetadataBytes)
-	if stringNotificationMetadata == "null" {
-		// TODO: Clean this update after 0.1.38.. there is a bug in the frontend that sends null instead of empty object
-		// this is a temporary fix to avoid breaking changes
-		// once change we can change notificationMetadataBytes to     var notificationMetadataMap map[string]interface{} to gernerate empty object
-		// and remove this check
-		stringNotificationMetadata = "{}"
-	}
-
-	// escape special characters in labels and store them as a string :
-	var stringLabels *string
-	if len(choreReq.Labels) > 0 {
-		var escapedLabels []string
-		for _, label := range choreReq.Labels {
-			escapedLabels = append(escapedLabels, html.EscapeString(label))
-		}
-
-		labels := strings.Join(escapedLabels, ",")
-		stringLabels = &labels
 	}
 
 	// Create a map to store the existing labels for quick lookup
@@ -522,28 +450,30 @@ func (h *Handler) editChore(c *gin.Context) {
 	}
 
 	updatedChore := &chModel.Chore{
-		ID:                choreReq.ID,
-		Name:              choreReq.Name,
-		FrequencyType:     choreReq.FrequencyType,
-		Frequency:         choreReq.Frequency,
-		FrequencyMetadata: &stringFrequencyMetadata,
+		ID:                  choreReq.ID,
+		Name:                choreReq.Name,
+		FrequencyType:       choreReq.FrequencyType,
+		Frequency:           choreReq.Frequency,
+		FrequencyMetadata:   nil, // deprecated in favor of FrequencyMetadataV2 v0.1.39
+		FrequencyMetadataV2: choreReq.FrequencyMetadata,
 		// Assignees:         &assignees,
-		NextDueDate:          dueDate,
-		AssignStrategy:       choreReq.AssignStrategy,
-		AssignedTo:           choreReq.AssignedTo,
-		IsRolling:            choreReq.IsRolling,
-		IsActive:             choreReq.IsActive,
-		Notification:         choreReq.Notification,
-		NotificationMetadata: &stringNotificationMetadata,
-		Labels:               stringLabels,
-		CircleID:             oldChore.CircleID,
-		UpdatedBy:            currentUser.ID,
-		CreatedBy:            oldChore.CreatedBy,
-		CreatedAt:            oldChore.CreatedAt,
-		Points:               choreReq.Points,
-		CompletionWindow:     choreReq.CompletionWindow,
-		Description:          choreReq.Description,
-		Priority:             choreReq.Priority,
+		NextDueDate:            dueDate,
+		AssignStrategy:         choreReq.AssignStrategy,
+		AssignedTo:             choreReq.AssignedTo,
+		IsRolling:              choreReq.IsRolling,
+		IsActive:               choreReq.IsActive,
+		Notification:           choreReq.Notification,
+		NotificationMetadata:   nil, // deprecated in favor of NotificationMetadataV2 v0.1.39
+		NotificationMetadataV2: choreReq.NotificationMetadata,
+		Labels:                 nil, // deprecated in favor of LabelsV2 v0.1.39
+		CircleID:               oldChore.CircleID,
+		UpdatedBy:              currentUser.ID,
+		CreatedBy:              oldChore.CreatedBy,
+		CreatedAt:              oldChore.CreatedAt,
+		Points:                 choreReq.Points,
+		CompletionWindow:       choreReq.CompletionWindow,
+		Description:            choreReq.Description,
+		Priority:               choreReq.Priority,
 	}
 	if err := h.choreRepo.UpsertChore(c, updatedChore); err != nil {
 		c.JSON(500, gin.H{
@@ -1082,7 +1012,7 @@ func (h *Handler) completeChore(c *gin.Context) {
 
 	// confirm that the chore in completion window:
 	if chore.CompletionWindow != nil {
-		if completedDate.Before(chore.NextDueDate.Add(time.Hour * time.Duration(*chore.CompletionWindow))) {
+		if completedDate.UTC().Before(chore.NextDueDate.UTC().Add(-time.Hour * time.Duration(*chore.CompletionWindow))) {
 			c.JSON(400, gin.H{
 				"error": "Chore is out of completion window",
 			})

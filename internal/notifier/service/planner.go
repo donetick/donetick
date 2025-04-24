@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -46,25 +45,21 @@ func (n *NotificationPlanner) GenerateNotifications(c context.Context, chore *ch
 
 		return true
 	}
-	var mt *chModel.NotificationMetadata
-	if err := json.Unmarshal([]byte(*chore.NotificationMetadata), &mt); err != nil {
-		log.Error("Error unmarshalling notification metadata", err)
-		return false
-	}
+
 	if chore.NextDueDate == nil {
 		return true
 	}
-	if mt.DueDate {
+	if chore.NotificationMetadataV2.DueDate {
 		notifications = append(notifications, generateDueNotifications(chore, assignedUser))
 	}
-	if mt.PreDue {
+	if chore.NotificationMetadataV2.PreDue {
 		notifications = append(notifications, generatePreDueNotifications(chore, assignedUser))
 	}
-	if mt.Nagging {
+	if chore.NotificationMetadataV2.Nagging {
 		notifications = append(notifications, generateOverdueNotifications(chore, assignedUser)...)
 	}
-	if mt.CircleGroup {
-		notifications = append(notifications, generateCircleGroupNotifications(chore, mt)...)
+	if chore.NotificationMetadataV2.CircleGroup {
+		notifications = append(notifications, generateCircleGroupNotifications(chore, chore.NotificationMetadataV2)...)
 	}
 	log.Debug("Generated notifications", "count", len(notifications))
 	n.nRepo.BatchInsertNotifications(notifications)

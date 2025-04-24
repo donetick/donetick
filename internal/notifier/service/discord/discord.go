@@ -29,11 +29,6 @@ func (dn *DiscordNotifier) SendChoreCompletion(c context.Context, chore *chModel
 		return
 	}
 
-	var mt *chModel.NotificationMetadata
-	if err := json.Unmarshal([]byte(*chore.NotificationMetadata), &mt); err != nil {
-		log.Error("Error unmarshalling notification metadata", err)
-	}
-
 	message := fmt.Sprintf("🎉 **%s** is completed! Great job, %s! 🌟", chore.Name, user.DisplayName)
 	err := dn.sendMessage(c, user.UserNotificationTargets.TargetID, message)
 	if err != nil {

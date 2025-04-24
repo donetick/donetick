@@ -268,11 +268,14 @@ func readJSONBooleanField(dbType string, columnName string, fieldName string) st
 }
 
 func (r *ChoreRepository) SetDueDate(c context.Context, choreID int, dueDate time.Time) error {
-	return r.db.WithContext(c).Model(&chModel.Chore{}).Where("id = ?", choreID).Update("next_due_date", dueDate).Error
+	return r.db.WithContext(c).Model(&chModel.Chore{}).Where("id = ?", choreID).Updates(map[string]interface{}{
+		"next_due_date": dueDate,
+		"is_active":     true,
+	}).Error
 }
 
 func (r *ChoreRepository) SetDueDateIfNotExisted(c context.Context, choreID int, dueDate time.Time) error {
-	return r.db.WithContext(c).Model(&chModel.Chore{}).Where("id = ? and next_due_date is null", choreID).Update("next_due_date", dueDate).Error
+	return r.db.WithContext(c).Model(&chModel.Chore{}).Where("id = ? and next_due_date is null and is_active = ?", choreID, true).Update("next_due_date", dueDate).Error
 }
 
 func (r *ChoreRepository) GetChoreDetailByID(c context.Context, choreID int, circleID int) (*chModel.ChoreDetail, error) {
@@ -330,7 +333,11 @@ func (r *ChoreRepository) GetChoresHistoryByUserID(c context.Context, userID int
 
 	var chores []*chModel.ChoreHistory
 	since := time.Now().AddDate(0, 0, days*-1)
-	if err := r.db.WithContext(c).Where("completed_by = ? AND completed_at > ?", userID, since).Order("completed_at desc").Find(&chores).Error; err != nil {
+	query := r.db.WithContext(c).Where("completed_at > ?", since).Order("completed_at desc")
+	if !includeCircle {
+		query = query.Where("completed_by = ?", userID)
+	}
+	if err := query.Find(&chores).Error; err != nil {
 		return nil, err
 	}
 	return chores, nil

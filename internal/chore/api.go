@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"donetick.com/core/config"
+	dtAuth "donetick.com/core/internal/authorization"
 	chRepo "donetick.com/core/internal/chore/repo"
 	"donetick.com/core/internal/events"
 	nps "donetick.com/core/internal/notifier/service"
@@ -41,17 +42,7 @@ func NewAPI(cr *chRepo.ChoreRepository, userRepo *uRepo.UserRepository, circleRe
 }
 
 func (h *API) GetAllChores(c *gin.Context) {
-
-	apiToken := c.GetHeader("secretkey")
-	if apiToken == "" {
-		c.JSON(401, gin.H{"error": "Unauthorized"})
-		return
-	}
-	user, err := h.userRepo.GetUserByToken(c, apiToken)
-	if err != nil {
-		c.JSON(401, gin.H{"error": "Unauthorized"})
-		return
-	}
+	user, _ := dtAuth.CurrentUser(c)
 	chores, err := h.choreRepo.GetChores(c, user.CircleID, user.ID, false)
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
@@ -63,16 +54,7 @@ func (h *API) GetAllChores(c *gin.Context) {
 func (h *API) CreateChore(c *gin.Context) {
 	var choreRequest chModel.ChoreReq
 
-	apiToken := c.GetHeader("secretkey")
-	if apiToken == "" {
-		c.JSON(401, gin.H{"error": "Unauthorized"})
-		return
-	}
-	user, err := h.userRepo.GetUserByToken(c, apiToken)
-	if err != nil {
-		c.JSON(401, gin.H{"error": "Unauthorized"})
-		return
-	}
+	user, _ := dtAuth.CurrentUser(c)
 
 	if err := c.BindJSON(&choreRequest); err != nil {
 		c.JSON(400, gin.H{"error": err.Error()})
@@ -89,9 +71,10 @@ func (h *API) CreateChore(c *gin.Context) {
 		AssignedTo:     user.ID,
 		Assignees:      []chModel.ChoreAssignees{{UserID: user.ID}},
 		Description:    choreRequest.Description,
+		IsActive:       true,
 	}
 
-	_, err = h.choreRepo.CreateChore(c, chore)
+	_, err := h.choreRepo.CreateChore(c, chore)
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
@@ -111,17 +94,7 @@ func (h *API) CompleteChore(c *gin.Context) {
 		})
 		return
 	}
-
-	apiToken := c.GetHeader("secretkey")
-	if apiToken == "" {
-		c.JSON(401, gin.H{"error": "No secret key provided"})
-		return
-	}
-	currentUser, err := h.userRepo.GetUserByToken(c, apiToken)
-	if err != nil {
-		c.JSON(401, gin.H{"error": "Unauthorized"})
-		return
-	}
+	currentUser, _ := dtAuth.CurrentUser(c)
 
 	chore, err := h.choreRepo.GetChore(c, choreID)
 	if err != nil {
@@ -218,14 +191,103 @@ func (h *API) CompleteChore(c *gin.Context) {
 	)
 }
 
-func APIs(cfg *config.Config, api *API, r *gin.Engine, auth *jwt.GinJWTMiddleware, limiter *limiter.Limiter) {
-
-	thingsAPI := r.Group("eapi/v1/chore")
-
-	// thingsAPI.Use(utils.TimeoutMiddleware(cfg.Server.WriteTimeout), utils.RateLimitMiddleware(limiter))
-	{
-		thingsAPI.GET("", api.GetAllChores)
-		thingsAPI.POST("/:id/complete", api.CompleteChore)
+func (h *API) UpdateChore(c *gin.Context) {
+	user, _ := dtAuth.CurrentUser(c)
+	choreIDRaw := c.Param("id")
+	choreID, err := strconv.Atoi(choreIDRaw)
+	if err != nil {
+		c.JSON(400, gin.H{
+			"error": "Invalid ID",
+		})
+		return
+	}
+	var choreRequest chModel.ChoreReq
+	if err := c.BindJSON(&choreRequest); err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+	chore, err := h.choreRepo.GetChore(c, choreID)
+	if err != nil {
+		c.JSON(500, gin.H{
+			"error": "Error getting chore",
+		})
+		return
 	}
 
+	chore.Name = choreRequest.Name
+	chore.IsRolling = choreRequest.IsRolling
+	chore.FrequencyType = choreRequest.FrequencyType
+	chore.Frequency = choreRequest.Frequency
+	chore.AssignStrategy = choreRequest.AssignStrategy
+	chore.Description = choreRequest.Description
+	chore.IsActive = choreRequest.IsActive
+	chore.UpdatedBy = user.ID
+
+	if err := h.choreRepo.UpsertChore(c, chore); err != nil {
+		c.JSON(500, gin.H{
+			"error": "Error updating chore",
+		})
+		return
+	}
+	c.JSON(200, chore)
+}
+
+func (h *API) DeleteChore(c *gin.Context) {
+	user, _ := dtAuth.CurrentUser(c)
+	chore := h.TryGetAndValidateChoreFromContext(c)
+	if err := h.choreRepo.SoftDelete(c, chore.ID, user.ID); err != nil {
+		c.JSON(500, gin.H{
+			"error": "Error deleting chore",
+		})
+		return
+	}
+	c.JSON(200, gin.H{
+		"message": "Chore deleted",
+	})
+}
+
+func (h *API) GetChore(c *gin.Context) {
+	chore := h.TryGetAndValidateChoreFromContext(c)
+	c.JSON(200, chore)
+}
+
+func (h *API) TryGetAndValidateChoreFromContext(c *gin.Context) *chModel.Chore {
+	choreIDRaw := c.Param("id")
+	choreID, err := strconv.Atoi(choreIDRaw)
+	if err != nil {
+		c.JSON(400, gin.H{
+			"error": "Invalid ID",
+		})
+		c.Abort()
+	}
+	chore, err := h.choreRepo.GetChore(c, choreID)
+	if err != nil {
+		c.JSON(500, gin.H{
+			"error": "Error getting chore",
+		})
+		c.Abort()
+	}
+	if chore == nil {
+		c.JSON(404, gin.H{
+			"error": "Chore not found",
+		})
+		c.Abort()
+	}
+	return chore
+}
+
+func APIs(cfg *config.Config, api *API, r *gin.Engine, auth *jwt.GinJWTMiddleware, limiter *limiter.Limiter) {
+
+	choresAPI := r.Group("eapi/v1/chore")
+	choresAPI.Use(dtAuth.TokenValidation(api.userRepo, api.circleRepo))
+
+	// choresAPI.Use(utils.TimeoutMiddleware(cfg.Server.WriteTimeout), utils.RateLimitMiddleware(limiter))
+	{
+		choresAPI.GET("", api.GetAllChores)
+		choresAPI.POST("", api.CreateChore)
+		choresAPI.GET("/:id", api.GetChore)
+		choresAPI.PUT("/:id", api.UpdateChore)
+		choresAPI.DELETE("/:id", api.DeleteChore)
+		choresAPI.POST("/:id/complete", api.CompleteChore)
+	}
 }

@@ -10,6 +10,7 @@ require (
 	github.com/gin-gonic/gin v1.10.0
 	github.com/glebarez/sqlite v1.11.0
 	github.com/go-telegram-bot-api/telegram-bot-api/v5 v5.5.1
+	github.com/golang-jwt/jwt/v5 v5.2.2
 	github.com/gregdel/pushover v1.3.1
 	github.com/rubenv/sql-migrate v1.7.0
 	github.com/spf13/viper v1.19.0

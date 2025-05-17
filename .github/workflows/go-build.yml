@@ -30,5 +30,10 @@ jobs:
       with:
         go-version: '1.22'
 
+    - name: Get Version from Git Tag (or commit if no tag)
+      id: get_version
+      run: |
+        VERSION=$(git describe --tags --abbrev=0 2>/dev/null || git rev-parse HEAD)
+        echo "::set-output name=version::$VERSION"
     - name: Build
-      run: go build -v ./...
+      run: go build -ldflags "-X donetick.com/core/config.Version=${{ steps.get_version.outputs.version }} -X donetick.com/core/config.Commit=$(git rev-parse HEAD) -X donetick.com/core/config.Date=$(date +%Y-%m-%d)" -v ./...

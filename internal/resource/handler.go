@@ -8,7 +8,10 @@ import (
 )
 
 type Resource struct {
-	Idp identityProvider `json:"identity_provider" binding:"omitempty"`
+	Idp        identityProvider `json:"identity_provider" binding:"omitempty"`
+	MinVersion string           `json:"min_version" binding:"omitempty"`
+	APIVersion string           `json:"api_version" binding:"omitempty"`
+	APICommit  string           `json:"api_commit" binding:"omitempty"`
 }
 type identityProvider struct {
 	Auth_url  string `json:"auth_url" binding:"omitempty"`
@@ -33,18 +36,15 @@ func (h *Handler) getResource(c *gin.Context) {
 			Client_ID: h.config.OAuth2Config.ClientID,
 			Name:      h.config.OAuth2Config.Name,
 		},
+		MinVersion: h.config.MinVersion,
+		APIVersion: h.config.Info.Version,
+		APICommit:  h.config.Info.Commit,
 	})
 }
 
 func Routes(r *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware, limiter *limiter.Limiter) {
 	resourceRoutes := r.Group("api/v1/resource")
 
-	// skip resource endpoint for donetick.com
-	if h.config.IsDoneTickDotCom {
-		resourceRoutes.GET("", func(c *gin.Context) {
-			c.JSON(200, gin.H{})
-		})
-		return
-	}
 	resourceRoutes.GET("", h.getResource)
+
 }

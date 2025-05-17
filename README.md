@@ -110,6 +110,27 @@ services:
 
 ## 🛠️ Development Environment
 
+### Build the frontend
+
+1. Clone the frontend repository:
+   ```bash
+   git clone https://github.com/donetick/frontend.git donetick-frontend
+   ```
+2. Navigate to the frontend directory:
+   ```bash
+   cd donetick-frontend
+   ```
+3. Install dependencies:
+   ```bash
+   npm install
+   ```
+4. Build the frontend:
+   ```bash
+   npm run build-selfhosted
+   ```
+
+### Build the application
+
 1. Clone the repository:
    ```bash
    git clone https://github.com/donetick/donetick.git
@@ -122,9 +143,27 @@ services:
    ```bash
    go mod download
    ```
-4. Run the app locally:
+4. Copy the frontend build to the application:
+   ```bash
+   rm -rf ./frontend/dist
+   cp -r ../donetick-frontend/dist ./frontend
+   ```
+5. Run the app locally:
    ```bash
    go run .
+   ```
+   Or build the application:
+   ```bash
+   go build -o donetick .
+   ```
+
+### Build the development Docker image
+
+> Make sure to build the frontend and the app first before building the Docker image.
+
+1. Build the Docker image:
+   ```bash
+   docker build -t donetick/donetick -f Dockerfile.dev .
    ```
 
 ---

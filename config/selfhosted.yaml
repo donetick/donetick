@@ -6,14 +6,14 @@ telegram:
 pushover:
   token: ""
 database:
-  type: "sqlite"
+  type: "postgres"
   migration: true
   # these are only required for postgres
-  host: "secret"
+  host: "192.168.2.177"
   port: 5432
-  user: "secret"
-  password: "secret"
-  name: "secret"
+  user: "donetick"
+  password: "donetick"
+  name: "donetick"
 jwt:
   secret: "secret"
   session_time: 168h

@@ -9,20 +9,41 @@ import (
 	"github.com/spf13/viper"
 )
 
+var (
+	Version   = "dev"
+	Commit    = "dev"
+	BuildDate = "dev"
+)
+
 type Config struct {
-	Name                   string          `mapstructure:"name" yaml:"name"`
-	Telegram               TelegramConfig  `mapstructure:"telegram" yaml:"telegram"`
-	Pushover               PushoverConfig  `mapstructure:"pushover" yaml:"pushover"`
-	Database               DatabaseConfig  `mapstructure:"database" yaml:"database"`
-	Jwt                    JwtConfig       `mapstructure:"jwt" yaml:"jwt"`
-	Server                 ServerConfig    `mapstructure:"server" yaml:"server"`
-	SchedulerJobs          SchedulerConfig `mapstructure:"scheduler_jobs" yaml:"scheduler_jobs"`
-	EmailConfig            EmailConfig     `mapstructure:"email" yaml:"email"`
-	StripeConfig           StripeConfig    `mapstructure:"stripe" yaml:"stripe"`
-	OAuth2Config           OAuth2Config    `mapstructure:"oauth2" yaml:"oauth2"`
-	WebhookConfig          WebhookConfig   `mapstructure:"webhook" yaml:"webhook"`
-	IsDoneTickDotCom       bool            `mapstructure:"is_done_tick_dot_com" yaml:"is_done_tick_dot_com"`
-	IsUserCreationDisabled bool            `mapstructure:"is_user_creation_disabled" yaml:"is_user_creation_disabled"`
+	Name                   string              `mapstructure:"name" yaml:"name"`
+	Telegram               TelegramConfig      `mapstructure:"telegram" yaml:"telegram"`
+	Pushover               PushoverConfig      `mapstructure:"pushover" yaml:"pushover"`
+	Database               DatabaseConfig      `mapstructure:"database" yaml:"database"`
+	Jwt                    JwtConfig           `mapstructure:"jwt" yaml:"jwt"`
+	Server                 ServerConfig        `mapstructure:"server" yaml:"server"`
+	SchedulerJobs          SchedulerConfig     `mapstructure:"scheduler_jobs" yaml:"scheduler_jobs"`
+	EmailConfig            EmailConfig         `mapstructure:"email" yaml:"email"`
+	StripeConfig           StripeConfig        `mapstructure:"stripe" yaml:"stripe"`
+	OAuth2Config           OAuth2Config        `mapstructure:"oauth2" yaml:"oauth2"`
+	WebhookConfig          WebhookConfig       `mapstructure:"webhook" yaml:"webhook"`
+	IsDoneTickDotCom       bool                `mapstructure:"is_done_tick_dot_com" yaml:"is_done_tick_dot_com"`
+	IsUserCreationDisabled bool                `mapstructure:"is_user_creation_disabled" yaml:"is_user_creation_disabled"`
+	MinVersion             string              `mapstructure:"min_version" yaml:"min_version"`
+	DonetickCloudConfig    DonetickCloudConfig `mapstructure:"donetick_cloud" yaml:"donetick_cloud"`
+	Info                   Info
+}
+
+type Info struct {
+	Version   string
+	Commit    string
+	BuildDate string
+}
+
+type DonetickCloudConfig struct {
+	GoogleClientID        string `mapstructure:"google_client_id" yaml:"google_client_id"`
+	GoogleAndroidClientID string `mapstructure:"google_android_client_id" yaml:"google_android_client_id"`
+	GoogleIOSClientID     string `mapstructure:"google_ios_client_id" yaml:"google_ios_client_id"`
 }
 
 type TelegramConfig struct {
@@ -166,6 +187,9 @@ func LoadConfig() *Config {
 	fmt.Printf("--ConfigLoad name : %s ", config.Name)
 
 	configEnvironmentOverrides(&config)
+	config.Info.Version = Version
+	config.Info.Commit = Commit
+	config.Info.BuildDate = BuildDate
 	return &config
 
 	// return LocalConfig()

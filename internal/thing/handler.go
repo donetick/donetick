@@ -122,7 +122,7 @@ func (h *Handler) UpdateThingState(c *gin.Context) {
 	if shouldReturn {
 		return
 	}
-	h.eventsProducer.ThingsUpdated(c.Request.Context(), *currentUser.WebhookURL, map[string]interface{}{
+	h.eventsProducer.ThingsUpdated(c.Request.Context(), currentUser.WebhookURL, map[string]interface{}{
 		"id":         thing.ID,
 		"name":       thing.Name,
 		"type":       thing.Type,

@@ -165,9 +165,13 @@ func (p *EventsProducer) NotificationEvent(ctx context.Context, url string, even
 	})
 }
 
-func (p *EventsProducer) ThingsUpdated(ctx context.Context, url string, data interface{}) {
+func (p *EventsProducer) ThingsUpdated(ctx context.Context, url *string, data interface{}) {
+	if url == nil {
+		p.logger.Debug("No subscribers for circle, skipping webhook")
+		return
+	}
 	p.publishEvent(Event{
-		URL:       url,
+		URL:       *url,
 		Type:      EventTypeThingChanged,
 		Timestamp: time.Now(),
 		Data:      data,

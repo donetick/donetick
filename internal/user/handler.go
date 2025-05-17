@@ -34,6 +34,7 @@ type Handler struct {
 	identityProvider       *auth.IdentityProvider
 	isDonetickDotCom       bool
 	IsUserCreationDisabled bool
+	DonetickCloudConfig    config.DonetickCloudConfig
 }
 
 func NewHandler(ur *uRepo.UserRepository, cr *cRepo.CircleRepository, jwtAuth *jwt.GinJWTMiddleware, email *email.EmailSender, idp *auth.IdentityProvider, config *config.Config) *Handler {
@@ -45,6 +46,7 @@ func NewHandler(ur *uRepo.UserRepository, cr *cRepo.CircleRepository, jwtAuth *j
 		identityProvider:       idp,
 		isDonetickDotCom:       config.IsDoneTickDotCom,
 		IsUserCreationDisabled: config.IsUserCreationDisabled,
+		DonetickCloudConfig:    config.DonetickCloudConfig,
 	}
 }
 
@@ -199,7 +201,22 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 		// logger.Infow("account.handler.thirdPartyAuthCallback", "token", token)
 		service, err := oauth2.New(http.DefaultClient)
 
-		// tokenInfo, err := service.Tokeninfo().AccessToken(token).Do()
+		tokenInfo, err := service.Tokeninfo().AccessToken(body.Token).Do()
+		if err != nil {
+			logger.Errorw("account.handler.thirdPartyAuthCallback failed to get token info", "err", err)
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "Invalid token",
+			})
+			return
+		}
+		logger.Infow("account.handler.thirdPartyAuthCallback", "tokenInfo", tokenInfo)
+		if tokenInfo.Audience != h.DonetickCloudConfig.GoogleClientID && tokenInfo.Audience != h.DonetickCloudConfig.GoogleIOSClientID && tokenInfo.Audience != h.DonetickCloudConfig.GoogleAndroidClientID {
+			logger.Errorw("account.handler.thirdPartyAuthCallback token audience mismatch", "audience", tokenInfo.Audience)
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "Invalid token",
+			})
+			return
+		}
 		userinfo, err := service.Userinfo.Get().Do(googleapi.QueryParameter("access_token", body.Token))
 		logger.Infow("account.handler.thirdPartyAuthCallback", "tokenInfo", userinfo)
 		if err != nil {

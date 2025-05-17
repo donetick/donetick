@@ -34,3 +34,12 @@ type ThingTrigger struct {
 	TriggerState string `json:"triggerState" binding:"required"`
 	Condition    string `json:"condition"`
 }
+
+type ThingType string
+
+const (
+	ThingTypeText    ThingType = "text"
+	ThingTypeNumber  ThingType = "number"
+	ThingTypeBoolean ThingType = "boolean"
+	ThingTypeAction  ThingType = "action"
+)

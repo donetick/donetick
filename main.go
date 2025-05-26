@@ -26,6 +26,8 @@ import (
 	label "donetick.com/core/internal/label"
 	lRepo "donetick.com/core/internal/label/repo"
 	"donetick.com/core/internal/resource"
+	"donetick.com/core/internal/storage"
+	storageRepo "donetick.com/core/internal/storage/repo"
 	spRepo "donetick.com/core/internal/subtask/repo"
 
 	notifier "donetick.com/core/internal/notifier"
@@ -105,6 +107,12 @@ func main() {
 
 		fx.Provide(frontend.NewHandler),
 
+		// storage :
+		fx.Provide(storage.NewLocalStorage),
+		fx.Provide(storage.NewURLSigner),
+		fx.Provide(storage.NewHandler),
+		fx.Provide(storageRepo.NewStorageRepository),
+
 		// fx.Invoke(RunApp),
 		fx.Invoke(
 			chore.Routes,
@@ -114,6 +122,7 @@ func main() {
 			thing.Routes,
 			thing.APIs,
 			label.Routes,
+			storage.Routes,
 			frontend.Routes,
 			resource.Routes,
 

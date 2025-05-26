@@ -32,3 +32,16 @@ email:
   key: 
   email:  
   appHost:  
+storage:
+  max_user_storage:
+  max_file_size:
+  bucket_name: 
+  region: 
+  base_path:
+  access_key: 
+  secret_key: 
+  endpoint: 
+
+
+
+  

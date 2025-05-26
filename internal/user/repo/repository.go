@@ -7,6 +7,7 @@ import (
 
 	"donetick.com/core/config"
 	nModel "donetick.com/core/internal/notifier/model"
+	storageModel "donetick.com/core/internal/storage/model"
 	uModel "donetick.com/core/internal/user/model"
 	"donetick.com/core/logging"
 	"gorm.io/gorm"
@@ -50,6 +51,14 @@ func (r *UserRepository) CreateUser(c context.Context, user *uModel.User) (*uMod
 	if err := r.db.WithContext(c).Save(user).Error; err != nil {
 		return nil, err
 	}
+	if err := r.db.WithContext(c).Save(&storageModel.StorageUsage{
+		UserID:    user.ID,
+		UsedBytes: 0,
+		UpdatedAt: time.Now().UTC(),
+	}).Error; err != nil {
+		return nil, err
+	}
+
 	return user, nil
 }
 func (r *UserRepository) GetUserByUsername(c context.Context, username string) (*uModel.UserDetails, error) {
@@ -179,4 +188,7 @@ func (r *UserRepository) UpdateNotificationTargetForAllNotifications(c context.C
 }
 func (r *UserRepository) UpdatePasswordByUserId(c context.Context, userID int, password string) error {
 	return r.db.WithContext(c).Model(&uModel.User{}).Where("id = ?", userID).Update("password", password).Error
+}
+func (r *UserRepository) UpdateUserImage(c context.Context, userID int, image string) error {
+	return r.db.WithContext(c).Model(&uModel.User{}).Where("id = ?", userID).Update("image", image).Error
 }

@@ -31,6 +31,7 @@ type Config struct {
 	IsUserCreationDisabled bool                `mapstructure:"is_user_creation_disabled" yaml:"is_user_creation_disabled"`
 	MinVersion             string              `mapstructure:"min_version" yaml:"min_version"`
 	DonetickCloudConfig    DonetickCloudConfig `mapstructure:"donetick_cloud" yaml:"donetick_cloud"`
+	Storage                StorageConfig       `mapstructure:"storage" yaml:"storage"`
 	Info                   Info
 }
 
@@ -39,7 +40,18 @@ type Info struct {
 	Commit    string
 	BuildDate string
 }
-
+type StorageConfig struct {
+	StorageType string `mapstructure:"storage_type" yaml:"storage_type"`
+	// CloudStorage:
+	BucketName     string `mapstructure:"bucket_name" yaml:"bucket_name"`
+	Region         string `mapstructure:"region" yaml:"region"`
+	BasePath       string `mapstructure:"base_path" yaml:"base_path"`
+	AccessKey      string `mapstructure:"access_key" yaml:"access_key"`
+	SecretKey      string `mapstructure:"secret_key" yaml:"secret_key"`
+	Endpoint       string `mapstructure:"endpoint" yaml:"endpoint"`
+	MaxUserStorage int    `mapstructure:"max_user_storage" yaml:"max_user_storage"`
+	MaxFileSize    int64  `mapstructure:"max_file_size" yaml:"max_file_size"`
+}
 type DonetickCloudConfig struct {
 	GoogleClientID        string `mapstructure:"google_client_id" yaml:"google_client_id"`
 	GoogleAndroidClientID string `mapstructure:"google_android_client_id" yaml:"google_android_client_id"`
@@ -61,7 +73,7 @@ type DatabaseConfig struct {
 	User      string `mapstructure:"user" yaml:"user"`
 	Password  string `mapstructure:"password" yaml:"password"`
 	Name      string `mapstructure:"name" yaml:"name"`
-	Migration bool   `mapstructure:"migration" yaml:"migration"`
+	Migration bool   `mapstructure:"migration" yaml:"migration" default:"true"`
 	LogLevel  int    `mapstructure:"logger" yaml:"logger"`
 }
 

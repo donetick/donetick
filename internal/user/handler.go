@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"html"
 	"net/http"
+	"strings"
 	"time"
 
 	"donetick.com/core/config"
@@ -15,6 +16,8 @@ import (
 	cRepo "donetick.com/core/internal/circle/repo"
 	"donetick.com/core/internal/email"
 	nModel "donetick.com/core/internal/notifier/model"
+	storage "donetick.com/core/internal/storage"
+	storageRepo "donetick.com/core/internal/storage/repo"
 	uModel "donetick.com/core/internal/user/model"
 	uRepo "donetick.com/core/internal/user/repo"
 	"donetick.com/core/internal/utils"
@@ -35,9 +38,16 @@ type Handler struct {
 	isDonetickDotCom       bool
 	IsUserCreationDisabled bool
 	DonetickCloudConfig    config.DonetickCloudConfig
+	storage                *storage.LocalStorage
+	storageRepo            *storageRepo.StorageRepository
+	signer                 *storage.URLSigner
 }
 
-func NewHandler(ur *uRepo.UserRepository, cr *cRepo.CircleRepository, jwtAuth *jwt.GinJWTMiddleware, email *email.EmailSender, idp *auth.IdentityProvider, config *config.Config) *Handler {
+func NewHandler(ur *uRepo.UserRepository, cr *cRepo.CircleRepository,
+	jwtAuth *jwt.GinJWTMiddleware, email *email.EmailSender,
+	idp *auth.IdentityProvider, storage *storage.LocalStorage,
+	signer *storage.URLSigner, storageRepo *storageRepo.StorageRepository,
+	config *config.Config) *Handler {
 	return &Handler{
 		userRepo:               ur,
 		circleRepo:             cr,
@@ -47,6 +57,9 @@ func NewHandler(ur *uRepo.UserRepository, cr *cRepo.CircleRepository, jwtAuth *j
 		isDonetickDotCom:       config.IsDoneTickDotCom,
 		IsUserCreationDisabled: config.IsUserCreationDisabled,
 		DonetickCloudConfig:    config.DonetickCloudConfig,
+		storage:                storage,
+		storageRepo:            storageRepo,
+		signer:                 signer,
 	}
 }
 
@@ -748,6 +761,90 @@ func (h *Handler) setWebhook(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{})
 }
 
+func (h *Handler) updateProfilePhoto(c *gin.Context) {
+	currentUser, ok := auth.CurrentUser(c)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get current user"})
+		return
+	}
+
+	file, err := c.FormFile("file")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid file"})
+		return
+	}
+	fileExtension := file.Filename[strings.LastIndex(file.Filename, "."):]
+	// validate file extension:
+	if fileExtension != ".jpg" && fileExtension != ".jpeg" && fileExtension != ".png" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid file extension"})
+		return
+	}
+
+	// Generate a unique filename using the current timestamp and a random string
+
+	hashFromUserName := sha256.Sum256([]byte(currentUser.Username))
+	// use the first 8 bytes of the hash as a unique identifier
+	id := fmt.Sprintf("%x", hashFromUserName[:20])
+	filename := fmt.Sprintf("profiles/%s%s", id, fileExtension)
+
+	openedFile, err := file.Open()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to open file"})
+		return
+	}
+	defer openedFile.Close()
+	// resize the image to 256x256:
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to resize image"})
+		return
+	}
+
+	err = h.storage.Save(c, filename, openedFile)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save file"})
+		return
+	}
+	signedFileName, err := h.signer.Sign(filename)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to sign URL"})
+		return
+	}
+	err = h.userRepo.UpdateUserImage(c, currentUser.ID, signedFileName)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update profile photo"})
+		return
+	}
+	// create signed URL for the file:
+	signedURL, err := h.signer.Sign(filename)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to sign URL"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"sign": signedURL})
+}
+
+func (h *Handler) getStorageUsage(c *gin.Context) {
+	currentUser, ok := auth.CurrentUser(c)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get current user"})
+		return
+	}
+
+	used, available, err := h.storageRepo.GetStorageStats(c, currentUser.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get storage usage"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"res": gin.H{
+			"used":  used,
+			"total": available,
+		},
+	})
+
+}
+
 func Routes(router *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware, limiter *limiter.Limiter) {
 
 	userRoutes := router.Group("api/v1/users")
@@ -762,6 +859,8 @@ func Routes(router *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware, limiter 
 		userRoutes.PUT("/webhook", h.setWebhook)
 		userRoutes.PUT("/targets", h.UpdateNotificationTarget)
 		userRoutes.PUT("change_password", h.updateUserPasswordLoggedInOnly)
+		userRoutes.POST("profile_photo", h.updateProfilePhoto)
+		userRoutes.GET("storage", h.getStorageUsage)
 
 	}
 

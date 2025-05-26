@@ -9,6 +9,8 @@ import (
 	config "donetick.com/core/config"
 	chModel "donetick.com/core/internal/chore/model"
 	cModel "donetick.com/core/internal/circle/model"
+	storageModel "donetick.com/core/internal/storage/model"
+	stModel "donetick.com/core/internal/subtask/model"
 	"gorm.io/gorm"
 )
 
@@ -80,6 +82,15 @@ func (r *ChoreRepository) DeleteChore(c context.Context, id int) error {
 		if err := tx.Delete(&chModel.Chore{}, id).Error; err != nil {
 			return err
 		}
+		// Delete all subtasks associated with the chore
+		if err := tx.Where("chore_id = ?", id).Delete(&stModel.SubTask{}).Error; err != nil {
+			return err
+		}
+		// Delete all chore storage files associated with the chore:
+		if err := tx.Where("entity_type = ? AND entity_id = ?", storageModel.EntityTypeChoreDescription, id).Delete(&storageModel.StorageFile{}).Error; err != nil {
+			return err
+		}
+
 		return nil
 	})
 }

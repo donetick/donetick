@@ -6,6 +6,7 @@ import (
 	"math"
 	"math/rand"
 	"strconv"
+	"strings"
 	"time"
 
 	auth "donetick.com/core/internal/authorization"
@@ -17,10 +18,14 @@ import (
 	"donetick.com/core/internal/notifier"
 	nRepo "donetick.com/core/internal/notifier/repo"
 	nps "donetick.com/core/internal/notifier/service"
+	storage "donetick.com/core/internal/storage"
+	storageModel "donetick.com/core/internal/storage/model"
+	storageRepo "donetick.com/core/internal/storage/repo"
 	stModel "donetick.com/core/internal/subtask/model"
 	stRepo "donetick.com/core/internal/subtask/repo"
 	tRepo "donetick.com/core/internal/thing/repo"
 	uModel "donetick.com/core/internal/user/model"
+	"donetick.com/core/internal/utils"
 	"donetick.com/core/logging"
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
@@ -36,11 +41,15 @@ type Handler struct {
 	lRepo         *lRepo.LabelRepository
 	eventProducer *events.EventsProducer
 	stRepo        *stRepo.SubTasksRepository
+	storageRepo   *storageRepo.StorageRepository
+	storage       *storage.LocalStorage
 }
 
 func NewHandler(cr *chRepo.ChoreRepository, circleRepo *cRepo.CircleRepository, nt *notifier.Notifier,
 	np *nps.NotificationPlanner, nRepo *nRepo.NotificationRepository, tRepo *tRepo.ThingRepository, lRepo *lRepo.LabelRepository,
-	ep *events.EventsProducer, stRepo *stRepo.SubTasksRepository) *Handler {
+	ep *events.EventsProducer, stRepo *stRepo.SubTasksRepository,
+	storage *storage.LocalStorage,
+	stoRepo *storageRepo.StorageRepository) *Handler {
 	return &Handler{
 		choreRepo:     cr,
 		circleRepo:    circleRepo,
@@ -51,6 +60,8 @@ func NewHandler(cr *chRepo.ChoreRepository, circleRepo *cRepo.CircleRepository, 
 		lRepo:         lRepo,
 		eventProducer: ep,
 		stRepo:        stRepo,
+		storageRepo:   stoRepo,
+		storage:       storage,
 	}
 }
 
@@ -269,6 +280,15 @@ func (h *Handler) createChore(c *gin.Context) {
 			return
 		}
 	}
+	description := *choreReq.Description
+	if choreReq.Description != nil {
+		if err := h.cleanUpUnreferencedFiles(c, currentUser.ID, storageModel.EntityTypeChoreDescription, createdChore.ID, description); err != nil {
+			c.JSON(500, gin.H{
+				"error": "Error processing description",
+			})
+			return
+		}
+	}
 	if err := h.choreRepo.UpdateChoreAssignees(c, choreAssignees); err != nil {
 		c.JSON(500, gin.H{
 			"error": "Error adding chore assignees",
@@ -448,6 +468,17 @@ func (h *Handler) editChore(c *gin.Context) {
 		})
 		return
 	}
+	description := *choreReq.Description
+	if choreReq.Description == nil && oldChore.Description != nil {
+		description = ""
+
+	}
+	if err := h.cleanUpUnreferencedFiles(c, currentUser.ID, storageModel.EntityTypeChoreDescription, choreReq.ID, description); err != nil {
+		c.JSON(500, gin.H{
+			"error": "Error processing description",
+		})
+		return
+	}
 
 	updatedChore := &chModel.Chore{
 		ID:                  choreReq.ID,
@@ -564,6 +595,34 @@ func (h *Handler) editChore(c *gin.Context) {
 	c.JSON(200, gin.H{
 		"message": "Chore added successfully",
 	})
+}
+
+func (h *Handler) cleanUpUnreferencedFiles(ctx *gin.Context, userID int, entityType storageModel.EntityType, entityID int, text string) error {
+	existedFiles, err := h.storageRepo.GetFilesByUser(ctx, userID, entityType, entityID)
+	if err != nil {
+		return err
+	}
+	referencedFiles := utils.ExtractImageURLs(text)
+	var filesToBeDeleted []*storageModel.StorageFile
+	var filePathsToBeDeleted []string
+	for _, file := range existedFiles {
+		found := false
+		for _, refFile := range referencedFiles {
+			if strings.Contains(refFile, file.FilePath) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			// if the file is not referenced in the text, delete it
+			filesToBeDeleted = append(filesToBeDeleted, file)
+			filePathsToBeDeleted = append(filePathsToBeDeleted, file.FilePath)
+		}
+	}
+
+	h.storage.Delete(ctx, filePathsToBeDeleted)
+	h.storageRepo.RemoveFileRecords(ctx, filesToBeDeleted, userID)
+	return nil
 }
 
 func HandleThingAssociation(choreReq chModel.ChoreReq, h *Handler, c *gin.Context, currentUser *uModel.User) bool {
@@ -955,6 +1014,8 @@ func (h *Handler) UnarchiveChore(c *gin.Context) {
 func (h *Handler) completeChore(c *gin.Context) {
 	type CompleteChoreReq struct {
 		Note string `json:"note"`
+		// the completed by only can be populated by the admin or super user
+		CompletedBy *int `json:"completedBy"`
 	}
 	var req CompleteChoreReq
 	currentUser, ok := auth.CurrentUser(c)
@@ -964,6 +1025,7 @@ func (h *Handler) completeChore(c *gin.Context) {
 		})
 		return
 	}
+	completedBy := currentUser.ID
 	completeChoreID := c.Param("id")
 	var completedDate time.Time
 	rawCompletedDate := c.Query("completedDate")
@@ -1020,6 +1082,14 @@ func (h *Handler) completeChore(c *gin.Context) {
 		}
 	}
 
+	if req.CompletedBy != nil {
+		// Only allow admins to complete chores on behalf of others in the circle
+		ok := authorizeChoreCompletionForUser(h, c, currentUser, req.CompletedBy)
+		if !ok {
+			return
+		}
+		completedBy = *req.CompletedBy
+	}
 	var nextDueDate *time.Time
 	if chore.FrequencyType == "adaptive" {
 		history, err := h.choreRepo.GetChoreHistoryWithLimit(c, chore.ID, 5)
@@ -1056,7 +1126,7 @@ func (h *Handler) completeChore(c *gin.Context) {
 		return
 	}
 
-	nextAssignedTo, err := checkNextAssignee(chore, choreHistory, currentUser.ID)
+	nextAssignedTo, err := checkNextAssignee(chore, choreHistory, completedBy)
 	if err != nil {
 		log.Printf("Error checking next assignee: %s", err)
 		c.JSON(500, gin.H{
@@ -1065,7 +1135,7 @@ func (h *Handler) completeChore(c *gin.Context) {
 		return
 	}
 
-	if err := h.choreRepo.CompleteChore(c, chore, additionalNotes, currentUser.ID, nextDueDate, &completedDate, nextAssignedTo, true); err != nil {
+	if err := h.choreRepo.CompleteChore(c, chore, additionalNotes, completedBy, nextDueDate, &completedDate, nextAssignedTo, true); err != nil {
 		c.JSON(500, gin.H{
 			"error": "Error completing chore",
 		})
@@ -1091,6 +1161,37 @@ func (h *Handler) completeChore(c *gin.Context) {
 	c.JSON(200, gin.H{
 		"res": updatedChore,
 	})
+}
+
+func authorizeChoreCompletionForUser(h *Handler, c *gin.Context, currentUser *uModel.UserDetails, completedByUserID *int) bool {
+	circleUsers, err := h.circleRepo.GetCircleUsers(c, currentUser.CircleID)
+	if err != nil {
+		c.JSON(500, gin.H{
+			"error": "Error getting circle users",
+		})
+		return false
+	}
+
+	isAuthorized := false
+	isCompletedByAuthorized := false
+
+	for _, circleUser := range circleUsers {
+		if circleUser.UserID == currentUser.ID && circleUser.Role == "admin" {
+			isAuthorized = true
+		}
+		if circleUser.UserID == *completedByUserID {
+			isCompletedByAuthorized = true
+		}
+	}
+	if !isAuthorized || !isCompletedByAuthorized {
+
+		c.JSON(403, gin.H{
+			"error": "You are not allowed to complete this action, either you are not admin or the completed by user is not in the circle",
+		})
+		return false
+	}
+
+	return true
 }
 
 func (h *Handler) GetChoreHistory(c *gin.Context) {

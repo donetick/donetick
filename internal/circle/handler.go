@@ -532,6 +532,85 @@ func (h *Handler) RedeemPoints(c *gin.Context) {
 		"res": "Points redeemed successfully",
 	})
 }
+func (h *Handler) ChangeMemberRole(c *gin.Context) {
+	log := logging.FromContext(c)
+	currentUser, ok := auth.CurrentUser(c)
+	if !ok {
+		c.JSON(500, gin.H{
+			"error": "Error getting current user",
+		})
+		return
+	}
+	type changeRoleRequest struct {
+		MemberID int         `json:"memberId"`
+		Role     cModel.Role `json:"role"`
+	}
+	var req changeRoleRequest
+	if err := c.ShouldBind(&req); err != nil {
+		log.Error("Error changing member role:", err)
+		c.JSON(400, gin.H{
+			"error": "Invalid request",
+		})
+		return
+	}
+
+	if !cModel.IsValidRole(req.Role) {
+		log.Error("Error changing member role: invalid role")
+		c.JSON(400, gin.H{
+			"error": "Invalid role",
+		})
+		return
+	}
+
+	users, err := h.circleRepo.GetCircleUsers(c, currentUser.CircleID)
+	if err != nil {
+		log.Error("Error getting circle admins:", err)
+		c.JSON(500, gin.H{
+			"error": "Error getting circle admins",
+		})
+		return
+	}
+	isAdmin := false
+	memberFound := false
+	adminCount := 0
+	for _, user := range users {
+		if user.Role == "admin" {
+			adminCount++
+			if user.UserID == currentUser.ID {
+				isAdmin = true
+			}
+		}
+		if user.UserID == req.MemberID {
+			memberFound = true
+		}
+	}
+	if !isAdmin {
+		c.JSON(403, gin.H{
+			"error": "You are not an admin of this circle",
+		})
+		return
+	}
+	if !memberFound {
+		c.JSON(400, gin.H{
+			"error": "User is not a member of this circle",
+		})
+		return
+	}
+
+	err = h.circleRepo.ChangeUserRole(c, currentUser.CircleID, req.MemberID, req.Role)
+	if err != nil {
+		log.Error("Error changing member role:", err)
+		c.JSON(500, gin.H{
+			"error": "Error changing member role",
+		})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"res": "Member role changed successfully",
+	})
+
+}
 
 func Routes(router *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware) {
 	log.Println("Registering routes")
@@ -542,6 +621,7 @@ func Routes(router *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware) {
 		circleRoutes.GET("/members", h.GetCircleMembers)
 		circleRoutes.GET("/members/requests", h.GetPendingCircleMembers)
 		circleRoutes.PUT("/members/requests/accept", h.AcceptJoinRequest)
+		circleRoutes.PUT("/members/role", h.ChangeMemberRole)
 		circleRoutes.GET("/", h.GetUserCircles)
 		circleRoutes.POST("/join", h.JoinCircle)
 		circleRoutes.DELETE("/leave", h.LeaveCircle)

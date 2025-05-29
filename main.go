@@ -108,8 +108,12 @@ func main() {
 		fx.Provide(frontend.NewHandler),
 
 		// storage :
-		fx.Provide(storage.NewLocalStorage),
-		fx.Provide(storage.NewURLSigner),
+		// is storage local or remote?
+		// fx.Provide(storage.NewLocalStorage),
+		// fx.Provide(storage.NewURLSignerLocal),
+		fx.Provide(storage.NewS3Storage),
+		fx.Provide(storage.NewURLSignerS3),
+
 		fx.Provide(storage.NewHandler),
 		fx.Provide(storageRepo.NewStorageRepository),
 

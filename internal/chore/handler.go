@@ -42,13 +42,13 @@ type Handler struct {
 	eventProducer *events.EventsProducer
 	stRepo        *stRepo.SubTasksRepository
 	storageRepo   *storageRepo.StorageRepository
-	storage       *storage.LocalStorage
+	storage       *storage.S3Storage
 }
 
 func NewHandler(cr *chRepo.ChoreRepository, circleRepo *cRepo.CircleRepository, nt *notifier.Notifier,
 	np *nps.NotificationPlanner, nRepo *nRepo.NotificationRepository, tRepo *tRepo.ThingRepository, lRepo *lRepo.LabelRepository,
 	ep *events.EventsProducer, stRepo *stRepo.SubTasksRepository,
-	storage *storage.LocalStorage,
+	storage *storage.S3Storage,
 	stoRepo *storageRepo.StorageRepository) *Handler {
 	return &Handler{
 		choreRepo:     cr,

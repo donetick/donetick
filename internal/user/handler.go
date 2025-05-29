@@ -38,15 +38,15 @@ type Handler struct {
 	isDonetickDotCom       bool
 	IsUserCreationDisabled bool
 	DonetickCloudConfig    config.DonetickCloudConfig
-	storage                *storage.LocalStorage
+	storage                *storage.S3Storage
 	storageRepo            *storageRepo.StorageRepository
-	signer                 *storage.URLSigner
+	signer                 *storage.URLSignerS3
 }
 
 func NewHandler(ur *uRepo.UserRepository, cr *cRepo.CircleRepository,
 	jwtAuth *jwt.GinJWTMiddleware, email *email.EmailSender,
-	idp *auth.IdentityProvider, storage *storage.LocalStorage,
-	signer *storage.URLSigner, storageRepo *storageRepo.StorageRepository,
+	idp *auth.IdentityProvider, storage *storage.S3Storage,
+	signer *storage.URLSignerS3, storageRepo *storageRepo.StorageRepository,
 	config *config.Config) *Handler {
 	return &Handler{
 		userRepo:               ur,
@@ -802,6 +802,7 @@ func (h *Handler) updateProfilePhoto(c *gin.Context) {
 
 	err = h.storage.Save(c, filename, openedFile)
 	if err != nil {
+		logging.FromContext(c).Errorw("Failed to save profile photo", "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save file"})
 		return
 	}

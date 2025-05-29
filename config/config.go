@@ -51,6 +51,7 @@ type StorageConfig struct {
 	Endpoint       string `mapstructure:"endpoint" yaml:"endpoint"`
 	MaxUserStorage int    `mapstructure:"max_user_storage" yaml:"max_user_storage"`
 	MaxFileSize    int64  `mapstructure:"max_file_size" yaml:"max_file_size"`
+	PublicHost     string `mapstructure:"public_host" yaml:"public_host"`
 }
 type DonetickCloudConfig struct {
 	GoogleClientID        string `mapstructure:"google_client_id" yaml:"google_client_id"`

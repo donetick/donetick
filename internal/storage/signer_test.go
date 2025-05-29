@@ -9,7 +9,7 @@ import (
 )
 
 func TestSignReturnsDifferentSignaturesForDifferentPaths(t *testing.T) {
-	signer := NewURLSigner(&config.Config{
+	signer := NewURLSignerLocal(&config.Config{
 		Jwt: config.JwtConfig{
 			Secret: "secret",
 		},
@@ -23,7 +23,7 @@ func TestSignReturnsDifferentSignaturesForDifferentPaths(t *testing.T) {
 }
 
 func TestSignReturnsDifferentSignaturesForDifferentExpiry(t *testing.T) {
-	signer := NewURLSigner(&config.Config{
+	signer := NewURLSignerLocal(&config.Config{
 		Jwt: config.JwtConfig{
 			Secret: "secret",
 		},
@@ -37,7 +37,7 @@ func TestSignReturnsDifferentSignaturesForDifferentExpiry(t *testing.T) {
 }
 
 func TestSigntureIsValid(t *testing.T) {
-	signer := NewURLSigner(&config.Config{
+	signer := NewURLSignerLocal(&config.Config{
 		Jwt: config.JwtConfig{
 			Secret: "secret",
 		},
@@ -55,7 +55,7 @@ func TestSigntureIsValid(t *testing.T) {
 
 // test creating signed url for this chore/1/3f67e1d0-4a88-48ea-a815-21533f0a823a.png:
 func TestSignReturnsValidURL(t *testing.T) {
-	signer := NewURLSigner(&config.Config{
+	signer := NewURLSignerLocal(&config.Config{
 		Jwt: config.JwtConfig{
 			Secret: "secret",
 		},

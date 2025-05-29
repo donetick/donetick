@@ -26,8 +26,8 @@ import (
 
 // Handler handles file storage-related routes
 type Handler struct {
-	storage     *LocalStorage
-	signer      *URLSigner
+	storage     Storage
+	signer      *URLSignerS3
 	storageRepo *storageRepo.StorageRepository
 	choreRepo   *chRepo.ChoreRepository
 	circleRepo  *cRepo.CircleRepository
@@ -35,11 +35,12 @@ type Handler struct {
 }
 
 // NewHandler creates a new Handler
-func NewHandler(storage *LocalStorage, choreRepo *chRepo.ChoreRepository, circleRepo *cRepo.CircleRepository,
-	repo *storageRepo.StorageRepository, signer *URLSigner, cfg *config.Config) *Handler {
+func NewHandler(storage *S3Storage, choreRepo *chRepo.ChoreRepository, circleRepo *cRepo.CircleRepository,
+	repo *storageRepo.StorageRepository, signer *URLSignerS3, cfg *config.Config) *Handler {
 	return &Handler{storage: storage, circleRepo: circleRepo,
 		choreRepo:   choreRepo,
-		storageRepo: repo, signer: signer,
+		storageRepo: repo,
+		signer:      signer,
 		maxFileSize: cfg.Storage.MaxFileSize,
 	}
 }
@@ -161,6 +162,7 @@ func (h *Handler) ChoreUploadHandler(c *gin.Context) {
 	}
 	err = h.storage.Save(context.Background(), path, src)
 	if err != nil {
+		log.Error("failed to save file to storage", "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save file"})
 		return
 	}

@@ -4,9 +4,12 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"io"
 
+	"donetick.com/core/config"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 )
@@ -15,32 +18,39 @@ type S3Storage struct {
 	Bucket   string
 	BasePath string
 	Client   *s3.S3
+	Key      string
 }
 
 const (
 	VALID_FOR = 1000 * 365 * 24 * 60 * 60 // 1000 years
 )
 
-func NewS3Storage(bucket, basePath, region string) (*S3Storage, error) {
+func NewS3Storage(config *config.Config) (*S3Storage, error) {
 	sess, err := session.NewSession(&aws.Config{
-		Region: aws.String(region),
+		Region:   aws.String(config.Storage.Region),
+		Endpoint: aws.String(config.Storage.Endpoint),
+		Credentials: credentials.NewStaticCredentials(
+			config.Storage.AccessKey,
+			config.Storage.SecretKey,
+			"",
+		),
 	})
 	if err != nil {
 		return nil, err
 	}
 	return &S3Storage{
-		Bucket:   bucket,
-		BasePath: basePath,
+		Bucket:   config.Storage.BucketName,
+		BasePath: config.Storage.BasePath,
 		Client:   s3.New(sess),
 	}, nil
 }
-func (s *S3Storage) Save(ctx context.Context, path string, file io.Reader) (string, error) {
-	key := s.BasePath + path
+func (s *S3Storage) Save(ctx context.Context, path string, file io.Reader) error {
+	key := fmt.Sprintf("%s/%s", s.BasePath, path)
 
 	// Read the file into a buffer to create an io.ReadSeeker
 	buf, err := io.ReadAll(file)
 	if err != nil {
-		return "", err
+		return err
 	}
 	reader := bytes.NewReader(buf)
 
@@ -50,18 +60,10 @@ func (s *S3Storage) Save(ctx context.Context, path string, file io.Reader) (stri
 		Body:   reader,
 	})
 	if err != nil {
-		return "", err
+		return err
 	}
-	// get presigned URL for the object
-	req, _ := s.Client.GetObjectRequest(&s3.GetObjectInput{
-		Bucket: aws.String(s.Bucket),
-		Key:    aws.String(key),
-	})
-	urlStr, err := req.Presign(VALID_FOR)
-	if err != nil {
-		return "", err
-	}
-	return urlStr, nil
+
+	return nil
 }
 func (s *S3Storage) Delete(ctx context.Context, paths []string) error {
 	var err error

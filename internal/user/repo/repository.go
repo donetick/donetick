@@ -48,10 +48,10 @@ func (r *UserRepository) GetAllUsersForSystemOnly(c context.Context) ([]*uModel.
 	return users, nil
 }
 func (r *UserRepository) CreateUser(c context.Context, user *uModel.User) (*uModel.User, error) {
-	if err := r.db.WithContext(c).Save(user).Error; err != nil {
+	if err := r.db.WithContext(c).Create(user).Error; err != nil {
 		return nil, err
 	}
-	if err := r.db.WithContext(c).Save(&storageModel.StorageUsage{
+	if err := r.db.WithContext(c).Create(&storageModel.StorageUsage{
 		UserID:    user.ID,
 		UsedBytes: 0,
 		UpdatedAt: time.Now().UTC(),

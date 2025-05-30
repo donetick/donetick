@@ -1,6 +1,7 @@
 package chore
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -325,7 +326,7 @@ func executeTestTable(t *testing.T, tests []scheduleTest) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := scheduleNextDueDate(&tt.chore, tt.completedDate)
+			got, err := scheduleNextDueDate(context.TODO(), &tt.chore, tt.completedDate)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("testcase: %s", tt.name)
 				t.Errorf("scheduleNextDueDate() error = %v, wantErr %v", err, tt.wantErr)

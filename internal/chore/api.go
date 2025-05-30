@@ -168,7 +168,7 @@ func (h *API) CompleteChore(c *gin.Context) {
 		}
 
 	} else {
-		nextDueDate, err = scheduleNextDueDate(chore, completedDate.UTC())
+		nextDueDate, err = scheduleNextDueDate(c, chore, completedDate.UTC())
 		if err != nil {
 			log.Printf("Error scheduling next due date: %s", err)
 			c.JSON(500, gin.H{

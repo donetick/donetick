@@ -127,8 +127,8 @@ func (h *Handler) signUp(c *gin.Context) {
 		Password:    password,
 		DisplayName: signupReq.DisplayName,
 		Email:       signupReq.Email,
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
+		CreatedAt:   time.Now().UTC(),
+		UpdatedAt:   time.Now().UTC(),
 	}); err != nil {
 		c.JSON(500, gin.H{
 			"error": "Error creating user, email already exists or username is taken",

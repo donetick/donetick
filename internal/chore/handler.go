@@ -860,7 +860,7 @@ func (h *Handler) skipChore(c *gin.Context) {
 		})
 		return
 	}
-	nextDueDate, err := scheduleNextDueDate(chore, chore.NextDueDate.UTC())
+	nextDueDate, err := scheduleNextDueDate(c, chore, chore.NextDueDate.UTC())
 	if err != nil {
 		c.JSON(500, gin.H{
 			"error": "Error scheduling next due date",
@@ -869,7 +869,7 @@ func (h *Handler) skipChore(c *gin.Context) {
 	}
 
 	nextAssigedTo := chore.AssignedTo
-	if err := h.choreRepo.CompleteChore(c, chore, nil, currentUser.ID, nextDueDate, nil, nextAssigedTo, false); err != nil {
+	if err := h.choreRepo.SkipChore(c, chore, currentUser.ID, nextDueDate, nextAssigedTo); err != nil {
 		c.JSON(500, gin.H{
 			"error": "Error completing chore",
 		})
@@ -1109,7 +1109,7 @@ func (h *Handler) completeChore(c *gin.Context) {
 		}
 
 	} else {
-		nextDueDate, err = scheduleNextDueDate(chore, completedDate.UTC())
+		nextDueDate, err = scheduleNextDueDate(c, chore, completedDate.UTC())
 		if err != nil {
 			log.Printf("Error scheduling next due date: %s", err)
 			c.JSON(500, gin.H{
@@ -1267,7 +1267,7 @@ func (h *Handler) ModifyHistory(c *gin.Context) {
 		return
 	}
 	type ModifyHistoryReq struct {
-		CompletedAt *time.Time `json:"completedAt"`
+		PerformedAt *time.Time `json:"performedAt"`
 		DueDate     *time.Time `json:"dueDate"`
 		Notes       *string    `json:"notes"`
 	}
@@ -1303,8 +1303,8 @@ func (h *Handler) ModifyHistory(c *gin.Context) {
 		})
 		return
 	}
-	if req.CompletedAt != nil {
-		history.CompletedAt = req.CompletedAt
+	if req.PerformedAt != nil {
+		history.PerformedAt = req.PerformedAt
 	}
 	if req.DueDate != nil {
 		history.DueDate = req.DueDate

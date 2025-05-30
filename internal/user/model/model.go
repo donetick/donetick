@@ -59,3 +59,20 @@ const (
 	AuthProviderOAuth2
 	AuthProviderGoogle
 )
+
+func (u User) IsPlusMember() bool {
+	// if the user has a subscription, and the expiration date is in the future, then the user is a plus member:
+	// expiration in 2999-12-31 format
+	if u.Expiration != nil {
+		if u.Expiration == nil || *u.Expiration == "" {
+			return false
+		}
+		expiration, err := time.Parse("2006-01-02", *u.Expiration)
+		if err != nil {
+			return false
+		}
+		return expiration.After(time.Now().UTC())
+	}
+
+	return false
+}

@@ -1,6 +1,7 @@
 package chore
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"math/rand"
@@ -8,9 +9,10 @@ import (
 	"time"
 
 	chModel "donetick.com/core/internal/chore/model"
+	"donetick.com/core/logging"
 )
 
-func scheduleNextDueDate(chore *chModel.Chore, completedDate time.Time) (*time.Time, error) {
+func scheduleNextDueDate(ctx context.Context, chore *chModel.Chore, completedDate time.Time) (*time.Time, error) {
 	if chore.FrequencyType == "once" || chore.FrequencyType == "no_repeat" || chore.FrequencyType == "trigger" {
 		return nil, nil
 	}
@@ -29,7 +31,17 @@ func scheduleNextDueDate(chore *chModel.Chore, completedDate time.Time) (*time.T
 	if chore.FrequencyType == "day_of_the_month" || chore.FrequencyType == "days_of_the_week" || chore.FrequencyType == "interval" {
 		t, err := time.Parse(time.RFC3339, chore.FrequencyMetadataV2.Time)
 		if err != nil {
-			return nil, fmt.Errorf("error parsing time in frequency metadata: %w", err)
+			log := logging.FromContext(ctx)
+			log.Error("error parsing time in frequency metadata", "error", err, "chore_id", chore.ID)
+			log.Warn("falling back to current time for next due date calculation")
+
+			// fallback to use the next due date time if available:
+			if chore.NextDueDate != nil {
+				t = chore.NextDueDate.UTC()
+			} else {
+				t = time.Now().UTC()
+			}
+
 		}
 		t = t.UTC()
 		baseDate = time.Date(baseDate.Year(), baseDate.Month(), baseDate.Day(), t.Hour(), t.Minute(), t.Second(), 0, time.UTC)
@@ -142,7 +154,7 @@ func scheduleAdaptiveNextDueDate(chore *chModel.Chore, completedDate time.Time, 
 
 	history = append([]*chModel.ChoreHistory{
 		{
-			CompletedAt: &completedDate,
+			PerformedAt: &completedDate,
 		},
 	}, history...)
 
@@ -160,7 +172,7 @@ func scheduleAdaptiveNextDueDate(chore *chModel.Chore, completedDate time.Time, 
 	decayFactor := 0.5 // Adjust this value to control the decay rate
 
 	for i := 0; i < len(history)-1; i++ {
-		delay := history[i].CompletedAt.UTC().Sub(history[i+1].CompletedAt.UTC()).Seconds()
+		delay := history[i].PerformedAt.UTC().Sub(history[i+1].PerformedAt.UTC()).Seconds()
 		weight := math.Pow(decayFactor, float64(i))
 		totalDelay += delay * weight
 		totalWeight += weight

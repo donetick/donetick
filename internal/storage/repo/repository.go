@@ -7,6 +7,7 @@ import (
 	errorx "donetick.com/core/internal/error"
 
 	st "donetick.com/core/internal/storage/model"
+	uModel "donetick.com/core/internal/user/model"
 	"gorm.io/gorm"
 )
 
@@ -19,12 +20,15 @@ func NewStorageRepository(db *gorm.DB, config *config.Config) *StorageRepository
 	return &StorageRepository{db: db, maxUserStorage: config.Storage.MaxUserStorage}
 }
 
-func (r *StorageRepository) AddMediaRecord(ctx context.Context, media *st.StorageFile, userID int) error {
+func (r *StorageRepository) AddMediaRecord(ctx context.Context, media *st.StorageFile, user *uModel.UserDetails) error {
+	if !user.IsPlusMember() {
+		return errorx.ErrNotAPlusMember
+	}
 	// create transaction and increment the storage then save the file:
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 
 		// confirm is the user have enough space and increment the storage:
-		res := tx.Debug().Model(&st.StorageUsage{}).Where("user_id = ? and used_bytes <= ? ", userID, r.maxUserStorage-media.SizeBytes).Updates(map[string]interface{}{"used_bytes": gorm.Expr("used_bytes + ?", media.SizeBytes)})
+		res := tx.Debug().Model(&st.StorageUsage{}).Where("user_id = ? and used_bytes <= ? ", user.ID, r.maxUserStorage-media.SizeBytes).Updates(map[string]interface{}{"used_bytes": gorm.Expr("used_bytes + ?", media.SizeBytes)})
 		if res.RowsAffected == 0 {
 			return errorx.ErrNotEnoughSpace
 		}

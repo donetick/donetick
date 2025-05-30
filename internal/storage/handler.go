@@ -148,7 +148,7 @@ func (h *Handler) ChoreUploadHandler(c *gin.Context) {
 
 	if err := h.storageRepo.AddMediaRecord(c,
 		mediaRecord,
-		currentUser.ID,
+		currentUser,
 	); err != nil {
 		if err == errorx.ErrNotEnoughSpace {
 			log.Error("user has no enough space", "error", err)

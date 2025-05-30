@@ -81,20 +81,40 @@ func (r *SubTasksRepository) UpdateSubtask(c context.Context, choreId int, toBeR
 				tempToRealIdMap[tempId] = insertedSubtask.ID
 			}
 
-			tasksToProcess := append([]*stModel.SubTask{}, updates...)
-			tasksToProcess = append(tasksToProcess, insertions...)
+			// First, update the parentIds for newly inserted subtasks if needed
+			for _, subtask := range insertions {
+				tempId := objectToTempIdMap[subtask]
+				originalParentIdPtr, hasOriginalParent := originalParentIdMap[tempId]
 
-			for _, subtask := range tasksToProcess {
-				var originalMapKey int
+				// Check if the *original* parent ID was temporary (negative).
+				if hasOriginalParent && originalParentIdPtr != nil && *originalParentIdPtr <= 0 {
+					tempParentId := *originalParentIdPtr
+					realParentId, found := tempToRealIdMap[tempParentId]
+					if found {
+						// resolved the temporary parent ID to a real ID...now update the subtask's ParentId field.
+						subtask.ParentId = &realParentId
 
-				// Determine the key used for this subtask in originalParentIdMap
-				tempId, wasInsertion := objectToTempIdMap[subtask]
-				if wasInsertion {
-					originalMapKey = tempId
-				} else {
-					// It must be an update? :) use its real ID
-					originalMapKey = subtask.ID
+						// Update the newly inserted subtask's parent_id only
+						if err := tx.Model(&stModel.SubTask{}).Where("id = ? AND chore_id = ?", subtask.ID, choreId).
+							Update("parent_id", subtask.ParentId).Error; err != nil {
+							log.Printf("Error updating parent_id for newly inserted subtask ID %d for chore %d: %v",
+								subtask.ID, choreId, err)
+							return fmt.Errorf("failed to update parent_id for subtask %d: %w", subtask.ID, err)
+						}
+					} else {
+						// Error Case: Frontend sent a temporary parent ID not in this batch.
+						log.Printf("Warning: Temporary parent ID %d for subtask '%s' (Original Key: %d, Real ID: %d) not found in the current batch insert for chore %d. Setting ParentId to NULL.",
+							tempParentId, subtask.Name, tempId, subtask.ID, choreId)
+						subtask.ParentId = nil
+						return fmt.Errorf("invalid temporary parent ID %d provided for subtask with original key %d", tempParentId, tempId)
+					}
 				}
+			}
+
+			// Process only existing subtasks that need updating
+			for _, subtask := range updates {
+				// It must be an update, use its real ID
+				originalMapKey := subtask.ID
 
 				originalParentIdPtr, hasOriginalParent := originalParentIdMap[originalMapKey]
 
@@ -120,11 +140,10 @@ func (r *SubTasksRepository) UpdateSubtask(c context.Context, choreId int, toBeR
 					"completed_at": subtask.CompletedAt,
 					"completed_by": subtask.CompletedBy,
 					"parent_id":    subtask.ParentId, // Use the potentially resolved ParentId
-					"chore_id":     subtask.ChoreID,  // Ensure chore_id is correct
 				}
 
 				// Perform the update operation for this subtask using its real ID.
-				if err := tx.Model(&stModel.SubTask{}).Where("id = ?", subtask.ID).Updates(updateValues).Error; err != nil {
+				if err := tx.Model(&stModel.SubTask{}).Where("id = ? and chore_id = ?", subtask.ID, choreId).Updates(updateValues).Error; err != nil {
 					log.Printf("Error updating subtask ID %d (Original Key: %d) for chore %d: %v. Values: %+v", subtask.ID, originalMapKey, choreId, err, updateValues)
 					return fmt.Errorf("failed to update subtask %d: %w", subtask.ID, err) // Rollback
 				}

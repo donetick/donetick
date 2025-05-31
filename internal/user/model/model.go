@@ -93,12 +93,12 @@ type MFAVerifyRequest struct {
 
 func (u User) IsPlusMember() bool {
 	// if the user has a subscription, and the expiration date is in the future, then the user is a plus member:
-	// expiration in 2999-12-31 format
+	// expiration in 2026-03-24 20:18:27.281786+00 format
 	if u.Expiration != nil {
 		if u.Expiration == nil || *u.Expiration == "" {
 			return false
 		}
-		expiration, err := time.Parse("2006-01-02", *u.Expiration)
+		expiration, err := time.Parse("2006-01-02 15:04:05.999999999-07", *u.Expiration)
 		if err != nil {
 			return false
 		}

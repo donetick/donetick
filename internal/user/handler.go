@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"html"
 	"net/http"
+	"strings"
 	"time"
 
 	"donetick.com/core/config"
@@ -14,7 +15,10 @@ import (
 	cModel "donetick.com/core/internal/circle/model"
 	cRepo "donetick.com/core/internal/circle/repo"
 	"donetick.com/core/internal/email"
+	"donetick.com/core/internal/mfa"
 	nModel "donetick.com/core/internal/notifier/model"
+	storage "donetick.com/core/internal/storage"
+	storageRepo "donetick.com/core/internal/storage/repo"
 	uModel "donetick.com/core/internal/user/model"
 	uRepo "donetick.com/core/internal/user/repo"
 	"donetick.com/core/internal/utils"
@@ -35,9 +39,16 @@ type Handler struct {
 	isDonetickDotCom       bool
 	IsUserCreationDisabled bool
 	DonetickCloudConfig    config.DonetickCloudConfig
+	storage                *storage.S3Storage
+	storageRepo            *storageRepo.StorageRepository
+	signer                 *storage.URLSignerS3
 }
 
-func NewHandler(ur *uRepo.UserRepository, cr *cRepo.CircleRepository, jwtAuth *jwt.GinJWTMiddleware, email *email.EmailSender, idp *auth.IdentityProvider, config *config.Config) *Handler {
+func NewHandler(ur *uRepo.UserRepository, cr *cRepo.CircleRepository,
+	jwtAuth *jwt.GinJWTMiddleware, email *email.EmailSender,
+	idp *auth.IdentityProvider, storage *storage.S3Storage,
+	signer *storage.URLSignerS3, storageRepo *storageRepo.StorageRepository,
+	config *config.Config) *Handler {
 	return &Handler{
 		userRepo:               ur,
 		circleRepo:             cr,
@@ -47,6 +58,9 @@ func NewHandler(ur *uRepo.UserRepository, cr *cRepo.CircleRepository, jwtAuth *j
 		isDonetickDotCom:       config.IsDoneTickDotCom,
 		IsUserCreationDisabled: config.IsUserCreationDisabled,
 		DonetickCloudConfig:    config.DonetickCloudConfig,
+		storage:                storage,
+		storageRepo:            storageRepo,
+		signer:                 signer,
 	}
 }
 
@@ -114,8 +128,8 @@ func (h *Handler) signUp(c *gin.Context) {
 		Password:    password,
 		DisplayName: signupReq.DisplayName,
 		Email:       signupReq.Email,
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
+		CreatedAt:   time.Now().UTC(),
+		UpdatedAt:   time.Now().UTC(),
 	}); err != nil {
 		c.JSON(500, gin.H{
 			"error": "Error creating user, email already exists or username is taken",
@@ -285,6 +299,39 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 				return
 			}
 		}
+		// Check if user has MFA enabled
+		if acc.MFAEnabled {
+			// Create MFA session for third-party auth
+			mfaService := mfa.NewMFAService("Donetick")
+			sessionToken, err := mfaService.GenerateSessionToken()
+			if err != nil {
+				logger.Errorw("Failed to generate MFA session token", "error", err)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Authentication failed"})
+				return
+			}
+
+			mfaSession := &uModel.MFASession{
+				SessionToken: sessionToken,
+				UserID:       acc.ID,
+				AuthMethod:   "google",
+				Verified:     false,
+				CreatedAt:    time.Now(),
+				ExpiresAt:    time.Now().Add(10 * time.Minute),
+				UserData:     acc.Username,
+			}
+
+			if err := h.userRepo.CreateMFASession(c, mfaSession); err != nil {
+				logger.Errorw("Failed to create MFA session", "error", err)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Authentication failed"})
+				return
+			}
+
+			c.JSON(http.StatusOK, gin.H{
+				"mfaRequired":  true,
+				"sessionToken": sessionToken,
+			})
+			return
+		}
 		// use auth to generate a token for the user:
 		c.Set("user_account", acc)
 		h.jwtAuth.Authenticator(c)
@@ -383,6 +430,39 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 				})
 				return
 			}
+		}
+		// Check if user has MFA enabled
+		if acc.MFAEnabled {
+			// Create MFA session for OAuth2 auth
+			mfaService := mfa.NewMFAService("Donetick")
+			sessionToken, err := mfaService.GenerateSessionToken()
+			if err != nil {
+				logger.Error("Failed to generate MFA session token", "error", err)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Authentication failed"})
+				return
+			}
+
+			mfaSession := &uModel.MFASession{
+				SessionToken: sessionToken,
+				UserID:       acc.ID,
+				AuthMethod:   "oauth2",
+				Verified:     false,
+				CreatedAt:    time.Now(),
+				ExpiresAt:    time.Now().Add(10 * time.Minute),
+				UserData:     acc.Username,
+			}
+
+			if err := h.userRepo.CreateMFASession(c, mfaSession); err != nil {
+				logger.Error("Failed to create MFA session", "error", err)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Authentication failed"})
+				return
+			}
+
+			c.JSON(http.StatusOK, gin.H{
+				"mfaRequired":  true,
+				"sessionToken": sessionToken,
+			})
+			return
 		}
 		// ... (JWT generation and response)
 		c.Set("user_account", acc)
@@ -509,6 +589,7 @@ func (h *Handler) UpdateUserDetails(c *gin.Context) {
 		DisplayName *string `json:"displayName" binding:"omitempty"`
 		ChatID      *int64  `json:"chatID" binding:"omitempty"`
 		Image       *string `json:"image" binding:"omitempty"`
+		Timezone    *string `json:"timezone" binding:"omitempty"`
 	}
 	user, ok := auth.CurrentUser(c)
 	if !ok {
@@ -534,6 +615,15 @@ func (h *Handler) UpdateUserDetails(c *gin.Context) {
 	if req.Image != nil {
 		user.Image = *req.Image
 	}
+	if req.Timezone != nil {
+		if !utils.IsValidTimezone(*req.Timezone) {
+			c.JSON(400, gin.H{
+				"error": "Invalid timezone",
+			})
+			return
+		}
+		user.Timezone = *req.Timezone
+	}
 
 	if err := h.userRepo.UpdateUser(c, &user.User); err != nil {
 		c.JSON(500, gin.H{
@@ -550,13 +640,43 @@ func (h *Handler) CreateLongLivedToken(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get current user"})
 		return
 	}
+
 	type TokenRequest struct {
-		Name string `json:"name" binding:"required"`
+		Name    string `json:"name" binding:"required"`
+		MFACode string `json:"mfaCode"` // Optional MFA code for enhanced security
 	}
 	var req TokenRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 		return
+	}
+
+	// If user has MFA enabled and provides an MFA code, verify it
+	if currentUser.MFAEnabled && req.MFACode != "" {
+		mfaService := mfa.NewMFAService("Donetick")
+		valid, newUsedCodes, err := mfaService.IsCodeValid(
+			currentUser.MFASecret,
+			currentUser.MFABackupCodes,
+			currentUser.MFARecoveryUsed,
+			req.MFACode,
+		)
+
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to validate MFA code"})
+			return
+		}
+
+		if !valid {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid MFA code"})
+			return
+		}
+
+		// Update used codes if a backup code was used
+		if newUsedCodes != currentUser.MFARecoveryUsed {
+			if err := h.userRepo.UpdateMFARecoveryCodes(c, currentUser.ID, newUsedCodes); err != nil {
+				logging.FromContext(c).Errorw("Failed to update recovery codes", "error", err)
+			}
+		}
 	}
 
 	// Step 1: Generate a secure random number
@@ -570,7 +690,6 @@ func (h *Handler) CreateLongLivedToken(c *gin.Context) {
 	timestamp := time.Now().Unix()
 	hashInput := fmt.Sprintf("%s:%d:%x", currentUser.Username, timestamp, randomBytes)
 	hash := sha256.Sum256([]byte(hashInput))
-
 	token := hex.EncodeToString(hash[:])
 
 	tokenModel, err := h.userRepo.StoreAPIToken(c, currentUser.ID, req.Name, token)
@@ -579,7 +698,14 @@ func (h *Handler) CreateLongLivedToken(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"res": tokenModel})
+	response := gin.H{"res": tokenModel}
+
+	// If user has MFA enabled but didn't provide a code, suggest using MFA for enhanced security
+	if currentUser.MFAEnabled && req.MFACode == "" {
+		response["message"] = "API token created successfully. For enhanced security, consider providing an MFA code when creating API tokens."
+	}
+
+	c.JSON(http.StatusOK, response)
 }
 
 func (h *Handler) GetAllUserToken(c *gin.Context) {
@@ -748,6 +874,91 @@ func (h *Handler) setWebhook(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{})
 }
 
+func (h *Handler) updateProfilePhoto(c *gin.Context) {
+	currentUser, ok := auth.CurrentUser(c)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get current user"})
+		return
+	}
+
+	file, err := c.FormFile("file")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid file"})
+		return
+	}
+	fileExtension := file.Filename[strings.LastIndex(file.Filename, "."):]
+	// validate file extension:
+	if fileExtension != ".jpg" && fileExtension != ".jpeg" && fileExtension != ".png" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid file extension"})
+		return
+	}
+
+	// Generate a unique filename using the current timestamp and a random string
+
+	hashFromUserName := sha256.Sum256([]byte(currentUser.Username))
+	// use the first 8 bytes of the hash as a unique identifier
+	id := fmt.Sprintf("%x", hashFromUserName[:20])
+	filename := fmt.Sprintf("profiles/%s%s", id, fileExtension)
+
+	openedFile, err := file.Open()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to open file"})
+		return
+	}
+	defer openedFile.Close()
+	// resize the image to 256x256:
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to resize image"})
+		return
+	}
+
+	err = h.storage.Save(c, filename, openedFile)
+	if err != nil {
+		logging.FromContext(c).Errorw("Failed to save profile photo", "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save file"})
+		return
+	}
+	signedFileName, err := h.signer.Sign(filename)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to sign URL"})
+		return
+	}
+	err = h.userRepo.UpdateUserImage(c, currentUser.ID, signedFileName)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update profile photo"})
+		return
+	}
+	// create signed URL for the file:
+	signedURL, err := h.signer.Sign(filename)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to sign URL"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"sign": signedURL})
+}
+
+func (h *Handler) getStorageUsage(c *gin.Context) {
+	currentUser, ok := auth.CurrentUser(c)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get current user"})
+		return
+	}
+
+	used, available, err := h.storageRepo.GetStorageStats(c, currentUser.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get storage usage"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"res": gin.H{
+			"used":  used,
+			"total": available,
+		},
+	})
+
+}
+
 func Routes(router *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware, limiter *limiter.Limiter) {
 
 	userRoutes := router.Group("api/v1/users")
@@ -762,7 +973,15 @@ func Routes(router *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware, limiter 
 		userRoutes.PUT("/webhook", h.setWebhook)
 		userRoutes.PUT("/targets", h.UpdateNotificationTarget)
 		userRoutes.PUT("change_password", h.updateUserPasswordLoggedInOnly)
+		userRoutes.POST("profile_photo", h.updateProfilePhoto)
+		userRoutes.GET("storage", h.getStorageUsage)
 
+		// MFA endpoints
+		userRoutes.GET("/mfa/status", h.getMFAStatus)
+		userRoutes.POST("/mfa/setup", h.setupMFA)
+		userRoutes.POST("/mfa/confirm", h.confirmMFA)
+		userRoutes.POST("/mfa/disable", h.disableMFA)
+		userRoutes.POST("/mfa/regenerate-backup-codes", h.regenerateBackupCodes)
 	}
 
 	authRoutes := router.Group("api/v1/auth")
@@ -774,5 +993,6 @@ func Routes(router *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware, limiter 
 		authRoutes.GET("refresh", auth.RefreshHandler)
 		authRoutes.POST("reset", h.resetPassword)
 		authRoutes.POST("password", h.updateUserPassword)
+		authRoutes.POST("mfa/verify", h.verifyMFA) // Add MFA verification endpoint
 	}
 }

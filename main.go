@@ -25,7 +25,10 @@ import (
 	"donetick.com/core/internal/events"
 	label "donetick.com/core/internal/label"
 	lRepo "donetick.com/core/internal/label/repo"
+	"donetick.com/core/internal/mfa"
 	"donetick.com/core/internal/resource"
+	"donetick.com/core/internal/storage"
+	storageRepo "donetick.com/core/internal/storage/repo"
 	spRepo "donetick.com/core/internal/subtask/repo"
 
 	notifier "donetick.com/core/internal/notifier"
@@ -83,6 +86,11 @@ func main() {
 
 		// add email sender:
 		fx.Provide(email.NewEmailSender),
+
+		// MFA services
+		fx.Provide(mfa.NewService),
+		fx.Provide(mfa.NewCleanupService),
+
 		// add handlers also
 		fx.Provide(newServer),
 		fx.Provide(notifier.NewScheduler),
@@ -105,6 +113,16 @@ func main() {
 
 		fx.Provide(frontend.NewHandler),
 
+		// storage :
+		// is storage local or remote?
+		// fx.Provide(storage.NewLocalStorage),
+		// fx.Provide(storage.NewURLSignerLocal),
+		fx.Provide(storage.NewS3Storage),
+		fx.Provide(storage.NewURLSignerS3),
+
+		fx.Provide(storage.NewHandler),
+		fx.Provide(storageRepo.NewStorageRepository),
+
 		// fx.Invoke(RunApp),
 		fx.Invoke(
 			chore.Routes,
@@ -114,6 +132,7 @@ func main() {
 			thing.Routes,
 			thing.APIs,
 			label.Routes,
+			storage.Routes,
 			frontend.Routes,
 			resource.Routes,
 
@@ -129,7 +148,7 @@ func main() {
 
 }
 
-func newServer(lc fx.Lifecycle, cfg *config.Config, db *gorm.DB, notifier *notifier.Scheduler, eventProducer *events.EventsProducer) *gin.Engine {
+func newServer(lc fx.Lifecycle, cfg *config.Config, db *gorm.DB, notifier *notifier.Scheduler, eventProducer *events.EventsProducer, mfaCleanup *mfa.CleanupService) *gin.Engine {
 	gin.SetMode(gin.DebugMode)
 	// log when http request is made:
 
@@ -164,6 +183,7 @@ func newServer(lc fx.Lifecycle, cfg *config.Config, db *gorm.DB, notifier *notif
 			}
 			notifier.Start(context.Background())
 			eventProducer.Start(context.Background())
+			mfaCleanup.Start(context.Background())
 			go func() {
 				if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 					log.Fatalf("listen: %s\n", err)
@@ -172,6 +192,7 @@ func newServer(lc fx.Lifecycle, cfg *config.Config, db *gorm.DB, notifier *notif
 			return nil
 		},
 		OnStop: func(context.Context) error {
+			mfaCleanup.Stop()
 			if err := srv.Shutdown(context.Background()); err != nil {
 				log.Fatalf("Server Shutdown: %s", err)
 			}

@@ -9,6 +9,8 @@ import (
 	config "donetick.com/core/config"
 	chModel "donetick.com/core/internal/chore/model"
 	cModel "donetick.com/core/internal/circle/model"
+	storageModel "donetick.com/core/internal/storage/model"
+	stModel "donetick.com/core/internal/subtask/model"
 	"gorm.io/gorm"
 )
 
@@ -80,6 +82,15 @@ func (r *ChoreRepository) DeleteChore(c context.Context, id int) error {
 		if err := tx.Delete(&chModel.Chore{}, id).Error; err != nil {
 			return err
 		}
+		// Delete all subtasks associated with the chore
+		if err := tx.Where("chore_id = ?", id).Delete(&stModel.SubTask{}).Error; err != nil {
+			return err
+		}
+		// Delete all chore storage files associated with the chore:
+		if err := tx.Where("entity_type = ? AND entity_id = ?", storageModel.EntityTypeChoreDescription, id).Delete(&storageModel.StorageFile{}).Error; err != nil {
+			return err
+		}
+
 		return nil
 	})
 }
@@ -111,11 +122,12 @@ func (r *ChoreRepository) CompleteChore(c context.Context, chore *chModel.Chore,
 		// Create a new chore history record.
 		ch := &chModel.ChoreHistory{
 			ChoreID:     chore.ID,
-			CompletedAt: completedDate,
+			PerformedAt: completedDate,
 			CompletedBy: userID,
 			AssignedTo:  chore.AssignedTo,
 			DueDate:     chore.NextDueDate,
 			Note:        note,
+			Status:      chModel.ChoreHistoryStatusCompleted,
 		}
 
 		// Update UserCirclee Points :
@@ -138,16 +150,54 @@ func (r *ChoreRepository) CompleteChore(c context.Context, chore *chModel.Chore,
 	return err
 }
 
+func (r *ChoreRepository) SkipChore(c context.Context, chore *chModel.Chore, userID int, dueDate *time.Time, nextAssignedTo int) error {
+	err := r.db.WithContext(c).Transaction(func(tx *gorm.DB) error {
+		choreUpdates := map[string]interface{}{}
+		choreUpdates["next_due_date"] = dueDate
+		choreUpdates["status"] = chModel.ChoreStatusNoStatus
+
+		if dueDate != nil {
+			choreUpdates["assigned_to"] = nextAssignedTo
+		} else {
+			// one time task
+			choreUpdates["is_active"] = false
+		}
+
+		// Create a new chore history record for the skipped chore
+		skippedAt := time.Now().UTC()
+		ch := &chModel.ChoreHistory{
+			ChoreID:     chore.ID,
+			PerformedAt: &skippedAt,
+			CompletedBy: userID,
+			AssignedTo:  chore.AssignedTo,
+			DueDate:     chore.NextDueDate,
+			Note:        nil,
+			Status:      chModel.ChoreHistoryStatusSkipped,
+		}
+
+		// Perform the update operation once, using the prepared updates map.
+		if err := tx.Model(&chModel.Chore{}).Where("id = ?", chore.ID).Updates(choreUpdates).Error; err != nil {
+			return err
+		}
+
+		if err := tx.Create(ch).Error; err != nil {
+			return err
+		}
+		return nil
+	})
+	return err
+}
+
 func (r *ChoreRepository) GetChoreHistory(c context.Context, choreID int) ([]*chModel.ChoreHistory, error) {
 	var histories []*chModel.ChoreHistory
-	if err := r.db.WithContext(c).Where("chore_id = ?", choreID).Order("completed_at desc").Find(&histories).Error; err != nil {
+	if err := r.db.WithContext(c).Where("chore_id = ?", choreID).Order("performed_at desc").Find(&histories).Error; err != nil {
 		return nil, err
 	}
 	return histories, nil
 }
 func (r *ChoreRepository) GetChoreHistoryWithLimit(c context.Context, choreID int, limit int) ([]*chModel.ChoreHistory, error) {
 	var histories []*chModel.ChoreHistory
-	if err := r.db.WithContext(c).Where("chore_id = ?", choreID).Order("completed_at desc").Limit(limit).Find(&histories).Error; err != nil {
+	if err := r.db.WithContext(c).Where("chore_id = ?", choreID).Order("performed_at desc").Limit(limit).Find(&histories).Error; err != nil {
 		return nil, err
 	}
 	return histories, nil
@@ -302,12 +352,12 @@ func (r *ChoreRepository) GetChoreDetailByID(c context.Context, choreID int, cir
         SELECT 
             chore_id, 
             assigned_to AS last_assigned_to, 
-            completed_at AS last_completed_date,
+            performed_at AS last_completed_date,
 			notes
 			
         FROM chore_histories
-        WHERE (chore_id, completed_at) IN (
-            SELECT chore_id, MAX(completed_at)
+        WHERE (chore_id, performed_at) IN (
+            SELECT chore_id, MAX(performed_at)
             FROM chore_histories
             GROUP BY chore_id
         )
@@ -333,7 +383,7 @@ func (r *ChoreRepository) GetChoresHistoryByUserID(c context.Context, userID int
 
 	var chores []*chModel.ChoreHistory
 	since := time.Now().AddDate(0, 0, days*-1)
-	query := r.db.WithContext(c).Where("completed_at > ?", since).Order("completed_at desc")
+	query := r.db.WithContext(c).Where("performed_at > ?", since).Order("performed_at desc")
 	if !includeCircle {
 		query = query.Where("completed_by = ?", userID)
 	}

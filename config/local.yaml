@@ -38,3 +38,21 @@ email:
   key: 
   email:  
   appHost:  
+mfa:
+  session_timeout: 10m
+  backup_code_count: 8
+  rate_limit_attempts: 5
+  rate_limit_window: 15m 
+storage:
+  max_user_storage:
+  max_file_size:
+  bucket_name: 
+  region: 
+  base_path:
+  access_key: 
+  secret_key: 
+  endpoint: 
+
+
+
+  

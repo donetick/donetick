@@ -42,4 +42,23 @@ type UserCircleDetail struct {
 	DisplayName      string                      `json:"displayName" gorm:"column:display_name"`
 	NotificationType nModel.NotificationPlatform `json:"-" gorm:"column:notification_type"`
 	TargetID         string                      `json:"-" gorm:"column:target_id"` // Target ID
+	Image            string                      `json:"image" gorm:"column:image"` // Image
+}
+
+type Role string
+
+const (
+	RoleAdmin   Role = "admin"
+	RoleMember  Role = "member"
+	RoleManager Role = "manager"
+)
+
+// write isValidRole method for Role type:
+func IsValidRole(r Role) bool {
+	switch r {
+	case RoleAdmin, RoleMember, RoleManager:
+		return true
+	default:
+		return false
+	}
 }

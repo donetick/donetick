@@ -12,6 +12,7 @@ import (
 	cModel "donetick.com/core/internal/circle/model"
 	nModel "donetick.com/core/internal/notifier/model"
 	pModel "donetick.com/core/internal/points"
+	storageModel "donetick.com/core/internal/storage/model"
 	stModel "donetick.com/core/internal/subtask/model"
 	tModel "donetick.com/core/internal/thing/model"
 	uModel "donetick.com/core/internal/user/model" // Pure go SQLite driver, checkout https://github.com/glebarez/sqlite for details
@@ -29,6 +30,7 @@ func Migration(db *gorm.DB) error {
 		chModel.ChoreAssignees{},
 		nModel.Notification{},
 		uModel.UserPasswordReset{},
+		uModel.MFASession{}, // Add MFA session model
 		tModel.Thing{},
 		tModel.ThingChore{},
 		tModel.ThingHistory{},
@@ -39,6 +41,8 @@ func Migration(db *gorm.DB) error {
 		migrations.Migration{},
 		pModel.PointsHistory{},
 		stModel.SubTask{},
+		storageModel.StorageFile{},
+		storageModel.StorageUsage{},
 	); err != nil {
 		return err
 	}

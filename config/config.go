@@ -27,10 +27,12 @@ type Config struct {
 	StripeConfig           StripeConfig        `mapstructure:"stripe" yaml:"stripe"`
 	OAuth2Config           OAuth2Config        `mapstructure:"oauth2" yaml:"oauth2"`
 	WebhookConfig          WebhookConfig       `mapstructure:"webhook" yaml:"webhook"`
+	MFAConfig              MFAConfig           `mapstructure:"mfa" yaml:"mfa"`
 	IsDoneTickDotCom       bool                `mapstructure:"is_done_tick_dot_com" yaml:"is_done_tick_dot_com"`
 	IsUserCreationDisabled bool                `mapstructure:"is_user_creation_disabled" yaml:"is_user_creation_disabled"`
 	MinVersion             string              `mapstructure:"min_version" yaml:"min_version"`
 	DonetickCloudConfig    DonetickCloudConfig `mapstructure:"donetick_cloud" yaml:"donetick_cloud"`
+	Storage                StorageConfig       `mapstructure:"storage" yaml:"storage"`
 	Info                   Info
 }
 
@@ -39,7 +41,19 @@ type Info struct {
 	Commit    string
 	BuildDate string
 }
-
+type StorageConfig struct {
+	StorageType string `mapstructure:"storage_type" yaml:"storage_type"`
+	// CloudStorage:
+	BucketName     string `mapstructure:"bucket_name" yaml:"bucket_name"`
+	Region         string `mapstructure:"region" yaml:"region"`
+	BasePath       string `mapstructure:"base_path" yaml:"base_path"`
+	AccessKey      string `mapstructure:"access_key" yaml:"access_key"`
+	SecretKey      string `mapstructure:"secret_key" yaml:"secret_key"`
+	Endpoint       string `mapstructure:"endpoint" yaml:"endpoint"`
+	MaxUserStorage int    `mapstructure:"max_user_storage" yaml:"max_user_storage"`
+	MaxFileSize    int64  `mapstructure:"max_file_size" yaml:"max_file_size"`
+	PublicHost     string `mapstructure:"public_host" yaml:"public_host"`
+}
 type DonetickCloudConfig struct {
 	GoogleClientID        string `mapstructure:"google_client_id" yaml:"google_client_id"`
 	GoogleAndroidClientID string `mapstructure:"google_android_client_id" yaml:"google_android_client_id"`
@@ -61,7 +75,7 @@ type DatabaseConfig struct {
 	User      string `mapstructure:"user" yaml:"user"`
 	Password  string `mapstructure:"password" yaml:"password"`
 	Name      string `mapstructure:"name" yaml:"name"`
-	Migration bool   `mapstructure:"migration" yaml:"migration"`
+	Migration bool   `mapstructure:"migration" yaml:"migration" default:"true"`
 	LogLevel  int    `mapstructure:"logger" yaml:"logger"`
 }
 
@@ -122,6 +136,14 @@ type OAuth2Config struct {
 type WebhookConfig struct {
 	Timeout   time.Duration `mapstructure:"timeout" yaml:"timeout" default:"5s"`
 	QueueSize int           `mapstructure:"queue_size" yaml:"queue_size" default:"100"`
+}
+
+type MFAConfig struct {
+	Enabled                 bool          `mapstructure:"enabled" yaml:"enabled" default:"true"`
+	SessionTimeoutMinutes   int           `mapstructure:"session_timeout_minutes" yaml:"session_timeout_minutes" default:"15"`
+	BackupCodeCount         int           `mapstructure:"backup_code_count" yaml:"backup_code_count" default:"10"`
+	MaxVerificationAttempts int           `mapstructure:"max_verification_attempts" yaml:"max_verification_attempts" default:"5"`
+	RateLimitWindow         time.Duration `mapstructure:"rate_limit_window" yaml:"rate_limit_window" default:"5m"`
 }
 
 func NewConfig() *Config {

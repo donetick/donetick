@@ -61,7 +61,7 @@ func TestSignReturnsValidURL(t *testing.T) {
 		},
 	})
 	url1, err := signer.Sign("chore/1/3f67e1d0-4a88-48ea-a815-21533f0a823a.png")
-	if err == nil {
+	if err != nil {
 		t.Error(url1)
 	}
 
@@ -71,7 +71,8 @@ func TestSignReturnsValidURL(t *testing.T) {
 	}
 	sig := parsed.Query().Get("sig")
 	if !signer.IsValid(parsed.Path, sig) {
-		t.Error("Signature is not valid")
+		t.Errorf("Signature is not valid: want valid signature for path %q, got invalid", parsed.Path)
+
 	}
 
 }

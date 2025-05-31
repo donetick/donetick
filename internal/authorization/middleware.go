@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"donetick.com/core/config"
+	"donetick.com/core/internal/mfa"
 	uModel "donetick.com/core/internal/user/model"
 	uRepo "donetick.com/core/internal/user/repo"
 	"donetick.com/core/logging"
@@ -85,6 +86,38 @@ func NewAuthMiddleware(cfg *config.Config, userRepo *uRepo.UserRepository) (*jwt
 					}
 					return nil, jwt.ErrFailedAuthentication
 				}
+
+				// Check if MFA is enabled for this user
+				if user.MFAEnabled {
+					// Create MFA session for verification
+					mfaService := mfa.NewMFAService("Donetick")
+					sessionToken, err := mfaService.GenerateSessionToken()
+					if err != nil {
+						logging.FromContext(c).Errorw("Failed to generate MFA session token", "error", err)
+						return nil, jwt.ErrFailedAuthentication
+					}
+
+					mfaSession := &uModel.MFASession{
+						SessionToken: sessionToken,
+						UserID:       user.ID,
+						AuthMethod:   "local",
+						Verified:     false,
+						CreatedAt:    time.Now(),
+						ExpiresAt:    time.Now().Add(10 * time.Minute), // 10-minute expiry
+						UserData:     user.Username,                    // Store username for later verification
+					}
+
+					if err := userRepo.CreateMFASession(c.Request.Context(), mfaSession); err != nil {
+						logging.FromContext(c).Errorw("Failed to create MFA session", "error", err)
+						return nil, jwt.ErrFailedAuthentication
+					}
+
+					// Return special error to indicate MFA is required
+					c.Set("mfa_required", true)
+					c.Set("mfa_session_token", sessionToken)
+					return nil, NewMFARequiredError()
+				}
+
 				return &uModel.UserDetails{
 					User: uModel.User{
 						ID:        user.ID,
@@ -121,12 +154,33 @@ func NewAuthMiddleware(cfg *config.Config, userRepo *uRepo.UserRepository) (*jwt
 		},
 		Unauthorized: func(c *gin.Context, code int, message string) {
 			logging.FromContext(c).Info("middleware.jwt.Unauthorized", "code", code, "message", message)
+
+			// Check if MFA is required
+			if mfaRequired, exists := c.Get("mfa_required"); exists && mfaRequired.(bool) {
+				sessionToken, _ := c.Get("mfa_session_token")
+				c.JSON(http.StatusOK, gin.H{
+					"mfaRequired":  true,
+					"sessionToken": sessionToken,
+				})
+				return
+			}
+
 			c.JSON(code, gin.H{
 				"code":    code,
 				"message": message,
 			})
 		},
 		LoginResponse: func(c *gin.Context, code int, token string, expire time.Time) {
+			// Check if MFA is required
+			if mfaRequired, exists := c.Get("mfa_required"); exists && mfaRequired.(bool) {
+				sessionToken, _ := c.Get("mfa_session_token")
+				c.JSON(http.StatusOK, gin.H{
+					"mfaRequired":  true,
+					"sessionToken": sessionToken,
+				})
+				return
+			}
+
 			c.JSON(http.StatusOK, gin.H{
 				"code":   code,
 				"token":  token,

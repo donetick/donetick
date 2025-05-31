@@ -27,6 +27,7 @@ type Config struct {
 	StripeConfig           StripeConfig        `mapstructure:"stripe" yaml:"stripe"`
 	OAuth2Config           OAuth2Config        `mapstructure:"oauth2" yaml:"oauth2"`
 	WebhookConfig          WebhookConfig       `mapstructure:"webhook" yaml:"webhook"`
+	MFAConfig              MFAConfig           `mapstructure:"mfa" yaml:"mfa"`
 	IsDoneTickDotCom       bool                `mapstructure:"is_done_tick_dot_com" yaml:"is_done_tick_dot_com"`
 	IsUserCreationDisabled bool                `mapstructure:"is_user_creation_disabled" yaml:"is_user_creation_disabled"`
 	MinVersion             string              `mapstructure:"min_version" yaml:"min_version"`
@@ -135,6 +136,14 @@ type OAuth2Config struct {
 type WebhookConfig struct {
 	Timeout   time.Duration `mapstructure:"timeout" yaml:"timeout" default:"5s"`
 	QueueSize int           `mapstructure:"queue_size" yaml:"queue_size" default:"100"`
+}
+
+type MFAConfig struct {
+	Enabled                 bool          `mapstructure:"enabled" yaml:"enabled" default:"true"`
+	SessionTimeoutMinutes   int           `mapstructure:"session_timeout_minutes" yaml:"session_timeout_minutes" default:"15"`
+	BackupCodeCount         int           `mapstructure:"backup_code_count" yaml:"backup_code_count" default:"10"`
+	MaxVerificationAttempts int           `mapstructure:"max_verification_attempts" yaml:"max_verification_attempts" default:"5"`
+	RateLimitWindow         time.Duration `mapstructure:"rate_limit_window" yaml:"rate_limit_window" default:"5m"`
 }
 
 func NewConfig() *Config {

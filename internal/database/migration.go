@@ -30,6 +30,7 @@ func Migration(db *gorm.DB) error {
 		chModel.ChoreAssignees{},
 		nModel.Notification{},
 		uModel.UserPasswordReset{},
+		uModel.MFASession{}, // Add MFA session model
 		tModel.Thing{},
 		tModel.ThingChore{},
 		tModel.ThingHistory{},

@@ -16,9 +16,15 @@ type User struct {
 	CircleID    int              `json:"circleID" gorm:"column:circle_id"`       // Circle ID
 	ChatID      int64            `json:"chatID" gorm:"column:chat_id"`           // Telegram chat ID
 	Image       string           `json:"image" gorm:"column:image"`              // Image
-	CreatedAt   time.Time        `json:"created_at" gorm:"column:created_at"`    // Created at
-	UpdatedAt   time.Time        `json:"updated_at" gorm:"column:updated_at"`    // Updated at
-	Disabled    bool             `json:"disabled" gorm:"column:disabled"`        // Disabled
+	Timezone    string           `json:"timezone" gorm:"column:timezone"`        // Timezone
+	// MFA fields
+	MFAEnabled      bool      `json:"mfaEnabled" gorm:"column:mfa_enabled;default:false;not null"`    // MFA enabled status
+	MFASecret       string    `json:"-" gorm:"column:mfa_secret;type:text"`                           // TOTP secret (hidden from JSON)
+	MFABackupCodes  string    `json:"-" gorm:"column:mfa_backup_codes;type:text"`                     // JSON array of backup codes
+	MFARecoveryUsed string    `json:"-" gorm:"column:mfa_recovery_codes_used;type:text;default:'[]'"` // JSON array of used recovery codes
+	CreatedAt       time.Time `json:"created_at" gorm:"column:created_at"`                            // Created at
+	UpdatedAt       time.Time `json:"updated_at" gorm:"column:updated_at"`                            // Updated at
+	Disabled        bool      `json:"disabled" gorm:"column:disabled"`                                // Disabled
 	// Email    string `json:"email" gorm:"column:email"`       // Email
 	CustomerID              *string                `gorm:"column:customer_id;<-:false"`                      // read only column
 	Subscription            *string                `json:"subscription" gorm:"column:subscription;<-:false"` // read only column
@@ -59,6 +65,31 @@ const (
 	AuthProviderOAuth2
 	AuthProviderGoogle
 )
+
+// MFASession represents a temporary session during MFA verification
+type MFASession struct {
+	ID           int       `json:"id" gorm:"primary_key;auto_increment"`
+	SessionToken string    `json:"sessionToken" gorm:"column:session_token;type:varchar(255);unique;not null;index"`
+	UserID       int       `json:"userId" gorm:"column:user_id;not null;index"`
+	AuthMethod   string    `json:"authMethod" gorm:"column:auth_method;type:varchar(50);not null"` // 'local', 'google', 'oauth2'
+	Verified     bool      `json:"verified" gorm:"column:verified;default:false;not null"`
+	CreatedAt    time.Time `json:"createdAt" gorm:"column:created_at;not null"`
+	ExpiresAt    time.Time `json:"expiresAt" gorm:"column:expires_at;not null;index"`
+	UserData     string    `json:"-" gorm:"column:user_data;type:text"` // JSON data to complete auth after MFA
+}
+
+// MFASetupResponse represents the response when setting up MFA
+type MFASetupResponse struct {
+	Secret      string   `json:"secret"`
+	QRCodeURL   string   `json:"qrCodeUrl"`
+	BackupCodes []string `json:"backupCodes"`
+}
+
+// MFAVerifyRequest represents a request to verify MFA code
+type MFAVerifyRequest struct {
+	Code         string `json:"code" binding:"required"`
+	SessionToken string `json:"sessionToken,omitempty"` // For login flow
+}
 
 func (u User) IsPlusMember() bool {
 	// if the user has a subscription, and the expiration date is in the future, then the user is a plus member:

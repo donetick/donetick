@@ -1518,6 +1518,7 @@ func (h *Handler) UpdateSubtaskCompletedAt(c *gin.Context) {
 		})
 		return
 	}
+	// h.choreRepo.setStatus(c, choreID, chModel.ChoreStatusInProgress, currentUser.ID)
 
 	h.eventProducer.SubtaskUpdated(c, currentUser.WebhookURL,
 		&stModel.SubTask{
@@ -1550,14 +1551,14 @@ func checkNextAssignee(chore *chModel.Chore, choresHistory []*chModel.ChoreHisto
 	}
 
 	switch chore.AssignStrategy {
-	case "least_assigned":
+	case chModel.AssignmentStrategyLeastAssigned:
 		// find the assignee with the least number of chores
 		assigneeChores := map[int]int{}
 		for _, performer := range chore.Assignees {
 			assigneeChores[performer.UserID] = 0
 		}
 		for _, history := range history {
-			if ok := assigneesMap[history.AssignedTo]; !ok {
+			if ok := assigneesMap[history.AssignedTo]; ok {
 				// calculate the number of chores assigned to each assignee
 				assigneeChores[history.AssignedTo]++
 			}
@@ -1573,7 +1574,7 @@ func checkNextAssignee(chore *chModel.Chore, choresHistory []*chModel.ChoreHisto
 				nextAssignee = assignee
 			}
 		}
-	case "least_completed":
+	case chModel.AssignmentStrategyLeastCompleted:
 		// find the assignee who has completed the least number of chores
 		assigneeChores := map[int]int{}
 		for _, performer := range chore.Assignees {
@@ -1596,18 +1597,38 @@ func checkNextAssignee(chore *chModel.Chore, choresHistory []*chModel.ChoreHisto
 				nextAssignee = assignee
 			}
 		}
-	case "random":
+	case chModel.AssignmentStrategyRandom:
 		nextAssignee = chore.Assignees[rand.Intn(len(chore.Assignees))].UserID
-	case "keep_last_assigned":
+	case chModel.AssignmentStrategyKeepLastAssigned:
 		// keep the last assignee
 		nextAssignee = chore.AssignedTo
-	case "random_except_last_assigned":
+	case chModel.AssignmentStrategyRandomExceptLastAssigned:
 		var lastAssigned = chore.AssignedTo
 		AssigneesCopy := make([]chModel.ChoreAssignees, len(chore.Assignees))
 		copy(AssigneesCopy, chore.Assignees)
 		var removeLastAssigned = remove(AssigneesCopy, lastAssigned)
 		nextAssignee = removeLastAssigned[rand.Intn(len(removeLastAssigned))].UserID
+	case chModel.AssignmentStrategyRoundRobin:
+		if len(chore.Assignees) == 0 {
+			return chore.AssignedTo, fmt.Errorf("no assignees available")
+		}
 
+		// Find current assignee index
+		currentIndex := -1
+		for i, assignee := range chore.Assignees {
+			if assignee.UserID == chore.AssignedTo {
+				currentIndex = i
+				break
+			}
+		}
+
+		// If current assignee is not found, start from the beginning
+		if currentIndex == -1 {
+			nextAssignee = chore.Assignees[0].UserID
+		} else {
+			nextIndex := (currentIndex + 1) % len(chore.Assignees)
+			nextAssignee = chore.Assignees[nextIndex].UserID
+		}
 	default:
 		return chore.AssignedTo, fmt.Errorf("invalid assign strategy")
 

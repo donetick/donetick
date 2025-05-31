@@ -15,6 +15,7 @@ import (
 	cModel "donetick.com/core/internal/circle/model"
 	cRepo "donetick.com/core/internal/circle/repo"
 	"donetick.com/core/internal/email"
+	"donetick.com/core/internal/mfa"
 	nModel "donetick.com/core/internal/notifier/model"
 	storage "donetick.com/core/internal/storage"
 	storageRepo "donetick.com/core/internal/storage/repo"
@@ -298,6 +299,39 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 				return
 			}
 		}
+		// Check if user has MFA enabled
+		if acc.MFAEnabled {
+			// Create MFA session for third-party auth
+			mfaService := mfa.NewMFAService("Donetick")
+			sessionToken, err := mfaService.GenerateSessionToken()
+			if err != nil {
+				logger.Errorw("Failed to generate MFA session token", "error", err)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Authentication failed"})
+				return
+			}
+
+			mfaSession := &uModel.MFASession{
+				SessionToken: sessionToken,
+				UserID:       acc.ID,
+				AuthMethod:   "google",
+				Verified:     false,
+				CreatedAt:    time.Now(),
+				ExpiresAt:    time.Now().Add(10 * time.Minute),
+				UserData:     acc.Username,
+			}
+
+			if err := h.userRepo.CreateMFASession(c, mfaSession); err != nil {
+				logger.Errorw("Failed to create MFA session", "error", err)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Authentication failed"})
+				return
+			}
+
+			c.JSON(http.StatusOK, gin.H{
+				"mfaRequired":  true,
+				"sessionToken": sessionToken,
+			})
+			return
+		}
 		// use auth to generate a token for the user:
 		c.Set("user_account", acc)
 		h.jwtAuth.Authenticator(c)
@@ -396,6 +430,39 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 				})
 				return
 			}
+		}
+		// Check if user has MFA enabled
+		if acc.MFAEnabled {
+			// Create MFA session for OAuth2 auth
+			mfaService := mfa.NewMFAService("Donetick")
+			sessionToken, err := mfaService.GenerateSessionToken()
+			if err != nil {
+				logger.Error("Failed to generate MFA session token", "error", err)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Authentication failed"})
+				return
+			}
+
+			mfaSession := &uModel.MFASession{
+				SessionToken: sessionToken,
+				UserID:       acc.ID,
+				AuthMethod:   "oauth2",
+				Verified:     false,
+				CreatedAt:    time.Now(),
+				ExpiresAt:    time.Now().Add(10 * time.Minute),
+				UserData:     acc.Username,
+			}
+
+			if err := h.userRepo.CreateMFASession(c, mfaSession); err != nil {
+				logger.Error("Failed to create MFA session", "error", err)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Authentication failed"})
+				return
+			}
+
+			c.JSON(http.StatusOK, gin.H{
+				"mfaRequired":  true,
+				"sessionToken": sessionToken,
+			})
+			return
 		}
 		// ... (JWT generation and response)
 		c.Set("user_account", acc)
@@ -522,6 +589,7 @@ func (h *Handler) UpdateUserDetails(c *gin.Context) {
 		DisplayName *string `json:"displayName" binding:"omitempty"`
 		ChatID      *int64  `json:"chatID" binding:"omitempty"`
 		Image       *string `json:"image" binding:"omitempty"`
+		Timezone    *string `json:"timezone" binding:"omitempty"`
 	}
 	user, ok := auth.CurrentUser(c)
 	if !ok {
@@ -547,6 +615,15 @@ func (h *Handler) UpdateUserDetails(c *gin.Context) {
 	if req.Image != nil {
 		user.Image = *req.Image
 	}
+	if req.Timezone != nil {
+		if !utils.IsValidTimezone(*req.Timezone) {
+			c.JSON(400, gin.H{
+				"error": "Invalid timezone",
+			})
+			return
+		}
+		user.Timezone = *req.Timezone
+	}
 
 	if err := h.userRepo.UpdateUser(c, &user.User); err != nil {
 		c.JSON(500, gin.H{
@@ -563,13 +640,43 @@ func (h *Handler) CreateLongLivedToken(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get current user"})
 		return
 	}
+
 	type TokenRequest struct {
-		Name string `json:"name" binding:"required"`
+		Name    string `json:"name" binding:"required"`
+		MFACode string `json:"mfaCode"` // Optional MFA code for enhanced security
 	}
 	var req TokenRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 		return
+	}
+
+	// If user has MFA enabled and provides an MFA code, verify it
+	if currentUser.MFAEnabled && req.MFACode != "" {
+		mfaService := mfa.NewMFAService("Donetick")
+		valid, newUsedCodes, err := mfaService.IsCodeValid(
+			currentUser.MFASecret,
+			currentUser.MFABackupCodes,
+			currentUser.MFARecoveryUsed,
+			req.MFACode,
+		)
+
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to validate MFA code"})
+			return
+		}
+
+		if !valid {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid MFA code"})
+			return
+		}
+
+		// Update used codes if a backup code was used
+		if newUsedCodes != currentUser.MFARecoveryUsed {
+			if err := h.userRepo.UpdateMFARecoveryCodes(c, currentUser.ID, newUsedCodes); err != nil {
+				logging.FromContext(c).Errorw("Failed to update recovery codes", "error", err)
+			}
+		}
 	}
 
 	// Step 1: Generate a secure random number
@@ -583,7 +690,6 @@ func (h *Handler) CreateLongLivedToken(c *gin.Context) {
 	timestamp := time.Now().Unix()
 	hashInput := fmt.Sprintf("%s:%d:%x", currentUser.Username, timestamp, randomBytes)
 	hash := sha256.Sum256([]byte(hashInput))
-
 	token := hex.EncodeToString(hash[:])
 
 	tokenModel, err := h.userRepo.StoreAPIToken(c, currentUser.ID, req.Name, token)
@@ -592,7 +698,14 @@ func (h *Handler) CreateLongLivedToken(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"res": tokenModel})
+	response := gin.H{"res": tokenModel}
+
+	// If user has MFA enabled but didn't provide a code, suggest using MFA for enhanced security
+	if currentUser.MFAEnabled && req.MFACode == "" {
+		response["message"] = "API token created successfully. For enhanced security, consider providing an MFA code when creating API tokens."
+	}
+
+	c.JSON(http.StatusOK, response)
 }
 
 func (h *Handler) GetAllUserToken(c *gin.Context) {
@@ -863,6 +976,12 @@ func Routes(router *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware, limiter 
 		userRoutes.POST("profile_photo", h.updateProfilePhoto)
 		userRoutes.GET("storage", h.getStorageUsage)
 
+		// MFA endpoints
+		userRoutes.GET("/mfa/status", h.getMFAStatus)
+		userRoutes.POST("/mfa/setup", h.setupMFA)
+		userRoutes.POST("/mfa/confirm", h.confirmMFA)
+		userRoutes.POST("/mfa/disable", h.disableMFA)
+		userRoutes.POST("/mfa/regenerate-backup-codes", h.regenerateBackupCodes)
 	}
 
 	authRoutes := router.Group("api/v1/auth")
@@ -874,5 +993,6 @@ func Routes(router *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware, limiter 
 		authRoutes.GET("refresh", auth.RefreshHandler)
 		authRoutes.POST("reset", h.resetPassword)
 		authRoutes.POST("password", h.updateUserPassword)
+		authRoutes.POST("mfa/verify", h.verifyMFA) // Add MFA verification endpoint
 	}
 }

@@ -36,6 +36,7 @@ const (
 	AssignmentStrategyLeastCompleted           AssignmentStrategy = "least_completed"
 	AssignmentStrategyKeepLastAssigned         AssignmentStrategy = "keep_last_assigned"
 	AssignmentStrategyRandomExceptLastAssigned AssignmentStrategy = "random_except_last_assigned"
+	AssignmentStrategyRoundRobin               AssignmentStrategy = "round_robin"
 )
 
 type Chore struct {

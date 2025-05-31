@@ -79,7 +79,7 @@ func (r *UserRepository) GetUserByUsername(c context.Context, username string) (
 			return nil, err
 		}
 	} else {
-		if err := r.db.WithContext(c).Preload("UserNotificationTargets").Table("users u").Select("u.*, 'active' as  subscription, '2999-12-31' as expiration, c.webhook_url as webhook_url").Joins("left join circles c on c.id = u.circle_id").Where("username = ?", username).First(&user).Error; err != nil {
+		if err := r.db.WithContext(c).Preload("UserNotificationTargets").Table("users u").Select("u.*, 'active' as  subscription, '2999-12-31 00:00:00+00' as expiration, c.webhook_url as webhook_url").Joins("left join circles c on c.id = u.circle_id").Where("username = ?", username).First(&user).Error; err != nil {
 
 			return nil, err
 		}

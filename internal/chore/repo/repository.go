@@ -383,10 +383,18 @@ func (r *ChoreRepository) GetChoresHistoryByUserID(c context.Context, userID int
 
 	var chores []*chModel.ChoreHistory
 	since := time.Now().AddDate(0, 0, days*-1)
-	query := r.db.WithContext(c).Where("circle_id = ? AND performed_at > ?", circleID, since).Order("performed_at desc")
+	query := r.db.WithContext(c).
+		Table("chore_histories").
+		Select("chore_histories.*, circles.id as circle_id").
+		Joins("LEFT JOIN chores ON chore_histories.chore_id = chores.id").
+		Joins("LEFT JOIN circles ON chores.circle_id = circles.id").
+		Where("circles.id = ? AND chore_histories.performed_at > ?", circleID, since).
+		Order("chore_histories.performed_at desc")
+
 	if !includeCircle {
-		query = query.Where("completed_by = ?", userID)
+		query = query.Where("chore_histories.performed_by = ?", userID)
 	}
+
 	if err := query.Find(&chores).Error; err != nil {
 		return nil, err
 	}

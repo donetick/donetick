@@ -280,8 +280,9 @@ func (h *Handler) createChore(c *gin.Context) {
 			return
 		}
 	}
-	description := *choreReq.Description
+
 	if choreReq.Description != nil {
+		description := *choreReq.Description
 		if err := h.cleanUpUnreferencedFiles(c, currentUser.ID, storageModel.EntityTypeChoreDescription, createdChore.ID, description); err != nil {
 			c.JSON(500, gin.H{
 				"error": "Error processing description",

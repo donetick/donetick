@@ -981,7 +981,7 @@ func Routes(router *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware, limiter 
 		userRoutes.POST("/mfa/setup", h.setupMFA)
 		userRoutes.POST("/mfa/confirm", h.confirmMFA)
 		userRoutes.POST("/mfa/disable", h.disableMFA)
-		userRoutes.POST("/mfa/regenerate-backup-codes", h.regenerateBackupCodes)
+		// userRoutes.POST("/mfa/regenerate-backup-codes", h.regenerateBackupCodes)
 	}
 
 	authRoutes := router.Group("api/v1/auth")

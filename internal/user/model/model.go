@@ -28,7 +28,7 @@ type User struct {
 	// Email    string `json:"email" gorm:"column:email"`       // Email
 	CustomerID              *string                `gorm:"column:customer_id;<-:false"`                      // read only column
 	Subscription            *string                `json:"subscription" gorm:"column:subscription;<-:false"` // read only column
-	Expiration              *string                `json:"expiration" gorm:"column:expiration;<-:false"`     // read only column
+	Expiration              *time.Time             `json:"expiration" gorm:"column:expiration;<-:false"`     // read only column
 	UserNotificationTargets UserNotificationTarget `json:"notification_target" gorm:"foreignKey:UserID;references:ID"`
 }
 type UserDetails struct {
@@ -92,17 +92,9 @@ type MFAVerifyRequest struct {
 }
 
 func (u User) IsPlusMember() bool {
-	// if the user has a subscription, and the expiration date is in the future, then the user is a plus member:
-	// expiration in 2026-03-24 20:18:27.281786+00 format
+	// if the user has a subscription, and the expiration date is in the future, then the user is a plus member
 	if u.Expiration != nil {
-		if u.Expiration == nil || *u.Expiration == "" {
-			return false
-		}
-		expiration, err := time.Parse("2006-01-02 15:04:05.999999999-07", *u.Expiration)
-		if err != nil {
-			return false
-		}
-		return expiration.After(time.Now().UTC())
+		return u.Expiration.After(time.Now().UTC())
 	}
 
 	return false

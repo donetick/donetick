@@ -22,7 +22,7 @@ builds:
       - linux
       - darwin
     ldflags:
-      - "-X donetick.com/core/config.Version=${{ steps.get_version.outputs.version }} -X donetick.com/core/config.Commit=$(git rev-parse HEAD) -X donetick.com/core/config.Date=$(date +%Y-%m-%d)"
+      - "-X donetick.com/core/config.Version={{.Version}} -X donetick.com/core/config.Commit={{.Commit}} -X donetick.com/core/config.BuildDate={{.Date}}"
     targets:
       - linux_amd64_v1
       - darwin_arm64

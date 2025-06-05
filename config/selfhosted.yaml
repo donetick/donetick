@@ -9,7 +9,7 @@ database:
   type: "sqlite"
   migration: true
 jwt:
-  secret: "secret"
+  secret: "change_this_to_a_secure_random_string_32_characters_long"
   session_time: 168h
   max_refresh: 168h
 server:
@@ -25,6 +25,10 @@ server:
     - "https://localhost"
     - "capacitor://localhost"
   serve_frontend: true
+logging:
+  level: "info"
+  encoding: "json"
+  development: false
 scheduler_jobs:
   due_job: 30m
   overdue_job: 3h
@@ -42,4 +46,4 @@ oauth2:
   token_url: 
   user_info_url: 
   redirect_url: 
-  name: 
+  name:

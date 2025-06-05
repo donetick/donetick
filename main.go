@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 
 	"donetick.com/core/config"
 	"donetick.com/core/frontend"
@@ -12,7 +13,6 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/fx"
-	"go.uber.org/zap/zapcore"
 	"gorm.io/gorm"
 
 	auth "donetick.com/core/internal/authorization"
@@ -47,14 +47,18 @@ import (
 )
 
 func main() {
-	logging.SetConfig(&logging.Config{
-		Encoding:    "console",
-		Level:       zapcore.Level(zapcore.DebugLevel),
-		Development: true,
-	})
+	// Load configuration first
+	cfg := config.LoadConfig()
+
+	// Configure logging from application config
+	logging.SetConfigFromAppConfig(
+		cfg.Logging.Level,
+		cfg.Logging.Encoding,
+		cfg.Logging.Development,
+	)
 
 	app := fx.New(
-		fx.Supply(config.LoadConfig()),
+		fx.Supply(cfg),
 		fx.Supply(logging.DefaultLogger().Desugar()),
 
 		// fx.Provide(config.NewConfig),
@@ -149,7 +153,13 @@ func main() {
 }
 
 func newServer(lc fx.Lifecycle, cfg *config.Config, db *gorm.DB, notifier *notifier.Scheduler, eventProducer *events.EventsProducer, mfaCleanup *mfa.CleanupService) *gin.Engine {
-	gin.SetMode(gin.DebugMode)
+	// Set Gin mode based on logging configuration
+	if cfg.Logging.Development || strings.ToLower(cfg.Logging.Level) == "debug" {
+		gin.SetMode(gin.DebugMode)
+	} else {
+		gin.SetMode(gin.ReleaseMode)
+	}
+
 	// log when http request is made:
 
 	r := gin.New()

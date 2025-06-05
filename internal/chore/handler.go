@@ -245,7 +245,10 @@ func (h *Handler) createChore(c *gin.Context) {
 		Points:                 choreReq.Points,
 		CompletionWindow:       choreReq.CompletionWindow,
 		Description:            choreReq.Description,
-		SubTasks:               choreReq.SubTasks,
+		Priority:               choreReq.Priority,
+		// SubTasks removed to prevent duplicate creation - handled by UpdateSubtask call below
+		// it's need custom logic to handle subtask creation as we send negative ids sometimes when we creating parent child releationship
+		// when the subtask is not yet created
 	}
 	id, err := h.choreRepo.CreateChore(c, createdChore)
 	createdChore.ID = id

@@ -9,7 +9,10 @@ database:
   type: "sqlite"
   migration: true
 jwt:
-  secret: "secret"
+  # JWT secret must be at least 32 characters long and cryptographically secure
+  # Generate one with: openssl rand -base64 32
+  # Or use the suggested value from the application startup error message
+  secret: "change_this_to_a_secure_random_string_32_characters_long"
   session_time: 168h
   max_refresh: 168h
 server:
@@ -22,6 +25,10 @@ server:
     - "http://localhost:5173"
     - "http://localhost:7926"
   serve_frontend: false
+logging:
+  level: "info"
+  encoding: "console"
+  development: true
 scheduler_jobs:
   due_job: 30m
   overdue_job: 3h
@@ -45,8 +52,7 @@ storage:
   base_path:
   access_key: 
   secret_key: 
-  endpoint: 
+  endpoint:
 
 
 
-  

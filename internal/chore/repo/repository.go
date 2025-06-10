@@ -34,6 +34,11 @@ func (r *ChoreRepository) UpdateChorePriority(c context.Context, userID int, cho
 	}
 	return nil
 }
+
+func (r *ChoreRepository) UpdateChoreFields(ctx context.Context, choreID int, fields map[string]interface{}) error {
+	return r.db.WithContext(ctx).Model(&chModel.Chore{}).Where("id = ?", choreID).Updates(fields).Error
+}
+
 func (r *ChoreRepository) UpdateChores(c context.Context, chores []*chModel.Chore) error {
 	return r.db.WithContext(c).Save(&chores).Error
 }
@@ -46,7 +51,7 @@ func (r *ChoreRepository) CreateChore(c context.Context, chore *chModel.Chore) (
 
 func (r *ChoreRepository) GetChore(c context.Context, choreID int) (*chModel.Chore, error) {
 	var chore chModel.Chore
-	if err := r.db.Debug().WithContext(c).Model(&chModel.Chore{}).Preload("SubTasks").Preload("Assignees").Preload("ThingChore").Preload("LabelsV2").First(&chore, choreID).Error; err != nil {
+	if err := r.db.Debug().WithContext(c).Model(&chModel.Chore{}).Preload("SubTasks", "chore_id = ?", choreID).Preload("Assignees").Preload("ThingChore").Preload("LabelsV2").First(&chore, choreID).Error; err != nil {
 		return nil, err
 	}
 	return &chore, nil
@@ -392,7 +397,7 @@ func (r *ChoreRepository) GetChoresHistoryByUserID(c context.Context, userID int
 		Order("chore_histories.performed_at desc")
 
 	if !includeCircle {
-		query = query.Where("chore_histories.performed_by = ?", userID)
+		query = query.Where("chore_histories.completed_by = ?", userID)
 	}
 
 	if err := query.Find(&chores).Error; err != nil {

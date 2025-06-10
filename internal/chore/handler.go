@@ -736,7 +736,8 @@ func (h *Handler) updateAssignee(c *gin.Context) {
 		return
 	}
 	type AssigneeReq struct {
-		Assignee int `json:"assignee" binding:"required"`
+		Assignee  int       `json:"assignee" binding:"required"`
+		UpdatedAt time.Time `json:"updatedAt" binding:"required"`
 	}
 
 	var assigneeReq AssigneeReq
@@ -769,16 +770,32 @@ func (h *Handler) updateAssignee(c *gin.Context) {
 		})
 		return
 	}
+	circleUsers, err := h.circleRepo.GetCircleUsers(c, currentUser.CircleID)
+	if err != nil {
+		c.JSON(500, gin.H{
+			"error": "Error getting circle users",
+		})
+		return
+	}
+	if err := chore.CanEdit(currentUser.ID, circleUsers, &assigneeReq.UpdatedAt); err != nil {
+		c.JSON(403, gin.H{
+			"error": fmt.Sprintf("You cannot edit this chore: %s", err.Error()),
+		})
+		return
+	}
 
-	chore.UpdatedBy = currentUser.ID
-	chore.AssignedTo = assigneeReq.Assignee
-	if err := h.choreRepo.UpsertChore(c, chore); err != nil {
+	if err := h.choreRepo.UpdateChoreFields(c, id, map[string]interface{}{
+		"assigned_to": assigneeReq.Assignee,
+		"updated_by":  currentUser.ID,
+		"updated_at":  assigneeReq.UpdatedAt,
+	}); err != nil {
+		logging.FromContext(c).Error("Error updating assignee", "error", err, "choreID", id, "assignee", assigneeReq.Assignee)
+
 		c.JSON(500, gin.H{
 			"error": "Error updating assignee",
 		})
 		return
 	}
-
 	c.JSON(200, gin.H{
 		"res": chore,
 	})
@@ -902,7 +919,8 @@ func (h *Handler) updateDueDate(c *gin.Context) {
 	}
 
 	type DueDateReq struct {
-		DueDate string `json:"dueDate" binding:"required"`
+		DueDate   string    `json:"dueDate" binding:"required"`
+		UpdatedAt time.Time `json:"updatedAt" binding:"required"`
 	}
 
 	var dueDateReq DueDateReq
@@ -938,15 +956,30 @@ func (h *Handler) updateDueDate(c *gin.Context) {
 		})
 		return
 	}
-	chore.NextDueDate = &dueDate
-	chore.UpdatedBy = currentUser.ID
-	if err := h.choreRepo.UpsertChore(c, chore); err != nil {
+	circleUsers, err := h.circleRepo.GetCircleUsers(c, currentUser.CircleID)
+	if err != nil {
+		c.JSON(500, gin.H{
+			"error": "Error getting circle users",
+		})
+		return
+	}
+	if err := chore.CanEdit(currentUser.ID, circleUsers, &dueDateReq.UpdatedAt); err != nil {
+		c.JSON(403, gin.H{
+			"error": fmt.Sprintf("You cannot edit this chore: %s", err.Error()),
+		})
+		return
+	}
+	if err := h.choreRepo.UpdateChoreFields(c, chore.ID, map[string]interface{}{
+		"next_due_date": dueDate,
+		"updated_by":    currentUser.ID,
+		"updated_at":    time.Now().UTC(),
+	}); err != nil {
+		log.Printf("Error updating due date: %s", err)
 		c.JSON(500, gin.H{
 			"error": "Error updating due date",
 		})
 		return
 	}
-
 	c.JSON(200, gin.H{
 		"res": chore,
 	})

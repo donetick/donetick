@@ -61,6 +61,10 @@ func (n *NotificationPlanner) GenerateNotifications(c context.Context, chore *ch
 	if chore.NotificationMetadataV2.CircleGroup {
 		notifications = append(notifications, generateCircleGroupNotifications(chore, chore.NotificationMetadataV2)...)
 	}
+	if len(chore.NotificationMetadataV2.Templates) > 0 {
+		notifications = append(notifications, generateNotiticationFromTemplete(chore, assignedUser, EventTypeDue)...)
+	}
+
 	log.Debug("Generated notifications", "count", len(notifications))
 	n.nRepo.BatchInsertNotifications(notifications)
 	return true
@@ -216,6 +220,81 @@ func generateCircleGroupNotifications(chore *chModel.Chore, mt *chModel.Notifica
 				notifications = append(notifications, notification)
 			}
 		}
+	}
+
+	return notifications
+}
+
+// calculateDuration calculates duration based on unit and value
+func calculateDuration(value int, unit string) (time.Duration, error) {
+	switch unit {
+	case "minutes":
+		return time.Duration(value) * time.Minute, nil
+	case "hours":
+		return time.Duration(value) * time.Hour, nil
+	case "days":
+		return time.Duration(value) * 24 * time.Hour, nil
+	default:
+		return 0, fmt.Errorf("unsupported time unit: %s", unit)
+	}
+}
+
+// calculateScheduledTime calculates the scheduled time based on template configuration
+func calculateScheduledTime(baseTime time.Time, template *chModel.NotificaitonTemplate) (time.Time, error) {
+	if template == nil {
+		return baseTime, fmt.Errorf("template is nil")
+	}
+
+	duration, err := calculateDuration(template.Value, template.Unit)
+	if err != nil {
+		return baseTime, err
+	}
+
+	if template.Type == "before" {
+		duration = -duration
+	}
+
+	return baseTime.Add(duration), nil
+}
+
+func generateNotiticationFromTemplete(chore *chModel.Chore, assignedUser *cModel.UserCircleDetail, eventType EventType) []*nModel.Notification {
+	if len(chore.NotificationMetadataV2.Templates) == 0 {
+		return nil // No templates to process
+	}
+
+	notifications := make([]*nModel.Notification, 0)
+
+	for _, template := range chore.NotificationMetadataV2.Templates {
+		scheduledTime, err := calculateScheduledTime(*chore.NextDueDate, template)
+		if err != nil {
+			// Log error and fallback to due date
+			scheduledTime = *chore.NextDueDate
+		}
+		// don't schedule if the time already pass :
+		if scheduledTime.Before(time.Now().UTC()) {
+			logging.FromContext(context.Background()).Debug("Skipping notification for template, scheduled time has passed", "scheduled_time", scheduledTime)
+			continue
+		}
+		notifications = append(notifications, &nModel.Notification{
+			ChoreID:      chore.ID,
+			IsSent:       false,
+			ScheduledFor: scheduledTime,
+			CreatedAt:    time.Now().UTC(),
+			TypeID:       assignedUser.NotificationType,
+			UserID:       assignedUser.UserID,
+			CircleID:     assignedUser.CircleID,
+			TargetID:     assignedUser.TargetID,
+			Text:         fmt.Sprintf("📅 Reminder: *%s* is due today and assigned to %s.", chore.Name, assignedUser.DisplayName),
+			RawEvent: map[string]interface{}{
+				"id":                chore.ID,
+				"type":              eventType,
+				"name":              chore.Name,
+				"due_date":          chore.NextDueDate,
+				"assignee":          assignedUser.DisplayName,
+				"assignee_username": assignedUser.Username,
+			},
+		})
+
 	}
 
 	return notifications

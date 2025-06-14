@@ -4,6 +4,7 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"time"
 
 	cModel "donetick.com/core/internal/circle/model"
@@ -11,6 +12,8 @@ import (
 	stModel "donetick.com/core/internal/subtask/model"
 	tModel "donetick.com/core/internal/thing/model"
 )
+
+const MAX_TEMPLATES = 5
 
 type FrequencyType string
 
@@ -114,12 +117,19 @@ type FrequencyMetadata struct {
 }
 
 type NotificationMetadata struct {
-	DueDate       bool   `json:"dueDate,omitempty"`
-	Completion    bool   `json:"completion,omitempty"`
-	Nagging       bool   `json:"nagging,omitempty"`
-	PreDue        bool   `json:"predue,omitempty"`
-	CircleGroup   bool   `json:"circleGroup,omitempty"`
-	CircleGroupID *int64 `json:"circleGroupID,omitempty"`
+	DueDate       bool                    `json:"dueDate,omitempty"`
+	Completion    bool                    `json:"completion,omitempty"`
+	Nagging       bool                    `json:"nagging,omitempty"`
+	PreDue        bool                    `json:"predue,omitempty"`
+	CircleGroup   bool                    `json:"circleGroup,omitempty"`
+	CircleGroupID *int64                  `json:"circleGroupID,omitempty"`
+	Templates     []*NotificaitonTemplate `json:"templates,omitempty" validate:"max=5"` // Template for notification
+}
+
+type NotificaitonTemplate struct {
+	Value int    `json:"value,omitempty"`
+	Unit  string `json:"unit,omitempty"`
+	Type  string `json:"type,omitempty"`
 }
 
 type Tag struct {
@@ -201,6 +211,10 @@ func (c *Chore) CanEdit(userID int, circleUsers []*cModel.UserCircleDetail, upda
 		if c.UpdatedAt.After(*updatedAt) {
 			// this means the chore was modified by someone
 			choreCanModified = false
+		} else if updatedAt.After(time.Now()) {
+			// if the updatedAt is in the future, then do not allow editing
+			choreCanModified = false
+			return errors.New("updatedAt is in the future and cannot be used to edit the chore")
 		}
 	}
 	if !userHasPermission {
@@ -242,7 +256,25 @@ func (n *NotificationMetadata) Scan(value interface{}) error {
 		return errors.New("type assertion to []byte failed")
 	}
 
-	return json.Unmarshal(bytes, n)
+	if err := json.Unmarshal(bytes, n); err != nil {
+		return err
+	}
+
+	// Validate after unmarshaling from database
+	return n.Validate()
+}
+
+func (n *NotificationMetadata) Validate() error {
+	if n == nil {
+		return nil
+	}
+
+	if len(n.Templates) > MAX_TEMPLATES {
+		return fmt.Errorf("templates cannot exceed %d items (got %d)",
+			MAX_TEMPLATES, len(n.Templates))
+	}
+
+	return nil
 }
 
 func (f FrequencyMetadata) Value() (driver.Value, error) {

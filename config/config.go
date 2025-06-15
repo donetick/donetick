@@ -31,6 +31,7 @@ type Config struct {
 	StripeConfig           StripeConfig        `mapstructure:"stripe" yaml:"stripe"`
 	OAuth2Config           OAuth2Config        `mapstructure:"oauth2" yaml:"oauth2"`
 	WebhookConfig          WebhookConfig       `mapstructure:"webhook" yaml:"webhook"`
+	RealTimeConfig         RealTimeConfig      `mapstructure:"realtime" yaml:"realtime"`
 	MFAConfig              MFAConfig           `mapstructure:"mfa" yaml:"mfa"`
 	Logging                LogConfig           `mapstructure:"logging" yaml:"logging"`
 	IsDoneTickDotCom       bool                `mapstructure:"is_done_tick_dot_com" yaml:"is_done_tick_dot_com"`
@@ -143,6 +144,21 @@ type WebhookConfig struct {
 	QueueSize int           `mapstructure:"queue_size" yaml:"queue_size" default:"100"`
 }
 
+type RealTimeConfig struct {
+	Enabled               bool          `mapstructure:"enabled" yaml:"enabled" default:"true"`
+	WebSocketEnabled      bool          `mapstructure:"websocket_enabled" yaml:"websocket_enabled" default:"true"`
+	HeartbeatInterval     time.Duration `mapstructure:"heartbeat_interval" yaml:"heartbeat_interval" default:"30s"`
+	ConnectionTimeout     time.Duration `mapstructure:"connection_timeout" yaml:"connection_timeout" default:"60s"`
+	MaxConnections        int           `mapstructure:"max_connections" yaml:"max_connections" default:"1000"`
+	MaxConnectionsPerUser int           `mapstructure:"max_connections_per_user" yaml:"max_connections_per_user" default:"5"`
+	EventQueueSize        int           `mapstructure:"event_queue_size" yaml:"event_queue_size" default:"2048"`
+	CleanupInterval       time.Duration `mapstructure:"cleanup_interval" yaml:"cleanup_interval" default:"2m"`
+	StaleThreshold        time.Duration `mapstructure:"stale_threshold" yaml:"stale_threshold" default:"5m"`
+	EnableCompression     bool          `mapstructure:"enable_compression" yaml:"enable_compression" default:"true"`
+	EnableStats           bool          `mapstructure:"enable_stats" yaml:"enable_stats" default:"true"`
+	AllowedOrigins        []string      `mapstructure:"allowed_origins" yaml:"allowed_origins"`
+}
+
 type MFAConfig struct {
 	Enabled                 bool          `mapstructure:"enabled" yaml:"enabled" default:"true"`
 	SessionTimeoutMinutes   int           `mapstructure:"session_timeout_minutes" yaml:"session_timeout_minutes" default:"15"`
@@ -177,6 +193,20 @@ func NewConfig() *Config {
 			Secret:      secureSecret,
 			SessionTime: 7 * 24 * time.Hour,
 			MaxRefresh:  7 * 24 * time.Hour,
+		},
+		RealTimeConfig: RealTimeConfig{
+			Enabled:               true,
+			WebSocketEnabled:      true,
+			HeartbeatInterval:     30 * time.Second,
+			ConnectionTimeout:     60 * time.Second,
+			MaxConnections:        1000,
+			MaxConnectionsPerUser: 5,
+			EventQueueSize:        2048,
+			CleanupInterval:       2 * time.Minute,
+			StaleThreshold:        5 * time.Minute,
+			EnableCompression:     true,
+			EnableStats:           true,
+			AllowedOrigins:        []string{"*"},
 		},
 		Logging: LogConfig{
 			Level:       "info",

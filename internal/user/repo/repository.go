@@ -93,6 +93,14 @@ func (r *UserRepository) GetUserByUsername(c context.Context, username string) (
 	return user, nil
 }
 
+func (r *UserRepository) GetUserByID(c context.Context, userID int) (*uModel.User, error) {
+	var user *uModel.User
+	if err := r.db.WithContext(c).Where("id = ?", userID).First(&user).Error; err != nil {
+		return nil, err
+	}
+	return user, nil
+}
+
 func (r *UserRepository) UpdateUser(c context.Context, user *uModel.User) error {
 	return r.db.WithContext(c).Save(user).Error
 }

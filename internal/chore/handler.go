@@ -18,6 +18,7 @@ import (
 	"donetick.com/core/internal/notifier"
 	nRepo "donetick.com/core/internal/notifier/repo"
 	nps "donetick.com/core/internal/notifier/service"
+	"donetick.com/core/internal/realtime"
 	storage "donetick.com/core/internal/storage"
 	storageModel "donetick.com/core/internal/storage/model"
 	storageRepo "donetick.com/core/internal/storage/repo"
@@ -32,36 +33,39 @@ import (
 )
 
 type Handler struct {
-	choreRepo     *chRepo.ChoreRepository
-	circleRepo    *cRepo.CircleRepository
-	notifier      *notifier.Notifier
-	nPlanner      *nps.NotificationPlanner
-	nRepo         *nRepo.NotificationRepository
-	tRepo         *tRepo.ThingRepository
-	lRepo         *lRepo.LabelRepository
-	eventProducer *events.EventsProducer
-	stRepo        *stRepo.SubTasksRepository
-	storageRepo   *storageRepo.StorageRepository
-	storage       *storage.S3Storage
+	choreRepo       *chRepo.ChoreRepository
+	circleRepo      *cRepo.CircleRepository
+	notifier        *notifier.Notifier
+	nPlanner        *nps.NotificationPlanner
+	nRepo           *nRepo.NotificationRepository
+	tRepo           *tRepo.ThingRepository
+	lRepo           *lRepo.LabelRepository
+	eventProducer   *events.EventsProducer
+	stRepo          *stRepo.SubTasksRepository
+	storageRepo     *storageRepo.StorageRepository
+	storage         *storage.S3Storage
+	realTimeService *realtime.RealTimeService
 }
 
 func NewHandler(cr *chRepo.ChoreRepository, circleRepo *cRepo.CircleRepository, nt *notifier.Notifier,
 	np *nps.NotificationPlanner, nRepo *nRepo.NotificationRepository, tRepo *tRepo.ThingRepository, lRepo *lRepo.LabelRepository,
 	ep *events.EventsProducer, stRepo *stRepo.SubTasksRepository,
 	storage *storage.S3Storage,
-	stoRepo *storageRepo.StorageRepository) *Handler {
+	stoRepo *storageRepo.StorageRepository,
+	rts *realtime.RealTimeService) *Handler {
 	return &Handler{
-		choreRepo:     cr,
-		circleRepo:    circleRepo,
-		notifier:      nt,
-		nPlanner:      np,
-		nRepo:         nRepo,
-		tRepo:         tRepo,
-		lRepo:         lRepo,
-		eventProducer: ep,
-		stRepo:        stRepo,
-		storageRepo:   stoRepo,
-		storage:       storage,
+		choreRepo:       cr,
+		circleRepo:      circleRepo,
+		notifier:        nt,
+		nPlanner:        np,
+		nRepo:           nRepo,
+		tRepo:           tRepo,
+		lRepo:           lRepo,
+		eventProducer:   ep,
+		stRepo:          stRepo,
+		storageRepo:     stoRepo,
+		storage:         storage,
+		realTimeService: rts,
 	}
 }
 
@@ -302,6 +306,13 @@ func (h *Handler) createChore(c *gin.Context) {
 	go func() {
 		h.nPlanner.GenerateNotifications(c, createdChore)
 	}()
+
+	// Broadcast real-time chore creation event
+	if h.realTimeService != nil {
+		broadcaster := h.realTimeService.GetEventBroadcaster()
+		broadcaster.BroadcastChoreCreated(createdChore, &currentUser.User)
+	}
+
 	shouldReturn := HandleThingAssociation(choreReq, h, c, &currentUser.User)
 	if shouldReturn {
 		return
@@ -586,6 +597,18 @@ func (h *Handler) editChore(c *gin.Context) {
 	go func() {
 		h.nPlanner.GenerateNotifications(c, updatedChore)
 	}()
+
+	// Broadcast real-time chore update event
+	if h.realTimeService != nil {
+		broadcaster := h.realTimeService.GetEventBroadcaster()
+		// Build changes map (simplified - in real implementation you might want to track actual changes)
+		changes := map[string]interface{}{
+			"updatedBy": currentUser.ID,
+			"updatedAt": time.Now().UTC(),
+		}
+		broadcaster.BroadcastChoreUpdated(updatedChore, &currentUser.User, changes, nil)
+	}
+
 	if oldChore.ThingChore != nil {
 		// TODO: Add check to see if dissociation is necessary
 		h.tRepo.DissociateThingWithChore(c, oldChore.ThingChore.ThingID, oldChore.ID)
@@ -681,6 +704,15 @@ func (h *Handler) deleteChore(c *gin.Context) {
 		return
 	}
 
+	// Get chore details before deletion for real-time event
+	chore, err := h.choreRepo.GetChore(c, id)
+	if err != nil {
+		c.JSON(500, gin.H{
+			"error": "Error getting chore",
+		})
+		return
+	}
+
 	if err := h.choreRepo.DeleteChore(c, id); err != nil {
 		c.JSON(500, gin.H{
 			"error": "Error deleting chore",
@@ -689,6 +721,12 @@ func (h *Handler) deleteChore(c *gin.Context) {
 	}
 	h.nRepo.DeleteAllChoreNotifications(id)
 	h.tRepo.DissociateChoreWithThing(c, id)
+
+	// Broadcast real-time chore deletion event
+	if h.realTimeService != nil {
+		broadcaster := h.realTimeService.GetEventBroadcaster()
+		broadcaster.BroadcastChoreDeleted(chore.ID, chore.Name, chore.CircleID, &currentUser.User)
+	}
 
 	c.JSON(200, gin.H{
 		"message": "Chore deleted successfully",
@@ -796,6 +834,21 @@ func (h *Handler) updateAssignee(c *gin.Context) {
 		})
 		return
 	}
+
+	// Broadcast real-time assignee update event
+	if h.realTimeService != nil {
+		updatedChore, err := h.choreRepo.GetChore(c, id)
+		if err == nil {
+			broadcaster := h.realTimeService.GetEventBroadcaster()
+			changes := map[string]interface{}{
+				"assignedTo": assigneeReq.Assignee,
+				"updatedBy":  currentUser.ID,
+				"updatedAt":  assigneeReq.UpdatedAt,
+			}
+			broadcaster.BroadcastChoreUpdated(updatedChore, &currentUser.User, changes, nil)
+		}
+	}
+
 	c.JSON(200, gin.H{
 		"res": chore,
 	})
@@ -904,6 +957,19 @@ func (h *Handler) skipChore(c *gin.Context) {
 		return
 	}
 	h.eventProducer.ChoreSkipped(c, currentUser.WebhookURL, updatedChore, &currentUser.User)
+
+	// Broadcast real-time chore skip event
+	if h.realTimeService != nil {
+		broadcaster := h.realTimeService.GetEventBroadcaster()
+		// Get the skip history entry
+		history, _ := h.choreRepo.GetChoreHistoryWithLimit(c, chore.ID, 1)
+		var choreHistory *chModel.ChoreHistory
+		if len(history) > 0 {
+			choreHistory = history[0]
+		}
+		broadcaster.BroadcastChoreSkipped(updatedChore, &currentUser.User, choreHistory, nil)
+	}
+
 	c.JSON(200, gin.H{
 		"res": updatedChore,
 	})
@@ -980,6 +1046,21 @@ func (h *Handler) updateDueDate(c *gin.Context) {
 		})
 		return
 	}
+
+	// Broadcast real-time due date update event
+	if h.realTimeService != nil {
+		updatedChore, err := h.choreRepo.GetChore(c, chore.ID)
+		if err == nil {
+			broadcaster := h.realTimeService.GetEventBroadcaster()
+			changes := map[string]interface{}{
+				"nextDueDate": dueDate,
+				"updatedBy":   currentUser.ID,
+				"updatedAt":   time.Now().UTC(),
+			}
+			broadcaster.BroadcastChoreUpdated(updatedChore, &currentUser.User, changes, nil)
+		}
+	}
+
 	c.JSON(200, gin.H{
 		"res": chore,
 	})
@@ -1009,6 +1090,20 @@ func (h *Handler) archiveChore(c *gin.Context) {
 			"error": "Error archiving chore",
 		})
 		return
+	}
+
+	// Broadcast real-time chore archive event
+	if h.realTimeService != nil {
+		updatedChore, err := h.choreRepo.GetChore(c, id)
+		if err == nil {
+			broadcaster := h.realTimeService.GetEventBroadcaster()
+			changes := map[string]interface{}{
+				"archived":  true,
+				"updatedBy": currentUser.ID,
+				"updatedAt": time.Now().UTC(),
+			}
+			broadcaster.BroadcastChoreUpdated(updatedChore, &currentUser.User, changes, nil)
+		}
 	}
 
 	c.JSON(200, gin.H{
@@ -1043,8 +1138,22 @@ func (h *Handler) UnarchiveChore(c *gin.Context) {
 		return
 	}
 
+	// Broadcast real-time chore unarchive event
+	if h.realTimeService != nil {
+		updatedChore, err := h.choreRepo.GetChore(c, id)
+		if err == nil {
+			broadcaster := h.realTimeService.GetEventBroadcaster()
+			changes := map[string]interface{}{
+				"archived":  false,
+				"updatedBy": currentUser.ID,
+				"updatedAt": time.Now().UTC(),
+			}
+			broadcaster.BroadcastChoreUpdated(updatedChore, &currentUser.User, changes, nil)
+		}
+	}
+
 	c.JSON(200, gin.H{
-		"message": "Chore archived successfully",
+		"message": "Chore unarchived successfully",
 	})
 }
 
@@ -1195,6 +1304,18 @@ func (h *Handler) completeChore(c *gin.Context) {
 	// }()
 	h.nPlanner.GenerateNotifications(c, updatedChore)
 	h.eventProducer.ChoreCompleted(c, currentUser.WebhookURL, chore, &currentUser.User)
+	if h.realTimeService != nil {
+		broadcaster := h.realTimeService.GetEventBroadcaster()
+		// Get the completion history entry
+		history, _ := h.choreRepo.GetChoreHistoryWithLimit(c, chore.ID, 1)
+
+		var choreHistory *chModel.ChoreHistory
+		if len(history) > 0 {
+			choreHistory = history[0]
+		}
+		broadcaster.BroadcastChoreCompleted(updatedChore, &currentUser.User, choreHistory, additionalNotes)
+	}
+
 	c.JSON(200, gin.H{
 		"res": updatedChore,
 	})
@@ -1556,6 +1677,20 @@ func (h *Handler) UpdateSubtaskCompletedAt(c *gin.Context) {
 		return
 	}
 	// h.choreRepo.setStatus(c, choreID, chModel.ChoreStatusInProgress, currentUser.ID)
+
+	// Broadcast real-time subtask event
+	if h.realTimeService != nil {
+		broadcaster := h.realTimeService.GetEventBroadcaster()
+
+		broadcaster.BroadcastSubtaskUpdated(
+			choreID,
+			req.ID,
+			completedAt,
+			&currentUser.User,
+			chore.CircleID,
+		)
+
+	}
 
 	h.eventProducer.SubtaskUpdated(c, currentUser.WebhookURL,
 		&stModel.SubTask{

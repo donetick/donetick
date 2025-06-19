@@ -186,7 +186,21 @@ func newServer(lc fx.Lifecycle, cfg *config.Config, db *gorm.DB, notifier *notif
 	}
 
 	config.AllowCredentials = true
-	config.AddAllowHeaders("Authorization", "secretkey")
+	// Add all headers that browsers commonly send
+	config.AddAllowHeaders(
+		"Authorization",
+		"secretkey",
+		"Cache-Control",
+		"Content-Type",
+		"Accept",
+		"Sec-Ch-Ua",
+		"Sec-Ch-Ua-Mobile",
+		"Sec-Ch-Ua-Platform",
+		"User-Agent",
+		"Referer",
+	)
+	// Expose headers that the frontend might need
+	config.AddExposeHeaders("Content-Type")
 	r.Use(cors.New(config))
 
 	lc.Append(fx.Hook{

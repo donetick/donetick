@@ -15,7 +15,10 @@ database:
   password: "secret"
   name: "secret"
 jwt:
-  secret: "secret"
+  # JWT secret must be at least 32 characters long and cryptographically secure
+  # Generate one with: openssl rand -base64 32
+  # Or use the suggested value from the application startup error message
+  secret: "change_this_to_a_secure_random_string_32_characters_long"
   session_time: 168h
   max_refresh: 168h
 server:
@@ -28,6 +31,10 @@ server:
     - "http://localhost:5173"
     - "http://localhost:7926"
   serve_frontend: false
+logging:
+  level: "info"
+  encoding: "console"
+  development: true
 scheduler_jobs:
   due_job: 30m
   overdue_job: 3h
@@ -51,8 +58,19 @@ storage:
   base_path:
   access_key: 
   secret_key: 
-  endpoint: 
-
-
-
-  
+  endpoint:
+realtime:
+  enabled: true
+  websocket_enabled: false
+  sse_enabled: true
+  heartbeat_interval: 60s
+  connection_timeout: 120s
+  max_connections: 1000
+  max_connections_per_user: 5
+  event_queue_size: 2048
+  cleanup_interval: 2m
+  stale_threshold: 5m
+  enable_compression: true
+  enable_stats: true
+  allowed_origins:
+    - "*"

@@ -2,6 +2,7 @@ package logging
 
 import (
 	"context"
+	"strings"
 	"sync"
 
 	"github.com/gin-gonic/gin"
@@ -37,6 +38,38 @@ func SetConfig(c *Config) {
 		Encoding:    c.Encoding,
 		Level:       c.Level,
 		Development: c.Development,
+	}
+}
+
+// SetConfigFromAppConfig sets logging configuration from application config
+func SetConfigFromAppConfig(level string, encoding string, development bool) {
+	logLevel := parseLogLevel(level)
+	conf = &Config{
+		Encoding:    encoding,
+		Level:       logLevel,
+		Development: development,
+	}
+}
+
+// parseLogLevel converts a string log level to zapcore.Level
+func parseLogLevel(level string) zapcore.Level {
+	switch strings.ToLower(level) {
+	case "debug":
+		return zapcore.DebugLevel
+	case "info":
+		return zapcore.InfoLevel
+	case "warn", "warning":
+		return zapcore.WarnLevel
+	case "error":
+		return zapcore.ErrorLevel
+	case "dpanic":
+		return zapcore.DPanicLevel
+	case "panic":
+		return zapcore.PanicLevel
+	case "fatal":
+		return zapcore.FatalLevel
+	default:
+		return zapcore.InfoLevel
 	}
 }
 

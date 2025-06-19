@@ -180,14 +180,12 @@ func NewAuthMiddleware(cfg *config.Config, userRepo *uRepo.UserRepository) (*jwt
 				})
 				return
 			}
-
 			c.JSON(http.StatusOK, gin.H{
 				"code":   code,
 				"token":  token,
 				"expire": expire,
 			})
 		},
-		TokenLookup:   "header: Authorization",
 		TokenHeadName: "Bearer",
 		TimeFunc:      time.Now,
 	})

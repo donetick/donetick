@@ -20,32 +20,49 @@ Donetick is an open-source, user-friendly app designed to help you organize task
 
 ---
 
-## ✨ Features
+## Features
 
+### Task & Chore Management
+**Collaborative Organization**: Create and manage tasks either solo or with family and friends through shared circles. Each circle functions as a collaborative workspace with role-based permissions.
 
-🏰 Group-Based Task Management: Create and manage tasks solo or with your family or friends in shared circles.
+**Natural Language Task Creation**: Simply describe what you need to do in plain English. Donetick automatically extracts dates, times, and recurrence patterns from phrases like "Change water filter every 6 months" or "Take the trash out every Monday and Tuesday at 6:15 pm."
 
 ✨ One-Sentence Task Creation[Experimental] : Create tasks by simply describing them in a sentence. Donetick will extracts dates, times, and recurrence patterns from your natural language."Take the trash out every Monday and Tuesday at 6:15 pm" will automatically generate the correct task.
 
-🔄 Smart Assignments: Assign tasks to individuals with rotation strategies like random or least completed.
+**Advanced Scheduling**: Beyond basic recurring tasks, Donetick offers adaptive scheduling that learns from completion patterns, flexible recurrence options, completion windows, and custom triggers based on historical data.
 
-⏰ Recurring Tasks: Automate task scheduling with flexible recurrence options:
-Daily, weekly, monthly, or yearly.
+**Subtasks & Organization**: Break down complex tasks into manageable subtasks with progress tracking. Organize everything with labels that can be shared across your circle for consistent categorization.
 
-📅 Custom triggers based on specific days or adaptive patterns using historical completion data.
+### Gamification & Progress
+**Points System**: Stay motivated with a built-in points system that rewards task completion and tracks your productivity over time.
 
-📈 Progress Tracking: Monitor completion rates and view historical data to track trends.
+**Comprehensive Analytics**: Monitor completion rates, view historical trends, and analyze productivity patterns to optimize your workflow.
 
-📢 NFC Tag Support: Write NFC tags to trigger tasks instantly by scanning.
+### Security & Authentication
+**Multi-Factor Authentication**: Secure your account with TOTP-based MFA, complete with backup codes for emergency access.
 
-📧 Notifications: Stay on top of tasks with reminders sent via Telegram or Pushover.
+**Multiple Sign-In Options**: Choose from local accounts, Google OAuth, or other OAuth2 providers for convenient and secure authentication.
 
-📦 Integration: Trigger tasks using external systems through API like
-viewing tasks directly in supported platforms (e.g., Home Assistant with a custom component).
+### File Management & Storage
+**File Attachments**: Attach files directly to tasks and chores. Upload profile photos and manage all your content with ease.
 
-💿 Labels for Organization: Group and organize tasks with labels. Labels can also be shared within the same group for better collaboration.
+**Flexible Storage**: Works with local storage or cloud providers including AWS S3, Cloudflare R2, MinIO, and other S3-compatible services.
 
-🛠️ "Things" Integration: Use entities (numbers, strings, booleans) to trigger tasks, track values, or connect with external systems via webhooks.
+### Notifications & Integrations
+**Multi-Platform Notifications**: Receive reminders through Telegram, Discord, or Pushover, ensuring you never miss important tasks.
+
+**NFC Tag Support**: Create physical triggers by writing NFC tags that instantly mark tasks as complete when scanned.
+
+**Home Assistant Integration**: View and manage tasks directly within Home Assistant using the official custom component.
+
+**Webhook System**: Connect with external systems through comprehensive webhook support and event-driven architecture.
+
+### Developer & API Features
+**REST API**: Full programmatic access to all features through a comprehensive REST API, perfect for custom integrations and automation.
+
+**Things Integration**: Connect IoT devices and external systems using entities (numbers, strings, booleans) that can trigger tasks, track sensor values, or integrate with smart home systems.
+
+**External Triggers**: Allow other applications and services to create, update, and complete tasks through API endpoints.
 
 🔑 SSO/OIDC Support: Integrate with identity providers using Single Sign-On and OpenID Connect.
 

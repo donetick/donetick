@@ -45,10 +45,6 @@ func scheduleNextDueDate(ctx context.Context, chore *chModel.Chore, completedDat
 		}
 		t = t.UTC()
 		baseDate = time.Date(baseDate.Year(), baseDate.Month(), baseDate.Day(), t.Hour(), t.Minute(), t.Second(), 0, time.UTC)
-		// If the time is in the past today, move it to tomorrow
-		if baseDate.Before(completedDate) {
-			baseDate = baseDate.AddDate(0, 0, 1)
-		}
 	}
 
 	switch chore.FrequencyType {

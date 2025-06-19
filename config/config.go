@@ -1,10 +1,14 @@
 package config
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"fmt"
 	"os"
 	"strings"
 	"time"
+
+	"go.uber.org/zap/zapcore"
 
 	"github.com/spf13/viper"
 )
@@ -27,7 +31,9 @@ type Config struct {
 	StripeConfig           StripeConfig        `mapstructure:"stripe" yaml:"stripe"`
 	OAuth2Config           OAuth2Config        `mapstructure:"oauth2" yaml:"oauth2"`
 	WebhookConfig          WebhookConfig       `mapstructure:"webhook" yaml:"webhook"`
+	RealTimeConfig         RealTimeConfig      `mapstructure:"realtime" yaml:"realtime"`
 	MFAConfig              MFAConfig           `mapstructure:"mfa" yaml:"mfa"`
+	Logging                LogConfig           `mapstructure:"logging" yaml:"logging"`
 	IsDoneTickDotCom       bool                `mapstructure:"is_done_tick_dot_com" yaml:"is_done_tick_dot_com"`
 	IsUserCreationDisabled bool                `mapstructure:"is_user_creation_disabled" yaml:"is_user_creation_disabled"`
 	MinVersion             string              `mapstructure:"min_version" yaml:"min_version"`
@@ -138,6 +144,23 @@ type WebhookConfig struct {
 	QueueSize int           `mapstructure:"queue_size" yaml:"queue_size" default:"100"`
 }
 
+type RealTimeConfig struct {
+	Enabled               bool          `mapstructure:"enabled" yaml:"enabled" default:"true"`
+	WebSocketEnabled      bool          `mapstructure:"websocket_enabled" yaml:"websocket_enabled" default:"true"`
+	SSEEnabled            bool          `mapstructure:"sse_enabled" yaml:"sse_enabled" default:"true"`
+	HeartbeatInterval     time.Duration `mapstructure:"heartbeat_interval" yaml:"heartbeat_interval" default:"30s"`
+	ConnectionTimeout     time.Duration `mapstructure:"connection_timeout" yaml:"connection_timeout" default:"60s"`
+	MinConnectionInterval time.Duration `mapstructure:"min_connection_interval" yaml:"min_connection_interval" default:"5s"`
+	MaxConnections        int           `mapstructure:"max_connections" yaml:"max_connections" default:"1000"`
+	MaxConnectionsPerUser int           `mapstructure:"max_connections_per_user" yaml:"max_connections_per_user" default:"5"`
+	EventQueueSize        int           `mapstructure:"event_queue_size" yaml:"event_queue_size" default:"2048"`
+	CleanupInterval       time.Duration `mapstructure:"cleanup_interval" yaml:"cleanup_interval" default:"2m"`
+	StaleThreshold        time.Duration `mapstructure:"stale_threshold" yaml:"stale_threshold" default:"5m"`
+	EnableCompression     bool          `mapstructure:"enable_compression" yaml:"enable_compression" default:"true"`
+	EnableStats           bool          `mapstructure:"enable_stats" yaml:"enable_stats" default:"true"`
+	AllowedOrigins        []string      `mapstructure:"allowed_origins" yaml:"allowed_origins"`
+}
+
 type MFAConfig struct {
 	Enabled                 bool          `mapstructure:"enabled" yaml:"enabled" default:"true"`
 	SessionTimeoutMinutes   int           `mapstructure:"session_timeout_minutes" yaml:"session_timeout_minutes" default:"15"`
@@ -146,7 +169,20 @@ type MFAConfig struct {
 	RateLimitWindow         time.Duration `mapstructure:"rate_limit_window" yaml:"rate_limit_window" default:"5m"`
 }
 
+type LogConfig struct {
+	Level       string `mapstructure:"level" yaml:"level" default:"info"`
+	Encoding    string `mapstructure:"encoding" yaml:"encoding" default:"console"`
+	Development bool   `mapstructure:"development" yaml:"development" default:"false"`
+}
+
 func NewConfig() *Config {
+	// Generate a secure secret instead of using a weak default
+	secureSecret, err := generateSecureSecret()
+	if err != nil {
+		// If we can't generate a secure secret, panic - this is a security requirement
+		panic(fmt.Sprintf("Failed to generate secure JWT secret: %v", err))
+	}
+
 	return &Config{
 		Telegram: TelegramConfig{
 			Token: "",
@@ -156,9 +192,30 @@ func NewConfig() *Config {
 			Migration: true,
 		},
 		Jwt: JwtConfig{
-			Secret:      "secret",
+			Secret:      secureSecret,
 			SessionTime: 7 * 24 * time.Hour,
 			MaxRefresh:  7 * 24 * time.Hour,
+		},
+		RealTimeConfig: RealTimeConfig{
+			Enabled:               true,
+			WebSocketEnabled:      true,
+			SSEEnabled:            true,
+			HeartbeatInterval:     30 * time.Second,
+			ConnectionTimeout:     60 * time.Second,
+			MinConnectionInterval: 5 * time.Second,
+			MaxConnections:        1000,
+			MaxConnectionsPerUser: 5,
+			EventQueueSize:        2048,
+			CleanupInterval:       2 * time.Minute,
+			StaleThreshold:        5 * time.Minute,
+			EnableCompression:     true,
+			EnableStats:           true,
+			AllowedOrigins:        []string{"*"},
+		},
+		Logging: LogConfig{
+			Level:       "info",
+			Encoding:    "console",
+			Development: false,
 		},
 	}
 }
@@ -173,6 +230,16 @@ func configEnvironmentOverrides(Config *Config) {
 		Config.IsUserCreationDisabled = true
 	}
 
+	// Logging environment overrides
+	if os.Getenv("DONETICK_LOG_LEVEL") != "" {
+		Config.Logging.Level = os.Getenv("DONETICK_LOG_LEVEL")
+	}
+	if os.Getenv("DONETICK_LOG_ENCODING") != "" {
+		Config.Logging.Encoding = os.Getenv("DONETICK_LOG_ENCODING")
+	}
+	if os.Getenv("DONETICK_LOG_DEVELOPMENT") == "true" {
+		Config.Logging.Development = true
+	}
 }
 func LoadConfig() *Config {
 	// set the config name based on the environment:
@@ -209,10 +276,95 @@ func LoadConfig() *Config {
 	fmt.Printf("--ConfigLoad name : %s ", config.Name)
 
 	configEnvironmentOverrides(&config)
+
+	// Validate JWT secret strength
+	if config.Name != "local" {
+		validateJWTSecret(config.Jwt.Secret)
+	}
+
 	config.Info.Version = Version
 	config.Info.Commit = Commit
 	config.Info.BuildDate = BuildDate
 	return &config
 
 	// return LocalConfig()
+}
+
+// List of known weak secrets that should not be allowed
+var weakSecrets = []string{
+	"secret",
+	"mysecret",
+	"jwt_secret",
+	"default",
+	"password",
+	"123456",
+	"changeme",
+	"donetick",
+	"jwt",
+	"token",
+	"key",
+	"secretkey",
+	"change_this_to_a_secure_random_string_32_characters_long",
+}
+
+// validateJWTSecret validates that the JWT secret is strong enough
+func validateJWTSecret(secret string) error {
+	var err error
+	if len(secret) < 32 {
+		err = fmt.Errorf("JWT secret must be at least 32 characters long, got %d characters", len(secret))
+	}
+
+	// Check against known weak secrets (case-insensitive)
+	secretLower := strings.ToLower(secret)
+	for _, weak := range weakSecrets {
+		if secretLower == weak {
+			err = fmt.Errorf("JWT secret is too weak: '%s' is not allowed", weak)
+			break
+		}
+	}
+	if err != nil {
+		fmt.Printf("\n\n🚨 SECURITY ERROR: %s\n", err.Error())
+		fmt.Printf("\n💡 To fix this issue:\n")
+		fmt.Printf("   1. Generate a secure JWT secret:\n")
+		if secureSecret, genErr := generateSecureSecret(); genErr == nil {
+			fmt.Printf("      Suggested secret: %s\n", secureSecret)
+		}
+		fmt.Printf("   2. Set it in your configuration:\n")
+		fmt.Printf("      - YAML: jwt.secret: \"<your_secure_secret>\"\n")
+		fmt.Printf("      - ENV:  export DT_JWT_SECRET=\"<your_secure_secret>\"\n")
+		fmt.Printf("\n❌ Application will not start with weak JWT secrets for security reasons.\n\n")
+		panic("Weak JWT secret detected - application startup aborted for security")
+	}
+	return nil
+}
+
+// generateSecureSecret generates a cryptographically secure random secret
+func generateSecureSecret() (string, error) {
+	bytes := make([]byte, 32) // 256 bits
+	if _, err := rand.Read(bytes); err != nil {
+		return "", err
+	}
+	return base64.URLEncoding.EncodeToString(bytes), nil
+}
+
+// ParseLogLevel converts a string log level to zapcore.Level
+func (c *LogConfig) ParseLogLevel() zapcore.Level {
+	switch strings.ToLower(c.Level) {
+	case "debug":
+		return zapcore.DebugLevel
+	case "info":
+		return zapcore.InfoLevel
+	case "warn", "warning":
+		return zapcore.WarnLevel
+	case "error":
+		return zapcore.ErrorLevel
+	case "dpanic":
+		return zapcore.DPanicLevel
+	case "panic":
+		return zapcore.PanicLevel
+	case "fatal":
+		return zapcore.FatalLevel
+	default:
+		return zapcore.InfoLevel
+	}
 }

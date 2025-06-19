@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
+	"time"
 
 	"donetick.com/core/config"
 	"donetick.com/core/frontend"
@@ -12,7 +14,6 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/fx"
-	"go.uber.org/zap/zapcore"
 	"gorm.io/gorm"
 
 	auth "donetick.com/core/internal/authorization"
@@ -38,6 +39,7 @@ import (
 	"donetick.com/core/internal/notifier/service/pushover"
 	telegram "donetick.com/core/internal/notifier/service/telegram"
 	pRepo "donetick.com/core/internal/points/repo"
+	"donetick.com/core/internal/realtime"
 	"donetick.com/core/internal/thing"
 	tRepo "donetick.com/core/internal/thing/repo"
 	"donetick.com/core/internal/user"
@@ -47,14 +49,18 @@ import (
 )
 
 func main() {
-	logging.SetConfig(&logging.Config{
-		Encoding:    "console",
-		Level:       zapcore.Level(zapcore.DebugLevel),
-		Development: true,
-	})
+	// Load configuration first
+	cfg := config.LoadConfig()
+
+	// Configure logging from application config
+	logging.SetConfigFromAppConfig(
+		cfg.Logging.Level,
+		cfg.Logging.Encoding,
+		cfg.Logging.Development,
+	)
 
 	app := fx.New(
-		fx.Supply(config.LoadConfig()),
+		fx.Supply(cfg),
 		fx.Supply(logging.DefaultLogger().Desugar()),
 
 		// fx.Provide(config.NewConfig),
@@ -123,6 +129,10 @@ func main() {
 		fx.Provide(storage.NewHandler),
 		fx.Provide(storageRepo.NewStorageRepository),
 
+		// Real-time service and components
+		fx.Provide(realtime.NewRealTimeService),
+		fx.Provide(realtime.NewAuthMiddleware),
+
 		// fx.Invoke(RunApp),
 		fx.Invoke(
 			chore.Routes,
@@ -136,6 +146,8 @@ func main() {
 			frontend.Routes,
 			resource.Routes,
 
+			realtime.Routes, //(router, rts, authMiddleware, pollingHandler)
+
 			func(r *gin.Engine) {},
 		),
 	)
@@ -148,8 +160,14 @@ func main() {
 
 }
 
-func newServer(lc fx.Lifecycle, cfg *config.Config, db *gorm.DB, notifier *notifier.Scheduler, eventProducer *events.EventsProducer, mfaCleanup *mfa.CleanupService) *gin.Engine {
-	gin.SetMode(gin.DebugMode)
+func newServer(lc fx.Lifecycle, cfg *config.Config, db *gorm.DB, notifier *notifier.Scheduler, eventProducer *events.EventsProducer, mfaCleanup *mfa.CleanupService, rts *realtime.RealTimeService) *gin.Engine {
+	// Set Gin mode based on logging configuration
+	if cfg.Logging.Development || strings.ToLower(cfg.Logging.Level) == "debug" {
+		gin.SetMode(gin.DebugMode)
+	} else {
+		gin.SetMode(gin.ReleaseMode)
+	}
+
 	// log when http request is made:
 
 	r := gin.New()
@@ -168,11 +186,25 @@ func newServer(lc fx.Lifecycle, cfg *config.Config, db *gorm.DB, notifier *notif
 	}
 
 	config.AllowCredentials = true
-	config.AddAllowHeaders("Authorization", "secretkey")
+	// Add all headers that browsers commonly send
+	config.AddAllowHeaders(
+		"Authorization",
+		"secretkey",
+		"Cache-Control",
+		"Content-Type",
+		"Accept",
+		"Sec-Ch-Ua",
+		"Sec-Ch-Ua-Mobile",
+		"Sec-Ch-Ua-Platform",
+		"User-Agent",
+		"Referer",
+	)
+	// Expose headers that the frontend might need
+	config.AddExposeHeaders("Content-Type")
 	r.Use(cors.New(config))
 
 	lc.Append(fx.Hook{
-		OnStart: func(context.Context) error {
+		OnStart: func(ctx context.Context) error {
 			if cfg.Database.Migration {
 				database.Migration(db)
 				migrations.Run(context.Background(), db)
@@ -184,6 +216,12 @@ func newServer(lc fx.Lifecycle, cfg *config.Config, db *gorm.DB, notifier *notif
 			notifier.Start(context.Background())
 			eventProducer.Start(context.Background())
 			mfaCleanup.Start(context.Background())
+
+			// Start real-time service
+			if err := rts.Start(ctx); err != nil {
+				log.Printf("Failed to start real-time service: %v", err)
+			}
+
 			go func() {
 				if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 					log.Fatalf("listen: %s\n", err)
@@ -191,10 +229,32 @@ func newServer(lc fx.Lifecycle, cfg *config.Config, db *gorm.DB, notifier *notif
 			}()
 			return nil
 		},
-		OnStop: func(context.Context) error {
+		OnStop: func(ctx context.Context) error {
+			// Stop real-time service first with timeout
+			done := make(chan error, 1)
+			go func() {
+				done <- rts.Stop()
+			}()
+
+			select {
+			case err := <-done:
+				if err != nil {
+					log.Printf("Failed to stop real-time service: %v", err)
+				}
+			case <-time.After(5 * time.Second):
+				log.Printf("Real-time service shutdown timeout, forcing shutdown")
+			}
+
 			mfaCleanup.Stop()
-			if err := srv.Shutdown(context.Background()); err != nil {
-				log.Fatalf("Server Shutdown: %s", err)
+
+			// Shutdown HTTP server with timeout
+			shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+
+			if err := srv.Shutdown(shutdownCtx); err != nil {
+				log.Printf("Server shutdown timeout: %s", err)
+				// Force close
+				srv.Close()
 			}
 			return nil
 		},

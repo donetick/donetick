@@ -55,7 +55,7 @@ storage:
   endpoint:
 realtime:
   enabled: true
-  websocket_enabled: true
+  websocket_enabled: false
   sse_enabled: true
   heartbeat_interval: 60s
   connection_timeout: 120s

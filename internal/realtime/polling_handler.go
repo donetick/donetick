@@ -194,7 +194,7 @@ func (h *PollingHandler) setSSEHeaders(c *gin.Context) {
 	c.Header("Content-Type", "text/event-stream")
 	c.Header("Cache-Control", "no-cache")
 	c.Header("Connection", "keep-alive")
-	c.Header("X-Accel-Buffering", "no") // Disable nginx buffering
+	c.Header("X-Accel-Buffering", "no")
 
 	// CORS headers for cross-origin requests from frontend
 	origin := c.GetHeader("Origin")

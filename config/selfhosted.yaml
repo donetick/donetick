@@ -47,3 +47,19 @@ oauth2:
   user_info_url: 
   redirect_url: 
   name:
+# Real-time configuration
+realtime:
+  enabled: true
+  websocket_enabled: false
+  sse_enabled: true
+  heartbeat_interval: 60s
+  connection_timeout: 120s
+  max_connections: 1000
+  max_connections_per_user: 5
+  event_queue_size: 2048
+  cleanup_interval: 2m
+  stale_threshold: 5m
+  enable_compression: true
+  enable_stats: true
+  allowed_origins:
+    - "*"

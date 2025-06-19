@@ -147,8 +147,10 @@ type WebhookConfig struct {
 type RealTimeConfig struct {
 	Enabled               bool          `mapstructure:"enabled" yaml:"enabled" default:"true"`
 	WebSocketEnabled      bool          `mapstructure:"websocket_enabled" yaml:"websocket_enabled" default:"true"`
+	SSEEnabled            bool          `mapstructure:"sse_enabled" yaml:"sse_enabled" default:"true"`
 	HeartbeatInterval     time.Duration `mapstructure:"heartbeat_interval" yaml:"heartbeat_interval" default:"30s"`
 	ConnectionTimeout     time.Duration `mapstructure:"connection_timeout" yaml:"connection_timeout" default:"60s"`
+	MinConnectionInterval time.Duration `mapstructure:"min_connection_interval" yaml:"min_connection_interval" default:"5s"`
 	MaxConnections        int           `mapstructure:"max_connections" yaml:"max_connections" default:"1000"`
 	MaxConnectionsPerUser int           `mapstructure:"max_connections_per_user" yaml:"max_connections_per_user" default:"5"`
 	EventQueueSize        int           `mapstructure:"event_queue_size" yaml:"event_queue_size" default:"2048"`
@@ -197,8 +199,10 @@ func NewConfig() *Config {
 		RealTimeConfig: RealTimeConfig{
 			Enabled:               true,
 			WebSocketEnabled:      true,
+			SSEEnabled:            true,
 			HeartbeatInterval:     30 * time.Second,
 			ConnectionTimeout:     60 * time.Second,
+			MinConnectionInterval: 5 * time.Second,
 			MaxConnections:        1000,
 			MaxConnectionsPerUser: 5,
 			EventQueueSize:        2048,

@@ -11,13 +11,13 @@ import (
 	uModel "donetick.com/core/internal/user/model"
 )
 
-// Connection represents a WebSocket connection with metadata
+// Connection represents a WebSocket or SSE connection with metadata
 type Connection struct {
 	ID           string
 	CircleID     int
 	UserID       int
 	User         *uModel.User
-	Conn         *websocket.Conn
+	Conn         *websocket.Conn // nil for SSE connections
 	Send         chan *Event
 	LastActivity time.Time
 	mu           sync.RWMutex
@@ -25,7 +25,7 @@ type Connection struct {
 	logger       *zap.SugaredLogger
 }
 
-// NewConnection creates a new WebSocket connection
+// NewConnection creates a new WebSocket or SSE connection
 func NewConnection(id string, circleID, userID int, user *uModel.User, conn *websocket.Conn, logger *zap.SugaredLogger) *Connection {
 	return &Connection{
 		ID:           id,
@@ -58,19 +58,32 @@ func (c *Connection) IsClosed() bool {
 func (c *Connection) Close() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	
+
 	if c.closed {
 		return
 	}
-	
+
 	c.closed = true
 	close(c.Send)
-	c.Conn.Close()
-	
-	c.logger.Debugw("Connection closed", 
+
+	// Only close websocket connection if it exists (SSE connections have nil Conn)
+	if c.Conn != nil {
+		c.Conn.Close()
+	}
+
+	c.logger.Debugw("Connection closed",
 		"connectionId", c.ID,
 		"userId", c.UserID,
-		"circleId", c.CircleID)
+		"circleId", c.CircleID,
+		"connectionType", c.getConnectionType())
+}
+
+// getConnectionType returns the connection type for logging
+func (c *Connection) getConnectionType() string {
+	if c.Conn == nil {
+		return "SSE"
+	}
+	return "WebSocket"
 }
 
 // UpdateActivity updates the last activity timestamp
@@ -84,34 +97,28 @@ func (c *Connection) UpdateActivity() {
 func (c *Connection) SendEvent(event *Event) bool {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	
+
 	if c.closed {
 		return false
 	}
-	
+
 	select {
 	case c.Send <- event:
 		return true
 	default:
-		// Channel is full, log warning and close connection to prevent blocking
-		c.logger.Warnw("Connection send buffer full, closing connection",
+		// Channel is full, log warning and mark connection for closure.
+		// The actual channel closing and connection cleanup is handled by Connection.Close().
+		c.logger.Warnw("Connection send buffer full. Marking connection for closure.",
 			"connectionId", c.ID,
 			"userId", c.UserID,
 			"circleId", c.CircleID,
-			"bufferSize", cap(c.Send))
-		
-		// Mark as closed and schedule cleanup
-		c.closed = true
-		close(c.Send)
-		
-		// Close connection asynchronously to avoid blocking
-		go func() {
-			if err := c.Conn.Close(); err != nil {
-				c.logger.Debugw("Error closing WebSocket connection", "error", err)
-			}
-		}()
-		
-		return false
+			"bufferSize", cap(c.Send),
+			"eventTypeAttempted", event.Type)
+
+		c.closed = true // Mark as closed. Connection.Close() will handle actual closing.
+		// NOTE: Removed close(c.Send) from here to prevent double-close panics.
+		// NOTE: Removed WebSocket specific closing from here; Connection.Close() handles it.
+		return false // Indicate that the event was not sent
 	}
 }
 
@@ -121,7 +128,7 @@ func (c *Connection) StartReadPump(pool *ConnectionPool) {
 		pool.RemoveConnection(c)
 		c.Close()
 	}()
-	
+
 	// Set read deadline and pong handler for heartbeat
 	c.Conn.SetReadDeadline(time.Now().Add(60 * time.Second))
 	c.Conn.SetPongHandler(func(string) error {
@@ -129,7 +136,7 @@ func (c *Connection) StartReadPump(pool *ConnectionPool) {
 		c.Conn.SetReadDeadline(time.Now().Add(60 * time.Second))
 		return nil
 	})
-	
+
 	for {
 		_, message, err := c.Conn.ReadMessage()
 		if err != nil {
@@ -138,9 +145,9 @@ func (c *Connection) StartReadPump(pool *ConnectionPool) {
 			}
 			break
 		}
-		
+
 		c.UpdateActivity()
-		
+
 		// Handle incoming message (e.g., ping/pong, client events)
 		c.handleIncomingMessage(message)
 	}
@@ -153,7 +160,7 @@ func (c *Connection) StartWritePump() {
 		ticker.Stop()
 		c.Close()
 	}()
-	
+
 	for {
 		select {
 		case event, ok := <-c.Send:
@@ -163,19 +170,19 @@ func (c *Connection) StartWritePump() {
 				c.Conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
 			}
-			
+
 			// Send the event as JSON
 			eventJSON, err := event.ToJSON()
 			if err != nil {
 				c.logger.Errorw("Failed to marshal event", "error", err, "connectionId", c.ID)
 				continue
 			}
-			
+
 			if err := c.Conn.WriteMessage(websocket.TextMessage, eventJSON); err != nil {
 				c.logger.Errorw("Failed to write message", "error", err, "connectionId", c.ID)
 				return
 			}
-			
+
 		case <-ticker.C:
 			c.Conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
 			if err := c.Conn.WriteMessage(websocket.PingMessage, nil); err != nil {
@@ -190,7 +197,7 @@ func (c *Connection) StartWritePump() {
 func (c *Connection) handleIncomingMessage(message []byte) {
 	// For now, we mainly handle ping/pong for keepalive
 	// In the future, we could handle client-side events here
-	c.logger.Debugw("Received message from client", 
+	c.logger.Debugw("Received message from client",
 		"connectionId", c.ID,
 		"message", string(message))
 }

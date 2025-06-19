@@ -23,6 +23,9 @@ func Routes(
 	// Create WebSocket handler
 	wsHandler := NewWebSocketHandler(rts, rtAuthMiddleware, config)
 
+	// Create SSE polling handler
+	pollingHandler := NewPollingHandler(rts, rtAuthMiddleware, config)
+
 	// Real-time API group
 	rtGroup := router.Group("/api/v1/realtime")
 
@@ -31,6 +34,8 @@ func Routes(
 
 	// WebSocket endpoint (with auth)
 	rtGroup.GET("/ws", rtAuthMiddleware.WebSocketAuthHandler(), wsHandler.HandleWebSocket)
+	// SSE endpoint (with auth)
+	rtGroup.GET("/sse", rtAuthMiddleware.WebSocketAuthHandler(), pollingHandler.HandleSSE)
 
 	// Connection stats endpoint (with auth)
 	rtGroup.GET("/stats/:circleId", authMiddleware.MiddlewareFunc(), rtAuthMiddleware.WebSocketAuthHandler(), wsHandler.HandleConnectionStats)

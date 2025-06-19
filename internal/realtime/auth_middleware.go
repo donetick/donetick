@@ -3,7 +3,6 @@ package realtime
 import (
 	"context"
 	"net/http"
-	"strconv"
 	"strings"
 
 	"donetick.com/core/config"
@@ -72,27 +71,7 @@ func (am *AuthMiddleware) AuthenticateConnection(c *gin.Context) (*uModel.User, 
 		return nil, 0, ErrInvalidToken
 	}
 
-	// Extract circle ID from query parameter
-	circleIDStr := c.Query("circleId")
-	if circleIDStr == "" {
-		return nil, 0, ErrInvalidCircleID
-	}
-
-	circleID, err := strconv.Atoi(circleIDStr)
-	if err != nil {
-		return nil, 0, ErrInvalidCircleID
-	}
-
-	// Verify user belongs to the circle
-	if user.CircleID != circleID {
-		am.logger.Warnw("User attempted to connect to unauthorized circle",
-			"userID", userID,
-			"userCircleID", user.CircleID,
-			"requestedCircleID", circleID)
-		return nil, 0, ErrUnauthorizedCircle
-	}
-
-	return user, circleID, nil
+	return user, user.CircleID, nil
 }
 
 // extractToken extracts the JWT token from the request
@@ -105,6 +84,10 @@ func (am *AuthMiddleware) extractToken(c *gin.Context) string {
 			return parts[1]
 		}
 	}
+	// see the cookies for the token
+	if cookie, err := c.Cookie(am.jwtAuth.CookieName); err == nil && cookie != "" {
+		return cookie
+	}
 
 	// Try WebSocket subprotocol for token (more secure than query params)
 	if wsProtocols := c.Request.Header.Get("Sec-WebSocket-Protocol"); wsProtocols != "" {
@@ -115,14 +98,6 @@ func (am *AuthMiddleware) extractToken(c *gin.Context) string {
 				return strings.TrimPrefix(protocol, "access_token.")
 			}
 		}
-	}
-
-	// Fallback to query parameter (less secure, log warning)
-	if token := c.Query("token"); token != "" {
-		am.logger.Warnw("JWT token provided via query parameter - consider using Authorization header for better security",
-			"remote_addr", c.ClientIP(),
-			"user_agent", c.GetHeader("User-Agent"))
-		return token
 	}
 
 	return ""

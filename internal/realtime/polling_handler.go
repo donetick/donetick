@@ -265,18 +265,18 @@ func (h *PollingHandler) sseEventLoop(ctx context.Context, c *gin.Context, conn 
 	ticker := time.NewTicker(h.config.RealTimeConfig.HeartbeatInterval)
 	defer ticker.Stop()
 
-	h.logger.Infow("SSE event loop started", "connectionId", conn.ID, "heartbeatInterval", h.config.RealTimeConfig.HeartbeatInterval)
+	h.logger.Debugw("SSE event loop started", "connectionId", conn.ID, "heartbeatInterval", h.config.RealTimeConfig.HeartbeatInterval)
 
 	for {
 		select {
 		case <-ctx.Done():
-			h.logger.Infow("SSE context cancelled, closing event loop.", "connectionId", conn.ID, "error", ctx.Err())
+			h.logger.Debugw("SSE context cancelled, closing event loop.", "connectionId", conn.ID, "error", ctx.Err())
 			return
 
 		case event, ok := <-conn.Send:
 			if !ok {
 				// Channel closed, connection is being shut down
-				h.logger.Infow("SSE send channel closed, closing event loop.", "connectionId", conn.ID)
+				h.logger.Debugw("SSE send channel closed, closing event loop.", "connectionId", conn.ID)
 				return
 			}
 

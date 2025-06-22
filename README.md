@@ -44,7 +44,7 @@ Donetick is an open-source, user-friendly app designed to help you organize task
 ### File Management & Storage
 **File Attachments**: Attach files directly to tasks and chores. Upload profile photos and manage all your content with ease.
 
-**Flexible Storage**: Works with local storage or cloud providers including AWS S3, Cloudflare R2, MinIO, and other S3-compatible services.
+**Flexible Storage**: Works with local storage(WIP) or cloud providers including AWS S3, Cloudflare R2, MinIO, and other S3-compatible services.
 
 ### Notifications & Integrations
 **Multi-Platform Notifications**: Receive reminders through Telegram, Discord, or Pushover, ensuring you never miss important tasks.

@@ -123,14 +123,21 @@ type NotificationMetadata struct {
 	PreDue        bool                    `json:"predue,omitempty"`
 	CircleGroup   bool                    `json:"circleGroup,omitempty"`
 	CircleGroupID *int64                  `json:"circleGroupID,omitempty"`
-	Templates     []*NotificaitonTemplate `json:"templates,omitempty" validate:"max=5"` // Template for notification
+	Templates     []*NotificationTemplate `json:"templates,omitempty" validate:"max=5"` // Template for notification
 }
 
-type NotificaitonTemplate struct {
-	Value int    `json:"value,omitempty"`
-	Unit  string `json:"unit,omitempty"`
-	Type  string `json:"type,omitempty"`
+type NotificationTemplate struct {
+	Value int                      `json:"value"`
+	Unit  NotificationTemplateUnit `json:"unit"`
 }
+
+type NotificationTemplateUnit string
+
+const (
+	NotificationTemplateUnitMinute NotificationTemplateUnit = "m"
+	NotificationTemplateUnitHour   NotificationTemplateUnit = "h"
+	NotificationTemplateUnitDay    NotificationTemplateUnit = "d"
+)
 
 type Tag struct {
 	ID   int    `json:"-" gorm:"primary_key"`
@@ -250,14 +257,13 @@ func (n *NotificationMetadata) Scan(value interface{}) error {
 	if value == nil {
 		return nil
 	}
-
-	bytes, ok := value.([]byte)
-	if !ok {
-		return errors.New("type assertion to []byte failed")
-	}
-
-	if err := json.Unmarshal(bytes, n); err != nil {
-		return err
+	switch v := value.(type) {
+	case []byte:
+		return json.Unmarshal(v, n)
+	case string:
+		return json.Unmarshal([]byte(v), n)
+	default:
+		return errors.New("type assertion to []byte or string failed")
 	}
 
 	// Validate after unmarshaling from database

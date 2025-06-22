@@ -27,19 +27,17 @@ Donetick is an open-source, user-friendly app designed to help you organize task
 
 **Natural Language Task Creation**: Simply describe what you need to do in plain English. Donetick automatically extracts dates, times, and recurrence patterns from phrases like "Change water filter every 6 months" or "Take the trash out every Monday and Tuesday at 6:15 pm."
 
-✨ One-Sentence Task Creation[Experimental] : Create tasks by simply describing them in a sentence. Donetick will extracts dates, times, and recurrence patterns from your natural language."Take the trash out every Monday and Tuesday at 6:15 pm" will automatically generate the correct task.
-
 **Advanced Scheduling**: Beyond basic recurring tasks, Donetick offers adaptive scheduling that learns from completion patterns, flexible recurrence options, completion windows, and custom triggers based on historical data.
 
 **Subtasks & Organization**: Break down complex tasks into manageable subtasks with progress tracking. Organize everything with labels that can be shared across your circle for consistent categorization.
 
 ### Gamification & Progress
-**Points System**: Stay motivated with a built-in points system that rewards task completion and tracks your productivity over time.
+**Points System**: a built-in points system that rewards task completion and tracks your productivity over time.
 
 **Comprehensive Analytics**: Monitor completion rates, view historical trends, and analyze productivity patterns to optimize your workflow.
 
 ### Security & Authentication
-**Multi-Factor Authentication**: Secure your account with TOTP-based MFA, complete with backup codes for emergency access.
+**Multi-Factor Authentication**: Support for TOTP-based MFA.
 
 **Multiple Sign-In Options**: Choose from local accounts, Google OAuth, or other OAuth2 providers for convenient and secure authentication.
 
@@ -58,7 +56,7 @@ Donetick is an open-source, user-friendly app designed to help you organize task
 **Webhook System**: Connect with external systems through comprehensive webhook support and event-driven architecture.
 
 ### Developer & API Features
-**REST API**: Full programmatic access to all features through a comprehensive REST API, perfect for custom integrations and automation.
+**REST API**: Full programmatic access to all features through a REST API, perfect for custom integrations and automation.
 
 **Things Integration**: Connect IoT devices and external systems using entities (numbers, strings, booleans) that can trigger tasks, track sensor values, or integrate with smart home systems.
 

@@ -4,6 +4,7 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"time"
 
 	cModel "donetick.com/core/internal/circle/model"
@@ -11,6 +12,8 @@ import (
 	stModel "donetick.com/core/internal/subtask/model"
 	tModel "donetick.com/core/internal/thing/model"
 )
+
+const MAX_TEMPLATES = 5
 
 type FrequencyType string
 
@@ -114,13 +117,27 @@ type FrequencyMetadata struct {
 }
 
 type NotificationMetadata struct {
-	DueDate       bool   `json:"dueDate,omitempty"`
-	Completion    bool   `json:"completion,omitempty"`
-	Nagging       bool   `json:"nagging,omitempty"`
-	PreDue        bool   `json:"predue,omitempty"`
-	CircleGroup   bool   `json:"circleGroup,omitempty"`
-	CircleGroupID *int64 `json:"circleGroupID,omitempty"`
+	DueDate       bool                    `json:"dueDate,omitempty"`
+	Completion    bool                    `json:"completion,omitempty"`
+	Nagging       bool                    `json:"nagging,omitempty"`
+	PreDue        bool                    `json:"predue,omitempty"`
+	CircleGroup   bool                    `json:"circleGroup,omitempty"`
+	CircleGroupID *int64                  `json:"circleGroupID,omitempty"`
+	Templates     []*NotificationTemplate `json:"templates,omitempty" validate:"max=5"` // Template for notification
 }
+
+type NotificationTemplate struct {
+	Value int                      `json:"value"`
+	Unit  NotificationTemplateUnit `json:"unit"`
+}
+
+type NotificationTemplateUnit string
+
+const (
+	NotificationTemplateUnitMinute NotificationTemplateUnit = "m"
+	NotificationTemplateUnitHour   NotificationTemplateUnit = "h"
+	NotificationTemplateUnitDay    NotificationTemplateUnit = "d"
+)
 
 type Tag struct {
 	ID   int    `json:"-" gorm:"primary_key"`
@@ -201,6 +218,10 @@ func (c *Chore) CanEdit(userID int, circleUsers []*cModel.UserCircleDetail, upda
 		if c.UpdatedAt.After(*updatedAt) {
 			// this means the chore was modified by someone
 			choreCanModified = false
+		} else if updatedAt.After(time.Now()) {
+			// if the updatedAt is in the future, then do not allow editing
+			choreCanModified = false
+			return errors.New("updatedAt is in the future and cannot be used to edit the chore")
 		}
 	}
 	if !userHasPermission {
@@ -236,13 +257,30 @@ func (n *NotificationMetadata) Scan(value interface{}) error {
 	if value == nil {
 		return nil
 	}
-
-	bytes, ok := value.([]byte)
-	if !ok {
-		return errors.New("type assertion to []byte failed")
+	switch v := value.(type) {
+	case []byte:
+		return json.Unmarshal(v, n)
+	case string:
+		return json.Unmarshal([]byte(v), n)
+	default:
+		return errors.New("type assertion to []byte or string failed")
 	}
 
-	return json.Unmarshal(bytes, n)
+	// Validate after unmarshaling from database
+	return n.Validate()
+}
+
+func (n *NotificationMetadata) Validate() error {
+	if n == nil {
+		return nil
+	}
+
+	if len(n.Templates) > MAX_TEMPLATES {
+		return fmt.Errorf("templates cannot exceed %d items (got %d)",
+			MAX_TEMPLATES, len(n.Templates))
+	}
+
+	return nil
 }
 
 func (f FrequencyMetadata) Value() (driver.Value, error) {

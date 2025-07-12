@@ -13,23 +13,24 @@ type EventType string
 
 const (
 	// Chore events
-	EventTypeChoreCreated        EventType = "chore.created"
-	EventTypeChoreUpdated        EventType = "chore.updated"
-	EventTypeChoreDeleted        EventType = "chore.deleted"
-	EventTypeChoreCompleted      EventType = "chore.completed"
-	EventTypeChoreSkipped        EventType = "chore.skipped"
+	EventTypeChoreCreated         EventType = "chore.created"
+	EventTypeChoreUpdated         EventType = "chore.updated"
+	EventTypeChoreDeleted         EventType = "chore.deleted"
+	EventTypeChoreCompleted       EventType = "chore.completed"
+	EventTypeChoreSkipped         EventType = "chore.skipped"
 	EventTypeChoreAssigneeChanged EventType = "chore.assignee_changed"
-	EventTypeChoreDueDateChanged EventType = "chore.due_date_changed"
-	EventTypeChoreArchived       EventType = "chore.archived"
-	
+	EventTypeChoreStatus          EventType = "chore.status"
+	EventTypeChoreDueDateChanged  EventType = "chore.due_date_changed"
+	EventTypeChoreArchived        EventType = "chore.archived"
+
 	// Subtask events
-	EventTypeSubtaskUpdated      EventType = "subtask.updated"
-	EventTypeSubtaskCompleted    EventType = "subtask.completed"
-	
+	EventTypeSubtaskUpdated   EventType = "subtask.updated"
+	EventTypeSubtaskCompleted EventType = "subtask.completed"
+
 	// System events
 	EventTypeConnectionEstablished EventType = "connection.established"
-	EventTypeHeartbeat            EventType = "heartbeat"
-	EventTypeError               EventType = "error"
+	EventTypeHeartbeat             EventType = "heartbeat"
+	EventTypeError                 EventType = "error"
 )
 
 // Event represents a real-time event to be sent to clients
@@ -43,11 +44,11 @@ type Event struct {
 
 // ChoreEventData contains data for chore-related events
 type ChoreEventData struct {
-	Chore     *chModel.Chore          `json:"chore"`
-	User      *uModel.User            `json:"user"`
-	Changes   map[string]interface{}  `json:"changes,omitempty"`
-	History   *chModel.ChoreHistory   `json:"history,omitempty"`
-	Note      *string                 `json:"note,omitempty"`
+	Chore   *chModel.Chore         `json:"chore"`
+	User    *uModel.User           `json:"user"`
+	Changes map[string]interface{} `json:"changes,omitempty"`
+	History *chModel.ChoreHistory  `json:"history,omitempty"`
+	Note    *string                `json:"note,omitempty"`
 }
 
 // ChoreCreatedData contains data for chore creation events
@@ -141,6 +142,15 @@ func NewChoreCompletedEvent(chore *chModel.Chore, user *uModel.User, history *ch
 		Chore:   chore,
 		User:    user,
 		History: history,
+		Note:    note,
+	})
+}
+
+func NewChoreStatusChangedEvent(chore *chModel.Chore, user *uModel.User, changes map[string]interface{}, note *string) *Event {
+	return NewEvent(EventTypeChoreStatus, chore.CircleID, &ChoreEventData{
+		Chore:   chore,
+		User:    user,
+		Changes: changes,
 		Note:    note,
 	})
 }

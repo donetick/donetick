@@ -520,6 +520,7 @@ func (h *Handler) editChore(c *gin.Context) {
 		CompletionWindow:       choreReq.CompletionWindow,
 		Description:            choreReq.Description,
 		Priority:               choreReq.Priority,
+		Status:                 oldChore.Status,
 	}
 	if err := h.choreRepo.UpsertChore(c, updatedChore); err != nil {
 		c.JSON(500, gin.H{
@@ -854,21 +855,177 @@ func (h *Handler) updateAssignee(c *gin.Context) {
 	})
 }
 
-func (h *Handler) updateChoreStatus(c *gin.Context) {
-	type StatusReq struct {
-		Status *chModel.Status `json:"status" binding:"required"`
-	}
-
-	var statusReq StatusReq
-
-	if err := c.ShouldBindJSON(&statusReq); err != nil {
-		c.JSON(400, gin.H{
-			"error": "Invalid request",
-		})
-	}
-
+func (h *Handler) startChore(c *gin.Context) {
 	rawID := c.Param("id")
 	id, err := strconv.Atoi(rawID)
+
+	if err != nil {
+		c.JSON(400, gin.H{
+			"error": "Invalid ID",
+		})
+		return
+	}
+	currentUser, ok := auth.CurrentUser(c)
+	if !ok {
+		c.JSON(500, gin.H{
+			"error": "Error getting current user",
+		})
+		return
+	}
+
+	chore, err := h.choreRepo.GetChore(c, id)
+	if err != nil {
+		c.JSON(500, gin.H{
+			"error": "Error getting chore",
+		})
+		return
+	}
+	if !chore.CanComplete(currentUser.ID) {
+		c.JSON(403, gin.H{
+			"error": "You are not allowed to start this chore",
+		})
+		return
+	}
+	var session *chModel.TimeSession
+	switch chore.Status {
+	case chModel.ChoreStatusNoStatus:
+		session, err = h.choreRepo.CreateTimeSession(c, chore, currentUser.ID)
+		if err != nil {
+			c.JSON(500, gin.H{
+				"error": "Error creating time session",
+			})
+			return
+		}
+		h.choreRepo.UpdateChoreStatus(c, chore.ID, chModel.ChoreStatusInProgress)
+	case chModel.ChoreStatusPaused:
+		session, err = h.choreRepo.GetActiveTimeSession(c, chore.ID)
+		if err != nil {
+			c.JSON(500, gin.H{
+				"error": "Error getting active time session",
+			})
+			return
+		}
+		if session != nil {
+			session.Start(currentUser.ID)
+			if err := h.choreRepo.UpdateTimeSession(c, session); err != nil {
+				c.JSON(500, gin.H{
+					"error": "Error updating time session",
+				})
+				return
+			}
+		}
+		h.choreRepo.UpdateChoreStatus(c, chore.ID, chModel.ChoreStatusInProgress)
+
+	default:
+		c.JSON(400, gin.H{
+			"error": "Chore is not in a state that can be started",
+		})
+		return
+	}
+	if h.realTimeService != nil {
+		chore.Status = chModel.ChoreStatusInProgress
+		broadcaster := h.realTimeService.GetEventBroadcaster()
+		// Build changes map (simplified - in real implementation you might want to track actual changes)
+		changes := map[string]interface{}{
+			"updatedBy":      currentUser.ID,
+			"updatedAt":      time.Now().UTC(),
+			"status":         chModel.ChoreStatusInProgress,
+			"timerUpdatedAt": session.UpdateAt,
+		}
+		broadcaster.BroadcastChoreUpdated(chore, &currentUser.User, changes, nil)
+	}
+
+	if session != nil {
+		c.JSON(200, gin.H{
+			"res": map[string]interface{}{
+				"timerUpdatedAt": session.UpdateAt,
+				"status":         chModel.ChoreStatusInProgress,
+				"duration":       session.Duration,
+			},
+		})
+	}
+}
+
+func (h *Handler) pauseChore(c *gin.Context) {
+	rawID := c.Param("id")
+	id, err := strconv.Atoi(rawID)
+
+	if err != nil {
+		c.JSON(400, gin.H{
+			"error": "Invalid ID",
+		})
+		return
+	}
+	currentUser, ok := auth.CurrentUser(c)
+	if !ok {
+		c.JSON(500, gin.H{
+			"error": "Error getting current user",
+		})
+		return
+	}
+
+	chore, err := h.choreRepo.GetChore(c, id)
+	if err != nil {
+		c.JSON(500, gin.H{
+			"error": "Error getting chore",
+		})
+		return
+	}
+	if !chore.CanComplete(currentUser.ID) {
+		c.JSON(403, gin.H{
+			"error": "You are not allowed to pause this chore",
+		})
+		return
+	}
+
+	session, err := h.choreRepo.GetActiveTimeSession(c, chore.ID)
+	if err != nil {
+		c.JSON(500, gin.H{
+			"error": "Error getting active time session",
+		})
+		return
+	}
+	if session == nil {
+		c.JSON(400, gin.H{
+			"error": "No active time session found for this chore",
+		})
+		return
+	}
+	session.Pause(currentUser.ID)
+	if err := h.choreRepo.UpdateTimeSession(c, session); err != nil {
+		c.JSON(500, gin.H{
+			"error": "Error updating time session",
+		})
+		return
+	}
+	h.choreRepo.UpdateChoreStatus(c, chore.ID, chModel.ChoreStatusPaused)
+	if h.realTimeService != nil {
+		chore.Status = chModel.ChoreStatusPaused
+		broadcaster := h.realTimeService.GetEventBroadcaster()
+
+		broadcaster.BroadcastChoreStatus(chore, &currentUser.User,
+			map[string]interface{}{
+				"updatedBy":      currentUser.ID,
+				"updatedAt":      time.Now().UTC(),
+				"status":         chore.Status,
+				"timerUpdatedAt": session.UpdateAt,
+			})
+	}
+
+	c.JSON(200, gin.H{
+		"res": map[string]interface{}{
+			"duration":       session.Duration,
+			"status":         chModel.ChoreStatusPaused,
+			"timerUpdatedAt": session.UpdateAt,
+		},
+	})
+
+}
+
+func (h *Handler) ResetChoreTimer(c *gin.Context) {
+	rawID := c.Param("id")
+	id, err := strconv.Atoi(rawID)
+
 	if err != nil {
 		c.JSON(400, gin.H{
 			"error": "Invalid ID",
@@ -891,22 +1048,75 @@ func (h *Handler) updateChoreStatus(c *gin.Context) {
 		})
 		return
 	}
-	if chore.CircleID != currentUser.CircleID {
 
+	if !chore.CanComplete(currentUser.ID) {
 		c.JSON(403, gin.H{
-			"error": "You are not allowed to start this chore",
+			"error": "You are not allowed to reset timer for this chore",
 		})
 		return
 	}
-	if err := h.choreRepo.UpdateChoreStatus(c, chore.ID, currentUser.ID, *statusReq.Status); err != nil {
 
+	session, err := h.choreRepo.GetActiveTimeSession(c, chore.ID)
+	if err != nil {
 		c.JSON(500, gin.H{
-			"error": "Error starting chore",
+			"error": "Error getting active time session",
 		})
 		return
 	}
-	c.JSON(200, gin.H{})
 
+	if session == nil {
+		c.JSON(400, gin.H{
+			"error": "No active time session found for this chore",
+		})
+		return
+	}
+
+	// Reset the timer: clear pause log, reset duration, set start time to now
+	timeNow := time.Now().UTC()
+	session.PauseLog = chModel.PauseLogEntries{}
+	session.Duration = 0
+	session.StartTime = timeNow
+	session.Status = chModel.TimeSessionStatusActive
+	session.UpdateBy = currentUser.ID
+	session.UpdateAt = timeNow
+
+	// Add new pause log entry for the reset session
+	session.PauseLog = append(session.PauseLog, &chModel.PauseLogEntry{
+		StartTime: timeNow,
+		UpdateBy:  currentUser.ID,
+	})
+
+	if err := h.choreRepo.UpdateTimeSession(c, session); err != nil {
+		c.JSON(500, gin.H{
+			"error": "Error updating time session",
+		})
+		return
+	}
+
+	// Update chore status to in progress
+	h.choreRepo.UpdateChoreStatus(c, chore.ID, chModel.ChoreStatusInProgress)
+
+	// Broadcast the change via real-time service
+	if h.realTimeService != nil {
+		chore.Status = chModel.ChoreStatusInProgress
+		broadcaster := h.realTimeService.GetEventBroadcaster()
+
+		changes := map[string]interface{}{
+			"updatedBy":      currentUser.ID,
+			"updatedAt":      timeNow,
+			"status":         chModel.ChoreStatusInProgress,
+			"timerUpdatedAt": session.UpdateAt,
+		}
+		broadcaster.BroadcastChoreUpdated(chore, &currentUser.User, changes, nil)
+	}
+
+	c.JSON(200, gin.H{
+		"res": map[string]interface{}{
+			"timerUpdatedAt": session.UpdateAt,
+			"status":         chModel.ChoreStatusInProgress,
+			"duration":       session.Duration,
+		},
+	})
 }
 
 func (h *Handler) skipChore(c *gin.Context) {
@@ -949,6 +1159,7 @@ func (h *Handler) skipChore(c *gin.Context) {
 		})
 		return
 	}
+
 	updatedChore, err := h.choreRepo.GetChore(c, id)
 	if err != nil {
 		c.JSON(500, gin.H{
@@ -1030,9 +1241,7 @@ func (h *Handler) updateDueDate(c *gin.Context) {
 		return
 	}
 	if err := chore.CanEdit(currentUser.ID, circleUsers, &dueDateReq.UpdatedAt); err != nil {
-		c.JSON(403, gin.H{
-			"error": fmt.Sprintf("You cannot edit this chore: %s", err.Error()),
-		})
+		c.JSON(403, gin.H{})
 		return
 	}
 	if err := h.choreRepo.UpdateChoreFields(c, chore.ID, map[string]interface{}{
@@ -1704,6 +1913,447 @@ func (h *Handler) UpdateSubtaskCompletedAt(c *gin.Context) {
 
 }
 
+func (h *Handler) GetChoreTimeSessions(c *gin.Context) {
+	currentUser, ok := auth.CurrentUser(c)
+	if !ok {
+		c.JSON(500, gin.H{
+			"error": "Error getting current user",
+		})
+		return
+	}
+
+	rawID := c.Param("id")
+	id, err := strconv.Atoi(rawID)
+	if err != nil {
+		c.JSON(400, gin.H{
+			"error": "Invalid ID",
+		})
+		return
+	}
+
+	// First, get the chore to check authorization
+	chore, err := h.choreRepo.GetChore(c, id)
+	if err != nil {
+		c.JSON(500, gin.H{
+			"error": "Error getting chore",
+		})
+		return
+	}
+
+	// Check if user has permission to view time sessions for this chore
+	// User can view if they are the creator OR an assignee
+	isAssignee := false
+	for _, assignee := range chore.Assignees {
+		if assignee.UserID == currentUser.ID {
+			isAssignee = true
+			break
+		}
+	}
+
+	if currentUser.ID != chore.CreatedBy && !isAssignee {
+		c.JSON(403, gin.H{
+			"error": "You are not allowed to view time sessions for this chore",
+		})
+		return
+	}
+
+	// Check for optional choreHistoryId query parameter
+	var choreHistoryId *int
+	if historyIdStr := c.Query("choreHistoryId"); historyIdStr != "" {
+		if historyIdInt, err := strconv.Atoi(historyIdStr); err == nil {
+			choreHistoryId = &historyIdInt
+		} else {
+			c.JSON(400, gin.H{
+				"error": "Invalid choreHistoryId parameter",
+			})
+			return
+		}
+	}
+
+	session, err := h.choreRepo.GetTimeSessionsByChoreID(c, id, choreHistoryId)
+	if err != nil {
+		c.JSON(500, gin.H{
+			"error": "Error getting chore time session",
+		})
+		return
+	}
+
+	if session == nil {
+		c.JSON(404, gin.H{
+			"error": "No time session found",
+		})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"res": session,
+	})
+}
+
+func (h *Handler) UpdateTimeSession(c *gin.Context) {
+	currentUser, ok := auth.CurrentUser(c)
+	if !ok {
+		c.JSON(500, gin.H{
+			"error": "Error getting current user",
+		})
+		return
+	}
+
+	rawChoreID := c.Param("id")
+	choreID, err := strconv.Atoi(rawChoreID)
+	if err != nil {
+		c.JSON(400, gin.H{
+			"error": "Invalid chore ID",
+		})
+		return
+	}
+
+	rawSessionID := c.Param("session_id")
+	sessionID, err := strconv.Atoi(rawSessionID)
+	if err != nil {
+		c.JSON(400, gin.H{
+			"error": "Invalid session ID",
+		})
+		return
+	}
+
+	type UpdateTimeSessionReq struct {
+		StartTime *time.Time               `json:"startTime"`
+		EndTime   *time.Time               `json:"endTime"`
+		PauseLog  *chModel.PauseLogEntries `json:"pauseLog"`
+	}
+
+	var req UpdateTimeSessionReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{
+			"error": "Invalid request body",
+		})
+		return
+	}
+
+	// First, get the chore to check authorization
+	chore, err := h.choreRepo.GetChore(c, choreID)
+	if err != nil {
+		c.JSON(500, gin.H{
+			"error": "Error getting chore",
+		})
+		return
+	}
+
+	// Check if user has permission to modify time sessions for this chore
+	// User can modify if they are the creator OR an assignee
+	isAssignee := false
+	for _, assignee := range chore.Assignees {
+		if assignee.UserID == currentUser.ID {
+			isAssignee = true
+			break
+		}
+	}
+
+	if currentUser.ID != chore.CreatedBy && !isAssignee {
+		c.JSON(403, gin.H{
+			"error": "You are not allowed to modify time sessions for this chore",
+		})
+		return
+	}
+
+	// Get the time session to ensure it exists and belongs to the chore
+	session, err := h.choreRepo.GetTimeSessionByID(c, sessionID)
+	if err != nil {
+		c.JSON(500, gin.H{
+			"error": "Error getting time session",
+		})
+		return
+	}
+
+	// Verify the session belongs to the specified chore
+	if session.ChoreID != choreID {
+		c.JSON(400, gin.H{
+			"error": "Time session does not belong to the specified chore",
+		})
+		return
+	}
+
+	// Update the session fields
+	if req.StartTime != nil {
+		session.StartTime = *req.StartTime
+	}
+	if req.EndTime != nil {
+		session.EndTime = req.EndTime
+	}
+	if req.PauseLog != nil {
+		session.PauseLog = *req.PauseLog
+	}
+
+	session.UpdateBy = currentUser.ID
+
+	// Save the updated session (this will recalculate duration)
+	if err := h.choreRepo.UpdateTimeSessionData(c, session); err != nil {
+		c.JSON(500, gin.H{
+			"error": "Error updating time session",
+		})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"res": session,
+	})
+}
+
+func (h *Handler) DeleteTimeSession(c *gin.Context) {
+	currentUser, ok := auth.CurrentUser(c)
+	if !ok {
+		c.JSON(500, gin.H{
+			"error": "Error getting current user",
+		})
+		return
+	}
+
+	rawChoreID := c.Param("id")
+	choreID, err := strconv.Atoi(rawChoreID)
+	if err != nil {
+		c.JSON(400, gin.H{
+			"error": "Invalid chore ID",
+		})
+		return
+	}
+
+	rawSessionID := c.Param("session_id")
+	sessionID, err := strconv.Atoi(rawSessionID)
+	if err != nil {
+		c.JSON(400, gin.H{
+			"error": "Invalid session ID",
+		})
+		return
+	}
+
+	// First, get the chore to check authorization
+	chore, err := h.choreRepo.GetChore(c, choreID)
+	if err != nil {
+		c.JSON(500, gin.H{
+			"error": "Error getting chore",
+		})
+		return
+	}
+
+	// Check if user has permission to delete time sessions for this chore
+	// User can delete if they are the creator OR an assignee
+	isAssignee := false
+	for _, assignee := range chore.Assignees {
+		if assignee.UserID == currentUser.ID {
+			isAssignee = true
+			break
+		}
+	}
+
+	if currentUser.ID != chore.CreatedBy && !isAssignee {
+		c.JSON(403, gin.H{
+			"error": "You are not allowed to delete time sessions for this chore",
+		})
+		return
+	}
+
+	// Get the time session to ensure it exists and belongs to the chore
+	session, err := h.choreRepo.GetTimeSessionByID(c, sessionID)
+	if err != nil {
+		c.JSON(500, gin.H{
+			"error": "Error getting time session",
+		})
+		return
+	}
+
+	// Verify the session belongs to the specified chore
+	if session.ChoreID != choreID {
+		c.JSON(400, gin.H{
+			"error": "Time session does not belong to the specified chore",
+		})
+		return
+	}
+
+	// Delete the time session
+	if err := h.choreRepo.DeleteTimeSession(c, sessionID, choreID); err != nil {
+		c.JSON(500, gin.H{
+			"error": "Error deleting time session",
+		})
+		return
+	}
+	if chore.Status == chModel.ChoreStatusInProgress || chore.Status == chModel.ChoreStatusPaused {
+		h.choreRepo.UpdateChoreStatus(c, choreID, chModel.ChoreStatusNoStatus)
+		c.JSON(200, gin.H{
+			"message": "Time session deleted successfully",
+		})
+		h.choreRepo.UpdateLatestChoreHistory(c, choreID, map[string]interface{}{
+			"status": chModel.ChoreHistoryStatusStarted,
+		})
+		return
+	}
+}
+func (h *Handler) updateChoreStatus(c *gin.Context) {
+	currentUser, ok := auth.CurrentUser(c)
+	if !ok {
+		c.JSON(500, gin.H{
+			"error": "Error getting current user",
+		})
+		return
+	}
+
+	rawID := c.Param("id")
+	id, err := strconv.Atoi(rawID)
+	if err != nil {
+		c.JSON(400, gin.H{
+			"error": "Invalid ID",
+		})
+		return
+	}
+
+	type StatusUpdateReq struct {
+		Status    chModel.Status `json:"status" binding:"required"`
+		UpdatedAt time.Time      `json:"updatedAt" binding:"required"`
+	}
+
+	var statusReq StatusUpdateReq
+	if err := c.ShouldBindJSON(&statusReq); err != nil {
+		c.JSON(400, gin.H{
+			"error": "Invalid request",
+		})
+		return
+	}
+
+	chore, err := h.choreRepo.GetChore(c, id)
+	if err != nil {
+		c.JSON(500, gin.H{
+			"error": "Error getting chore",
+		})
+		return
+	}
+
+	circleUsers, err := h.circleRepo.GetCircleUsers(c, currentUser.CircleID)
+	if err != nil {
+		c.JSON(500, gin.H{
+			"error": "Error getting circle users",
+		})
+		return
+	}
+	if err := chore.CanEdit(currentUser.ID, circleUsers, &statusReq.UpdatedAt); err != nil {
+		c.JSON(403, gin.H{
+			"error": fmt.Sprintf("You cannot update the status of this chore: %s", err.Error()),
+		})
+		return
+	}
+
+	if err := h.choreRepo.UpdateChoreFields(c, id, map[string]interface{}{
+		"status":     statusReq.Status,
+		"updated_by": currentUser.ID,
+		"updated_at": statusReq.UpdatedAt,
+	}); err != nil {
+		c.JSON(500, gin.H{
+			"error": "Error updating chore status",
+		})
+		return
+	}
+
+	// Broadcast real-time chore status update event
+	if h.realTimeService != nil {
+		updatedChore, err := h.choreRepo.GetChore(c, id)
+		if err == nil {
+			broadcaster := h.realTimeService.GetEventBroadcaster()
+			changes := map[string]interface{}{
+				"status":    statusReq.Status,
+				"updatedBy": currentUser.ID,
+				"updatedAt": statusReq.UpdatedAt,
+			}
+			broadcaster.BroadcastChoreUpdated(updatedChore, &currentUser.User, changes, nil)
+		}
+	}
+
+	c.JSON(200, gin.H{
+		"message": "Chore status updated successfully",
+	})
+}
+
+func (h *Handler) updateTimer(c *gin.Context) {
+	currentUser, ok := auth.CurrentUser(c)
+	if !ok {
+		c.JSON(500, gin.H{
+			"error": "Error getting current user",
+		})
+		return
+	}
+
+	rawID := c.Param("id")
+	id, err := strconv.Atoi(rawID)
+	if err != nil {
+		c.JSON(400, gin.H{
+			"error": "Invalid ID",
+		})
+		return
+	}
+
+	type TimerUpdateReq struct {
+		Duration  int       `json:"duration" binding:"required"`
+		UpdatedAt time.Time `json:"updatedAt" binding:"required"`
+	}
+
+	var timerReq TimerUpdateReq
+	if err := c.ShouldBindJSON(&timerReq); err != nil {
+		c.JSON(400, gin.H{
+			"error": "Invalid request",
+		})
+		return
+	}
+
+	chore, err := h.choreRepo.GetChore(c, id)
+	if err != nil {
+		c.JSON(500, gin.H{
+			"error": "Error getting chore",
+		})
+		return
+	}
+
+	circleUsers, err := h.circleRepo.GetCircleUsers(c, currentUser.CircleID)
+	if err != nil {
+		c.JSON(500, gin.H{
+			"error": "Error getting circle users",
+		})
+		return
+	}
+	if err := chore.CanEdit(currentUser.ID, circleUsers, &timerReq.UpdatedAt); err != nil {
+		c.JSON(403, gin.H{
+			"error": fmt.Sprintf("You cannot update the timer of this chore: %s", err.Error()),
+		})
+		return
+	}
+
+	if err := h.choreRepo.UpdateChoreFields(c, id, map[string]interface{}{
+		"timer":      timerReq.Duration,
+		"updated_by": currentUser.ID,
+		"updated_at": timerReq.UpdatedAt,
+	}); err != nil {
+		c.JSON(500, gin.H{
+			"error": "Error updating chore timer",
+		})
+		return
+	}
+
+	// Broadcast real-time chore timer update event
+	if h.realTimeService != nil {
+		updatedChore, err := h.choreRepo.GetChore(c, id)
+		if err == nil {
+			broadcaster := h.realTimeService.GetEventBroadcaster()
+			changes := map[string]interface{}{
+				"timer":     timerReq.Duration,
+				"updatedBy": currentUser.ID,
+				"updatedAt": timerReq.UpdatedAt,
+			}
+			broadcaster.BroadcastChoreUpdated(updatedChore, &currentUser.User, changes, nil)
+		}
+	}
+
+	c.JSON(200, gin.H{
+		"message": "Chore timer updated successfully",
+	})
+}
+
 func checkNextAssignee(chore *chModel.Chore, choresHistory []*chModel.ChoreHistory, performerID int) (int, error) {
 	// copy the history to avoid modifying the original:
 	history := make([]*chModel.ChoreHistory, len(choresHistory))
@@ -1719,7 +2369,6 @@ func checkNextAssignee(chore *chModel.Chore, choresHistory []*chModel.ChoreHisto
 		history = append(history, &chModel.ChoreHistory{
 			AssignedTo: performerID,
 		})
-
 	}
 
 	switch chore.AssignStrategy {
@@ -1809,12 +2458,11 @@ func checkNextAssignee(chore *chModel.Chore, choresHistory []*chModel.ChoreHisto
 }
 
 func remove(s []chModel.ChoreAssignees, i int) []chModel.ChoreAssignees {
-	var removalIndex = indexOf(s, i)
-	if removalIndex == -1 {
+	var targetIndex = indexOf(s, i)
+	if targetIndex == -1 {
 		return s
 	}
-
-	s[removalIndex] = s[len(s)-1]
+	s[targetIndex] = s[len(s)-1]
 	return s[:len(s)-1]
 }
 
@@ -1824,7 +2472,7 @@ func indexOf(arr []chModel.ChoreAssignees, value int) int {
 			return i
 		}
 	}
-	return -1 // Return -1 if the value is not found
+	return -1
 }
 
 func Routes(router *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware) {
@@ -1846,12 +2494,18 @@ func Routes(router *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware) {
 		choresRoutes.DELETE("/:id/history/:history_id", h.DeleteHistory)
 		choresRoutes.POST("/:id/do", h.completeChore)
 		choresRoutes.POST("/:id/skip", h.skipChore)
-		choresRoutes.PUT("/:id/status", h.updateChoreStatus)
+		choresRoutes.PUT("/:id/start", h.startChore)
+		choresRoutes.PUT("/:id/pause", h.pauseChore)
+		choresRoutes.GET("/:id/timer", h.GetChoreTimeSessions)
+		choresRoutes.PUT("/:id/timer/reset", h.ResetChoreTimer)
+
 		choresRoutes.PUT("/:id/assignee", h.updateAssignee)
 		choresRoutes.PUT("/:id/dueDate", h.updateDueDate)
 		choresRoutes.PUT("/:id/archive", h.archiveChore)
 		choresRoutes.PUT("/:id/unarchive", h.UnarchiveChore)
 		choresRoutes.DELETE("/:id", h.deleteChore)
+		choresRoutes.PUT("/:id/timer/:session_id", h.UpdateTimeSession)
+		choresRoutes.DELETE("/:id/timer/:session_id", h.DeleteTimeSession)
 	}
 
 }

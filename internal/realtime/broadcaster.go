@@ -29,10 +29,10 @@ func (b *EventBroadcaster) BroadcastChoreCreated(chore *chModel.Chore, user *uMo
 	if !b.service.config.Enabled {
 		return
 	}
-	
+
 	event := NewChoreCreatedEvent(chore, user)
 	event.ID = b.generateEventID()
-	
+
 	b.service.BroadcastToCircle(chore.CircleID, event)
 }
 
@@ -41,10 +41,10 @@ func (b *EventBroadcaster) BroadcastChoreUpdated(chore *chModel.Chore, user *uMo
 	if !b.service.config.Enabled {
 		return
 	}
-	
+
 	event := NewChoreUpdatedEvent(chore, user, changes, note)
 	event.ID = b.generateEventID()
-	
+
 	b.service.BroadcastToCircle(chore.CircleID, event)
 }
 
@@ -53,10 +53,10 @@ func (b *EventBroadcaster) BroadcastChoreDeleted(choreID int, choreName string, 
 	if !b.service.config.Enabled {
 		return
 	}
-	
+
 	event := NewChoreDeletedEvent(choreID, choreName, circleID, user)
 	event.ID = b.generateEventID()
-	
+
 	b.service.BroadcastToCircle(circleID, event)
 }
 
@@ -65,10 +65,22 @@ func (b *EventBroadcaster) BroadcastChoreCompleted(chore *chModel.Chore, user *u
 	if !b.service.config.Enabled {
 		return
 	}
-	
+
 	event := NewChoreCompletedEvent(chore, user, history, note)
 	event.ID = b.generateEventID()
-	
+
+	b.service.BroadcastToCircle(chore.CircleID, event)
+}
+
+// BroadcastChoreStarted broadcasts a chore start event
+func (b *EventBroadcaster) BroadcastChoreStatus(chore *chModel.Chore, user *uModel.User, changes map[string]interface{}) {
+	if !b.service.config.Enabled {
+		return
+	}
+
+	event := NewChoreStatusChangedEvent(chore, user, changes, nil)
+	event.ID = b.generateEventID()
+
 	b.service.BroadcastToCircle(chore.CircleID, event)
 }
 
@@ -77,10 +89,10 @@ func (b *EventBroadcaster) BroadcastChoreSkipped(chore *chModel.Chore, user *uMo
 	if !b.service.config.Enabled {
 		return
 	}
-	
+
 	event := NewChoreSkippedEvent(chore, user, history, note)
 	event.ID = b.generateEventID()
-	
+
 	b.service.BroadcastToCircle(chore.CircleID, event)
 }
 
@@ -89,10 +101,10 @@ func (b *EventBroadcaster) BroadcastSubtaskUpdated(choreID, subtaskID int, compl
 	if !b.service.config.Enabled {
 		return
 	}
-	
+
 	event := NewSubtaskUpdatedEvent(choreID, subtaskID, completedAt, user, circleID)
 	event.ID = b.generateEventID()
-	
+
 	b.service.BroadcastToCircle(circleID, event)
 }
 
@@ -101,10 +113,10 @@ func (b *EventBroadcaster) BroadcastSubtaskCompleted(choreID, subtaskID int, com
 	if !b.service.config.Enabled {
 		return
 	}
-	
+
 	event := NewSubtaskCompletedEvent(choreID, subtaskID, completedAt, user, circleID)
 	event.ID = b.generateEventID()
-	
+
 	b.service.BroadcastToCircle(circleID, event)
 }
 

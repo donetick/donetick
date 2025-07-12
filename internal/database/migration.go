@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"os"
 
+	migrate "github.com/rubenv/sql-migrate"
+	"gorm.io/gorm"
+
 	"donetick.com/core/config"
 	chModel "donetick.com/core/internal/chore/model"
 	cModel "donetick.com/core/internal/circle/model"
@@ -14,9 +17,7 @@ import (
 	stModel "donetick.com/core/internal/subtask/model"
 	tModel "donetick.com/core/internal/thing/model"
 	uModel "donetick.com/core/internal/user/model" // Pure go SQLite driver, checkout https://github.com/glebarez/sqlite for details
-	migrations "donetick.com/core/migrations"
-	migrate "github.com/rubenv/sql-migrate"
-	"gorm.io/gorm"
+	"donetick.com/core/migrations"
 )
 
 //go:embed migrations/*.sql
@@ -43,6 +44,7 @@ func Migration(db *gorm.DB) error {
 		stModel.SubTask{},
 		storageModel.StorageFile{},
 		storageModel.StorageUsage{},
+		chModel.TimeSession{},
 	); err != nil {
 		return err
 	}
@@ -56,17 +58,33 @@ func MigrationScripts(gormDB *gorm.DB, cfg *config.Config) error {
 		Root:       "migrations",
 	}
 
-	path := os.Getenv("DT_SQLITE_PATH")
-	if path == "" {
-		path = "donetick.db"
+	var dialect string
+	switch cfg.Database.Type {
+	case "postgres":
+		dialect = "postgres"
+	case "sqlite":
+		dialect = "sqlite3"
+	default:
+		return fmt.Errorf("unsupported database type: %s", cfg.Database.Type)
 	}
 
 	db, err := gormDB.DB()
 	if err != nil {
 		return err
 	}
+	var n int
+	if cfg.Database.Type == "sqlite" {
 
-	n, err := migrate.Exec(db, "sqlite3", migrations, migrate.Up)
+		path := os.Getenv("DT_SQLITE_PATH")
+		if path == "" {
+			path = "donetick.db"
+		}
+		n, err = migrate.Exec(db, "sqlite3", migrations, migrate.Up)
+	} else if cfg.Database.Type == "postgres" {
+		n, err = migrate.Exec(db, "postgres", migrations, migrate.Up)
+	}
+
+	n, err = migrate.Exec(db, dialect, migrations, migrate.Up)
 	if err != nil {
 		return err
 	}

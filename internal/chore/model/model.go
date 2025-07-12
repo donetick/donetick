@@ -89,21 +89,24 @@ type ChoreAssignees struct {
 	UserID  int `json:"userId" gorm:"column:user_id;uniqueIndex:idx_chore_user"` // The user this assignee is for
 }
 type ChoreHistory struct {
-	ID          int                `json:"id" gorm:"primary_key"`                  // Unique identifier
-	ChoreID     int                `json:"choreId" gorm:"column:chore_id"`         // The chore this history is for
-	PerformedAt *time.Time         `json:"performedAt" gorm:"column:performed_at"` // When the chore was performed (completed or skipped)
-	CompletedBy int                `json:"completedBy" gorm:"column:completed_by"` // Who completed the chore
-	AssignedTo  int                `json:"assignedTo" gorm:"column:assigned_to"`   // Who the chore was assigned to
-	Note        *string            `json:"notes" gorm:"column:notes"`              // Notes about the chore
-	DueDate     *time.Time         `json:"dueDate" gorm:"column:due_date"`         // When the chore was due
-	UpdatedAt   *time.Time         `json:"updatedAt" gorm:"column:updated_at"`     // When the record was last updated
-	Status      ChoreHistoryStatus `json:"status" gorm:"column:status"`            // Status of the chore (1=completed, 2=skipped)
-	Points      *int               `json:"points,omitempty" gorm:"column:points"`  // Points for completing the chore
+	ID          int                `json:"id" gorm:"primary_key"`                             // Unique identifier
+	ChoreID     int                `json:"choreId" gorm:"column:chore_id"`                    // The chore this history is for
+	PerformedAt *time.Time         `json:"performedAt" gorm:"column:performed_at"`            // When the chore was performed (completed or skipped)
+	CompletedBy int                `json:"completedBy" gorm:"column:completed_by"`            // Who completed the chore
+	AssignedTo  int                `json:"assignedTo" gorm:"column:assigned_to"`              // Who the chore was assigned to
+	Note        *string            `json:"notes" gorm:"column:notes"`                         // Notes about the chore
+	DueDate     *time.Time         `json:"dueDate" gorm:"column:due_date"`                    // When the chore was due
+	UpdatedAt   *time.Time         `json:"updatedAt" gorm:"column:updated_at"`                // When the record was last updated
+	CreatedAt   time.Time          `json:"createdAt" gorm:"column:created_at;autoCreateTime"` // When the record was created
+	Status      ChoreHistoryStatus `json:"status" gorm:"column:status"`                       // Status of the chore (1=completed, 2=skipped)
+	Points      *int               `json:"points,omitempty" gorm:"column:points"`             // Points for completing the chore
+	Duration    *int               `json:"duration,omitempty" gorm:"<-:false;-:migration"`    // Duration in seconds calculated from query (read-only, no DB column)
 }
+
 type ChoreHistoryStatus int8
 
 const (
-	ChoreHistoryStatusPending   ChoreHistoryStatus = 0
+	ChoreHistoryStatusStarted   ChoreHistoryStatus = 0
 	ChoreHistoryStatusCompleted ChoreHistoryStatus = 1
 	ChoreHistoryStatusSkipped   ChoreHistoryStatus = 2
 )
@@ -159,6 +162,10 @@ type ChoreDetail struct {
 	CreatedBy           int                `json:"createdBy" gorm:"column:created_by"`
 	CompletionWindow    *int               `json:"completionWindow,omitempty" gorm:"column:completion_window"`
 	Subtasks            *[]stModel.SubTask `json:"subTasks,omitempty" gorm:"foreignkey:ChoreID;references:ID"`
+	Status              Status             `json:"status" gorm:"column:status"`
+	Duration            int                `json:"duration" gorm:"column:duration"` // Total duration in seconds for the chore
+	StartTime           *time.Time         `json:"startTime" gorm:"column:start_time"`
+	TimerUpdatedAt      *time.Time         `json:"timerUpdatedAt" gorm:"column:timer_updated_at"` // When the chore was last started
 }
 
 type Label struct {
@@ -257,13 +264,19 @@ func (n *NotificationMetadata) Scan(value interface{}) error {
 	if value == nil {
 		return nil
 	}
+
+	var err error
 	switch v := value.(type) {
 	case []byte:
-		return json.Unmarshal(v, n)
+		err = json.Unmarshal(v, n)
 	case string:
-		return json.Unmarshal([]byte(v), n)
+		err = json.Unmarshal([]byte(v), n)
 	default:
 		return errors.New("type assertion to []byte or string failed")
+	}
+
+	if err != nil {
+		return err
 	}
 
 	// Validate after unmarshaling from database
@@ -298,4 +311,106 @@ func (f *FrequencyMetadata) Scan(value interface{}) error {
 	}
 
 	return json.Unmarshal(bytes, f)
+}
+
+type TimeSession struct {
+	ID             int               `json:"id" gorm:"primary_key"`
+	ChoreID        int               `json:"choreId" gorm:"column:chore_id;index"`
+	ChoreHistoryID int               `json:"choreHistoryId" gorm:"column:chore_history_id;index"` // The chore history this session is for
+	StartTime      time.Time         `json:"startTime" gorm:"column:start_time"`
+	EndTime        *time.Time        `json:"endTime" gorm:"column:end_time"`
+	Duration       int               `json:"duration" gorm:"column:duration"`
+	Status         TimeSessionStatus `json:"status" gorm:"column:status"`
+	PauseLog       PauseLogEntries   `json:"pauseLog" gorm:"column:pause_log;type:json"` // Track pause/resume times
+	UpdateBy       int               `json:"updatedBy" gorm:"column:updated_by"`         // Who last updated the session
+	UpdateAt       time.Time         `json:"updatedAt" gorm:"column:updated_at"`         // When the session was last updated
+}
+
+type TimeSessionStatus int8
+
+const (
+	TimeSessionStatusActive    TimeSessionStatus = 0
+	TimeSessionStatusPaused    TimeSessionStatus = 1
+	TimeSessionStatusCompleted TimeSessionStatus = 2
+)
+
+type PauseLogEntry struct {
+	StartTime time.Time  `json:"start"`
+	EndTime   *time.Time `json:"end"`
+	Duration  int        `json:"duration"`
+	UpdateBy  int        `json:"updatedBy"`
+}
+
+// PauseLogEntries is a custom type for handling JSON serialization/deserialization
+type PauseLogEntries []*PauseLogEntry
+
+// Implement driver.Valuer to convert the slice to JSON when saving to the database
+func (p PauseLogEntries) Value() (driver.Value, error) {
+	if p == nil {
+		return nil, nil
+	}
+	return json.Marshal(p)
+}
+
+// Implement sql.Scanner to convert JSON from database back to slice
+func (p *PauseLogEntries) Scan(value interface{}) error {
+	if value == nil {
+		return nil
+	}
+
+	switch v := value.(type) {
+	case []byte:
+		return json.Unmarshal(v, p)
+	case string:
+		return json.Unmarshal([]byte(v), p)
+	default:
+		return errors.New("type assertion to []byte or string failed")
+	}
+}
+
+func (t *TimeSession) Start(UserID int) {
+	timeNow := time.Now().UTC()
+	t.Status = TimeSessionStatusActive
+	if t.StartTime.IsZero() {
+		t.StartTime = timeNow
+	}
+
+	t.PauseLog = append(t.PauseLog, &PauseLogEntry{
+		StartTime: timeNow,
+		UpdateBy:  UserID,
+	})
+	t.UpdateBy = UserID
+	t.UpdateAt = timeNow
+}
+
+func (t *TimeSession) Pause(UserID int) {
+	timeNow := time.Now().UTC()
+	duration := 0
+	if t.Status == TimeSessionStatusActive {
+		t.Status = TimeSessionStatusPaused
+	}
+	if len(t.PauseLog) > 0 && t.PauseLog[len(t.PauseLog)-1].EndTime == nil {
+		// If the last pause entry doesn't have an end time, update it
+		t.PauseLog[len(t.PauseLog)-1].EndTime = &timeNow
+		duration = int(timeNow.Sub(t.PauseLog[len(t.PauseLog)-1].StartTime).Seconds())
+		t.PauseLog[len(t.PauseLog)-1].Duration = duration
+		t.Duration += duration
+	}
+	t.UpdateBy = UserID
+	t.UpdateAt = timeNow
+}
+
+func (t *TimeSession) Finish(UserID int) {
+	timeNow := time.Now().UTC()
+	t.Status = TimeSessionStatusCompleted
+	if len(t.PauseLog) > 0 && t.PauseLog[len(t.PauseLog)-1].EndTime == nil {
+		// If the last pause entry doesn't have an end time, update it
+		t.PauseLog[len(t.PauseLog)-1].EndTime = &timeNow
+		duration := int(timeNow.Sub(t.PauseLog[len(t.PauseLog)-1].StartTime).Seconds())
+		t.PauseLog[len(t.PauseLog)-1].Duration = duration
+		t.Duration += duration
+	}
+	t.EndTime = &timeNow
+	t.UpdateBy = UserID
+	t.UpdateAt = timeNow
 }

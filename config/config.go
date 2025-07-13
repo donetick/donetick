@@ -257,7 +257,6 @@ func LoadConfig() *Config {
 	fmt.Printf("--ConfigLoad config for environment: %s ", os.Getenv("DT_ENV"))
 	viper.SetEnvPrefix("DT")
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
-	viper.AutomaticEnv()
 
 	viper.AddConfigPath("./config")
 	viper.SetConfigType("yaml")
@@ -267,12 +266,15 @@ func LoadConfig() *Config {
 	if err != nil {
 		panic(err)
 	}
+	// Override with environment variables if set:
+	viper.AutomaticEnv()
 
 	var config Config
 	err = viper.Unmarshal(&config)
 	if err != nil {
 		panic(err)
 	}
+
 	fmt.Printf("--ConfigLoad name : %s ", config.Name)
 
 	configEnvironmentOverrides(&config)

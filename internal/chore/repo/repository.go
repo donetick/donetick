@@ -429,7 +429,7 @@ func (r *ChoreRepository) GetChoreDetailByID(c context.Context, choreID int, cir
 		chores.priority,
 		chores.completion_window,
 		chores.status,
-		time_sessions.duration as duration,
+		CAST(MAX(time_sessions.duration) AS INTEGER) as duration,
 		time_sessions.start_time as start_time,
 		time_sessions.updated_at as timer_updated_at,
         recent_history.last_completed_date,
@@ -453,7 +453,7 @@ func (r *ChoreRepository) GetChoreDetailByID(c context.Context, choreID int, cir
     ) AS recent_history ON chores.id = recent_history.chore_id`).
 		Joins("LEFT JOIN time_sessions ON chores.id = time_sessions.chore_id AND time_sessions.status < ?", chModel.TimeSessionStatusCompleted).
 		Where("chores.id = ? and chores.circle_id = ?", choreID, circleID).
-		Group("chores.id, recent_history.last_completed_date, recent_history.last_assigned_to, recent_history.notes").
+		Group("chores.id, recent_history.last_completed_date, recent_history.last_assigned_to, recent_history.notes, time_sessions.start_time, time_sessions.updated_at").
 		First(&choreDetail).Error; err != nil {
 		return nil, err
 
@@ -498,7 +498,7 @@ func (r *ChoreRepository) UpdateChoreStatus(c context.Context, choreID int, stat
 
 func (r *ChoreRepository) GetActiveTimeSession(c context.Context, choreID int) (*chModel.TimeSession, error) {
 	var session chModel.TimeSession
-	if err := r.db.WithContext(c).Where("chore_id = ? AND status < 2", choreID, true).First(&session).Error; err != nil {
+	if err := r.db.WithContext(c).Where("chore_id = ? AND status < 2", choreID).First(&session).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil // No active session found
 		}
@@ -603,9 +603,22 @@ func (r *ChoreRepository) UpdateTimeSessionData(c context.Context, session *chMo
 }
 
 func (r *ChoreRepository) DeleteTimeSession(c context.Context, sessionID int, choreID int) error {
+	return r.db.WithContext(c).Transaction(func(tx *gorm.DB) error {
+		// delete existing choreHistory linked to the time session:
+		if err := tx.Where(
+			"chore_id = ? and status = ?", choreID, chModel.ChoreHistoryStatusStarted,
+		).Delete(&chModel.ChoreHistory{}).Error; err != nil {
+			logging.FromContext(c).Errorf("Failed to delete chore history for session %d and chore %d: %v", sessionID, choreID, err)
+			return err
+		}
+		// delete the time session itself:
+		if err := tx.Where("id = ?", sessionID).Delete(&chModel.TimeSession{}).Error; err != nil {
+			logging.FromContext(c).Errorf("Failed to delete time session %d for chore %d: %v", sessionID, choreID, err)
+			return err
+		}
+		return nil
+
+	})
 	// delete where session ID matches and chore ID matches
-	if choreID == 0 {
-		return r.db.WithContext(c).Delete(&chModel.TimeSession{}, sessionID).Error
-	}
-	return r.db.WithContext(c).Where("id = ? AND chore_id = ?", sessionID, choreID).Delete(&chModel.TimeSession{}).Error
+
 }

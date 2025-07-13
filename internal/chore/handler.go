@@ -2182,9 +2182,7 @@ func (h *Handler) DeleteTimeSession(c *gin.Context) {
 		c.JSON(200, gin.H{
 			"message": "Time session deleted successfully",
 		})
-		h.choreRepo.UpdateLatestChoreHistory(c, choreID, map[string]interface{}{
-			"status": chModel.ChoreHistoryStatusStarted,
-		})
+
 		return
 	}
 }

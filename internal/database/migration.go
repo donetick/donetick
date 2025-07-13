@@ -8,9 +8,6 @@ import (
 	migrate "github.com/rubenv/sql-migrate"
 	"gorm.io/gorm"
 
-	migrate "github.com/rubenv/sql-migrate"
-	"gorm.io/gorm"
-
 	"donetick.com/core/config"
 	chModel "donetick.com/core/internal/chore/model"
 	cModel "donetick.com/core/internal/circle/model"

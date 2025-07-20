@@ -198,7 +198,7 @@ func NewConfig() *Config {
 		},
 		RealTimeConfig: RealTimeConfig{
 			Enabled:               true,
-			WebSocketEnabled:      true,
+			WebSocketEnabled:      false,
 			SSEEnabled:            true,
 			HeartbeatInterval:     30 * time.Second,
 			ConnectionTimeout:     60 * time.Second,

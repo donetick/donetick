@@ -209,13 +209,13 @@ func (r *ChoreRepository) SkipChore(c context.Context, chore *chModel.Chore, use
 		// Look for existing chore history with start or pause status
 		var existingHistory chModel.ChoreHistory
 		err := tx.Where("chore_id = ? AND status = ? ",
-			chore.ID, chModel.ChoreHistoryStatusStarted, chModel.ChoreHistoryStatusStarted).
+			chore.ID, chModel.ChoreHistoryStatusStarted).
 			First(&existingHistory).Error
 
 		var ch *chModel.ChoreHistory
 		skippedAt := time.Now().UTC()
 
-		if err == nil {
+		if err == nil && existingHistory.PerformedAt != nil {
 			// Update existing history record
 			existingHistory.PerformedAt = &skippedAt
 			existingHistory.Note = nil

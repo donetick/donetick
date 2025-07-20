@@ -28,6 +28,7 @@ import (
 	limiter "github.com/ulule/limiter/v3"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/oauth2/v1"
+	"google.golang.org/api/option"
 )
 
 type Handler struct {
@@ -213,7 +214,14 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 		}
 
 		// logger.Infow("account.handler.thirdPartyAuthCallback", "token", token)
-		service, err := oauth2.New(http.DefaultClient)
+		service, err := oauth2.NewService(c, option.WithHTTPClient(http.DefaultClient))
+		if err != nil {
+			logger.Errorw("account.handler.thirdPartyAuthCallback failed to create oauth2 service", "err", err)
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "Authentication service unavailable",
+			})
+			return
+		}
 
 		tokenInfo, err := service.Tokeninfo().AccessToken(body.Token).Do()
 		if err != nil {
@@ -246,7 +254,14 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 		if err != nil {
 			// create a random password for the user using crypto/rand:
 			password := auth.GenerateRandomPassword(12)
-			encodedPassword, err := auth.EncodePassword(password)
+			encodedPassword, err := auth.EncodePassword(password) //nolint:ineffassign
+			if err != nil {
+				logger.Errorw("account.handler.thirdPartyAuthCallback failed to encode password", "err", err)
+				c.JSON(http.StatusInternalServerError, gin.H{
+					"error": "Unable to create user account",
+				})
+				return
+			}
 			account := &uModel.User{
 				Username:    userinfo.Id,
 				Email:       userinfo.Email,
@@ -353,15 +368,34 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 		}
 		var req Request
 		if err := c.BindJSON(&req); err != nil {
+			logger.Errorw("account.handler.thirdPartyAuthCallback (oauth2) failed to bind request", "err", err)
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 			return
 		}
 
+		// Validate that the code is not empty
+		if req.Code == "" {
+			logger.Errorw("account.handler.thirdPartyAuthCallback (oauth2) empty authorization code")
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Authorization code is required"})
+			return
+		}
+
+		logger.Infow("account.handler.thirdPartyAuthCallback (oauth2) attempting to exchange code", "codeLength", len(req.Code))
+
 		token, err := h.identityProvider.ExchangeToken(c, req.Code)
 
 		if err != nil {
-			logger.Error("account.handler.thirdPartyAuthCallback (oauth2) failed to exchange token", "err", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to exchange token"})
+			logger.Errorw("account.handler.thirdPartyAuthCallback (oauth2) failed to exchange token", "err", err, "code", req.Code[:min(len(req.Code), 10)]+"...")
+			// Return a more specific error message based on the OAuth2 error
+			if strings.Contains(err.Error(), "invalid_grant") {
+				c.JSON(http.StatusBadRequest, gin.H{
+					"error": "Authorization code is invalid, expired, or already used. Please try the authentication process again.",
+				})
+			} else {
+				c.JSON(http.StatusInternalServerError, gin.H{
+					"error": "Failed to exchange authorization code for token",
+				})
+			}
 			return
 		}
 
@@ -906,12 +940,6 @@ func (h *Handler) updateProfilePhoto(c *gin.Context) {
 		return
 	}
 	defer openedFile.Close()
-	// resize the image to 256x256:
-
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to resize image"})
-		return
-	}
 
 	err = h.storage.Save(c, filename, openedFile)
 	if err != nil {

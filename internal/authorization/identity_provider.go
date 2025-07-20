@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"strings"
 
 	"donetick.com/core/config"
 	"golang.org/x/oauth2"
@@ -34,6 +35,10 @@ func (i *IdentityProvider) ExchangeToken(ctx context.Context, code string) (stri
 		return "", errors.New("identity provider is not enabled")
 	}
 
+	if code == "" {
+		return "", errors.New("authorization code is empty")
+	}
+
 	conf := &oauth2.Config{
 		ClientID:     i.config.ClientID,
 		ClientSecret: i.config.ClientSecret,
@@ -44,14 +49,23 @@ func (i *IdentityProvider) ExchangeToken(ctx context.Context, code string) (stri
 			TokenURL: i.config.TokenURL,
 		},
 	}
+
 	token, err := conf.Exchange(ctx, code)
 	if err != nil {
+		// Enhanced error handling for OAuth2 errors
+		if strings.Contains(err.Error(), "invalid_grant") {
+			return "", errors.New("oauth2: invalid_grant - The authorization code is invalid, expired, revoked, or does not match the redirect URI")
+		} else if strings.Contains(err.Error(), "invalid_client") {
+			return "", errors.New("oauth2: invalid_client - Client authentication failed")
+		} else if strings.Contains(err.Error(), "invalid_request") {
+			return "", errors.New("oauth2: invalid_request - The request is missing a required parameter or is otherwise malformed")
+		}
 		return "", err
 	}
 
 	accessToken, ok := token.AccessToken, token.Valid()
 	if !ok {
-		return "", errors.New("access token not found")
+		return "", errors.New("access token not found or invalid")
 	}
 
 	return accessToken, nil

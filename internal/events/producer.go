@@ -106,7 +106,7 @@ func (p *EventsProducer) processEvent(event Event) {
 
 	resp, err := p.client.Do(req)
 	if err != nil {
-		p.logger.Errorw("Failed to send webhook event", "error", err)
+		p.logger.Debugw("Failed to send webhook event", "error", err)
 		return
 	}
 	defer resp.Body.Close()

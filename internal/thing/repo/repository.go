@@ -112,6 +112,14 @@ func (r *ThingRepository) GetThingChoresByThingId(c context.Context, thingID int
 	return thingChores, nil
 }
 
+func (r *ThingRepository) GetThingsByUserID(c context.Context, userID int) ([]*tModel.Thing, error) {
+	var things []*tModel.Thing
+	if err := r.db.WithContext(c).Model(&tModel.Thing{}).Where("user_id = ?", userID).Find(&things).Error; err != nil {
+		return nil, err
+	}
+	return things, nil
+}
+
 // func (r *ThingRepository) GetChoresByThingId(c context.Context, thingID int) ([]*chModel.Chore, error) {
 // 	var chores []*chModel.Chore
 // 	if err := r.db.WithContext(c).Model(&chModel.Chore{}).Joins("left join thing_chores on chores.id = thing_chores.chore_id").Where("thing_chores.thing_id = ?", thingID).Find(&chores).Error; err != nil {

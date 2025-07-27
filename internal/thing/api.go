@@ -170,6 +170,38 @@ func APIs(cfg *config.Config, w *API, r *gin.Engine, auth *jwt.GinJWTMiddleware)
 	{
 		thingsAPI.GET("/:id/state/change", w.ChangeThingState)
 		thingsAPI.GET("/:id/state", w.UpdateThingState)
+		thingsAPI.GET("/:id", w.GetThingByID)
+		thingsAPI.GET("/", w.GetAllThings)
+
 	}
 
+}
+
+// GetThingByID returns a single thing by its ID for the authenticated user
+func (h *API) GetThingByID(c *gin.Context) {
+	thing, shouldReturn := validateUserAndThing(c, h)
+	if shouldReturn {
+		return
+	}
+	c.JSON(200, gin.H{"thing": thing})
+}
+
+// GetAllThings returns all things for the authenticated user
+func (h *API) GetAllThings(c *gin.Context) {
+	apiToken := c.GetHeader("secretkey")
+	if apiToken == "" {
+		c.JSON(401, gin.H{"error": "Unauthorized"})
+		return
+	}
+	user, err := h.userRepo.GetUserByToken(c, apiToken)
+	if err != nil {
+		c.JSON(401, gin.H{"error": "Unauthorized"})
+		return
+	}
+	things, err := h.thingRepo.GetThingsByUserID(c, user.ID)
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(200, things)
 }

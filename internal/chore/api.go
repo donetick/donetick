@@ -1,7 +1,6 @@
 package chore
 
 import (
-	"log"
 	"strconv"
 	"time"
 
@@ -9,6 +8,8 @@ import (
 	chRepo "donetick.com/core/internal/chore/repo"
 	"donetick.com/core/internal/events"
 	nps "donetick.com/core/internal/notifier/service"
+	"donetick.com/core/internal/utils"
+	"donetick.com/core/logging"
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
 
@@ -101,19 +102,23 @@ func (h *API) CreateChore(c *gin.Context) {
 }
 
 func (h *API) CompleteChore(c *gin.Context) {
-
+	log := logging.FromContext(c)
 	completedDate := time.Now().UTC()
 	choreIDRaw := c.Param("id")
 	choreID, err := strconv.Atoi(choreIDRaw)
 	if err != nil {
+		log.Debugw("chore.api.CompleteChore failed to parse chore ID", "error", err)
 		c.JSON(400, gin.H{
 			"error": "Invalid ID",
 		})
 		return
 	}
+	completedByRaw := c.Query("completedBy")
+	completedBy, err := strconv.Atoi(completedByRaw)
 
 	apiToken := c.GetHeader("secretkey")
 	if apiToken == "" {
+		log.Debugw("chore.api.CompleteChore no secret key provided")
 		c.JSON(401, gin.H{"error": "No secret key provided"})
 		return
 	}
@@ -122,9 +127,14 @@ func (h *API) CompleteChore(c *gin.Context) {
 		c.JSON(401, gin.H{"error": "Unauthorized"})
 		return
 	}
-
+	performer := currentUser.ID
+	if completedBy != 0 {
+		log.Debugw("chore.api.CompleteChore completedBy is set", "completedBy", completedBy)
+		performer = completedBy
+	}
 	chore, err := h.choreRepo.GetChore(c, choreID)
 	if err != nil {
+		log.Errorw("chore.api.CompleteChore failed to get chore", "error", err)
 		c.JSON(500, gin.H{
 			"error": "Error getting chore",
 		})
@@ -132,7 +142,8 @@ func (h *API) CompleteChore(c *gin.Context) {
 	}
 
 	// user need to be assigned to the chore to complete it
-	if !chore.CanComplete(currentUser.ID) {
+	if !chore.CanComplete(performer) {
+		log.Debugw("chore.api.CompleteChore user is not assigned to chore", "userID", performer, "choreID", choreID)
 		c.JSON(400, gin.H{
 			"error": "User is not assigned to chore",
 		})
@@ -142,6 +153,7 @@ func (h *API) CompleteChore(c *gin.Context) {
 	// confirm that the chore in completion window:
 	if chore.CompletionWindow != nil {
 		if completedDate.Before(chore.NextDueDate.Add(time.Hour * time.Duration(*chore.CompletionWindow))) {
+			log.Debugw("chore.api.CompleteChore chore is in completion window", "choreID", choreID, "completionWindow", chore.CompletionWindow)
 			c.JSON(400, gin.H{
 				"error": "Chore is out of completion window",
 			})
@@ -160,7 +172,8 @@ func (h *API) CompleteChore(c *gin.Context) {
 		}
 		nextDueDate, err = scheduleAdaptiveNextDueDate(chore, completedDate, history)
 		if err != nil {
-			log.Printf("Error scheduling next due date: %s", err)
+			log.Debugw("chore.api.CompleteChore failed to schedule adaptive next due date", "error", err)
+
 			c.JSON(500, gin.H{
 				"error": "Error scheduling next due date",
 			})
@@ -170,7 +183,7 @@ func (h *API) CompleteChore(c *gin.Context) {
 	} else {
 		nextDueDate, err = scheduleNextDueDate(c, chore, completedDate.UTC())
 		if err != nil {
-			log.Printf("Error scheduling next due date: %s", err)
+			log.Debugw("chore.api.CompleteChore failed to schedule next due date", "error", err)
 			c.JSON(500, gin.H{
 				"error": "Error scheduling next due date",
 			})
@@ -185,16 +198,16 @@ func (h *API) CompleteChore(c *gin.Context) {
 		return
 	}
 
-	nextAssignedTo, err := checkNextAssignee(chore, choreHistory, currentUser.ID)
+	nextAssignedTo, err := checkNextAssignee(chore, choreHistory, performer)
 	if err != nil {
-		log.Printf("Error checking next assignee: %s", err)
+		log.Debugw("chore.api.CompleteChore failed to check next assignee", "error", err)
 		c.JSON(500, gin.H{
 			"error": "Error checking next assignee",
 		})
 		return
 	}
 
-	if err := h.choreRepo.CompleteChore(c, chore, nil, currentUser.ID, nextDueDate, &completedDate, nextAssignedTo, true); err != nil {
+	if err := h.choreRepo.CompleteChore(c, chore, nil, performer, nextDueDate, &completedDate, nextAssignedTo, true); err != nil {
 		c.JSON(500, gin.H{
 			"error": "Error completing chore",
 		})
@@ -218,14 +231,45 @@ func (h *API) CompleteChore(c *gin.Context) {
 	)
 }
 
+func (h *API) GetCircleMembers(c *gin.Context) {
+	apiToken := c.GetHeader("secretkey")
+	if apiToken == "" {
+		c.JSON(401, gin.H{"error": "Unauthorized"})
+		return
+	}
+	currentUser, err := h.userRepo.GetUserByToken(c, apiToken)
+	if err != nil {
+		c.JSON(401, gin.H{"error": "Unauthorized"})
+		return
+	}
+	users, err := h.circleRepo.GetCircleUsers(c, currentUser.CircleID)
+	if err != nil {
+		c.JSON(500, gin.H{"error": "Failed to get circle members"})
+		return
+	}
+	if len(users) == 0 {
+		c.JSON(404, gin.H{"error": "No members found in the circle"})
+		return
+	}
+	c.JSON(200, users)
+}
+
 func APIs(cfg *config.Config, api *API, r *gin.Engine, auth *jwt.GinJWTMiddleware, limiter *limiter.Limiter) {
 
-	thingsAPI := r.Group("eapi/v1/chore")
+	tasksAPI := r.Group("eapi/v1/chore")
 
-	// thingsAPI.Use(utils.TimeoutMiddleware(cfg.Server.WriteTimeout), utils.RateLimitMiddleware(limiter))
+	// tasksAPI.Use(utils.TimeoutMiddleware(cfg.Server.WriteTimeout), utils.RateLimitMiddleware(limiter))
 	{
-		thingsAPI.GET("", api.GetAllChores)
-		thingsAPI.POST("/:id/complete", api.CompleteChore)
+		tasksAPI.GET("", api.GetAllChores)
+		tasksAPI.POST("/:id/complete", api.CompleteChore)
+		// tasksAPI.POST("", api.CreateChore)
+		// tasksAPI.PUT(":id", api.UpdateChore)
+	}
+
+	circleAPI := r.Group("eapi/v1/circle")
+	circleAPI.Use(utils.TimeoutMiddleware(cfg.Server.WriteTimeout), utils.RateLimitMiddleware(limiter))
+	{
+		circleAPI.GET("/members", api.GetCircleMembers)
 	}
 
 }

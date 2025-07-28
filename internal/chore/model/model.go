@@ -182,6 +182,13 @@ type ChoreLabels struct {
 	UserID  int `json:"userId" gorm:"primaryKey;autoIncrement:false;not null"`
 	Label   Label
 }
+type ChoreLiteReq struct {
+	Name        string  `json:"name" binding:"required"`
+	Description *string `json:"description"`
+	ID          int     `json:"id"`
+	DueDate     string  `json:"dueDate"`
+	CreatedBy   *int    `json:"createdBy"`
+}
 
 type ChoreReq struct {
 	Name                 string                `json:"name" binding:"required"`

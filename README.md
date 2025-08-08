@@ -65,7 +65,7 @@ Donetick is an open-source, user-friendly app designed to help you organize task
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 > [!NOTE]
 > Before running the application, ensure you have a valid `selfhosted.yaml` configuration file. 
 > If you don't have one, create a `selfhosted.yaml` file based on the example provided [here](https://github.com/donetick/donetick/blob/main/config/selfhosted.yaml).
@@ -121,7 +121,7 @@ services:
 
 
 
-## 🛠️ Development Environment
+## Development Environment
 
 ### Build the frontend
 

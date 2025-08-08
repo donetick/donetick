@@ -56,15 +56,21 @@ Donetick is an open-source, user-friendly app designed to help you organize task
 **Multiple Sign-In Options**: Choose from local accounts or any OAuth2 provider that supports OIDC, like Keycloak, Authentik, Authelia, etc. (Tested with Authentik.)
 
 ### Notifications & Integrations
+
+**Dashboard View**: If you’re on a larger screen (like a laptop or tablet) and logged in as an admin, Donetick shows a mount-friendly dashboard layout. a full task list, calendar, and recent activity all in one place. Perfect for wall-mounted displays or shared tablets. With the ability for any user to pick their account and complete a task on the go!
+
+**Realtime Sync**: Enable realtime sync to instantly reflect task changes across all connected devices and users.  whether you are adding, editing, or completing a task. It reflects immediately on enabled devices!
+
+**Offline Support**: You can access donetick if you lose connection and navigate some areas, but this is very limited functionality at the moment. 
+
 **Multi-Platform Notifications**: Get reminders through the mobile app (we have an alpha iOS app on TestFlight, and the Android APK is available in releases), as well as via Telegram, Discord, or Pushover.
 
 **Home Assistant Integration**: Manage and view tasks directly within Home Assistant using the official integration. It creates separate to-do lists for each Donetick user. Donetick Home Assistant Integration
 
-**Webhook System**: Connect Donetick to external systems using flexible webhook support — perfect for custom notification flows or automations.
-
 ### Developer & API Features
 **REST API**: Full access to Donetick’s features through a REST API, great for custom automations and integrations. (For external use, we recommend using the eAPI, which offers limited access intended for long-lived access tokens.)
 
+**Webhook System**: Connect Donetick to external systems using flexible webhook support good for custom notification flows or automations.
 
 ---
 

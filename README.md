@@ -31,8 +31,11 @@ Donetick is an open-source, user-friendly app designed to help you organize task
 - Supports flexible scheduling: daily, weekly, monthly, yearly, specific months, specific days of the week, or even adaptive scheduling — where Donetick learns from historical completions to suggest due dates automatically.
 - Due Date vs Completion Date Based Recurrence: Choose whether recurring tasks should be scheduled from the previous due date (ideal for a consistent cadence) or from the actual completion date (useful when tasks are often delayed).
 - Assignee Rotation: Automatically rotate task assignments based on who has completed the fewest tasks, randomly, or in turns(round-robin) order.
-- Time Tracking & Session Insights: Track how much time you spend on a task whether in a single session or across multiple. 
-**Subtasks & Tagging/Labeling**: Break down complex tasks into manageable subtasks with progress tracking. Organize everything using labels that can be shared across your group.
+- Time Tracking & Session Insights: Track how much time you spend on a task whether in a single session or across multiple.
+  
+**Subtasks with Smart Reset**: Break tasks into smaller steps with subtasks, each trackable on its own. For recurring tasks, subtasks automatically reset when the main task is completed. subtasks can be nested as well!
+
+**Organize with Priorities and Labels**: Organize everything using custom labels and priorities. Labels can be shared across your group, making it easy to filter and sort tasks by category. Priorities help you stay focused  Donetick supports five levels: P1, P2, P3, P4, and No Priority.
 
 **Add Photos**: Attach photos directly to tasks. Supports local storage (WIP) or cloud providers including AWS S3, Cloudflare R2, MinIO, and other S3-compatible services.
 

@@ -57,7 +57,6 @@ Donetick is an open-source, user-friendly app designed to help you organize task
 ### Developer & API Features
 **REST API**: Full access to Donetick’s features through a REST API, great for custom automations and integrations. (For external use, we recommend using the eAPI, which offers limited access intended for long-lived access tokens.)
 
-**Things Integration**: Connect IoT devices or external systems using “Things” — numeric, string, or boolean values — to trigger tasks, track sensors, or integrate with your smart home.
 
 ---
 

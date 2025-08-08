@@ -23,47 +23,41 @@ Donetick is an open-source, user-friendly app designed to help you organize task
 ## Features
 
 ### Task & Chore Management
-**Collaborative Organization**: Create and manage tasks either solo or with family and friends through shared circles. Each circle functions as a collaborative workspace with role-based permissions.
+**Collaborative**: Create and manage tasks either solo or with family and friends. You can create a group and share or assign some of the tasks or chores with others.
 
-**Natural Language Task Creation**: Simply describe what you need to do in plain English. Donetick automatically extracts dates, times, and recurrence patterns from phrases like "Change water filter every 6 months" or "Take the trash out every Monday and Tuesday at 6:15 pm."
+**Natural Language Task Creation**: Describe what you need to do in plain English. Donetick automatically extracts dates, times, and recurrence patterns from phrases like “Change water filter every 6 months” or “Take the trash out every Monday and Tuesday at 6:15 pm.”
 
-**Advanced Scheduling**: Beyond basic recurring tasks, Donetick offers adaptive scheduling that learns from completion patterns, flexible recurrence options, completion windows, and custom triggers based on historical data.
+**Advanced Scheduling**: Supports flexible scheduling: daily, weekly, monthly, yearly, specific months, specific days of the week, or even adaptive scheduling — where Donetick learns from historical completions to suggest due dates automatically.
 
-**Subtasks & Organization**: Break down complex tasks into manageable subtasks with progress tracking. Organize everything with labels that can be shared across your circle for consistent categorization.
+**Subtasks & Tagging/Labeling**: Break down complex tasks into manageable subtasks with progress tracking. Organize everything using labels that can be shared across your group.
 
-### Gamification & Progress
-**Points System**: a built-in points system that rewards task completion and tracks your productivity over time.
+**Add Photos**: Attach photos directly to tasks. Supports local storage (WIP) or cloud providers including AWS S3, Cloudflare R2, MinIO, and other S3-compatible services.
 
-**Comprehensive Analytics**: Monitor completion rates, view historical trends, and analyze productivity patterns to optimize your workflow.
-
-### Security & Authentication
-**Multi-Factor Authentication**: Support for TOTP-based MFA.
-
-**Multiple Sign-In Options**: Choose from local accounts, Google OAuth, or other OAuth2 providers for convenient and secure authentication.
-
-### File Management & Storage
-**File Attachments**: Attach files directly to tasks and chores. Upload profile photos and manage all your content with ease.
-
-**Flexible Storage**: Works with local storage(WIP) or cloud providers including AWS S3, Cloudflare R2, MinIO, and other S3-compatible services.
-
-### Notifications & Integrations
-**Multi-Platform Notifications**: Receive reminders through Telegram, Discord, or Pushover, ensuring you never miss important tasks.
+**Things**: A unique feature in Donetick. “Things” let you track data that isn’t a task. A Thing can be a number, boolean (true/false), or plain text. You can also mark tasks as done automatically when a Thing changes to a certain value.
 
 **NFC Tag Support**: Create physical triggers by writing NFC tags that instantly mark tasks as complete when scanned.
 
-**Home Assistant Integration**: View and manage tasks directly within Home Assistant using the official custom component.
+### Gamification & Progress
+**Points System**: Built-in points system that rewards task completion and tracks your progress over time.
 
-**Webhook System**: Connect with external systems through comprehensive webhook support and event-driven architecture.
+**Comprehensive Analytics**: See task breakdowns by label, completion status, and other helpful graphs.
+
+### Security & Authentication
+**Multi-Factor Authentication**: Supports TOTP-based MFA.
+
+**Multiple Sign-In Options**: Choose from local accounts or any OAuth2 provider that supports OIDC, like Keycloak, Authentik, Authelia, etc. (Tested with Authentik.)
+
+### Notifications & Integrations
+**Multi-Platform Notifications**: Get reminders through the mobile app (we have an alpha iOS app on TestFlight, and the Android APK is available in releases), as well as via Telegram, Discord, or Pushover.
+
+**Home Assistant Integration**: Manage and view tasks directly within Home Assistant using the official integration. It creates separate to-do lists for each Donetick user. Donetick Home Assistant Integration
+
+**Webhook System**: Connect Donetick to external systems using flexible webhook support — perfect for custom notification flows or automations.
 
 ### Developer & API Features
-**REST API**: Full programmatic access to all features through a REST API, perfect for custom integrations and automation.
+**REST API**: Full access to Donetick’s features through a REST API, great for custom automations and integrations. (For external use, we recommend using the eAPI, which offers limited access intended for long-lived access tokens.)
 
-**Things Integration**: Connect IoT devices and external systems using entities (numbers, strings, booleans) that can trigger tasks, track sensor values, or integrate with smart home systems.
-
-**External Triggers**: Allow other applications and services to create, update, and complete tasks through API endpoints.
-
-🔑 SSO/OIDC Support: Integrate with identity providers using Single Sign-On and OpenID Connect.
-
+**Things Integration**: Connect IoT devices or external systems using “Things” — numeric, string, or boolean values — to trigger tasks, track sensors, or integrate with your smart home.
 
 ---
 
@@ -183,36 +177,19 @@ services:
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! If you want to work on something that is not listed as an issue, please open a [Discussion](https://github.com/donetick/donetick/discussions) first to ensure it aligns with our goals and to avoid any unnecessary effort!
 
-if you have an idea also feel free to use the [Discussion](https://github.com/donetick/donetick/discussions)
-1. Pick an issue or open discuss about the contribution
-2. Fork the repository.
-3. Create a new branch:
-   ```bash
-   git checkout -b feature/your-feature-name
-   ```
-4. Make your changes and commit them:
-   ```bash
-   git commit -m 'Add a new feature'
-   ```
-5. Push your branch:
-   ```bash
-   git push origin feature/your-feature-name
-   ```
-6. Submit a pull request.
-
 ---
 
-## 🔒 License
+## License
 
 This project is licensed under the **AGPLv3**. See the [LICENSE](LICENSE) file for more details.
 
 ---
 
-## 💬 Join the Discussion
+## Join the Discussion
 For ideas or feature requests, please use GitHub Discussions. We also have a Discord server and a subreddit for those who prefer those platforms!
 
 
@@ -223,7 +200,7 @@ For ideas or feature requests, please use GitHub Discussions. We also have a Dis
 
 ---
 
-## 💡 Support Donetick
+## Support Donetick
 
  If you find it helpful, consider supporting us by starring the repository, contributing code, or sharing feedback!  
 

@@ -27,8 +27,11 @@ Donetick is an open-source, user-friendly app designed to help you organize task
 
 **Natural Language Task Creation**: Describe what you need to do in plain English. Donetick automatically extracts dates, times, and recurrence patterns from phrases like “Change water filter every 6 months” or “Take the trash out every Monday and Tuesday at 6:15 pm.”
 
-**Advanced Scheduling**: Supports flexible scheduling: daily, weekly, monthly, yearly, specific months, specific days of the week, or even adaptive scheduling — where Donetick learns from historical completions to suggest due dates automatically.
-
+**Task Advanced Scheduling**: 
+- Supports flexible scheduling: daily, weekly, monthly, yearly, specific months, specific days of the week, or even adaptive scheduling — where Donetick learns from historical completions to suggest due dates automatically.
+- Due Date vs Completion Date Based Recurrence: Choose whether recurring tasks should be scheduled from the previous due date (ideal for a consistent cadence) or from the actual completion date (useful when tasks are often delayed).
+- Assignee Rotation: Automatically rotate task assignments based on who has completed the fewest tasks, randomly, or in turns(round-robin) order.
+- Time Tracking & Session Insights: Track how much time you spend on a task whether in a single session or across multiple. 
 **Subtasks & Tagging/Labeling**: Break down complex tasks into manageable subtasks with progress tracking. Organize everything using labels that can be shared across your group.
 
 **Add Photos**: Attach photos directly to tasks. Supports local storage (WIP) or cloud providers including AWS S3, Cloudflare R2, MinIO, and other S3-compatible services.
@@ -39,6 +42,8 @@ Donetick is an open-source, user-friendly app designed to help you organize task
 
 ### Gamification & Progress
 **Points System**: Built-in points system that rewards task completion and tracks your progress over time.
+
+**Completion Restrictions** : You can restrict task completion until a certain time, for example, make a task completable only within the last X hours before its due date. This helps prevent marking tasks as "done" too early.
 
 **Comprehensive Analytics**: See task breakdowns by label, completion status, and other helpful graphs.
 

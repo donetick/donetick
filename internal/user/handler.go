@@ -11,7 +11,8 @@ import (
 	"time"
 
 	"donetick.com/core/config"
-	auth "donetick.com/core/internal/authorization"
+	auth "donetick.com/core/internal/auth"
+	"donetick.com/core/internal/auth/apple"
 	cModel "donetick.com/core/internal/circle/model"
 	cRepo "donetick.com/core/internal/circle/repo"
 	"donetick.com/core/internal/email"
@@ -43,13 +44,16 @@ type Handler struct {
 	storage                *storage.S3Storage
 	storageRepo            *storageRepo.StorageRepository
 	signer                 *storage.URLSignerS3
+	deletionService        *DeletionService
+	appleService           *apple.AppleService
 }
 
 func NewHandler(ur *uRepo.UserRepository, cr *cRepo.CircleRepository,
 	jwtAuth *jwt.GinJWTMiddleware, email *email.EmailSender,
 	idp *auth.IdentityProvider, storage *storage.S3Storage,
 	signer *storage.URLSignerS3, storageRepo *storageRepo.StorageRepository,
-	config *config.Config) *Handler {
+	appleService *apple.AppleService,
+	deletionService *DeletionService, config *config.Config) *Handler {
 	return &Handler{
 		userRepo:               ur,
 		circleRepo:             cr,
@@ -62,6 +66,8 @@ func NewHandler(ur *uRepo.UserRepository, cr *cRepo.CircleRepository,
 		storage:                storage,
 		storageRepo:            storageRepo,
 		signer:                 signer,
+		deletionService:        deletionService,
+		appleService:           appleService,
 	}
 }
 
@@ -353,6 +359,172 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 		tokenString, expire, err := h.jwtAuth.TokenGenerator(acc)
 		if err != nil {
 			logger.Errorw("Unable to Generate a Token")
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "Unable to Generate a Token",
+			})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"token": tokenString, "expire": expire})
+		return
+	case "apple":
+		c.Set("auth_provider", "3rdPartyAuth")
+		type AppleAuthRequest struct {
+			Data struct {
+				Profile struct {
+					User       string `json:"user"`
+					GivenName  string `json:"givenName"`
+					FamilyName string `json:"familyName"`
+					Email      string `json:"email"`
+				} `json:"profile"`
+				AccessToken struct {
+					Token string `json:"token"`
+				} `json:"accessToken"`
+			} `json:"data"`
+			IDToken string `json:"idToken"`
+		}
+
+		var body AppleAuthRequest
+		if err := c.ShouldBindJSON(&body); err != nil {
+			logger.Errorw("account.handler.thirdPartyAuthCallback (apple) failed to bind", "err", err)
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "Invalid request",
+			})
+			return
+		}
+
+		// Validate the ID token
+		userInfo, err := h.appleService.ValidateIDToken(c.Request.Context(), body.Data.AccessToken.Token)
+		if err != nil {
+			logger.Errorw("account.handler.thirdPartyAuthCallback (apple) failed to validate token", "err", err)
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "Invalid Apple ID token",
+			})
+			return
+		}
+
+		logger.Infow("account.handler.thirdPartyAuthCallback (apple)", "userInfo", userInfo)
+
+		// Check if user exists
+		acc, err := h.userRepo.FindByEmail(c, userInfo.Email)
+
+		if err != nil {
+			// Create user account
+			password := auth.GenerateRandomPassword(12)
+			encodedPassword, err := auth.EncodePassword(password)
+			if err != nil {
+				logger.Errorw("account.handler.thirdPartyAuthCallback (apple) failed to encode password", "err", err)
+				c.JSON(http.StatusInternalServerError, gin.H{
+					"error": "Unable to create user account",
+				})
+				return
+			}
+
+			// Use provided names from profile or fallback to email
+			displayName := body.Data.Profile.GivenName
+			if displayName == "" {
+				displayName = userInfo.Email
+			}
+
+			account := &uModel.User{
+				Username:    userInfo.Sub,
+				Email:       userInfo.Email,
+				Password:    encodedPassword,
+				DisplayName: displayName,
+				Provider:    uModel.AuthProviderApple,
+			}
+
+			createdUser, err := h.userRepo.CreateUser(c, account)
+			if err != nil {
+				logger.Errorw("account.handler.thirdPartyAuthCallback (apple) failed to create user", "err", err)
+				c.JSON(http.StatusInternalServerError, gin.H{
+					"error": "Unable to create user",
+				})
+				return
+			}
+
+			// Create Circle for the user
+			userCircle, err := h.circleRepo.CreateCircle(c, &cModel.Circle{
+				Name:       displayName + "'s circle",
+				CreatedAt:  time.Now(),
+				UpdatedAt:  time.Now(),
+				InviteCode: utils.GenerateInviteCode(c),
+			})
+
+			if err != nil {
+				logger.Errorw("account.handler.thirdPartyAuthCallback (apple) failed to create circle", "err", err)
+				c.JSON(500, gin.H{
+					"error": "Error creating circle",
+				})
+				return
+			}
+
+			if err := h.circleRepo.AddUserToCircle(c, &cModel.UserCircle{
+				UserID:    createdUser.ID,
+				CircleID:  userCircle.ID,
+				Role:      "admin",
+				IsActive:  true,
+				CreatedAt: time.Now(),
+				UpdatedAt: time.Now(),
+			}); err != nil {
+				logger.Errorw("account.handler.thirdPartyAuthCallback (apple) failed to add user to circle", "err", err)
+				c.JSON(500, gin.H{
+					"error": "Error adding user to circle",
+				})
+				return
+			}
+
+			createdUser.CircleID = userCircle.ID
+			if err := h.userRepo.UpdateUser(c, createdUser); err != nil {
+				logger.Errorw("account.handler.thirdPartyAuthCallback (apple) failed to update user", "err", err)
+				c.JSON(500, gin.H{
+					"error": "Error updating user",
+				})
+				return
+			}
+
+			acc = &uModel.UserDetails{User: *createdUser}
+		}
+
+		// Check if user has MFA enabled
+		if acc.MFAEnabled {
+			// Create MFA session for Apple auth
+			mfaService := mfa.NewMFAService("Donetick")
+			sessionToken, err := mfaService.GenerateSessionToken()
+			if err != nil {
+				logger.Errorw("Failed to generate MFA session token", "error", err)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Authentication failed"})
+				return
+			}
+
+			mfaSession := &uModel.MFASession{
+				SessionToken: sessionToken,
+				UserID:       acc.ID,
+				AuthMethod:   "apple",
+				Verified:     false,
+				CreatedAt:    time.Now(),
+				ExpiresAt:    time.Now().Add(10 * time.Minute),
+				UserData:     acc.Username,
+			}
+
+			if err := h.userRepo.CreateMFASession(c, mfaSession); err != nil {
+				logger.Errorw("Failed to create MFA session", "error", err)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Authentication failed"})
+				return
+			}
+
+			c.JSON(http.StatusOK, gin.H{
+				"mfaRequired":  true,
+				"sessionToken": sessionToken,
+			})
+			return
+		}
+
+		// Generate JWT token for the user
+		c.Set("user_account", acc)
+		h.jwtAuth.Authenticator(c)
+		tokenString, expire, err := h.jwtAuth.TokenGenerator(acc)
+		if err != nil {
+			logger.Errorw("Unable to Generate a Token for Apple user")
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": "Unable to Generate a Token",
 			})
@@ -987,6 +1159,90 @@ func (h *Handler) getStorageUsage(c *gin.Context) {
 
 }
 
+// Account deletion request/response types
+type AccountDeletionRequest struct {
+	Password        string                 `json:"password" binding:"required"`
+	TransferOptions []CircleTransferOption `json:"transferOptions,omitempty"`
+	Confirmation    string                 `json:"confirmation" binding:"required"` // Must be "DELETE"
+}
+
+type AccountDeletionCheckRequest struct {
+	Password string `json:"password" binding:"required"`
+}
+
+func (h *Handler) checkAccountDeletion(c *gin.Context) {
+	currentUser, ok := auth.CurrentUser(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	var req AccountDeletionCheckRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Verify password
+	if auth.Matches(currentUser.Password, req.Password) != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid password"})
+		return
+	}
+
+	// Check what would be deleted (dry run)
+	result, err := h.deletionService.CheckUserAccountDeletion(c.Request.Context(), currentUser.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check account deletion: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, result)
+}
+
+func (h *Handler) deleteAccount(c *gin.Context) {
+	currentUser, ok := auth.CurrentUser(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	var req AccountDeletionRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Validate confirmation text
+	if req.Confirmation != "DELETE" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Confirmation text must be 'DELETE'"})
+		return
+	}
+
+	// Verify password
+	if auth.Matches(currentUser.Password, req.Password) != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid password"})
+		return
+	}
+
+	// Perform account deletion
+	result, err := h.deletionService.DeleteUserAccount(c.Request.Context(), currentUser.ID, req.TransferOptions)
+	if err != nil {
+		logging.DefaultLogger().Errorf("Failed to delete account for user %d: %v", currentUser.ID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete account: " + err.Error()})
+		return
+	}
+
+	if !result.Success {
+		c.JSON(http.StatusBadRequest, result)
+		return
+	}
+
+	// Log the account deletion
+	logging.DefaultLogger().Infof("Account deleted successfully for user %d (%s)", currentUser.ID, currentUser.Username)
+
+	c.JSON(http.StatusOK, result)
+}
+
 func Routes(router *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware, limiter *limiter.Limiter) {
 
 	userRoutes := router.Group("api/v1/users")
@@ -1010,6 +1266,10 @@ func Routes(router *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware, limiter 
 		userRoutes.POST("/mfa/confirm", h.confirmMFA)
 		userRoutes.POST("/mfa/disable", h.disableMFA)
 		// userRoutes.POST("/mfa/regenerate-backup-codes", h.regenerateBackupCodes)
+
+		// Account deletion endpoints
+		userRoutes.POST("/delete/check", h.checkAccountDeletion)
+		userRoutes.DELETE("/delete", h.deleteAccount)
 	}
 
 	authRoutes := router.Group("api/v1/auth")

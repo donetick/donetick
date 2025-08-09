@@ -9,6 +9,7 @@ import (
 	"gorm.io/gorm"
 
 	"donetick.com/core/config"
+	sModel "donetick.com/core/external/payment/model"
 	chModel "donetick.com/core/internal/chore/model"
 	cModel "donetick.com/core/internal/circle/model"
 	nModel "donetick.com/core/internal/notifier/model"
@@ -31,7 +32,14 @@ func Migration(db *gorm.DB) error {
 		chModel.ChoreAssignees{},
 		nModel.Notification{},
 		uModel.UserPasswordReset{},
-		uModel.MFASession{}, // Add MFA session model
+		sModel.StripeCustomer{},
+		sModel.StripeSubscription{},
+		sModel.StripeSession{},
+		sModel.StripeInvoice{},
+		sModel.RevenueCatEvent{},
+		sModel.RevenueCatSubscription{},
+		sModel.Subscription{},
+		uModel.MFASession{},
 		tModel.Thing{},
 		tModel.ThingChore{},
 		tModel.ThingHistory{},

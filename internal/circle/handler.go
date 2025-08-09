@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"time"
 
-	auth "donetick.com/core/internal/authorization"
+	auth "donetick.com/core/internal/auth"
 	"donetick.com/core/internal/chore"
 	chRepo "donetick.com/core/internal/chore/repo"
 	cModel "donetick.com/core/internal/circle/model"

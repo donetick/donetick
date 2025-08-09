@@ -3,7 +3,7 @@ package user
 import (
 	"net/http"
 
-	auth "donetick.com/core/internal/authorization"
+	auth "donetick.com/core/internal/auth"
 	"donetick.com/core/internal/mfa"
 	uModel "donetick.com/core/internal/user/model"
 	"donetick.com/core/logging"

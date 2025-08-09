@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"donetick.com/core/config"
-	auth "donetick.com/core/internal/authorization"
+	auth "donetick.com/core/internal/auth"
 	chRepo "donetick.com/core/internal/chore/repo"
 	cRepo "donetick.com/core/internal/circle/repo"
 	errorx "donetick.com/core/internal/error"

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"donetick.com/core/config"
+	"donetick.com/core/external/payment"
 	"donetick.com/core/frontend"
 	"donetick.com/core/migrations"
 	"github.com/gin-contrib/cors"
@@ -16,7 +17,9 @@ import (
 	"go.uber.org/fx"
 	"gorm.io/gorm"
 
-	auth "donetick.com/core/internal/authorization"
+	auth "donetick.com/core/internal/auth"
+	"donetick.com/core/internal/auth/apple"
+	"donetick.com/core/internal/backup"
 	"donetick.com/core/internal/chore"
 	chRepo "donetick.com/core/internal/chore/repo"
 	"donetick.com/core/internal/circle"
@@ -32,6 +35,8 @@ import (
 	storageRepo "donetick.com/core/internal/storage/repo"
 	spRepo "donetick.com/core/internal/subtask/repo"
 
+	sRepo "donetick.com/core/external/payment/repo"
+	sService "donetick.com/core/external/payment/service"
 	notifier "donetick.com/core/internal/notifier"
 	nRepo "donetick.com/core/internal/notifier/repo"
 	nps "donetick.com/core/internal/notifier/service"
@@ -73,6 +78,7 @@ func main() {
 		fx.Provide(chRepo.NewChoreRepository),
 		fx.Provide(chore.NewHandler),
 		fx.Provide(uRepo.NewUserRepository),
+		fx.Provide(user.NewDeletionService),
 		fx.Provide(user.NewHandler),
 		fx.Provide(cRepo.NewCircleRepository),
 		fx.Provide(circle.NewHandler),
@@ -97,6 +103,8 @@ func main() {
 		fx.Provide(mfa.NewService),
 		fx.Provide(mfa.NewCleanupService),
 
+		fx.Provide(apple.NewAppleService),
+
 		// add handlers also
 		fx.Provide(newServer),
 		fx.Provide(notifier.NewScheduler),
@@ -115,6 +123,14 @@ func main() {
 		fx.Provide(thing.NewAPI),
 		fx.Provide(thing.NewHandler),
 
+		// External Only:
+		fx.Provide(sService.NewStripeService,
+			sRepo.NewStripeDB,
+			sRepo.NewRevenueCatDB,
+			sRepo.NewSubscriptionDB,
+		),
+		fx.Provide(payment.NewHandler),
+		fx.Provide(payment.NewWebhook),
 		fx.Provide(chore.NewAPI),
 
 		fx.Provide(frontend.NewHandler),
@@ -128,6 +144,10 @@ func main() {
 
 		fx.Provide(storage.NewHandler),
 		fx.Provide(storageRepo.NewStorageRepository),
+
+		// backup service
+		fx.Provide(backup.NewService),
+		fx.Provide(backup.NewHandler),
 
 		// Real-time service and components
 		fx.Provide(realtime.NewRealTimeService),
@@ -145,6 +165,7 @@ func main() {
 			storage.Routes,
 			frontend.Routes,
 			resource.Routes,
+			backup.Routes,
 
 			realtime.Routes, //(router, rts, authMiddleware, pollingHandler)
 

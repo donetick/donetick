@@ -3,7 +3,7 @@ package label
 import (
 	"strconv"
 
-	auth "donetick.com/core/internal/authorization"
+	auth "donetick.com/core/internal/auth"
 	lModel "donetick.com/core/internal/label/model"
 	lRepo "donetick.com/core/internal/label/repo"
 	jwt "github.com/appleboy/gin-jwt/v2"

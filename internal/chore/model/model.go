@@ -78,9 +78,10 @@ type Chore struct {
 type Status int8
 
 const (
-	ChoreStatusNoStatus   Status = 0
-	ChoreStatusInProgress Status = 1
-	ChoreStatusPaused     Status = 2
+	ChoreStatusNoStatus        Status = 0
+	ChoreStatusInProgress      Status = 1
+	ChoreStatusPaused          Status = 2
+	ChoreStatusPendingApproval Status = 3
 )
 
 type ChoreAssignees struct {

@@ -1145,7 +1145,7 @@ func (h *Handler) getStorageUsage(c *gin.Context) {
 		return
 	}
 
-	used, available, err := h.storageRepo.GetStorageStats(c, currentUser.ID)
+	used, available, err := h.storageRepo.GetStorageStats(c, currentUser)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get storage usage"})
 		return

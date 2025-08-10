@@ -67,6 +67,8 @@ type DonetickCloudConfig struct {
 	GoogleAndroidClientID string `mapstructure:"google_android_client_id" yaml:"google_android_client_id"`
 	GoogleIOSClientID     string `mapstructure:"google_ios_client_id" yaml:"google_ios_client_id"`
 	AppleClientID         string `mapstructure:"apple_client_id" yaml:"apple_client_id"`
+	MaxCircleMembers      int    `mapstructure:"max_circle_members" yaml:"max_circle_members"`
+	PlusCircleMaxMembers  int    `mapstructure:"plus_circle_max_members" yaml:"plus_circle_max_members"`
 }
 
 type TelegramConfig struct {

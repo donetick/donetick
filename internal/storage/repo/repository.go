@@ -28,7 +28,7 @@ func (r *StorageRepository) AddMediaRecord(ctx context.Context, media *st.Storag
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 
 		// confirm is the user have enough space and increment the storage:
-		res := tx.Debug().Model(&st.StorageUsage{}).Where("user_id = ? and used_bytes <= ? ", user.ID, r.maxUserStorage-media.SizeBytes).Updates(map[string]interface{}{"used_bytes": gorm.Expr("used_bytes + ?", media.SizeBytes)})
+		res := tx.Model(&st.StorageUsage{}).Where("(user_id = ? OR circle_id = ?)and used_bytes <= ? ", user.ID, user.CircleID, r.maxUserStorage-media.SizeBytes).Updates(map[string]interface{}{"used_bytes": gorm.Expr("used_bytes + ?", media.SizeBytes)})
 		if res.RowsAffected == 0 {
 			return errorx.ErrNotEnoughSpace
 		}
@@ -86,13 +86,15 @@ func (r *StorageRepository) GetFilesByUser(ctx context.Context, userID int, enti
 	return files, nil
 }
 
-func (r *StorageRepository) GetStorageStats(ctx context.Context, userID int) (int, int, error) {
-	var usage st.StorageUsage
-	if err := r.db.WithContext(ctx).Model(&st.StorageUsage{}).Where("user_id = ?", userID).First(&usage).Error; err != nil {
+func (r *StorageRepository) GetStorageStats(ctx context.Context, currentUser *uModel.UserDetails) (int, int, error) {
+	var totalUsedBytes int64
+	if err := r.db.WithContext(ctx).Model(&st.StorageUsage{}).
+		Select("COALESCE(SUM(used_bytes), 0)").
+		Where("circle_id = ?", currentUser.CircleID).
+		Scan(&totalUsedBytes).Error; err != nil {
 		return 0, 0, err
 	}
-
-	return usage.UsedBytes, r.maxUserStorage, nil
+	return int(totalUsedBytes), r.maxUserStorage, nil
 }
 
 func (r *StorageRepository) RemoveAllFileByEntity(ctx context.Context, entityType st.EntityType, entityID int) error {

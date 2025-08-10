@@ -153,6 +153,8 @@ func main() {
 		fx.Provide(realtime.NewRealTimeService),
 		fx.Provide(realtime.NewAuthMiddleware),
 
+		// MCP server
+
 		// fx.Invoke(RunApp),
 		fx.Invoke(
 			chore.Routes,

@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	"donetick.com/core/config"
 	auth "donetick.com/core/internal/auth"
 	"donetick.com/core/internal/chore"
 	chRepo "donetick.com/core/internal/chore/repo"
@@ -24,14 +25,21 @@ type Handler struct {
 	userRepo   *uRepo.UserRepository
 	choreRepo  *chRepo.ChoreRepository
 	pointRepo  *pRepo.PointsRepository
+	isDonetickDotCom bool
+	maxCircleMembers int
+	plusMaxCircleMembers int
 }
 
-func NewHandler(cr *cRepo.CircleRepository, ur *uRepo.UserRepository, c *chRepo.ChoreRepository, pr *pRepo.PointsRepository) *Handler {
+func NewHandler(cr *cRepo.CircleRepository, ur *uRepo.UserRepository, c *chRepo.ChoreRepository, pr *pRepo.PointsRepository,
+	config *config.Config) *Handler {
 	return &Handler{
 		circleRepo: cr,
 		userRepo:   ur,
 		choreRepo:  c,
 		pointRepo:  pr,
+		isDonetickDotCom: config.IsDonetickDotCom,
+		maxCircleMembers: config.DonetickCloudConfig.maxCircleMembers,
+		plusMaxCircleMembers: config.DonetickCloudConfig.PlusCircleMaxMembers,
 	}
 }
 
@@ -91,7 +99,6 @@ func (h *Handler) JoinCircle(c *gin.Context) {
 		})
 		return
 	}
-
 	// Add the user to the circle
 	err = h.circleRepo.AddUserToCircle(c, &cModel.UserCircle{
 		CircleID: circle.ID,
@@ -366,7 +373,18 @@ func (h *Handler) AcceptJoinRequest(c *gin.Context) {
 		})
 		return
 	}
-
+	if h.isDonetickDotCom {
+		maxMembers := h.maxCircleMembers
+		if currentUser.IsPlusMember() {
+			maxMembers = h.plusMaxCircleMembers
+		}
+		if len(currentMembers) >= maxMembers {
+		log.Error("Circle is full")
+		c.JSON(400, gin.H{
+			"error": "Circle is full, you can only have " + strconv.Itoa(maxMembers) + " members in a circle",
+		})
+		return
+	}
 	// confirm that the current user is an admin:
 	isAdmin := false
 	for _, member := range currentMemebers {
@@ -426,6 +444,7 @@ func (h *Handler) AcceptJoinRequest(c *gin.Context) {
 		"res": "Join request accepted successfully",
 	})
 }
+
 
 func (h *Handler) RedeemPoints(c *gin.Context) {
 	type RedeemPointsRequest struct {

@@ -76,7 +76,7 @@ func (r *UserRepository) GetUserByUsername(c context.Context, username string) (
 	var user *uModel.UserDetails
 	if r.isDonetickDotCom {
 		now := time.Now().UTC()
-		if err := r.db.WithContext(c).Preload("UserNotificationTargets").Table("users u").Select("u.*, s.status as subscription, s.expires_at as expiration, c.webhook_url as webhook_url").Joins("left join subscriptions s on s.user_id = u.id AND s.status = 'active' AND (s.expires_at IS NULL OR s.expires_at > ?)", now).Joins("left join circles c on c.id = u.circle_id").Where("username = ?", username).First(&user).Error; err != nil {
+		if err := r.db.WithContext(c).Preload("UserNotificationTargets").Table("users u").Select("u.*, s.status as subscription, s.expires_at as expiration, c.webhook_url as webhook_url").Joins("left join subscriptions s on s.circle_id = u.circle_id AND s.status = 'active' AND (s.expires_at IS NULL OR s.expires_at > ?)", now).Joins("left join circles c on c.id = u.circle_id").Where("username = ?", username).First(&user).Error; err != nil {
 			return nil, err
 		}
 	} else {
@@ -101,7 +101,7 @@ func (r *UserRepository) GetUserByID(c context.Context, userID int) (*uModel.Use
 		if err := r.db.WithContext(c).Preload("UserNotificationTargets").
 			Table("users u").
 			Select("u.*, s.status as subscription, s.expires_at as expiration, c.webhook_url as webhook_url").
-			Joins("left join subscriptions s on s.user_id = u.id AND s.status = 'active' AND s.expires_at > ?", now).
+			Joins("left join subscriptions s on s.circle_id = u.circle_id AND s.status = 'active' AND s.expires_at > ?", now).
 			Joins("left join circles c on c.id = u.circle_id").
 			Where("u.id = ?", userID).
 			First(&user).Error; err != nil {

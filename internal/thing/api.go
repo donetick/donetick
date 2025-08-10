@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"donetick.com/core/config"
+	"donetick.com/core/internal/auth"
+	authMiddleware "donetick.com/core/internal/auth"
 	chRepo "donetick.com/core/internal/chore/repo"
 	cRepo "donetick.com/core/internal/circle/repo"
 	tModel "donetick.com/core/internal/thing/model"
@@ -135,21 +137,12 @@ func WebhookEvaluateTriggerAndScheduleDueDate(h *API, c *gin.Context, thing *tMo
 }
 
 func validateUserAndThing(c *gin.Context, h *API) (*tModel.Thing, bool) {
-	apiToken := c.GetHeader("secretkey")
-	if apiToken == "" {
-		c.JSON(401, gin.H{"error": "Unauthorized"})
-		return nil, true
-	}
 	thingID, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		c.JSON(400, gin.H{"error": err.Error()})
 		return nil, true
 	}
-	user, err := h.userRepo.GetUserByToken(c, apiToken)
-	if err != nil {
-		c.JSON(401, gin.H{"error": "Unauthorized"})
-		return nil, true
-	}
+	user := auth.MustCurrentUser(c)
 	thing, err := h.thingRepo.GetThingByID(c, thingID)
 	if err != nil {
 		c.JSON(400, gin.H{"error": "Invalid thing id"})
@@ -162,17 +155,19 @@ func validateUserAndThing(c *gin.Context, h *API) (*tModel.Thing, bool) {
 	return thing, false
 }
 
-func APIs(cfg *config.Config, w *API, r *gin.Engine, auth *jwt.GinJWTMiddleware) {
+func APIs(cfg *config.Config, w *API, r *gin.Engine, auth *jwt.GinJWTMiddleware, userRepo *uRepo.UserRepository) {
 
 	thingsAPI := r.Group("eapi/v1/things")
 
-	thingsAPI.Use(utils.TimeoutMiddleware(cfg.Server.WriteTimeout))
+	thingsAPI.Use(
+		utils.TimeoutMiddleware(cfg.Server.WriteTimeout),
+		authMiddleware.APITokenMiddleware(userRepo),
+	)
 	{
 		thingsAPI.GET("/:id/state/change", w.ChangeThingState)
 		thingsAPI.GET("/:id/state", w.UpdateThingState)
 		thingsAPI.GET("/:id", w.GetThingByID)
 		thingsAPI.GET("/", w.GetAllThings)
-
 	}
 
 }
@@ -188,16 +183,7 @@ func (h *API) GetThingByID(c *gin.Context) {
 
 // GetAllThings returns all things for the authenticated user
 func (h *API) GetAllThings(c *gin.Context) {
-	apiToken := c.GetHeader("secretkey")
-	if apiToken == "" {
-		c.JSON(401, gin.H{"error": "Unauthorized"})
-		return
-	}
-	user, err := h.userRepo.GetUserByToken(c, apiToken)
-	if err != nil {
-		c.JSON(401, gin.H{"error": "Unauthorized"})
-		return
-	}
+	user := auth.MustCurrentUser(c)
 	things, err := h.thingRepo.GetThingsByUserID(c, user.ID)
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})

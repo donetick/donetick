@@ -131,3 +131,32 @@ func RequireMFAMiddleware() gin.HandlerFunc {
 		c.Next()
 	})
 }
+
+// RequirePlusMemberMiddleware requires that the authenticated user is a plus member
+func RequirePlusMemberMiddleware() gin.HandlerFunc {
+	return gin.HandlerFunc(func(c *gin.Context) {
+		// Get current user from context (should be set by APITokenMiddleware)
+		user, exists := c.Get(identityKey)
+		if !exists {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+			c.Abort()
+			return
+		}
+
+		userDetails, ok := user.(*uModel.UserDetails)
+		if !ok {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user context"})
+			c.Abort()
+			return
+		}
+
+		// Check if user is a plus member
+		if !userDetails.IsPlusMember() {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Only plus members can access this endpoint"})
+			c.Abort()
+			return
+		}
+
+		c.Next()
+	})
+}

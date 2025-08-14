@@ -63,6 +63,7 @@ func (r *UserRepository) CreateUser(c context.Context, user *uModel.User) (*uMod
 		return nil, err
 	}
 	if err := r.db.WithContext(c).Create(&storageModel.StorageUsage{
+		CircleID:  user.CircleID,
 		UserID:    user.ID,
 		UsedBytes: 0,
 		UpdatedAt: time.Now().UTC(),

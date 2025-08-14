@@ -367,7 +367,6 @@ func (h *API) CompleteChore(c *gin.Context) {
 }
 
 func (h *API) GetCircleMembers(c *gin.Context) {
-	log := logging.FromContext(c)
 	currentUser := auth.MustCurrentUser(c)
 	users, err := h.circleRepo.GetCircleUsers(c, currentUser.CircleID)
 	if err != nil {

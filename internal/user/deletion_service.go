@@ -90,7 +90,7 @@ func (s *DeletionService) deleteUserAccount(ctx context.Context, userID int, tra
 		// Count what would be deleted
 		result.Message = "Preview of what would be deleted"
 		result.Success = true
-		
+
 		// Count records that would be deleted
 		deletionSteps := []struct {
 			name     string
@@ -124,10 +124,10 @@ func (s *DeletionService) deleteUserAccount(ctx context.Context, userID int, tra
 				result.DeletedData[step.name] = count
 			}
 		}
-		
+
 		// Count the user record itself
 		result.DeletedData["user"] = 1
-		
+
 		return result, nil
 	}
 

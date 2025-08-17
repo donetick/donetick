@@ -1052,6 +1052,11 @@ func (h *Handler) setWebhook(c *gin.Context) {
 		return
 	}
 
+	if !currentUser.IsPlusMember() {
+		c.JSON(http.StatusForbidden, gin.H{"error": "This action is only available for Plus members"})
+		return
+	}
+
 	// get circle admins
 	admins, err := h.circleRepo.GetCircleAdmins(c, currentUser.CircleID)
 	if err != nil {

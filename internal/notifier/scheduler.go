@@ -61,7 +61,7 @@ func (s *Scheduler) cleanupSentNotifications(c context.Context) (time.Duration, 
 func (s *Scheduler) loadAndSendNotificationJob(c context.Context) (time.Duration, error) {
 	log := logging.FromContext(c)
 	startTime := time.Now()
-	getAllPendingNotifications, err := s.notificationRepo.GetPendingNotificaiton(c, time.Minute*900)
+	getAllPendingNotifications, err := s.notificationRepo.GetPendingNotification(c, time.Minute*900)
 	log.Debug("Getting pending notifications", " count ", len(getAllPendingNotifications))
 
 	if err != nil {

@@ -1,0 +1,51 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Global animations for smooth interactions */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Smooth scrolling for better UX */
+html {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+/* Global focus styles for better accessibility */
+*:focus-visible {
+  outline: 2px solid #0ea5e9;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Improve button and interactive element performance */
+button, a, [role="button"] {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* Ensure smooth transitions for dynamic content */
+* {
+  box-sizing: border-box;
+}
+
+/* Optimize animations for performance */
+.animate-optimized {
+  will-change: transform, opacity;
+}
+
+.animate-optimized.animation-complete {
+  will-change: auto;
+}

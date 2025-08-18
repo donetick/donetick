@@ -1,0 +1,208 @@
+/* Page Transition Animations */
+.page-wrapper {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+}
+
+/* Enter animations */
+.page-enter {
+  opacity: 0;
+  transform: translateX(20px);
+}
+
+.page-enter-active {
+  opacity: 1;
+  transform: translateX(0);
+  transition: opacity 300ms ease-out, transform 300ms ease-out;
+}
+
+/* Exit animations */
+.page-exit {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.page-exit-active {
+  opacity: 0;
+  transform: translateX(-20px);
+  transition: opacity 200ms ease-in, transform 200ms ease-in;
+}
+
+/* Specific animation for back navigation */
+.page-back-enter {
+  opacity: 0;
+  transform: translateX(-20px);
+}
+
+.page-back-enter-active {
+  opacity: 1;
+  transform: translateX(0);
+  transition: opacity 300ms ease-out, transform 300ms ease-out;
+}
+
+.page-back-exit {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.page-back-exit-active {
+  opacity: 0;
+  transform: translateX(20px);
+  transition: opacity 200ms ease-in, transform 200ms ease-in;
+}
+
+/* Modal/overlay animations */
+.modal-enter {
+  opacity: 0;
+  transform: scale(0.95) translateY(10px);
+}
+
+.modal-enter-active {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+  transition: opacity 250ms ease-out, transform 250ms ease-out;
+}
+
+.modal-exit {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+}
+
+.modal-exit-active {
+  opacity: 0;
+  transform: scale(0.95) translateY(10px);
+  transition: opacity 200ms ease-in, transform 200ms ease-in;
+}
+
+/* Fade animation for simple transitions */
+.fade-enter {
+  opacity: 0;
+}
+
+.fade-enter-active {
+  opacity: 1;
+  transition: opacity 250ms ease-out;
+}
+
+.fade-exit {
+  opacity: 1;
+}
+
+.fade-exit-active {
+  opacity: 0;
+  transition: opacity 200ms ease-in;
+}
+
+/* Slide up animation for bottom sheets/panels */
+.slide-up-enter {
+  opacity: 0;
+  transform: translateY(100%);
+}
+
+.slide-up-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 300ms ease-out, transform 300ms ease-out;
+}
+
+.slide-up-exit {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.slide-up-exit-active {
+  opacity: 0;
+  transform: translateY(100%);
+  transition: opacity 250ms ease-in, transform 250ms ease-in;
+}
+
+/* Loading spinner animation */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-spinner {
+  animation: spin 1s linear infinite;
+}
+
+/* Skeleton loading animations */
+@keyframes skeleton-loading {
+  0% {
+    background-position: -200px 0;
+  }
+  100% {
+    background-position: calc(200px + 100%) 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200px 100%;
+  animation: skeleton-loading 1.5s infinite;
+}
+
+/* Micro-interactions */
+.interactive-element {
+  transition: all 0.2s ease-out;
+  transform: translateZ(0); /* Enable GPU acceleration */
+}
+
+.interactive-element:hover {
+  transform: translateY(-2px) translateZ(0);
+}
+
+.interactive-element:active {
+  transform: translateY(0) translateZ(0);
+  transition: all 0.1s ease-out;
+}
+
+/* Stagger animation for lists */
+.stagger-enter {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+.stagger-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 300ms ease-out, transform 300ms ease-out;
+}
+
+/* Add animation delays for staggered effects */
+.stagger-enter-active:nth-child(1) { transition-delay: 0ms; }
+.stagger-enter-active:nth-child(2) { transition-delay: 50ms; }
+.stagger-enter-active:nth-child(3) { transition-delay: 100ms; }
+.stagger-enter-active:nth-child(4) { transition-delay: 150ms; }
+.stagger-enter-active:nth-child(5) { transition-delay: 200ms; }
+.stagger-enter-active:nth-child(6) { transition-delay: 250ms; }
+.stagger-enter-active:nth-child(7) { transition-delay: 300ms; }
+.stagger-enter-active:nth-child(8) { transition-delay: 350ms; }
+
+/* Reduced motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .page-enter,
+  .page-enter-active,
+  .page-exit,
+  .page-exit-active,
+  .modal-enter,
+  .modal-enter-active,
+  .modal-exit,
+  .modal-exit-active,
+  .fade-enter,
+  .fade-enter-active,
+  .fade-exit,
+  .fade-exit-active,
+  .interactive-element,
+  .stagger-enter,
+  .stagger-enter-active {
+    transition: none !important;
+    animation: none !important;
+    transform: none !important;
+  }
+}

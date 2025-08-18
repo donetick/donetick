@@ -1,0 +1,7 @@
+{
+  "name": "Donetick",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "custom"
+}

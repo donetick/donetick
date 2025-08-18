@@ -32,7 +32,7 @@ func (r *NotificationRepository) MarkNotificationsAsSent(notifications []*nModel
 	// Use the extracted IDs in the Where clause
 	return r.db.Model(&nModel.Notification{}).Where("id IN (?)", ids).Update("is_sent", true).Error
 }
-func (r *NotificationRepository) GetPendingNotificaiton(c context.Context, lookback time.Duration) ([]*nModel.NotificationDetails, error) {
+func (r *NotificationRepository) GetPendingNotification(c context.Context, lookback time.Duration) ([]*nModel.NotificationDetails, error) {
 	var notifications []*nModel.NotificationDetails
 	start := time.Now().UTC().Add(-lookback)
 	end := time.Now().UTC()

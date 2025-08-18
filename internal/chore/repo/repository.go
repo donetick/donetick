@@ -52,7 +52,7 @@ func (r *ChoreRepository) CreateChore(c context.Context, chore *chModel.Chore) (
 
 func (r *ChoreRepository) GetChore(c context.Context, choreID int, userID int) (*chModel.Chore, error) {
 	var chore chModel.Chore
-	query := r.db.Debug().WithContext(c).Model(&chModel.Chore{}).
+	query := r.db.WithContext(c).Model(&chModel.Chore{}).
 		Preload("SubTasks", "chore_id = ?", choreID).
 		Preload("Assignees").
 		Preload("ThingChore").

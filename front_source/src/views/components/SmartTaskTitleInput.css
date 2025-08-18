@@ -1,0 +1,42 @@
+.smart-task-display {
+  position: absolute;
+  width: 100%;
+  z-index: 10;
+  pointer-events: none;
+  padding: 0px;
+  margin: 0;
+  border: none;
+  overflow-y: auto;
+  word-wrap: break-word;
+  white-space: pre-wrap;
+  box-sizing: border-box;
+}
+.smart-task-common {
+  font-size: 1.2em;
+  line-height: 1.2em;
+  font-family: inherit;
+  caret-color: #f08080;
+}
+
+.highlight-date {
+  color: #f08080;
+}
+
+.highlight-repeat {
+  color: #90ee90;
+}
+
+.highlight-label {
+  color: #add8e6;
+}
+
+.highlight-priority {
+  color: #ffb6c1;
+}
+
+.task-input {
+  position: relative;
+  width: 100%;
+  border-radius: 8px;
+  box-sizing: border-box;
+}

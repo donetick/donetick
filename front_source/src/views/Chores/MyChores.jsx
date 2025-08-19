@@ -38,34 +38,40 @@ import {
 } from '@mui/joy'
 import Fuse from 'fuse.js'
 import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
+import KeyboardShortcutHint from '../../components/common/KeyboardShortcutHint'
+import { useImpersonateUser } from '../../contexts/ImpersonateUserContext.jsx'
 import { useChores } from '../../queries/ChoreQueries'
+import { useCircleMembers, useUserProfile } from '../../queries/UserQueries'
 import { useNotification } from '../../service/NotificationProvider'
-import { ArchiveChore, GetArchivedChores } from '../../utils/Fetcher'
+import { ChoreFilters, ChoresGrouper, ChoreSorter } from '../../utils/Choores'
+import {
+  ArchiveChore,
+  DeleteChore,
+  GetArchivedChores,
+  MarkChoreComplete,
+  SkipChore,
+} from '../../utils/Fetcher'
 import Priorities from '../../utils/Priorities'
 import LoadingComponent from '../components/Loading'
+import TaskInput from '../components/AddTaskModal'
 import { useLabels } from '../Labels/LabelQueries'
 import ConfirmationModal from '../Modals/Inputs/ConfirmationModal'
 import ChoreCard from './ChoreCard'
 import CompactChoreCard from './CompactChoreCard'
 import IconButtonWithMenu from './IconButtonWithMenu'
-import MultiSelectHelp from './MultiSelectHelp'
-
-import KeyboardShortcutHint from '../../components/common/KeyboardShortcutHint'
-import { useImpersonateUser } from '../../contexts/ImpersonateUserContext.jsx'
-import { useCircleMembers, useUserProfile } from '../../queries/UserQueries'
-import { ChoreFilters, ChoresGrouper, ChoreSorter } from '../../utils/Chores'
-import { DeleteChore, MarkChoreComplete, SkipChore } from '../../utils/Fetcher'
-import TaskInput from '../components/AddTaskModal'
 import {
   canScheduleNotification,
   scheduleChoreNotification,
 } from './LocalNotificationScheduler'
+import MultiSelectHelp from './MultiSelectHelp'
 import NotificationAccessSnackbar from './NotificationAccessSnackbar'
 import Sidepanel from './Sidepanel'
 import SortAndGrouping from './SortAndGrouping'
 
 const MyChores = () => {
+  const { t } = useTranslation()
   const { data: userProfile, isLoading: isUserProfileLoading } =
     useUserProfile()
   const { showSuccess, showError, showWarning } = useNotification()
@@ -106,7 +112,6 @@ const MyChores = () => {
   } = useChores(false)
   const { data: membersData, isLoading: membersLoading } = useCircleMembers()
 
-  // Multi-select state
   const [isMultiSelectMode, setIsMultiSelectMode] = useState(false)
   const [selectedChores, setSelectedChores] = useState(new Set())
   const [confirmModelConfig, setConfirmModelConfig] = useState({})
@@ -135,7 +140,6 @@ const MyChores = () => {
         }
 
         if (await canScheduleNotification()) {
-          console.log('Scheduling chore notifications...')
           scheduleChoreNotification(
             choresData.res,
             userProfile,
@@ -169,17 +173,13 @@ const MyChores = () => {
     }
   }, [searchInputFocus])
 
-  // Keyboard shortcuts for multi-select and other actions
   useEffect(() => {
     const handleKeyDown = event => {
-      // if the modal open we don't want anything here to trigger
       if (addTaskModalOpen) return
-      // if Ctrl/Cmd + / then show keyboard shortcuts modal
       if (event.ctrlKey || event.metaKey) {
         setShowKeyboardShortcuts(true)
       }
       const isHoldingCmdOrCtrl = event.ctrlKey || event.metaKey
-      // Ctrl/Cmd + K to open task modal
       if (isHoldingCmdOrCtrl && event.key === 'k') {
         event.preventDefault()
         setAddTaskModalOpen(true)
@@ -187,55 +187,38 @@ const MyChores = () => {
       }
 
       if (addTaskModalOpen) {
-        // we want to ignore anything in here until the modal close
         return
       }
 
-      // Ctrl/Cmd + J to navigate to create chore page
       if (isHoldingCmdOrCtrl && event.key === 'j') {
         event.preventDefault()
         Navigate(`/chores/create`)
         return
-      }
-
-      // Ctrl/Cmd + F to focus search input:
-      else if (isHoldingCmdOrCtrl && event.key === 'f') {
+      } else if (isHoldingCmdOrCtrl && event.key === 'f') {
         event.preventDefault()
         searchInputRef.current?.focus()
         return
-        // Ctrl/Cmd + X to close search input
       } else if (isHoldingCmdOrCtrl && event.key === 'x') {
         event.preventDefault()
         if (searchTerm?.length > 0) {
           handleSearchClose()
         }
-      }
-      // Ctrl/Cmd + S Toggle Multi-select mode
-      else if (isHoldingCmdOrCtrl && event.key === 's') {
+      } else if (isHoldingCmdOrCtrl && event.key === 's') {
         event.preventDefault()
         toggleMultiSelectMode()
         return
-      }
-
-      // Ctrl/Cmd + A to select all - works both in and out of multi-select mode
-      else if (
+      } else if (
         isHoldingCmdOrCtrl &&
         event.key === 'a' &&
         !['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)
       ) {
         event.preventDefault()
         if (!isMultiSelectMode) {
-          // Enable multi-select mode and select all visible tasks
           setIsMultiSelectMode(true)
           setTimeout(() => {
             selectAllVisibleChores()
           }, 0)
-          // showSuccess({
-          //   title: '🎯 Multi-select Mode Active',
-          //   message: 'Selected all visible tasks. Press Esc to exit.',
-          // })
         } else {
-          // Already in multi-select mode, check if all visible tasks are already selected
           let visibleChores = []
 
           if (searchTerm?.length > 0 || searchFilter !== 'All') {
@@ -246,18 +229,21 @@ const MyChores = () => {
 
             if (allVisibleSelected) {
               showSuccess({
-                title: '✅ All Tasks Selected',
-                message: `All ${visibleChores.length} filtered task${visibleChores.length !== 1 ? 's are' : ' is'} already selected.`,
+                title: t('myChores.allTasksSelected'),
+                message: t('myChores.allTasksSelectedSuccess', {
+                  count: visibleChores.length,
+                }),
               })
             } else {
               selectAllVisibleChores()
               showSuccess({
-                title: '🎯 Tasks Selected',
-                message: `Selected ${visibleChores.length} filtered task${visibleChores.length !== 1 ? 's' : ''}.`,
+                title: t('myChores.tasksSelected'),
+                message: t('myChores.tasksSelectedSuccess', {
+                  count: visibleChores.length,
+                }),
               })
             }
           } else {
-            // Check expanded sections first
             const expandedChores = choreSections
               .filter((section, index) => openChoreSections[index])
               .flatMap(section => section.content || [])
@@ -266,7 +252,6 @@ const MyChores = () => {
               expandedChores.length > 0 &&
               expandedChores.every(chore => selectedChores.has(chore.id))
 
-            // Get all chores (including collapsed sections)
             const allChores = choreSections.flatMap(
               section => section.content || [],
             )
@@ -275,34 +260,39 @@ const MyChores = () => {
               allChores.every(chore => selectedChores.has(chore.id))
 
             if (allChoresSelected) {
-              // All chores (including collapsed) are already selected
               showSuccess({
-                title: '✅ All Tasks Selected',
-                message: `All ${allChores.length} task${allChores.length !== 1 ? 's are' : ' is'} already selected (including collapsed sections).`,
+                title: t('myChores.allTasksSelected'),
+                message: t('myChores.allTasksSelectedWithCollapsed', {
+                  count: allChores.length,
+                }),
               })
             } else if (allExpandedSelected) {
-              // All expanded are selected, now select ALL (including collapsed)
-              selectAllVisibleChores() // This will now select all chores
+              selectAllVisibleChores()
               const collapsedCount = allChores.length - expandedChores.length
               showSuccess({
-                title: '🎯 All Tasks Selected',
-                message: `Selected all ${allChores.length} tasks (including ${collapsedCount} from collapsed sections).`,
+                title: t('myChores.allTasksSelected'),
+                message: t(
+                  'myChores.allTasksSelectedWithCollapsedSuccess',
+                  {
+                    count: allChores.length,
+                    collapsedCount: collapsedCount,
+                  },
+                ),
               })
             } else {
-              // Not all expanded are selected, select expanded only
-              selectAllVisibleChores() // This will select expanded only
+              selectAllVisibleChores()
               showSuccess({
-                title: '🎯 Tasks Selected',
-                message: `Selected ${expandedChores.length} task${expandedChores.length !== 1 ? 's' : ''} from expanded sections.`,
+                title: t('myChores.tasksSelected'),
+                message: t('myChores.tasksSelectedFromExpanded', {
+                  count: expandedChores.length,
+                }),
               })
             }
           }
         }
       }
 
-      // Multi-select keyboard shortcuts (only when in multi-select mode)
       if (isMultiSelectMode) {
-        // Escape to clear selection or exit multi-select mode
         if (event.key === 'Escape') {
           event.preventDefault()
           if (selectedChores.size > 0) {
@@ -313,7 +303,6 @@ const MyChores = () => {
           return
         }
 
-        // Enter key for bulk complete
         if (
           isHoldingCmdOrCtrl &&
           event.key === 'Enter' &&
@@ -324,7 +313,6 @@ const MyChores = () => {
           return
         }
 
-        // "/" key for bulk skip
         if (
           isHoldingCmdOrCtrl &&
           event.key === '/' &&
@@ -335,7 +323,6 @@ const MyChores = () => {
           return
         }
 
-        // "x" key for bulk archive (without shift or modifiers)
         if (
           isHoldingCmdOrCtrl &&
           (event.key === 'x' || event.key === 'X') &&
@@ -393,7 +380,6 @@ const MyChores = () => {
     localStorage.setItem('choreCardViewMode', newMode ? 'compact' : 'default')
   }
 
-  // Helper function to render the appropriate card component
   const renderChoreCard = (chore, key) => {
     const CardComponent = isCompactView ? CompactChoreCard : ChoreCard
     return (
@@ -405,7 +391,6 @@ const MyChores = () => {
         performers={performers}
         userLabels={userLabels}
         onChipClick={handleLabelFiltering}
-        // Multi-select props
         isMultiSelectMode={isMultiSelectMode}
         isSelected={selectedChores.has(chore.id)}
         onSelectionToggle={() => toggleChoreSelection(chore.id)}
@@ -511,52 +496,51 @@ const MyChores = () => {
     switch (event) {
       case 'completed':
         showSuccess({
-          title: 'Task Completed',
-          message: 'Great job! The task has been marked as completed.',
+          title: t('myChores.taskCompleted'),
+          message: t('myChores.taskCompletedSuccess'),
         })
         break
       case 'skipped':
         showSuccess({
-          title: 'Task Skipped',
-          message: 'The task has been moved to the next due date.',
+          title: t('myChores.taskSkipped'),
+          message: t('myChores.taskSkippedSuccess'),
         })
         break
       case 'rescheduled':
         showSuccess({
-          title: 'Task Rescheduled',
-          message: 'The task due date has been updated successfully.',
+          title: t('myChores.taskRescheduled'),
+          message: t('myChores.taskRescheduledSuccess'),
         })
         break
       case 'unarchive':
         showSuccess({
-          title: 'Task Restored',
-          message: 'The task has been restored and is now active.',
+          title: t('myChores.taskRestored'),
+          message: t('myChores.taskRestoredSuccess'),
         })
         break
       case 'archive':
         showSuccess({
-          title: 'Task Archived',
-          message:
-            'The task has been archived and hidden from the active list.',
+          title: t('myChores.taskArchived'),
+          message: t('myChores.taskArchivedSuccess'),
         })
         break
       case 'started':
         showSuccess({
-          title: 'Task Started',
-          message: 'The task has been marked as started.',
+          title: t('myChores.taskStarted'),
+          message: t('myChores.taskStartedSuccess'),
         })
         break
       case 'paused':
         showWarning({
-          title: 'Task Paused',
-          message: 'The task has been paused.',
+          title: t('myChores.taskPaused'),
+          message: t('myChores.taskPausedSuccess'),
         })
         break
       case 'deleted':
       default:
         showSuccess({
-          title: 'Task Updated',
-          message: 'Your changes have been saved successfully.',
+          title: t('myChores.taskUpdated'),
+          message: t('myChores.taskUpdatedSuccess'),
         })
     }
   }
@@ -578,9 +562,8 @@ const MyChores = () => {
   }
 
   const searchOptions = {
-    // keys to search in
     keys: ['name', 'raw_label'],
-    includeScore: true, // Optional: if you want to see how well each result matched the search term
+    includeScore: true,
     isCaseSensitive: false,
     findAllMatches: true,
   }
@@ -611,17 +594,15 @@ const MyChores = () => {
   const handleSearchClose = () => {
     setSearchTerm('')
     setFilteredChores(chores)
-    // remove the focus from the search input:
     setSearchInputFocus(0)
   }
 
-  // Multi-select helper functions
   const toggleMultiSelectMode = () => {
     const newMode = !isMultiSelectMode
     setIsMultiSelectMode(newMode)
 
     if (newMode) {
-      setSelectedChores(new Set()) // Clear selection when exiting multi-select
+      setSelectedChores(new Set())
     }
   }
 
@@ -639,24 +620,19 @@ const MyChores = () => {
     let visibleChores = []
 
     if (searchTerm?.length > 0 || searchFilter !== 'All') {
-      // If there's a search term or filter, all filtered chores are visible
       visibleChores = filteredChores
     } else {
-      // First, get chores from expanded sections only
       const expandedChores = choreSections
-        .filter((section, index) => openChoreSections[index]) // Only expanded sections
-        .flatMap(section => section.content || []) // Get all chores from expanded sections
+        .filter((section, index) => openChoreSections[index])
+        .flatMap(section => section.content || [])
 
-      // Check if all expanded chores are already selected
       const allExpandedSelected =
         expandedChores.length > 0 &&
         expandedChores.every(chore => selectedChores.has(chore.id))
 
       if (allExpandedSelected) {
-        // If all expanded chores are already selected, select ALL chores (including collapsed sections)
         visibleChores = choreSections.flatMap(section => section.content || [])
       } else {
-        // Otherwise, just select expanded chores
         visibleChores = expandedChores
       }
     }
@@ -668,7 +644,6 @@ const MyChores = () => {
   }
 
   const clearSelection = () => {
-    // if already empty, just exit multi-select mode:
     if (selectedChores.size === 0) {
       setIsMultiSelectMode(false)
       return
@@ -683,17 +658,18 @@ const MyChores = () => {
       .filter(Boolean)
   }
 
-  // Bulk operations with improved UX and confirmation modal
   const handleBulkComplete = async () => {
     const selectedData = getSelectedChoresData()
     if (selectedData.length === 0) return
 
     setConfirmModelConfig({
       isOpen: true,
-      title: 'Complete Tasks',
-      confirmText: 'Complete',
-      cancelText: 'Cancel',
-      message: `Mark ${selectedData.length} task${selectedData.length > 1 ? 's' : ''} as completed?`,
+      title: t('myChores.completeTasks'),
+      confirmText: t('myChores.complete'),
+      cancelText: t('myChores.cancel'),
+      message: t('myChores.completeTasksConfirmation', {
+        count: selectedData.length,
+      }),
       onClose: async isConfirmed => {
         if (isConfirmed === true) {
           try {
@@ -718,15 +694,19 @@ const MyChores = () => {
 
             if (completedTasks.length > 0) {
               showSuccess({
-                title: '✅ Tasks Completed',
-                message: `Successfully completed ${completedTasks.length} task${completedTasks.length > 1 ? 's' : ''}.`,
+                title: t('myChores.tasksCompleted'),
+                message: t('myChores.tasksCompletedSuccess', {
+                  count: completedTasks.length,
+                }),
               })
             }
 
             if (failedTasks.length > 0) {
               showError({
-                title: 'Some Tasks Failed',
-                message: `${failedTasks.length} task${failedTasks.length > 1 ? 's' : ''} could not be completed.`,
+                title: t('myChores.someTasksFailed'),
+                message: t('myChores.someTasksFailedToComplete', {
+                  count: failedTasks.length,
+                }),
               })
             }
 
@@ -734,8 +714,8 @@ const MyChores = () => {
             clearSelection()
           } catch (error) {
             showError({
-              title: 'Bulk Complete Failed',
-              message: 'An unexpected error occurred. Please try again.',
+              title: t('myChores.bulkCompleteFailed'),
+              message: t('myChores.bulkCompleteFailedError'),
             })
           }
         }
@@ -748,10 +728,12 @@ const MyChores = () => {
     if (selectedData.length === 0) return
     setConfirmModelConfig({
       isOpen: true,
-      title: 'Archive Tasks',
-      confirmText: 'Archive',
-      cancelText: 'Cancel',
-      message: `Archive ${selectedData.length} task${selectedData.length > 1 ? 's' : ''}?`,
+      title: t('myChores.archiveTasks'),
+      confirmText: t('myChores.archive'),
+      cancelText: t('myChores.cancel'),
+      message: t('myChores.archiveTasksConfirmation', {
+        count: selectedData.length,
+      }),
       onClose: async isConfirmed => {
         if (isConfirmed === true) {
           try {
@@ -761,7 +743,6 @@ const MyChores = () => {
               try {
                 const archivedChore = await ArchiveChore(chore.id)
                 archivedTasks.push(archivedChore)
-                // Remove from chores and filteredChores
                 setChores(chores.filter(c => c.id !== chore.id))
                 setFilteredChores(filteredChores.filter(c => c.id !== chore.id))
               } catch (error) {
@@ -770,10 +751,11 @@ const MyChores = () => {
             }
             if (archivedTasks.length > 0) {
               showSuccess({
-                title: '📦 Tasks Archived',
-                message: `Successfully archived ${archivedTasks.length} task${archivedTasks.length > 1 ? 's' : ''}.`,
+                title: t('myChores.tasksArchived'),
+                message: t('myChores.tasksArchivedSuccess', {
+                  count: archivedTasks.length,
+                }),
               })
-              // Update archived chores state
               setArchivedChores([
                 ...(archivedChores || []),
                 ...archivedTasks.map(c => ({
@@ -784,15 +766,17 @@ const MyChores = () => {
             }
             if (failedTasks.length > 0) {
               showError({
-                title: 'Some Tasks Failed',
-                message: `${failedTasks.length} task${failedTasks.length > 1 ? 's' : ''} could not be archived.`,
+                title: t('myChores.someTasksFailed'),
+                message: t('myChores.someTasksFailedToArchive', {
+                  count: failedTasks.length,
+                }),
               })
             }
             clearSelection()
           } catch (error) {
             showError({
-              title: 'Bulk Archive Failed',
-              message: 'An unexpected error occurred. Please try again.',
+              title: t('myChores.bulkArchiveFailed'),
+              message: t('myChores.bulkArchiveFailedError'),
             })
           }
         }
@@ -806,10 +790,12 @@ const MyChores = () => {
 
     setConfirmModelConfig({
       isOpen: true,
-      title: 'Delete Tasks',
-      confirmText: 'Delete',
-      cancelText: 'Cancel',
-      message: `Delete ${selectedData.length} task${selectedData.length > 1 ? 's' : ''}?\n\nThis action cannot be undone.`,
+      title: t('myChores.deleteTasks'),
+      confirmText: t('myChores.delete'),
+      cancelText: t('myChores.cancel'),
+      message: t('myChores.deleteTasksConfirmation', {
+        count: selectedData.length,
+      }),
       onClose: async isConfirmed => {
         if (isConfirmed === true) {
           try {
@@ -827,8 +813,10 @@ const MyChores = () => {
 
             if (deletedTasks.length > 0) {
               showSuccess({
-                title: '🗑️ Tasks Deleted',
-                message: `Successfully deleted ${deletedTasks.length} task${deletedTasks.length > 1 ? 's' : ''}.`,
+                title: t('myChores.tasksDeleted'),
+                message: t('myChores.tasksDeletedSuccess', {
+                  count: deletedTasks.length,
+                }),
               })
 
               const deletedIds = new Set(deletedTasks.map(c => c.id))
@@ -849,16 +837,18 @@ const MyChores = () => {
 
             if (failedTasks.length > 0) {
               showError({
-                title: 'Some Tasks Failed',
-                message: `${failedTasks.length} task${failedTasks.length > 1 ? 's' : ''} could not be deleted.`,
+                title: t('myChores.someTasksFailed'),
+                message: t('myChores.someTasksFailedToDelete', {
+                  count: failedTasks.length,
+                }),
               })
             }
 
             clearSelection()
           } catch (error) {
             showError({
-              title: 'Bulk Delete Failed',
-              message: 'An unexpected error occurred. Please try again.',
+              title: t('myChores.bulkDeleteFailed'),
+              message: t('myChores.bulkDeleteFailedError'),
             })
           }
         }
@@ -873,10 +863,12 @@ const MyChores = () => {
 
     setConfirmModelConfig({
       isOpen: true,
-      title: 'Skip Tasks',
-      confirmText: 'Skip',
-      cancelText: 'Cancel',
-      message: `Skip ${selectedData.length} task${selectedData.length > 1 ? 's' : ''} to next due date?`,
+      title: t('myChores.skipTasks'),
+      confirmText: t('myChores.skip'),
+      cancelText: t('myChores.cancel'),
+      message: t('myChores.skipTasksConfirmation', {
+        count: selectedData.length,
+      }),
       onClose: async isConfirmed => {
         if (isConfirmed === true) {
           try {
@@ -894,15 +886,19 @@ const MyChores = () => {
 
             if (skippedTasks.length > 0) {
               showSuccess({
-                title: '⏭️ Tasks Skipped',
-                message: `Successfully skipped ${skippedTasks.length} task${skippedTasks.length > 1 ? 's' : ''}.`,
+                title: t('myChores.tasksSkipped'),
+                message: t('myChores.tasksSkippedSuccess', {
+                  count: skippedTasks.length,
+                }),
               })
             }
 
             if (failedTasks.length > 0) {
               showError({
-                title: 'Some Tasks Failed',
-                message: `${failedTasks.length} task${failedTasks.length > 1 ? 's' : ''} could not be skipped.`,
+                title: t('myChores.someTasksFailed'),
+                message: t('myChores.someTasksFailedToSkip', {
+                  count: failedTasks.length,
+                }),
               })
             }
 
@@ -910,8 +906,8 @@ const MyChores = () => {
             clearSelection()
           } catch (error) {
             showError({
-              title: 'Bulk Skip Failed',
-              message: 'An unexpected error occurred. Please try again.',
+              title: t('myChores.bulkSkipFailed'),
+              message: t('myChores.bulkSkipFailedError'),
             })
           }
         }
@@ -952,7 +948,7 @@ const MyChores = () => {
         >
           <Input
             slotProps={{ input: { ref: searchInputRef } }}
-            placeholder='Search'
+            placeholder={t('myChores.search')}
             value={searchTerm}
             onFocus={() => {
               setShowSearchFilter(true)
@@ -984,28 +980,8 @@ const MyChores = () => {
               </Box>
             }
           />
-
-          {/* {activeTextField != 'search' && (
-            <IconButton
-              variant='outlined'
-              color='neutral'
-              size='sm'
-              sx={{
-                height: 24,
-                borderRadius: 24,
-              }}
-              onClick={() => {
-                setActiveTextFieldWithCache('search')
-                setSearchInputFocus(searchInputFocus + 1)
-
-                searchInputRef?.current?.focus()
-              }}
-            >
-              <Search />
-            </IconButton>
-          )} */}
           <SortAndGrouping
-            title='Group by'
+            title={t('myChores.groupBy')}
             k={'icon-menu-group-by'}
             icon={<Sort />}
             selectedItem={selectedChoreSection}
@@ -1019,7 +995,6 @@ const MyChores = () => {
               )
               setChoreSections(section)
               setOpenChoreSectionsWithCache(
-                // open all sections by default
                 Object.keys(section).reduce((acc, key) => {
                   acc[key] = true
                   return acc
@@ -1035,7 +1010,6 @@ const MyChores = () => {
               setChoreSections(section)
               setSelectedChoreSectionWithCache(selected.value)
               setOpenChoreSectionsWithCache(
-                // open all sections by default
                 Object.keys(section).reduce((acc, key) => {
                   acc[key] = true
                   return acc
@@ -1046,8 +1020,6 @@ const MyChores = () => {
             }}
             mouseClickHandler={handleMenuOutsideClick}
           />
-
-          {/* View Mode Toggle Button */}
           <IconButton
             variant='outlined'
             color='neutral'
@@ -1059,13 +1031,13 @@ const MyChores = () => {
             }}
             onClick={toggleViewMode}
             title={
-              isCompactView ? 'Switch to Card View' : 'Switch to Compact View'
+              isCompactView
+                ? t('myChores.switchToCardView')
+                : t('myChores.switchToCompactView')
             }
           >
             {isCompactView ? <ViewModule /> : <ViewAgenda />}
           </IconButton>
-
-          {/* Multi-select Toggle Button */}
           <Box sx={{ position: 'relative', display: 'inline-flex' }}>
             <IconButton
               variant={isMultiSelectMode ? 'solid' : 'outlined'}
@@ -1079,8 +1051,8 @@ const MyChores = () => {
               onClick={toggleMultiSelectMode}
               title={
                 isMultiSelectMode
-                  ? 'Exit Multi-select Mode (Ctrl+S)'
-                  : 'Enable Multi-select Mode (Ctrl+S)'
+                  ? t('myChores.exitMultiSelectMode')
+                  : t('myChores.enableMultiSelectMode')
               }
             >
               {isMultiSelectMode ? <CheckBox /> : <CheckBoxOutlineBlank />}
@@ -1097,8 +1069,6 @@ const MyChores = () => {
             />
           </Box>
         </Box>
-
-        {/* Search Filter with animation */}
         <Box
           sx={{
             overflow: 'hidden',
@@ -1112,7 +1082,7 @@ const MyChores = () => {
           <div className='flex gap-4'>
             <div className='grid flex-1 grid-cols-3 gap-4'>
               <IconButtonWithMenu
-                label={' Priority'}
+                label={t('myChores.priority')}
                 k={'icon-menu-priority-filter'}
                 icon={<PriorityHigh />}
                 options={Priorities}
@@ -1126,7 +1096,7 @@ const MyChores = () => {
 
               <IconButtonWithMenu
                 k={'icon-menu-labels-filter'}
-                label={' Labels'}
+                label={t('myChores.labels')}
                 icon={<Style />}
                 options={userLabels}
                 selectedItem={searchFilter}
@@ -1153,7 +1123,7 @@ const MyChores = () => {
                   borderRadius: 24,
                 }}
               >
-                {' Other'}
+                {t('myChores.other')}
               </Button>
 
               <List
@@ -1194,18 +1164,18 @@ const MyChores = () => {
                     </MenuItem>
                   ))}
 
-                  {searchFilter.startsWith('Label: ') ||
-                    (searchFilter.startsWith('Priority: ') && (
-                      <MenuItem
-                        key={`filter-list-cancel-all-filters`}
-                        onClick={() => {
-                          setFilteredChores(chores)
-                          setSearchFilter('All')
-                        }}
-                      >
-                        Cancel All Filters
-                      </MenuItem>
-                    ))}
+                  {(searchFilter.startsWith('Label: ') ||
+                    searchFilter.startsWith('Priority: ')) && (
+                    <MenuItem
+                      key={`filter-list-cancel-all-filters`}
+                      onClick={() => {
+                        setFilteredChores(chores)
+                        setSearchFilter('All')
+                      }}
+                    >
+                      {t('myChores.cancelAllFilters')}
+                    </MenuItem>
+                  )}
                 </Menu>
               </List>
             </div>
@@ -1228,8 +1198,6 @@ const MyChores = () => {
             </IconButton>
           </div>
         </Box>
-
-        {/* Multi-select Toolbar with animation */}
         <Box
           sx={{
             position: 'sticky',
@@ -1257,12 +1225,12 @@ const MyChores = () => {
               gap: 2,
               display: 'flex',
               flexDirection: {
-                sm: 'column', // Stack vertically on mobile
-                md: 'row', // Horizontal on tablet and larger
+                sm: 'column',
+                md: 'row',
               },
               alignItems: {
-                xs: 'stretch', // Full width on mobile
-                sm: 'center', // Center aligned on larger screens
+                xs: 'stretch',
+                sm: 'center',
               },
               justifyContent: {
                 xs: 'center',
@@ -1270,18 +1238,17 @@ const MyChores = () => {
               },
             }}
           >
-            {/* Selection Info and Controls */}
             <Box
               sx={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: 2,
                 flexWrap: {
-                  xs: 'wrap', // Allow wrapping on mobile if needed
+                  xs: 'wrap',
                   sm: 'nowrap',
                 },
                 justifyContent: {
-                  xs: 'center', // Center on mobile
+                  xs: 'center',
                   sm: 'flex-start',
                 },
               }}
@@ -1289,15 +1256,16 @@ const MyChores = () => {
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <CheckBox sx={{ color: 'primary.500' }} />
                 <Typography level='body-sm' fontWeight='md'>
-                  {selectedChores.size} task
-                  {selectedChores.size !== 1 ? 's' : ''} selected
+                  {t('myChores.tasksSelectedMessage', {
+                    count: selectedChores.size,
+                  })}
                 </Typography>
               </Box>
 
               <Divider
                 orientation='vertical'
                 sx={{
-                  display: { xs: 'none', sm: 'block' }, // Hide vertical divider on mobile
+                  display: { xs: 'none', sm: 'block' },
                 }}
               />
 
@@ -1320,7 +1288,7 @@ const MyChores = () => {
                   }}
                   title='Select all visible tasks (Ctrl+A)'
                 >
-                  All
+                  {t('myChores.selectAll')}
                   {showKeyboardShortcuts && (
                     <KeyboardShortcutHint
                       shortcut='A'
@@ -1349,9 +1317,15 @@ const MyChores = () => {
                     '--Button-paddingInline': '0.75rem',
                     position: 'relative',
                   }}
-                  title={`${selectedChores.size === 0 ? 'Close' : 'Clear'} multi-select (Esc)`}
+                  title={`${
+                    selectedChores.size === 0
+                      ? t('myChores.close')
+                      : t('myChores.clear')
+                  } multi-select (Esc)`}
                 >
-                  {selectedChores.size === 0 ? 'Close' : 'Clear'}
+                  {selectedChores.size === 0
+                    ? t('myChores.close')
+                    : t('myChores.clear')}
                   {showKeyboardShortcuts && (
                     <KeyboardShortcutHint
                       withCtrl={false}
@@ -1367,19 +1341,17 @@ const MyChores = () => {
                 </Button>
               </Box>
             </Box>
-
-            {/* Action Buttons */}
             <Box
               sx={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: 1,
                 flexWrap: {
-                  xs: 'wrap', // Allow wrapping on mobile
+                  xs: 'wrap',
                   sm: 'nowrap',
                 },
                 justifyContent: {
-                  xs: 'center', // Center on mobile
+                  xs: 'center',
                   sm: 'flex-end',
                 },
               }}
@@ -1397,7 +1369,7 @@ const MyChores = () => {
                 }}
                 title='Complete selected tasks (Enter)'
               >
-                Complete
+                {t('myChores.complete')}
                 {showKeyboardShortcuts && selectedChores.size > 0 && (
                   <KeyboardShortcutHint
                     shortcut='Enter'
@@ -1423,7 +1395,7 @@ const MyChores = () => {
                 }}
                 title='Skip selected tasks (/)'
               >
-                Skip
+                {t('myChores.skip')}
                 {showKeyboardShortcuts && selectedChores.size > 0 && (
                   <KeyboardShortcutHint
                     shortcut='/'
@@ -1449,7 +1421,7 @@ const MyChores = () => {
                 }}
                 title='Archive selected tasks (X)'
               >
-                Archive
+                {t('myChores.archive')}
                 {showKeyboardShortcuts && selectedChores.size > 0 && (
                   <KeyboardShortcutHint
                     shortcut='X'
@@ -1476,7 +1448,7 @@ const MyChores = () => {
                 }}
                 title='Delete selected tasks (Shift+X)'
               >
-                Delete
+                {t('myChores.delete')}
                 {showKeyboardShortcuts && selectedChores.size > 0 && (
                   <KeyboardShortcutHint
                     shortcut='E'
@@ -1489,30 +1461,6 @@ const MyChores = () => {
                   />
                 )}
               </Button>
-
-              {/* 
-              <Divider
-                orientation='vertical'
-                sx={{
-                  display: { xs: 'none', sm: 'block' }, // Hide vertical divider on mobile
-                }}
-              />
-
-              <IconButton
-                size='sm'
-                variant='plain'
-                onClick={toggleMultiSelectMode}
-                color='neutral'
-                title='Exit multi-select mode (Esc)'
-                sx={{
-                  '&:hover': {
-                    bgcolor: 'danger.softBg',
-                    color: 'danger.softColor',
-                  },
-                }}
-              >
-                <CancelRounded />
-              </IconButton> */}
             </Box>
           </Box>
         </Box>
@@ -1533,7 +1481,7 @@ const MyChores = () => {
               setSearchFilter('All')
             }}
           >
-            Current Filter: {searchFilter}
+            {t('myChores.currentFilter', { filter: searchFilter })}
           </Chip>
         )}
         {filteredChores.length === 0 && archivedChores == null && (
@@ -1549,12 +1497,11 @@ const MyChores = () => {
             <EditCalendar
               sx={{
                 fontSize: '4rem',
-                // color: 'text.disabled',
                 mb: 1,
               }}
             />
             <Typography level='title-md' gutterBottom>
-              Nothing scheduled
+              {t('myChores.nothingScheduled')}
             </Typography>
             {chores.length > 0 && (
               <>
@@ -1566,7 +1513,7 @@ const MyChores = () => {
                   variant='outlined'
                   color='neutral'
                 >
-                  Reset filters
+                  {t('myChores.resetFilters')}
                 </Button>
               </>
             )}
@@ -1633,9 +1580,7 @@ const MyChores = () => {
                     sx={{
                       flexDirection: 'column',
                       ['& > *']: {
-                        // px: 0.5,
                         px: 0.5,
-                        // pr: 0,
                       },
                     }}
                   >
@@ -1648,7 +1593,6 @@ const MyChores = () => {
         )}
         <Box
           sx={{
-            // center the button
             justifyContent: 'center',
             mt: 2,
           }}
@@ -1674,7 +1618,7 @@ const MyChores = () => {
                   />
                 }
               >
-                Show Archived
+                {t('myChores.showArchived')}
               </Button>
             </Box>
           )}
@@ -1693,7 +1637,7 @@ const MyChores = () => {
                     </>
                   }
                 >
-                  Archived
+                  {t('myChores.archived')}
                 </Chip>
               </Divider>
 
@@ -1702,12 +1646,11 @@ const MyChores = () => {
           )}
         </Box>
         <Box
-          // variant='outlined'
           sx={{
             position: 'fixed',
             bottom: 0,
             left: 10,
-            p: 2, // padding
+            p: 2,
             display: 'flex',
             justifyContent: 'flex-end',
             gap: 2,
@@ -1727,7 +1670,7 @@ const MyChores = () => {
             onClick={() => {
               Navigate(`/chores/create`)
             }}
-            title='Create new chore (Cmd+C)'
+            title={t('myChores.createNewChore')}
           >
             <Add />
             <KeyboardShortcutHint
@@ -1786,11 +1729,7 @@ const MyChores = () => {
       </Container>
 
       <Sidepanel chores={chores} performers={performers} />
-
-      {/* Multi-select Help - only show when in multi-select mode */}
       <MultiSelectHelp isVisible={isMultiSelectMode} />
-
-      {/* Confirmation Modal for bulk operations */}
       {confirmModelConfig?.isOpen && (
         <ConfirmationModal config={confirmModelConfig} />
       )}

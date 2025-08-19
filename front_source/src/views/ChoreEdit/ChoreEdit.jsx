@@ -23,6 +23,7 @@ import {
 } from '@mui/joy'
 import moment from 'moment'
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import NotificationTemplate from '../../components/NotificationTemplate.jsx'
 import {
@@ -61,6 +62,7 @@ const REPEAT_ON_TYPE = ['interval', 'days_of_the_week', 'day_of_the_month']
 const NO_DUE_DATE_REQUIRED_TYPE = ['no_repeat', 'once']
 const NO_DUE_DATE_ALLOWED_TYPE = ['trigger']
 const ChoreEdit = () => {
+  const { t } = useTranslation()
   const { data: userProfile, isLoading: isUserProfileLoading } =
     useUserProfile()
 
@@ -126,28 +128,30 @@ const ChoreEdit = () => {
     const errors = {}
 
     if (name.trim() === '') {
-      errors.name = 'Name is required'
+      errors.name = t('choreEdit.nameIsRequired')
     }
     if (assignees.length === 0) {
-      errors.assignees = 'At least 1 assignees is required'
+      errors.assignees = t('choreEdit.assigneesIsRequired')
     }
     if (assignedTo < 0) {
-      errors.assignedTo = 'Assigned to is required'
+      errors.assignedTo = t('choreEdit.assignedToIsRequired')
     }
     if (frequencyType === 'interval' && !frequency > 0) {
-      errors.frequency = `Invalid frequency, the ${frequencyMetadata.unit} should be > 0`
+      errors.frequency = t('choreEdit.invalidFrequency', {
+        unit: frequencyMetadata.unit,
+      })
     }
     if (
       frequencyType === 'days_of_the_week' &&
       frequencyMetadata['days']?.length === 0
     ) {
-      errors.frequency = 'At least 1 day is required'
+      errors.frequency = t('choreEdit.atLeastOneDayIsRequired')
     }
     if (
       frequencyType === 'day_of_the_month' &&
       frequencyMetadata['months']?.length === 0
     ) {
-      errors.frequency = 'At least 1 month is required'
+      errors.frequency = t('choreEdit.atLeastOneMonthIsRequired')
     }
     if (
       dueDate === null &&
@@ -155,29 +159,24 @@ const ChoreEdit = () => {
       !NO_DUE_DATE_ALLOWED_TYPE.includes(frequencyType)
     ) {
       if (REPEAT_ON_TYPE.includes(frequencyType)) {
-        console.log('VALIDATION:', dueDate, frequencyType)
-
-        errors.dueDate = 'Start date is required'
+        errors.dueDate = t('choreEdit.startDateIsRequired')
       } else {
-        errors.dueDate = 'Due date is required'
+        errors.dueDate = t('choreEdit.dueDateIsRequired')
       }
     }
     if (frequencyType === 'trigger') {
       if (!isThingValid) {
-        errors.thingTrigger = 'Thing trigger is invalid'
+        errors.thingTrigger = t('choreEdit.thingTriggerIsInvalid')
       }
     }
 
-    // if there is any error then return false:
     setErrors(errors)
     if (Object.keys(errors).length > 0) {
-      // generate a list with error and set it in snackbar:
-
       const errorList = Object.keys(errors).map(key => (
         <ListItem key={key}>{errors[key]}</ListItem>
       ))
       showError({
-        title: 'Please resolve the following errors:',
+        title: t('choreEdit.resolveErrors'),
         message: <List>{errorList}</List>,
       })
       return false
@@ -192,8 +191,6 @@ const ChoreEdit = () => {
   const HandleSaveChore = () => {
     setAttemptToSave(true)
     if (!HandleValidateChore()) {
-      console.log('validation failed')
-      console.log(errors)
       return
     }
     let newChoreId = choreId
@@ -221,7 +218,6 @@ const ChoreEdit = () => {
       thingTrigger: thingTrigger,
       points: points < 0 ? null : points,
       completionWindow:
-        // if completionWindow is -1 then set it to null or dueDate is null
         completionWindow < 0 || dueDate === null ? null : completionWindow,
       priority: priority,
     }
@@ -233,21 +229,20 @@ const ChoreEdit = () => {
     SaveFunction(chore)
       .then(() => {
         showSuccess({
-          title: 'Chore Saved',
-          message: 'Your task has been saved successfully!',
+          title: t('choreEdit.choreSaved'),
+          message: t('choreEdit.choreSavedSuccess'),
         })
         Navigate('/my/chores/')
       })
       .catch(error => {
         console.error('Failed to save chore:', error)
         showError({
-          title: 'Save Failed',
-          message: 'Failed to save chore, please try again.',
+          title: t('choreEdit.saveFailed'),
+          message: t('choreEdit.saveFailedError'),
         })
       })
   }
   useEffect(() => {
-    //fetch performers:
     GetAllCircleMembers().then(data => {
       setPerformers(data.res)
     })
@@ -296,15 +291,15 @@ const ChoreEdit = () => {
         if (data.res.subTasks) {
           const clonedSubTasks = data.res.subTasks.map(subTask => ({
             ...subTask,
-            id: -subTask.id, // Negate ID to indicate new sub task
-            parentId: subTask.parentId ? -subTask.parentId : null, // Negate parent ID if exists
-            completed: false, // Reset completion status
-            completedAt: null, // Reset completion date
+            id: -subTask.id,
+            parentId: subTask.parentId ? -subTask.parentId : null,
+            completed: false,
+            completedAt: null,
           }))
           setSubTasks(clonedSubTasks)
         }
         if (data.res.name) {
-          setName(`Copy of ${data.res.name}`)
+          setName(`${t('choreEdit.copyPrefix')}${data.res.name}`)
         }
       }
 
@@ -318,18 +313,9 @@ const ChoreEdit = () => {
       setCreatedBy(data.res.createdBy)
       setUpdatedBy(data.res.updatedBy)
     }
-  }, [choreData, isChoreLoading, searchParams])
-
-  // useEffect(() => {
-  //   if (userLabels && userLabels.length == 0 && labelsV2.length == 0) {
-  //     return
-  //   }
-  //   const labelIds = labelsV2.map(l => l.id)
-  //   setLabelsV2(userLabels.filter(l => labelIds.indexOf(l.id) > -1))
-  // }, [userLabels, labelsV2])
+  }, [choreData, isChoreLoading, searchParams, t])
 
   useEffect(() => {
-    // if frequency type change to somthing need a due date then set it to the current date:
     if (!NO_DUE_DATE_REQUIRED_TYPE.includes(frequencyType) && !dueDate) {
       setDueDate(moment(new Date()).format('YYYY-MM-DDTHH:mm:00'))
     }
@@ -354,7 +340,6 @@ const ChoreEdit = () => {
     }
   }, [performers, userProfile])
 
-  // if user resolve the error trigger validation to remove the error message from the respective field
   useEffect(() => {
     if (attemptToSave) {
       HandleValidateChore()
@@ -364,17 +349,17 @@ const ChoreEdit = () => {
   const handleDelete = () => {
     setConfirmModelConfig({
       isOpen: true,
-      title: 'Delete Chore',
-      confirmText: 'Delete',
-      cancelText: 'Cancel',
-      message: 'Are you sure you want to delete this chore?',
+      title: t('choreEdit.deleteChore'),
+      confirmText: t('choreEdit.delete'),
+      cancelText: t('choreEdit.cancel'),
+      message: t('choreEdit.confirmDelete'),
       onClose: isConfirmed => {
         if (isConfirmed === true) {
           DeleteChore(choreId).then(response => {
             if (response.status === 200) {
               Navigate('/my/chores')
             } else {
-              alert('Failed to delete chore')
+              alert(t('choreEdit.deleteFailed'))
             }
           })
         }
@@ -392,39 +377,30 @@ const ChoreEdit = () => {
   }
   return (
     <Container maxWidth='md'>
-      {/* <Typography level='h3' mb={1.5}>
-        Edit Chore
-      </Typography> */}
       <Box>
         <FormControl error={errors.name}>
-          <Typography level='h4'>Name :</Typography>
-          <Typography level='h5'> What is the name of this chore?</Typography>
+          <Typography level='h4'>{t('choreEdit.name')}</Typography>
+          <Typography level='h5'>{t('choreEdit.nameHint')}</Typography>
           <Input value={name} onChange={e => setName(e.target.value)} />
           <FormHelperText error>{errors.name}</FormHelperText>
         </FormControl>
       </Box>
       <Box mt={2}>
         <FormControl error={errors.description}>
-          <Typography level='h4'>Additional Details :</Typography>
-          <Typography level='h5'>What is this task about?</Typography>
-          {/* <Textarea
-            value={description}
-            onChange={e => setDescription(e.target.value)}
-          /> */}
-
+          <Typography level='h4'>{t('choreEdit.additionalDetails')}</Typography>
+          <Typography level='h5'>{t('choreEdit.additionalDetailsHint')}</Typography>
           <RichTextEditor
             value={description}
             onChange={setDescription}
             entityId={choreId}
             entityType={'chore_description'}
           />
-
           <FormHelperText error>{errors.name}</FormHelperText>
         </FormControl>
       </Box>
       <Box mt={2}>
-        <Typography level='h4'>Assignees :</Typography>
-        <Typography level='h5'>Who can do this task?</Typography>
+        <Typography level='h4'>{t('choreEdit.assignees')}</Typography>
+        <Typography level='h5'>{t('choreEdit.assigneesHint')}</Typography>
         <Card>
           <List
             orientation='horizontal'
@@ -437,7 +413,6 @@ const ChoreEdit = () => {
             {performers?.map((item, index) => (
               <ListItem key={item.id}>
                 <Checkbox
-                  // disabled={index === 0}
                   checked={assignees.find(a => a.userId == item.userId) != null}
                   onClick={() => {
                     if (assignees.some(a => a.userId === item.userId)) {
@@ -463,22 +438,12 @@ const ChoreEdit = () => {
         </FormControl>
       </Box>
       {assignees.length > 1 && (
-        // this wrap the details that needed if we have more than one assingee
-        // we need to pick the next assignedTo and also the strategy to pick the next assignee.
-        // if we have only one then no need to display this section
         <>
           <Box mt={2}>
-            <Typography level='h4'>Assigned :</Typography>
-            <Typography level='h5'>
-              Who is assigned the next due chore?
-            </Typography>
-
+            <Typography level='h4'>{t('choreEdit.assigned')}</Typography>
+            <Typography level='h5'>{t('choreEdit.assignedHint')}</Typography>
             <Select
-              placeholder={
-                assignees.length === 0
-                  ? 'No Assignees yet can perform this chore'
-                  : 'Select an assignee for this chore'
-              }
+              placeholder='Select an assignee'
               disabled={assignees.length === 0}
               value={assignedTo > -1 ? assignedTo : null}
             >
@@ -493,18 +458,13 @@ const ChoreEdit = () => {
                     }}
                   >
                     {item.displayName}
-                    {/* <Chip size='sm' color='neutral' variant='soft'>
-                </Chip> */}
                   </Option>
                 ))}
             </Select>
           </Box>
           <Box mt={2}>
-            <Typography level='h4'>Picking Mode :</Typography>
-            <Typography level='h5'>
-              How to pick the next assignee for the following chore?
-            </Typography>
-
+            <Typography level='h4'>{t('choreEdit.pickingMode')}</Typography>
+            <Typography level='h5'>{t('choreEdit.pickingModeHint')}</Typography>
             <Card>
               <List
                 orientation='horizontal'
@@ -517,7 +477,6 @@ const ChoreEdit = () => {
                 {ASSIGN_STRATEGIES.map((item, idx) => (
                   <ListItem key={item}>
                     <Checkbox
-                      // disabled={index === 0}
                       checked={assignStrategy === item}
                       onClick={() => setAssignStrategy(item)}
                       overlay
@@ -562,11 +521,14 @@ const ChoreEdit = () => {
 
       <Box mt={2}>
         <Typography level='h4'>
-          {REPEAT_ON_TYPE.includes(frequencyType) ? 'Start date' : 'Due date'} :
+          {REPEAT_ON_TYPE.includes(frequencyType)
+            ? t('choreEdit.startDate')
+            : t('choreEdit.dueDate')}{' '}
+          :
         </Typography>
         {frequencyType === 'trigger' && !dueDate && (
           <Typography level='body-sm'>
-            Due Date will be set when the trigger of the thing is met
+            {t('choreEdit.dueDateHint')}
           </Typography>
         )}
 
@@ -583,19 +545,17 @@ const ChoreEdit = () => {
               defaultChecked={dueDate !== null}
               checked={dueDate !== null}
               overlay
-              label='Give this task a due date'
+              label={t('choreEdit.giveTaskDueDate')}
             />
-            <FormHelperText>
-              task needs to be completed by a specific time.
-            </FormHelperText>
+            <FormHelperText>{t('choreEdit.dueDateHelper')}</FormHelperText>
           </FormControl>
         )}
         {dueDate && (
           <FormControl error={Boolean(errors.dueDate)}>
             <Typography level='h5'>
               {REPEAT_ON_TYPE.includes(frequencyType)
-                ? 'When does this chore start?'
-                : 'When is the next first time this chore is due?'}
+                ? t('choreEdit.whenDoesChoreStart')
+                : t('choreEdit.whenIsNextDueDate')}
             </Typography>
             <Input
               type='datetime-local'
@@ -620,17 +580,16 @@ const ChoreEdit = () => {
                 }}
                 color={completionWindow !== -1 ? 'success' : 'neutral'}
                 variant={completionWindow !== -1 ? 'solid' : 'outlined'}
-                // endDecorator={points !== -1 ? 'On' : 'Off'}
                 sx={{
                   mr: 2,
                 }}
               />
               <div>
-                {/* <FormLabel>Completion window (hours)</FormLabel> */}
-                <Typography level='h5'>Completion window (hours)</Typography>
-
+                <Typography level='h5'>
+                  {t('choreEdit.completionWindow')}
+                </Typography>
                 <FormHelperText sx={{ mt: 0 }}>
-                  {"Set a time window that task can't be completed before"}
+                  {t('choreEdit.completionWindowHint')}
                 </FormHelperText>
               </div>
             </FormControl>
@@ -642,20 +601,18 @@ const ChoreEdit = () => {
                     ml: 4,
                   }}
                 >
-                  <Typography level='body-sm'>Hours:</Typography>
-
+                  <Typography level='body-sm'>{t('choreEdit.hours')}</Typography>
                   <Input
                     type='number'
                     value={completionWindow}
                     sx={{ maxWidth: 100 }}
-                    // add min points is 0 and max is 1000
                     slotProps={{
                       input: {
                         min: 0,
                         max: 24 * 7,
                       },
                     }}
-                    placeholder='Hours'
+                    placeholder={t('choreEdit.hours')}
                     onChange={e => {
                       setCompletionWindow(parseInt(e.target.value))
                     }}
@@ -668,9 +625,11 @@ const ChoreEdit = () => {
       </Box>
       {!['once', 'no_repeat'].includes(frequencyType) && (
         <Box mt={2}>
-          <Typography level='h4'>Scheduling Preferences: </Typography>
+          <Typography level='h4'>
+            {t('choreEdit.schedulingPreferences')}
+          </Typography>
           <Typography level='h5'>
-            How to reschedule the next due date?
+            {t('choreEdit.schedulingPreferencesHint')}
           </Typography>
 
           <RadioGroup name='tiers' sx={{ gap: 1, '& > div': { p: 1 } }}>
@@ -679,11 +638,10 @@ const ChoreEdit = () => {
                 overlay
                 checked={!isRolling}
                 onClick={() => setIsRolling(false)}
-                label='Reschedule from due date'
+                label={t('choreEdit.rescheduleFromDueDate')}
               />
               <FormHelperText>
-                the next task will be scheduled from the original due date, even
-                if the previous task was completed late
+                {t('choreEdit.rescheduleFromDueDateHint')}
               </FormHelperText>
             </FormControl>
             <FormControl>
@@ -691,30 +649,28 @@ const ChoreEdit = () => {
                 overlay
                 checked={isRolling}
                 onClick={() => setIsRolling(true)}
-                label='Reschedule from completion date'
+                label={t('choreEdit.rescheduleFromCompletionDate')}
               />
               <FormHelperText>
-                the next task will be scheduled from the actual completion date
-                of the previous task
+                {t('choreEdit.rescheduleFromCompletionDateHint')}
               </FormHelperText>
             </FormControl>
           </RadioGroup>
         </Box>
       )}
       <Box mt={2}>
-        <Typography level='h4'>Notifications : </Typography>
+        <Typography level='h4'>{t('choreEdit.notifications')}</Typography>
         <Typography level='h5'>
-          Get Reminders when this task is due or completed
+          {t('choreEdit.notificationsHint')}
           {!isPlusAccount(userProfile) && (
             <Chip variant='soft' color='warning'>
-              Plus Feature
+              {t('choreEdit.plusFeature')}
             </Chip>
           )}
         </Typography>
         {!isPlusAccount(userProfile) && (
           <Typography level='body-sm' color='warning' sx={{ mb: 1 }}>
-            Task notifications are not available in the Basic plan. Upgrade to
-            Plus to receive reminders when tasks are due or completed.
+            {t('choreEdit.notificationsUnavailable')}
           </Typography>
         )}
 
@@ -722,7 +678,6 @@ const ChoreEdit = () => {
           <Checkbox
             onChange={e => {
               setIsNotificable(e.target.checked)
-              // if unchecking, reset notification metadata:
               if (!e.target.checked) {
                 setNotificationMetadata({})
               }
@@ -731,14 +686,14 @@ const ChoreEdit = () => {
             checked={isNotificable}
             disabled={!isPlusAccount(userProfile)}
             overlay
-            label='Notify for this task'
+            label={t('choreEdit.notifyForThisTask')}
           />
           <FormHelperText
             sx={{
               opacity: !isPlusAccount(userProfile) ? 0.5 : 1,
             }}
           >
-            When should receive notifications for this task
+            {t('choreEdit.notifyForThisTaskHint')}
           </FormHelperText>
         </FormControl>
       </Box>
@@ -748,12 +703,13 @@ const ChoreEdit = () => {
             display: 'flex',
             flexDirection: 'column',
             gap: 2,
-
             '& > div': { p: 2, borderRadius: 'md', display: 'flex' },
           }}
         >
           <Card variant='outlined'>
-            <Typography level='body-md'>Notification Schedule:</Typography>
+            <Typography level='body-md'>
+              {t('choreEdit.notificationSchedule')}
+            </Typography>
             <Box sx={{ p: 0.5 }}>
               <NotificationTemplate
                 onChange={metadata => {
@@ -768,15 +724,15 @@ const ChoreEdit = () => {
                 value={notificationMetadata}
               />
             </Box>
-            <Typography level='h5'>Choose Who to Notify:</Typography>
+            <Typography level='h5'>{t('choreEdit.chooseWhoToNotify')}</Typography>
             <FormControl>
               <Checkbox
                 overlay
                 disabled={true}
                 checked={true}
-                label='All Assignees'
+                label={t('choreEdit.allAssignees')}
               />
-              <FormHelperText>Notify all assignees</FormHelperText>
+              <FormHelperText>{t('choreEdit.notifyAllAssignees')}</FormHelperText>
             </FormControl>
 
             <FormControl>
@@ -797,9 +753,9 @@ const ChoreEdit = () => {
                     ? notificationMetadata['circleGroup']
                     : false
                 }
-                label='Specific Group'
+                label={t('choreEdit.specificGroup')}
               />
-              <FormHelperText>Notify a specific group</FormHelperText>
+              <FormHelperText>{t('choreEdit.notifySpecificGroup')}</FormHelperText>
             </FormControl>
 
             {notificationMetadata['circleGroup'] && (
@@ -809,12 +765,14 @@ const ChoreEdit = () => {
                   ml: 4,
                 }}
               >
-                <Typography level='body-sm'>Telegram Group ID:</Typography>
+                <Typography level='body-sm'>
+                  {t('choreEdit.telegramGroupId')}
+                </Typography>
 
                 <Input
                   type='number'
                   value={notificationMetadata['circleGroupID']}
-                  placeholder='Telegram Group ID'
+                  placeholder={t('choreEdit.telegramGroupId')}
                   onChange={e => {
                     setNotificationMetadata({
                       ...notificationMetadata,
@@ -828,10 +786,8 @@ const ChoreEdit = () => {
         </Box>
       )}
       <Box mt={2}>
-        <Typography level='h4'>Labels :</Typography>
-        <Typography level='h5'>
-          Things to remember about this chore or to tag it
-        </Typography>
+        <Typography level='h4'>{t('choreEdit.labels')}</Typography>
+        <Typography level='h5'>{t('choreEdit.labelsHint')}</Typography>
         <Select
           multiple
           onChange={(event, newValue) => {
@@ -871,7 +827,6 @@ const ChoreEdit = () => {
         >
           {userLabels &&
             userLabels
-              // .map(l => l.name)
               .map(label => (
                 <Option key={label.id + label.name} value={label.name}>
                   <div
@@ -893,13 +848,13 @@ const ChoreEdit = () => {
             }}
           >
             <Add />
-            Add New Label
+            {t('choreEdit.addNewLabel')}
           </MenuItem>
         </Select>
       </Box>
       <Box mt={2}>
-        <Typography level='h4'>Priority :</Typography>
-        <Typography level='h5'>How important is this task?</Typography>
+        <Typography level='h4'>{t('choreEdit.priority')}</Typography>
+        <Typography level='h5'>{t('choreEdit.priorityHint')}</Typography>
         <Select
           onChange={(event, newValue) => {
             setPriority(newValue)
@@ -927,13 +882,13 @@ const ChoreEdit = () => {
               {priority.name}
             </Option>
           ))}
-          <Option value={0}>No Priority</Option>
+          <Option value={0}>{t('choreEdit.noPriority')}</Option>
         </Select>
       </Box>
 
       <Box mt={2}>
         <Typography level='h4' gutterBottom>
-          Others :
+          {t('choreEdit.others')}
         </Typography>
 
         <FormControl sx={{ mt: 1 }}>
@@ -947,9 +902,9 @@ const ChoreEdit = () => {
             }}
             overlay
             checked={subTasks != null}
-            label='Sub Tasks'
+            label={t('choreEdit.subTasks')}
           />
-          <FormHelperText>Add sub tasks to this task</FormHelperText>
+          <FormHelperText>{t('choreEdit.subTasksHint')}</FormHelperText>
         </FormControl>
         {subTasks != null && (
           <Card
@@ -977,12 +932,9 @@ const ChoreEdit = () => {
             }}
             checked={points > -1}
             overlay
-            label='Assign Points'
+            label={t('choreEdit.assignPoints')}
           />
-          <FormHelperText>
-            Assign points to this task and user will earn points when they
-            completed it
-          </FormHelperText>
+          <FormHelperText>{t('choreEdit.assignPointsHint')}</FormHelperText>
         </FormControl>
 
         {points != -1 && (
@@ -993,20 +945,19 @@ const ChoreEdit = () => {
                 ml: 4,
               }}
             >
-              <Typography level='body-sm'>Points:</Typography>
+              <Typography level='body-sm'>{t('choreEdit.points')}</Typography>
 
               <Input
                 type='number'
                 value={points}
                 sx={{ maxWidth: 100 }}
-                // add min points is 0 and max is 1000
                 slotProps={{
                   input: {
                     min: 0,
                     max: 1000,
                   },
                 }}
-                placeholder='Points'
+                placeholder={t('choreEdit.points')}
                 onChange={e => {
                   setPoints(parseInt(e.target.value))
                 }}
@@ -1025,25 +976,25 @@ const ChoreEdit = () => {
             }}
           >
             <Typography level='body1'>
-              Created by{' '}
+              {t('choreEdit.createdBy')}{' '}
               <Chip variant='solid'>
                 {membersData.res.find(f => f.userId === createdBy)?.displayName}
               </Chip>{' '}
-              {moment(chore.createdAt).fromNow()}
+              {t('choreEdit.fromNow', { time: moment(chore.createdAt).fromNow() })}
             </Typography>
             {(chore.updatedAt && updatedBy > 0 && (
               <>
                 <Divider sx={{ my: 1 }} />
 
                 <Typography level='body1'>
-                  Updated by{' '}
+                  {t('choreEdit.updatedBy')}{' '}
                   <Chip variant='solid'>
                     {
                       membersData.res.find(f => f.userId === updatedBy)
                         ?.displayName
                     }
                   </Chip>{' '}
-                  {moment(chore.updatedAt).fromNow()}
+                  {t('choreEdit.fromNow', { time: moment(chore.updatedAt).fromNow() })}
                 </Typography>
               </>
             )) || <></>}
@@ -1052,10 +1003,6 @@ const ChoreEdit = () => {
       )}
 
       <Divider sx={{ mb: 9 }} />
-
-      {/* <Box mt={2} alignSelf={'flex-start'} display='flex' gap={2}>
-        <Button onClick={SaveChore}>Save</Button>
-      </Box> */}
       <Sheet
         variant='outlined'
         sx={{
@@ -1063,13 +1010,13 @@ const ChoreEdit = () => {
           bottom: 0,
           left: 0,
           right: 0,
-          p: 2, // padding
+          p: 2,
           display: 'flex',
           justifyContent: 'flex-end',
           gap: 2,
           'z-index': 1000,
           bgcolor: 'background.body',
-          boxShadow: 'md', // Add a subtle shadow
+          boxShadow: 'md',
         }}
       >
         {choreId > 0 && (
@@ -1077,11 +1024,10 @@ const ChoreEdit = () => {
             color='danger'
             variant='solid'
             onClick={() => {
-              // confirm before deleting:
               handleDelete()
             }}
           >
-            Delete
+            {t('choreEdit.delete')}
           </Button>
         )}
         <Button
@@ -1091,10 +1037,10 @@ const ChoreEdit = () => {
             window.history.back()
           }}
         >
-          Cancel
+          {t('choreEdit.cancel')}
         </Button>
         <Button color='primary' variant='solid' onClick={HandleSaveChore}>
-          {choreId > 0 ? 'Save' : 'Create'}
+          {choreId > 0 ? t('choreEdit.save') : t('choreEdit.create')}
         </Button>
       </Sheet>
       <ConfirmationModal config={confirmModelConfig} />
@@ -1102,19 +1048,15 @@ const ChoreEdit = () => {
         <LabelModal
           isOpen={addLabelModalOpen}
           onSave={label => {
-            console.log('label', label)
-
             const newLabels = [...labelsV2]
             newLabels.push(label)
             setUserLabels([...userLabels, label])
-
             setLabelsV2([...labelsV2, label])
             setAddLabelModalOpen(false)
           }}
           onClose={() => setAddLabelModalOpen(false)}
         />
       )}
-      {/* <ChoreHistory ChoreHistory={choresHistory} UsersData={performers} /> */}
     </Container>
   )
 }

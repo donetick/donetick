@@ -16,6 +16,7 @@ import {
 } from '@mui/joy'
 import moment from 'moment'
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import RealTimeSettings from '../../components/RealTimeSettings'
 import Logo from '../../Logo'
 import { useUserProfile } from '../../queries/UserQueries'
@@ -46,6 +47,7 @@ import StorageSettings from './StorageSettings'
 import ThemeToggle from './ThemeToggle'
 
 const Settings = () => {
+  const { t, i18n } = useTranslation()
   const { data: userProfile } = useUserProfile()
   const { showNotification } = useNotification()
 
@@ -679,6 +681,19 @@ const Settings = () => {
       <MFASettings />
       <APITokenSettings />
       <StorageSettings />
+
+      <div className='grid gap-4 py-4'>
+        <Typography level='h3'>Language</Typography>
+        <Divider />
+        <Typography level='body-md'>
+          {t('greeting')}
+        </Typography>
+        <Box>
+          <Button onClick={() => i18n.changeLanguage('en')}>English</Button>
+          <Button onClick={() => i18n.changeLanguage('zh')} sx={{ ml: 1 }}>中文</Button>
+        </Box>
+      </div>
+
       <div className='grid gap-4 py-4'>
         <Typography level='h3'>Theme preferences</Typography>
         <Divider />

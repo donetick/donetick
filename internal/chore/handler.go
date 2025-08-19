@@ -211,6 +211,19 @@ func (h *Handler) createChore(c *gin.Context) {
 		choreReq.AssignedTo = choreReq.Assignees[rand.Intn(len(choreReq.Assignees))].UserID
 	}
 
+	// Validate frequency type
+	if choreReq.FrequencyType != "" && !choreReq.FrequencyType.IsValid() {
+		c.JSON(400, gin.H{
+			"error": fmt.Sprintf("Invalid frequency type: %s", choreReq.FrequencyType),
+		})
+		return
+	}
+
+	// Set default frequency type if not provided
+	if choreReq.FrequencyType == "" {
+		choreReq.FrequencyType = chModel.FrequencyTypeOnce
+	}
+
 	var dueDate *time.Time
 
 	if choreReq.DueDate != "" {
@@ -438,6 +451,15 @@ func (h *Handler) editChore(c *gin.Context) {
 		// if the assigned to field is not set, randomly assign the chore to one of the assignees
 		choreReq.AssignedTo = choreReq.Assignees[rand.Intn(len(choreReq.Assignees))].UserID
 	}
+
+	// Validate frequency type
+	if choreReq.FrequencyType != "" && !choreReq.FrequencyType.IsValid() {
+		c.JSON(400, gin.H{
+			"error": fmt.Sprintf("Invalid frequency type: %s", choreReq.FrequencyType),
+		})
+		return
+	}
+
 	oldChore, err := h.choreRepo.GetChore(c, choreReq.ID)
 
 	if err != nil {

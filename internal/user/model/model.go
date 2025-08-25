@@ -64,6 +64,7 @@ const (
 	AuthProviderDonetick AuthProviderType = iota
 	AuthProviderOAuth2
 	AuthProviderGoogle
+	AuthProviderApple
 )
 
 // MFASession represents a temporary session during MFA verification

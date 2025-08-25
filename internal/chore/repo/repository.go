@@ -50,9 +50,17 @@ func (r *ChoreRepository) CreateChore(c context.Context, chore *chModel.Chore) (
 	return chore.ID, nil
 }
 
-func (r *ChoreRepository) GetChore(c context.Context, choreID int) (*chModel.Chore, error) {
+func (r *ChoreRepository) GetChore(c context.Context, choreID int, userID int) (*chModel.Chore, error) {
 	var chore chModel.Chore
-	if err := r.db.Debug().WithContext(c).Model(&chModel.Chore{}).Preload("SubTasks", "chore_id = ?", choreID).Preload("Assignees").Preload("ThingChore").Preload("LabelsV2").First(&chore, choreID).Error; err != nil {
+	query := r.db.WithContext(c).Model(&chModel.Chore{}).
+		Preload("SubTasks", "chore_id = ?", choreID).
+		Preload("Assignees").
+		Preload("ThingChore").
+		Preload("LabelsV2").
+		Joins("LEFT JOIN chore_assignees ON chores.id = chore_assignees.chore_id AND chore_assignees.user_id = ?", userID).
+		Where("chores.id = ? AND ((chores.is_private = false) OR (chores.is_private = true AND (chores.created_by = ? OR chore_assignees.user_id = ?)))", choreID, userID, userID)
+
+	if err := query.First(&chore).Error; err != nil {
 		return nil, err
 	}
 	return &chore, nil
@@ -60,7 +68,7 @@ func (r *ChoreRepository) GetChore(c context.Context, choreID int) (*chModel.Cho
 
 func (r *ChoreRepository) GetChores(c context.Context, circleID int, userID int, includeArchived bool) ([]*chModel.Chore, error) {
 	var chores []*chModel.Chore
-	query := r.db.WithContext(c).Preload("Assignees").Preload("LabelsV2").Joins("left join chore_assignees on chores.id = chore_assignees.chore_id").Where("chores.circle_id = ? AND (chores.created_by = ? OR chore_assignees.user_id = ?)", circleID, userID, userID).Group("chores.id").Order("next_due_date asc")
+	query := r.db.WithContext(c).Preload("Assignees").Preload("LabelsV2").Joins("left join chore_assignees on chores.id = chore_assignees.chore_id").Where("chores.circle_id = ? AND ((chores.is_private = false) OR (chores.is_private = true AND (chores.created_by = ? OR chore_assignees.user_id = ?)))", circleID, userID, userID).Group("chores.id").Order("next_due_date asc")
 	if !includeArchived {
 		query = query.Where("chores.is_active = ?", true)
 	}
@@ -72,11 +80,12 @@ func (r *ChoreRepository) GetChores(c context.Context, circleID int, userID int,
 
 func (r *ChoreRepository) GetArchivedChores(c context.Context, circleID int, userID int) ([]*chModel.Chore, error) {
 	var chores []*chModel.Chore
-	if err := r.db.WithContext(c).Preload("Assignees").Preload("LabelsV2").Joins("left join chore_assignees on chores.id = chore_assignees.chore_id").Where("chores.circle_id = ? AND (chores.created_by = ? OR chore_assignees.user_id = ?)", circleID, userID, userID).Group("chores.id").Order("next_due_date asc").Find(&chores, "circle_id = ? AND is_active = ?", circleID, false).Error; err != nil {
+	if err := r.db.WithContext(c).Preload("Assignees").Preload("LabelsV2").Joins("left join chore_assignees on chores.id = chore_assignees.chore_id").Where("chores.circle_id = ? AND ((chores.is_private = false) OR (chores.is_private = true AND (chores.created_by = ? OR chore_assignees.user_id = ?)))", circleID, userID, userID).Group("chores.id").Order("next_due_date asc").Find(&chores, "circle_id = ? AND is_active = ?", circleID, false).Error; err != nil {
 		return nil, err
 	}
 	return chores, nil
 }
+
 func (r *ChoreRepository) DeleteChore(c context.Context, id int) error {
 	return r.db.WithContext(c).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Where("chore_id = ?", id).Delete(&chModel.ChoreAssignees{}).Error; err != nil {
@@ -117,6 +126,138 @@ func (r *ChoreRepository) IsChoreOwner(c context.Context, choreID int, userID in
 	var chore chModel.Chore
 	err := r.db.WithContext(c).Model(&chModel.Chore{}).Where("id = ? AND created_by = ?", choreID, userID).First(&chore).Error
 	return err
+}
+
+func (r *ChoreRepository) SetChorePendingApproval(c context.Context, chore *chModel.Chore, note *string, userID int, completedDate *time.Time) error {
+	err := r.db.WithContext(c).Transaction(func(tx *gorm.DB) error {
+		// Look for existing chore history with start or pause status
+		var existingHistory chModel.ChoreHistory
+		err := tx.Where("chore_id = ? AND status = ? ",
+			chore.ID, chModel.ChoreHistoryStatusStarted).
+			First(&existingHistory).Error
+
+		var ch *chModel.ChoreHistory
+		if err == nil {
+			// Update existing history record to mark as pending approval
+			existingHistory.PerformedAt = completedDate
+			existingHistory.Note = note
+			existingHistory.Status = chModel.ChoreHistoryStatusPendingApproval
+			ch = &existingHistory
+		} else if errors.Is(err, gorm.ErrRecordNotFound) {
+			// Create a new chore history record
+			ch = &chModel.ChoreHistory{
+				ChoreID:     chore.ID,
+				PerformedAt: completedDate,
+				CompletedBy: userID,
+				AssignedTo:  chore.AssignedTo,
+				DueDate:     chore.NextDueDate,
+				Note:        note,
+				Status:      chModel.ChoreHistoryStatusPendingApproval,
+			}
+		} else {
+			return err
+		}
+
+		if err := tx.Save(ch).Error; err != nil {
+			return err
+		}
+
+		// Set chore status to pending approval
+		if err := tx.Model(&chModel.Chore{}).Where("id = ?", chore.ID).Update("status", chModel.ChoreStatusPendingApproval).Error; err != nil {
+			return err
+		}
+
+		// if there is any time session associated with the chore, mark them as finished:
+		var timeSessions []*chModel.TimeSession
+		tx.Model(&chModel.TimeSession{}).Where("chore_id = ? AND status < ?", chore.ID, chModel.TimeSessionStatusCompleted).Find(&timeSessions)
+		if len(timeSessions) != 0 {
+			for _, session := range timeSessions {
+				session.Finish(userID)
+			}
+			if err := tx.Save(&timeSessions).Error; err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+	return err
+}
+
+func (r *ChoreRepository) ApproveChore(c context.Context, chore *chModel.Chore, adminUserID int, dueDate *time.Time, nextAssignedTo int, applyPoints bool) error {
+	err := r.db.WithContext(c).Transaction(func(tx *gorm.DB) error {
+		choreUpdates := map[string]interface{}{}
+		choreUpdates["next_due_date"] = dueDate
+		choreUpdates["status"] = chModel.ChoreStatusNoStatus
+
+		if dueDate != nil {
+			choreUpdates["assigned_to"] = nextAssignedTo
+		} else {
+			// one time task
+			choreUpdates["is_active"] = false
+		}
+
+		// Get the latest history entry that's pending approval and update it to completed
+		var history chModel.ChoreHistory
+		err := tx.Where("chore_id = ? AND status = ?", chore.ID, chModel.ChoreHistoryStatusPendingApproval).
+			Order("performed_at desc").
+			First(&history).Error
+		if err != nil {
+			return err
+		}
+
+		// Update status to completed
+		history.Status = chModel.ChoreHistoryStatusCompleted
+
+		// Update UserCircle Points if applicable
+		if applyPoints && chore.Points != nil && *chore.Points > 0 {
+			history.Points = chore.Points
+			if err := tx.Model(&cModel.UserCircle{}).Where("user_id = ? AND circle_id = ?", history.CompletedBy, chore.CircleID).Update("points", gorm.Expr("points + ?", chore.Points)).Error; err != nil {
+				return err
+			}
+		}
+
+		// Save the updated history
+		if err := tx.Save(&history).Error; err != nil {
+			return err
+		}
+
+		// Perform the update operation once, using the prepared updates map.
+		if err := tx.Model(&chModel.Chore{}).Where("id = ?", chore.ID).Updates(choreUpdates).Error; err != nil {
+			return err
+		}
+
+		return nil
+	})
+	return err
+}
+
+func (r *ChoreRepository) RejectChore(c context.Context, choreID int, rejectionNote *string) error {
+	return r.db.WithContext(c).Transaction(func(tx *gorm.DB) error {
+		// Reset chore status to normal
+		if err := tx.Model(&chModel.Chore{}).Where("id = ?", choreID).Update("status", chModel.ChoreStatusNoStatus).Error; err != nil {
+			return err
+		}
+
+		// Get the latest pending approval history entry and mark it as rejected
+		var history chModel.ChoreHistory
+		err := tx.Where("chore_id = ? AND status = ?", choreID, chModel.ChoreHistoryStatusPendingApproval).
+			Order("performed_at desc").
+			First(&history).Error
+		if err != nil {
+			return err
+		}
+
+		// Update status to rejected
+		history.Status = chModel.ChoreHistoryStatusRejected
+
+		// Save the updated history
+		if err := tx.Save(&history).Error; err != nil {
+			return err
+		}
+
+		return nil
+	})
 }
 
 func (r *ChoreRepository) CompleteChore(c context.Context, chore *chModel.Chore, note *string, userID int, dueDate *time.Time, completedDate *time.Time, nextAssignedTo int, applyPoints bool) error {
@@ -413,7 +554,7 @@ func (r *ChoreRepository) SetDueDateIfNotExisted(c context.Context, choreID int,
 	return r.db.WithContext(c).Model(&chModel.Chore{}).Where("id = ? and next_due_date is null and is_active = ?", choreID, true).Update("next_due_date", dueDate).Error
 }
 
-func (r *ChoreRepository) GetChoreDetailByID(c context.Context, choreID int, circleID int) (*chModel.ChoreDetail, error) {
+func (r *ChoreRepository) GetChoreDetailByID(c context.Context, choreID int, circleID int, userID int) (*chModel.ChoreDetail, error) {
 	var choreDetail chModel.ChoreDetail
 	if err := r.db.WithContext(c).
 		Table("chores").
@@ -452,7 +593,8 @@ func (r *ChoreRepository) GetChoreDetailByID(c context.Context, choreID int, cir
         )
     ) AS recent_history ON chores.id = recent_history.chore_id`).
 		Joins("LEFT JOIN time_sessions ON chores.id = time_sessions.chore_id AND time_sessions.status < ?", chModel.TimeSessionStatusCompleted).
-		Where("chores.id = ? and chores.circle_id = ?", choreID, circleID).
+		Joins("LEFT JOIN chore_assignees ON chores.id = chore_assignees.chore_id AND chore_assignees.user_id = ?", userID).
+		Where("chores.id = ? AND chores.circle_id = ? AND ((chores.is_private = false) OR (chores.is_private = true AND (chores.created_by = ? OR chore_assignees.user_id = ?)))", choreID, circleID, userID, userID).
 		Group("chores.id, recent_history.last_completed_date, recent_history.last_assigned_to, recent_history.notes, time_sessions.start_time, time_sessions.updated_at").
 		First(&choreDetail).Error; err != nil {
 		return nil, err
@@ -479,7 +621,9 @@ func (r *ChoreRepository) GetChoresHistoryByUserID(c context.Context, userID int
 		Joins("LEFT JOIN chores ON chore_histories.chore_id = chores.id").
 		Joins("LEFT JOIN circles ON chores.circle_id = circles.id").
 		Joins("LEFT JOIN time_sessions ON chore_histories.id = time_sessions.chore_history_id").
+		Joins("LEFT JOIN chore_assignees ON chores.id = chore_assignees.chore_id AND chore_assignees.user_id = ?", userID).
 		Where("circles.id = ? AND chore_histories.updated_at > ?", circleID, since).
+		Where("(chores.is_private = false) OR (chores.is_private = true AND (chores.created_by = ? OR chore_assignees.user_id = ?))", userID, userID).
 		Order("chore_histories.performed_at desc, chore_histories.updated_at desc")
 
 	if !includeCircle {

@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"donetick.com/core/config"
-	auth "donetick.com/core/internal/authorization"
+	auth "donetick.com/core/internal/auth"
 	chRepo "donetick.com/core/internal/chore/repo"
 	cRepo "donetick.com/core/internal/circle/repo"
 	errorx "donetick.com/core/internal/error"
@@ -195,7 +195,7 @@ func handleEntityType(c *gin.Context, h *Handler, currentUser *user.UserDetails)
 	}
 	switch entityType {
 	case "chore":
-		chore, err := h.choreRepo.GetChore(c, entityID)
+		chore, err := h.choreRepo.GetChore(c, entityID, currentUser.ID)
 		if err != nil {
 			log.Error("failed to get chore from db", "error", err)
 			return storageModel.EntityTypeChoreDescription, 0, false

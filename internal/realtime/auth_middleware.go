@@ -188,6 +188,18 @@ func (am *AuthMiddleware) WebSocketAuthHandler() gin.HandlerFunc {
 			c.Abort()
 			return
 		}
+		if !user.IsPlusMember() {
+			am.logger.Warnw("WebSocket access denied for non-plus member",
+				"user_id", user.ID,
+				"remote_addr", c.ClientIP())
+
+			c.JSON(http.StatusForbidden, gin.H{
+				"error": "Access denied for non-plus members",
+				"code":  "ACCESS_DENIED",
+			})
+			c.Abort()
+			return
+		}
 
 		// Store user and circle ID in context for the WebSocket handler
 		c.Set("user", user)

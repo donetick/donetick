@@ -6,7 +6,8 @@ import (
 	"strconv"
 	"time"
 
-	auth "donetick.com/core/internal/authorization"
+	"donetick.com/core/config"
+	auth "donetick.com/core/internal/auth"
 	"donetick.com/core/internal/chore"
 	chRepo "donetick.com/core/internal/chore/repo"
 	cModel "donetick.com/core/internal/circle/model"
@@ -20,18 +21,25 @@ import (
 )
 
 type Handler struct {
-	circleRepo *cRepo.CircleRepository
-	userRepo   *uRepo.UserRepository
-	choreRepo  *chRepo.ChoreRepository
-	pointRepo  *pRepo.PointsRepository
+	circleRepo           *cRepo.CircleRepository
+	userRepo             *uRepo.UserRepository
+	choreRepo            *chRepo.ChoreRepository
+	pointRepo            *pRepo.PointsRepository
+	isDonetickDotCom     bool
+	maxCircleMembers     int
+	plusMaxCircleMembers int
 }
 
-func NewHandler(cr *cRepo.CircleRepository, ur *uRepo.UserRepository, c *chRepo.ChoreRepository, pr *pRepo.PointsRepository) *Handler {
+func NewHandler(cr *cRepo.CircleRepository, ur *uRepo.UserRepository, c *chRepo.ChoreRepository, pr *pRepo.PointsRepository,
+	config *config.Config) *Handler {
 	return &Handler{
-		circleRepo: cr,
-		userRepo:   ur,
-		choreRepo:  c,
-		pointRepo:  pr,
+		circleRepo:           cr,
+		userRepo:             ur,
+		choreRepo:            c,
+		pointRepo:            pr,
+		isDonetickDotCom:     config.IsDoneTickDotCom,
+		maxCircleMembers:     config.DonetickCloudConfig.MaxCircleMembers,
+		plusMaxCircleMembers: config.DonetickCloudConfig.PlusCircleMaxMembers,
 	}
 }
 
@@ -91,7 +99,6 @@ func (h *Handler) JoinCircle(c *gin.Context) {
 		})
 		return
 	}
-
 	// Add the user to the circle
 	err = h.circleRepo.AddUserToCircle(c, &cModel.UserCircle{
 		CircleID: circle.ID,
@@ -358,7 +365,7 @@ func (h *Handler) AcceptJoinRequest(c *gin.Context) {
 		return
 	}
 
-	currentMemebers, err := h.circleRepo.GetCircleUsers(c, currentUser.CircleID)
+	currentMembers, err := h.circleRepo.GetCircleUsers(c, currentUser.CircleID)
 	if err != nil {
 		log.Error("Error getting circle members:", err)
 		c.JSON(500, gin.H{
@@ -366,67 +373,78 @@ func (h *Handler) AcceptJoinRequest(c *gin.Context) {
 		})
 		return
 	}
-
-	// confirm that the current user is an admin:
-	isAdmin := false
-	for _, member := range currentMemebers {
-		if member.UserID == currentUser.ID && member.Role == "admin" {
-			isAdmin = true
-			break
+	if h.isDonetickDotCom {
+		maxMembers := h.maxCircleMembers
+		if currentUser.IsPlusMember() {
+			maxMembers = h.plusMaxCircleMembers
 		}
-	}
-	if !isAdmin {
-		c.JSON(403, gin.H{
-			"error": "You are not an admin of this circle",
-		})
-		return
-	}
-	pendingRequests, err := h.circleRepo.GetPendingJoinRequests(c, currentUser.CircleID)
-	if err != nil {
-		log.Error("Error getting pending circle members:", err)
-		c.JSON(500, gin.H{
-			"error": "Error getting pending circle members",
-		})
-		return
-	}
-	isActiveRequest := false
-	var requestedCircle *cModel.UserCircleDetail
-	for _, request := range pendingRequests {
-		if request.ID == requestID {
-			requestedCircle = request
-			isActiveRequest = true
-			break
+		if len(currentMembers) >= maxMembers {
+			log.Error("Circle is full")
+			c.JSON(400, gin.H{
+				"error": "Circle is full, you can only have " + strconv.Itoa(maxMembers) + " members in a circle",
+			})
+			return
 		}
-	}
-	if !isActiveRequest {
-		c.JSON(400, gin.H{
-			"error": "Invalid request",
-		})
-		return
-	}
+		// confirm that the current user is an admin:
+		isAdmin := false
+		for _, member := range currentMembers {
+			if member.UserID == currentUser.ID && member.Role == "admin" {
+				isAdmin = true
+				break
+			}
+		}
+		if !isAdmin {
+			c.JSON(403, gin.H{
+				"error": "You are not an admin of this circle",
+			})
+			return
+		}
+		pendingRequests, err := h.circleRepo.GetPendingJoinRequests(c, currentUser.CircleID)
+		if err != nil {
+			log.Error("Error getting pending circle members:", err)
+			c.JSON(500, gin.H{
+				"error": "Error getting pending circle members",
+			})
+			return
+		}
+		isActiveRequest := false
+		var requestedCircle *cModel.UserCircleDetail
+		for _, request := range pendingRequests {
+			if request.ID == requestID {
+				requestedCircle = request
+				isActiveRequest = true
+				break
+			}
+		}
+		if !isActiveRequest {
+			c.JSON(400, gin.H{
+				"error": "Invalid request",
+			})
+			return
+		}
 
-	err = h.circleRepo.AcceptJoinRequest(c, currentUser.CircleID, requestID)
-	if err != nil {
-		log.Error("Error accepting join request:", err)
-		c.JSON(500, gin.H{
-			"error": "Error accepting join request",
-		})
-		return
-	}
+		err = h.circleRepo.AcceptJoinRequest(c, currentUser.CircleID, requestID)
+		if err != nil {
+			log.Error("Error accepting join request:", err)
+			c.JSON(500, gin.H{
+				"error": "Error accepting join request",
+			})
+			return
+		}
 
-	if err := h.userRepo.UpdateUserCircle(c, requestedCircle.UserID, currentUser.CircleID); err != nil {
-		log.Error("Error updating user circle:", err)
-		c.JSON(500, gin.H{
-			"error": "Error updating user circle",
-		})
-		return
-	}
+		if err := h.userRepo.UpdateUserCircle(c, requestedCircle.UserID, currentUser.CircleID); err != nil {
+			log.Error("Error updating user circle:", err)
+			c.JSON(500, gin.H{
+				"error": "Error updating user circle",
+			})
+			return
+		}
 
-	c.JSON(200, gin.H{
-		"res": "Join request accepted successfully",
-	})
+		c.JSON(200, gin.H{
+			"res": "Join request accepted successfully",
+		})
+	}
 }
-
 func (h *Handler) RedeemPoints(c *gin.Context) {
 	type RedeemPointsRequest struct {
 		Points int `json:"points"`

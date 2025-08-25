@@ -32,8 +32,10 @@ func Routes(
 	// Health check endpoint (no auth required)
 	rtGroup.GET("/health", wsHandler.HandleHealthCheck)
 
-	// WebSocket endpoint (with auth)
-	rtGroup.GET("/ws", rtAuthMiddleware.WebSocketAuthHandler(), wsHandler.HandleWebSocket)
+	// I never endup releasing the ws as i found sse is more suitable for donetick
+	// i can remove this code in future release
+	// // WebSocket endpoint (with auth)
+	// rtGroup.GET("/ws", rtAuthMiddleware.WebSocketAuthHandler(), wsHandler.HandleWebSocket)
 	// SSE endpoint (with auth)
 	rtGroup.GET("/sse", rtAuthMiddleware.WebSocketAuthHandler(), pollingHandler.HandleSSE)
 

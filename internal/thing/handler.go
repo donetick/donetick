@@ -4,7 +4,7 @@ import (
 	"strconv"
 	"time"
 
-	auth "donetick.com/core/internal/authorization"
+	auth "donetick.com/core/internal/auth"
 	chRepo "donetick.com/core/internal/chore/repo"
 	cRepo "donetick.com/core/internal/circle/repo"
 	"donetick.com/core/internal/events"
@@ -144,7 +144,11 @@ func EvaluateTriggerAndScheduleDueDate(h *Handler, c *gin.Context, thing *tModel
 	for _, tc := range thingChores {
 		triggered := EvaluateThingChore(tc, thing.State)
 		if triggered {
-			h.choreRepo.SetDueDateIfNotExisted(c, tc.ChoreID, time.Now().UTC())
+			err := h.choreRepo.SetDueDateIfNotExisted(c, tc.ChoreID, time.Now().UTC())
+			if err != nil {
+				c.JSON(500, gin.H{"error": err.Error()})
+				return true
+			}
 		}
 	}
 	return false

@@ -72,15 +72,17 @@ type Chore struct {
 	Points                 *int                  `json:"points,omitempty" gorm:"column:points"`                      // Points for completing the chore
 	Description            *string               `json:"description,omitempty" gorm:"type:text;column:description"`  // Description of the chore
 	SubTasks               *[]stModel.SubTask    `json:"subTasks,omitempty" gorm:"foreignkey:ChoreID;references:ID"` // Subtasks for the chore
-
+	RequireApproval        bool                  `json:"requireApproval" gorm:"column:require_approval"`             // Whether chore completion requires admin approval
+	IsPrivate              bool                  `json:"isPrivate" gorm:"column:is_private;default:false"`           // Whether the chore is private
 }
 
 type Status int8
 
 const (
-	ChoreStatusNoStatus   Status = 0
-	ChoreStatusInProgress Status = 1
-	ChoreStatusPaused     Status = 2
+	ChoreStatusNoStatus        Status = 0
+	ChoreStatusInProgress      Status = 1
+	ChoreStatusPaused          Status = 2
+	ChoreStatusPendingApproval Status = 3
 )
 
 type ChoreAssignees struct {
@@ -106,18 +108,31 @@ type ChoreHistory struct {
 type ChoreHistoryStatus int8
 
 const (
-	ChoreHistoryStatusStarted   ChoreHistoryStatus = 0
-	ChoreHistoryStatusCompleted ChoreHistoryStatus = 1
-	ChoreHistoryStatusSkipped   ChoreHistoryStatus = 2
+	ChoreHistoryStatusStarted         ChoreHistoryStatus = 0
+	ChoreHistoryStatusCompleted       ChoreHistoryStatus = 1
+	ChoreHistoryStatusSkipped         ChoreHistoryStatus = 2
+	ChoreHistoryStatusPendingApproval ChoreHistoryStatus = 3
+	ChoreHistoryStatusRejected        ChoreHistoryStatus = 4
 )
 
 type FrequencyMetadata struct {
-	Days     []*string `json:"days,omitempty"`
-	Months   []*string `json:"months,omitempty"`
-	Unit     *string   `json:"unit,omitempty"`
-	Time     string    `json:"time,omitempty"`
-	Timezone string    `json:"timezone,omitempty"`
+	Days        []*string    `json:"days,omitempty"`
+	Months      []*string    `json:"months,omitempty"`
+	Unit        *string      `json:"unit,omitempty"`
+	Time        string       `json:"time,omitempty"`
+	Timezone    string       `json:"timezone,omitempty"`
+	WeekPattern *Weekpattern `json:"weekPattern,omitempty"`
+	WeekNumbers []int        `json:"weekNumbers,omitempty"` // DEPRECATED: use Occurrences instead
+	Occurrences []*int       `json:"occurrences,omitempty"` // e.g. ["1","3","last"] for 1st, 3rd, and last occurrence of the day
 }
+
+type Weekpattern string
+
+const (
+	WeekpatternEveryWeek     Weekpattern = "every_week"
+	WeekPatternWeekOfMonth   Weekpattern = "week_of_month"   // e.g. ["1","3","last"] for 1st, 3rd, and last occurrence of the day in the month
+	WeekPatternWeekOfQuarter Weekpattern = "week_of_quarter" // e.g. ["1","2","3"] for 1st, 2nd, and 3rd occurrence of the day in the quarter
+)
 
 type NotificationMetadata struct {
 	DueDate       bool                    `json:"dueDate,omitempty"`
@@ -212,6 +227,8 @@ type ChoreReq struct {
 	Description          *string               `json:"description"`
 	Priority             int                   `json:"priority"`
 	SubTasks             *[]stModel.SubTask    `json:"subTasks"`
+	RequireApproval      bool                  `json:"requireApproval"`
+	IsPrivate            bool                  `json:"isPrivate"`
 	UpdatedAt            *time.Time            `json:"updatedAt,omitempty"` // For internal use only when syncing a chore updated offline
 }
 

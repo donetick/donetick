@@ -370,3 +370,287 @@ func jsonPtr(s string) *string {
 func truncateToDay(t time.Time) time.Time {
 	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
 }
+
+func intPtr(i int) *int {
+	return &i
+}
+
+func TestScheduleNextDueDateWeekPatterns(t *testing.T) {
+	location, err := time.LoadLocation("UTC")
+	if err != nil {
+		t.Fatalf("error loading location: %v", err)
+	}
+
+	// January 2025 calendar:
+	// Sun Mon Tue Wed Thu Fri Sat
+	//           1   2   3   4
+	//  5   6   7   8   9  10  11
+	// 12  13  14  15  16  17  18
+	// 19  20  21  22  23  24  25
+	// 26  27  28  29  30  31
+
+	// Starting from Thursday, January 1, 2025
+	now := time.Date(2025, 1, 1, 10, 0, 0, 0, location)
+
+	tests := []scheduleTest{
+		{
+			name: "1st Monday of month",
+			chore: chModel.Chore{
+				FrequencyType: chModel.FrequencyTypeDayOfTheWeek,
+				FrequencyMetadataV2: &chModel.FrequencyMetadata{
+					Days:        []*string{jsonPtr("monday")},
+					Time:        "2025-01-06T10:00:00Z",
+					WeekPattern: func() *chModel.Weekpattern { w := chModel.WeekPatternWeekOfMonth; return &w }(),
+					Occurrences: []*int{intPtr(1)},
+				},
+			},
+			completedDate: now,
+			want:          timePtr(time.Date(2025, 1, 6, 10, 0, 0, 0, location)), // First Monday (Jan 6th)
+		},
+		{
+			name: "2nd Tuesday of month",
+			chore: chModel.Chore{
+				FrequencyType: chModel.FrequencyTypeDayOfTheWeek,
+				FrequencyMetadataV2: &chModel.FrequencyMetadata{
+					Days:        []*string{jsonPtr("tuesday")},
+					Time:        "2025-01-14T14:30:00Z",
+					WeekPattern: func() *chModel.Weekpattern { w := chModel.WeekPatternWeekOfMonth; return &w }(),
+					Occurrences: []*int{intPtr(2)},
+				},
+			},
+			completedDate: now,
+			want:          timePtr(time.Date(2025, 1, 14, 14, 30, 0, 0, location)), // Second Tuesday (Jan 14th)
+		},
+		{
+			name: "1st Friday of quarter",
+			chore: chModel.Chore{
+				FrequencyType: chModel.FrequencyTypeDayOfTheWeek,
+				FrequencyMetadataV2: &chModel.FrequencyMetadata{
+					Days:        []*string{jsonPtr("friday")},
+					Time:        "2025-01-03T09:00:00Z",
+					WeekPattern: func() *chModel.Weekpattern { w := chModel.WeekPatternWeekOfQuarter; return &w }(),
+					Occurrences: []*int{intPtr(1)},
+				},
+			},
+			completedDate: now,
+			want:          timePtr(time.Date(2025, 1, 3, 9, 0, 0, 0, location)), // First Friday of Q1
+		},
+		{
+			name: "Every week pattern (default behavior)",
+			chore: chModel.Chore{
+				FrequencyType: chModel.FrequencyTypeDayOfTheWeek,
+				FrequencyMetadataV2: &chModel.FrequencyMetadata{
+					Days:        []*string{jsonPtr("wednesday")},
+					Time:        "2025-01-08T16:00:00Z",
+					WeekPattern: func() *chModel.Weekpattern { w := chModel.WeekpatternEveryWeek; return &w }(),
+				},
+			},
+			completedDate: now,
+			want:          timePtr(time.Date(2025, 1, 8, 16, 0, 0, 0, location)), // Next Wednesday
+		},
+		{
+			name: "No week pattern specified (default behavior)",
+			chore: chModel.Chore{
+				FrequencyType: chModel.FrequencyTypeDayOfTheWeek,
+				FrequencyMetadataV2: &chModel.FrequencyMetadata{
+					Days: []*string{jsonPtr("saturday")},
+					Time: "2025-01-04T12:00:00Z",
+				},
+			},
+			completedDate: now,
+			want:          timePtr(time.Date(2025, 1, 4, 12, 0, 0, 0, location)), // Next Saturday
+		},
+		{
+			name: "1st and 3rd Monday of month",
+			chore: chModel.Chore{
+				FrequencyType: chModel.FrequencyTypeDayOfTheWeek,
+				FrequencyMetadataV2: &chModel.FrequencyMetadata{
+					Days:        []*string{jsonPtr("monday")},
+					Time:        "2025-01-03T08:00:00Z",
+					WeekPattern: func() *chModel.Weekpattern { w := chModel.WeekPatternWeekOfMonth; return &w }(),
+					Occurrences: []*int{intPtr(1), intPtr(3)},
+				},
+			},
+			completedDate: now,
+			want:          timePtr(time.Date(2025, 1, 6, 8, 0, 0, 0, location)), // First Monday (Jan 6th)
+		},
+		{
+			name: "Last Friday of month",
+			chore: chModel.Chore{
+				FrequencyType: chModel.FrequencyTypeDayOfTheWeek,
+				FrequencyMetadataV2: &chModel.FrequencyMetadata{
+					Days:        []*string{jsonPtr("friday")},
+					Time:        "2025-01-31T17:00:00Z",
+					WeekPattern: func() *chModel.Weekpattern { w := chModel.WeekPatternWeekOfMonth; return &w }(),
+					Occurrences: []*int{intPtr(-1)},
+				},
+			},
+			completedDate: now,
+			want:          timePtr(time.Date(2025, 1, 31, 17, 0, 0, 0, location)), // Last Friday (Jan 31st)
+		},
+		{
+			name: "Error - week_of_month without occurrences",
+			chore: chModel.Chore{
+				FrequencyType: chModel.FrequencyTypeDayOfTheWeek,
+				FrequencyMetadataV2: &chModel.FrequencyMetadata{
+					Days:        []*string{jsonPtr("monday")},
+					Time:        "2025-01-06T10:00:00Z",
+					WeekPattern: func() *chModel.Weekpattern { w := chModel.WeekPatternWeekOfMonth; return &w }(),
+					Occurrences: []*int{},
+				},
+			},
+			completedDate: now,
+			wantErr:       true,
+			wantErrMsg:    "week_of_month requires at least one occurrence",
+		},
+		{
+			name: "Error - week_of_quarter without occurrences",
+			chore: chModel.Chore{
+				FrequencyType: chModel.FrequencyTypeDayOfTheWeek,
+				FrequencyMetadataV2: &chModel.FrequencyMetadata{
+					Days:        []*string{jsonPtr("friday")},
+					Time:        "2025-01-03T09:00:00Z",
+					WeekPattern: func() *chModel.Weekpattern { w := chModel.WeekPatternWeekOfQuarter; return &w }(),
+					Occurrences: []*int{},
+				},
+			},
+			completedDate: now,
+			wantErr:       true,
+			wantErrMsg:    "week_of_quarter requires at least one occurrence",
+		},
+		{
+			name: "Backward compatibility - legacy WeekNumbers",
+			chore: chModel.Chore{
+				FrequencyType: chModel.FrequencyTypeDayOfTheWeek,
+				FrequencyMetadataV2: &chModel.FrequencyMetadata{
+					Days:        []*string{jsonPtr("monday")},
+					Time:        "2025-01-06T10:00:00Z",
+					WeekPattern: func() *chModel.Weekpattern { w := chModel.WeekPatternWeekOfMonth; return &w }(),
+					WeekNumbers: []int{1}, // This should still work
+				},
+			},
+			completedDate: now,
+			want:          timePtr(time.Date(2025, 1, 6, 10, 0, 0, 0, location)), // First Monday
+		},
+		// {
+		// 	name: "Week of month - 2nd week Tuesday",
+		// 	chore: chModel.Chore{
+		// 		FrequencyType: chModel.FrequencyTypeDayOfTheWeek,
+		// 		FrequencyMetadataV2: &chModel.FrequencyMetadata{
+		// 			Days:        []*string{jsonPtr("tuesday")},
+		// 			Time:        "2025-01-14T14:30:00Z",
+		// 			WeekPattern: func() *chModel.Weekpattern { w := chModel.WeekPatternWeekOfMonth; return &w }(),
+		// 			WeekNumbers: []int{2},
+		// 		},
+		// 	},
+		// 	completedDate: now,
+		// 	want:          timePtr(time.Date(2025, 1, 14, 14, 30, 0, 0, location)), // Second Tuesday (2nd week)
+		// },
+		// {
+		// 	name: "Week of quarter - 1st week Friday",
+		// 	chore: chModel.Chore{
+		// 		FrequencyType: chModel.FrequencyTypeDayOfTheWeek,
+		// 		FrequencyMetadataV2: &chModel.FrequencyMetadata{
+		// 			Days:        []*string{jsonPtr("friday")},
+		// 			Time:        "2025-01-03T09:00:00Z",
+		// 			WeekPattern: func() *chModel.Weekpattern { w := chModel.WeekPatternWeekOfQuarter; return &w }(),
+		// 			WeekNumbers: []int{1},
+		// 		},
+		// 	},
+		// 	completedDate: now,
+		// 	want:          timePtr(time.Date(2025, 1, 3, 9, 0, 0, 0, location)), // First Friday of Q1
+		// },
+		// {
+		// 	name: "Every week pattern (default behavior)",
+		// 	chore: chModel.Chore{
+		// 		FrequencyType: chModel.FrequencyTypeDayOfTheWeek,
+		// 		FrequencyMetadataV2: &chModel.FrequencyMetadata{
+		// 			Days:        []*string{jsonPtr("wednesday")},
+		// 			Time:        "2025-01-08T16:00:00Z",
+		// 			WeekPattern: func() *chModel.Weekpattern { w := chModel.WeekpatternEveryWeek; return &w }(),
+		// 		},
+		// 	},
+		// 	completedDate: now,
+		// 	want:          timePtr(time.Date(2025, 1, 8, 16, 0, 0, 0, location)), // Next Wednesday
+		// },
+		// {
+		// 	name: "No week pattern specified (default behavior)",
+		// 	chore: chModel.Chore{
+		// 		FrequencyType: chModel.FrequencyTypeDayOfTheWeek,
+		// 		FrequencyMetadataV2: &chModel.FrequencyMetadata{
+		// 			Days: []*string{jsonPtr("saturday")},
+		// 			Time: "2025-01-04T12:00:00Z",
+		// 		},
+		// 	},
+		// 	completedDate: now,
+		// 	want:          timePtr(time.Date(2025, 1, 4, 12, 0, 0, 0, location)), // Next Saturday
+		// },
+		// {
+		// 	name: "Week of month - multiple days and weeks",
+		// 	chore: chModel.Chore{
+		// 		FrequencyType: chModel.FrequencyTypeDayOfTheWeek,
+		// 		FrequencyMetadataV2: &chModel.FrequencyMetadata{
+		// 			Days:        []*string{jsonPtr("monday"), jsonPtr("friday")},
+		// 			Time:        "2025-01-03T08:00:00Z",
+		// 			WeekPattern: func() *chModel.Weekpattern { w := chModel.WeekPatternWeekOfMonth; return &w }(),
+		// 			WeekNumbers: []int{1, 3},
+		// 		},
+		// 	},
+		// 	completedDate: now,
+		// 	want:          timePtr(time.Date(2025, 1, 3, 8, 0, 0, 0, location)), // First Friday (1st week)
+		// },
+		// {
+		// 	name: "Error - week_of_month without week numbers",
+		// 	chore: chModel.Chore{
+		// 		FrequencyType: chModel.FrequencyTypeDayOfTheWeek,
+		// 		FrequencyMetadataV2: &chModel.FrequencyMetadata{
+		// 			Days:        []*string{jsonPtr("monday")},
+		// 			Time:        "2025-01-06T10:00:00Z",
+		// 			WeekPattern: func() *chModel.Weekpattern { w := chModel.WeekPatternWeekOfMonth; return &w }(),
+		// 			WeekNumbers: []int{},
+		// 		},
+		// 	},
+		// 	completedDate: now,
+		// 	wantErr:       true,
+		// 	wantErrMsg:    "week_of_month requires at least one week number",
+		// },
+		// {
+		// 	name: "Error - week_of_quarter without week numbers",
+		// 	chore: chModel.Chore{
+		// 		FrequencyType: chModel.FrequencyTypeDayOfTheWeek,
+		// 		FrequencyMetadataV2: &chModel.FrequencyMetadata{
+		// 			Days:        []*string{jsonPtr("friday")},
+		// 			Time:        "2025-01-03T09:00:00Z",
+		// 			WeekPattern: func() *chModel.Weekpattern { w := chModel.WeekPatternWeekOfQuarter; return &w }(),
+		// 			WeekNumbers: []int{},
+		// 		},
+		// 	},
+		// 	completedDate: now,
+		// 	wantErr:       true,
+		// 	wantErrMsg:    "week_of_quarter requires at least one week number",
+		// },
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := scheduleNextDueDate(context.Background(), &tt.chore, tt.completedDate)
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("scheduleNextDueDate() expected error but got none")
+					return
+				}
+				if tt.wantErrMsg != "" && err.Error() != tt.wantErrMsg {
+					t.Errorf("scheduleNextDueDate() error = %v, wantErrMsg %v", err.Error(), tt.wantErrMsg)
+				}
+				return
+			}
+			if err != nil {
+				t.Errorf("scheduleNextDueDate() error = %v", err)
+				return
+			}
+			if !equalTime(got, tt.want) {
+				t.Errorf("scheduleNextDueDate() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

@@ -118,12 +118,21 @@ func scheduleNextDueDate(ctx context.Context, chore *chModel.Chore, completedDat
 		}
 
 		// Handle week_of_month pattern
-		if *weekPattern == "nth_day_of_month" {
+		if *weekPattern == chModel.WeekPatternWeekOfMonth {
 			occurrences := getOccurrences(chore.FrequencyMetadataV2)
 			if len(occurrences) == 0 {
-				return nil, fmt.Errorf("nth_day_of_month requires at least one occurrence")
+				return nil, fmt.Errorf("week_of_month requires at least one occurrence")
 			}
 			return findNextDueDateForOccurrencePattern(baseDate, chore.FrequencyMetadataV2.Days, occurrences, true)
+		}
+
+		// Handle week_of_quarter pattern
+		if *weekPattern == chModel.WeekPatternWeekOfQuarter {
+			occurrences := getOccurrences(chore.FrequencyMetadataV2)
+			if len(occurrences) == 0 {
+				return nil, fmt.Errorf("week_of_quarter requires at least one occurrence")
+			}
+			return findNextDueDateForOccurrencePattern(baseDate, chore.FrequencyMetadataV2.Days, occurrences, false)
 		}
 
 		return nil, fmt.Errorf("invalid week pattern: %s", *weekPattern)
@@ -190,7 +199,11 @@ func getOccurrences(metadata *chModel.FrequencyMetadata) []string {
 	if len(metadata.Occurrences) > 0 {
 		occurrences := make([]string, len(metadata.Occurrences))
 		for i, occ := range metadata.Occurrences {
-			occurrences[i] = string(*occ)
+			if *occ == -1 {
+				occurrences[i] = "last"
+			} else {
+				occurrences[i] = fmt.Sprintf("%d", *occ)
+			}
 		}
 		return occurrences
 	}

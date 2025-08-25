@@ -371,6 +371,10 @@ func truncateToDay(t time.Time) time.Time {
 	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
 }
 
+func intPtr(i int) *int {
+	return &i
+}
+
 func TestScheduleNextDueDateWeekPatterns(t *testing.T) {
 	location, err := time.LoadLocation("UTC")
 	if err != nil {
@@ -397,7 +401,7 @@ func TestScheduleNextDueDateWeekPatterns(t *testing.T) {
 					Days:        []*string{jsonPtr("monday")},
 					Time:        "2025-01-06T10:00:00Z",
 					WeekPattern: func() *chModel.Weekpattern { w := chModel.WeekPatternWeekOfMonth; return &w }(),
-					Occurrences: []*string{jsonPtr("1")},
+					Occurrences: []*int{intPtr(1)},
 				},
 			},
 			completedDate: now,
@@ -411,7 +415,7 @@ func TestScheduleNextDueDateWeekPatterns(t *testing.T) {
 					Days:        []*string{jsonPtr("tuesday")},
 					Time:        "2025-01-14T14:30:00Z",
 					WeekPattern: func() *chModel.Weekpattern { w := chModel.WeekPatternWeekOfMonth; return &w }(),
-					Occurrences: []*string{jsonPtr("2")},
+					Occurrences: []*int{intPtr(2)},
 				},
 			},
 			completedDate: now,
@@ -425,7 +429,7 @@ func TestScheduleNextDueDateWeekPatterns(t *testing.T) {
 					Days:        []*string{jsonPtr("friday")},
 					Time:        "2025-01-03T09:00:00Z",
 					WeekPattern: func() *chModel.Weekpattern { w := chModel.WeekPatternWeekOfQuarter; return &w }(),
-					Occurrences: []*string{jsonPtr("1")},
+					Occurrences: []*int{intPtr(1)},
 				},
 			},
 			completedDate: now,
@@ -464,7 +468,7 @@ func TestScheduleNextDueDateWeekPatterns(t *testing.T) {
 					Days:        []*string{jsonPtr("monday")},
 					Time:        "2025-01-03T08:00:00Z",
 					WeekPattern: func() *chModel.Weekpattern { w := chModel.WeekPatternWeekOfMonth; return &w }(),
-					Occurrences: []*string{jsonPtr("1"), jsonPtr("3")},
+					Occurrences: []*int{intPtr(1), intPtr(3)},
 				},
 			},
 			completedDate: now,
@@ -478,7 +482,7 @@ func TestScheduleNextDueDateWeekPatterns(t *testing.T) {
 					Days:        []*string{jsonPtr("friday")},
 					Time:        "2025-01-31T17:00:00Z",
 					WeekPattern: func() *chModel.Weekpattern { w := chModel.WeekPatternWeekOfMonth; return &w }(),
-					Occurrences: []*string{jsonPtr("last")},
+					Occurrences: []*int{intPtr(-1)},
 				},
 			},
 			completedDate: now,
@@ -492,7 +496,7 @@ func TestScheduleNextDueDateWeekPatterns(t *testing.T) {
 					Days:        []*string{jsonPtr("monday")},
 					Time:        "2025-01-06T10:00:00Z",
 					WeekPattern: func() *chModel.Weekpattern { w := chModel.WeekPatternWeekOfMonth; return &w }(),
-					Occurrences: []*string{},
+					Occurrences: []*int{},
 				},
 			},
 			completedDate: now,
@@ -507,7 +511,7 @@ func TestScheduleNextDueDateWeekPatterns(t *testing.T) {
 					Days:        []*string{jsonPtr("friday")},
 					Time:        "2025-01-03T09:00:00Z",
 					WeekPattern: func() *chModel.Weekpattern { w := chModel.WeekPatternWeekOfQuarter; return &w }(),
-					Occurrences: []*string{},
+					Occurrences: []*int{},
 				},
 			},
 			completedDate: now,

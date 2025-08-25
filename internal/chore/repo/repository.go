@@ -250,25 +250,6 @@ func (r *ChoreRepository) RejectChore(c context.Context, choreID int, rejectionN
 
 		// Update status to rejected
 		history.Status = chModel.ChoreHistoryStatusRejected
-		if rejectionNote != nil {
-			// Add rejection note to the existing note (or replace if none)
-			if history.Note != nil {
-				combined := *history.Note + " [REJECTED: " + *rejectionNote + "]"
-				history.Note = &combined
-			} else {
-				rejectionNote := "REJECTED: " + *rejectionNote
-				history.Note = &rejectionNote
-			}
-		} else {
-			// No rejection note provided, just mark as rejected
-			if history.Note != nil {
-				rejected := *history.Note + " [REJECTED]"
-				history.Note = &rejected
-			} else {
-				rejected := "REJECTED"
-				history.Note = &rejected
-			}
-		}
 
 		// Save the updated history
 		if err := tx.Save(&history).Error; err != nil {

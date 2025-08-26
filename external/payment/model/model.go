@@ -57,15 +57,15 @@ type RevenueCatSubscription struct {
 
 // Unified subscription table for all payment providers
 type Subscription struct {
-	ID                     string               `json:"id" gorm:"column:id;primaryKey;not null"`                         // subscription_id or original_transaction_id
-	UserID                 int                  `json:"user_id" gorm:"column:user_id;not null;index"`                    // direct link to users table
-	CircleID               int                  `json:"circle_id" gorm:"column:circle_id;index"`                         // optional circle association
-	Provider               SubscriptionProvider `json:"provider" gorm:"column:provider;not null;index"`                  // 'stripe', 'revenuecat'
-	ExternalSubscriptionID string               `json:"external_subscription_id" gorm:"column:external_subscription_id"` // provider's subscription ID
-	ExternalCustomerID     string               `json:"external_customer_id" gorm:"column:external_customer_id"`         // stripe customer_id or app_user_id
-	ProductID              string               `json:"product_id" gorm:"column:product_id"`                             // product/price identifier
-	Status                 string               `json:"status" gorm:"column:status;not null;index"`                      // active, expired, cancelled, billing_issue
-	ExpiresAt              *time.Time           `json:"expires_at" gorm:"column:expires_at;index"`                       // unified expiration field
+	ID                     string               `json:"id" gorm:"column:id;primaryKey;not null"`                                                                                          // subscription_id or original_transaction_id
+	UserID                 int                  `json:"user_id" gorm:"column:user_id;not null;index:idx_subscriptions_user_id"`                                                           // direct link to users table
+	CircleID               int                  `json:"circle_id" gorm:"column:circle_id;index"`                                                                                          // optional circle association
+	Provider               SubscriptionProvider `json:"provider" gorm:"column:provider;not null;index:idx_subscriptions_provider_status;uniqueIndex:idx_subscriptions_provider_external"` // 'stripe', 'revenuecat'
+	ExternalSubscriptionID string               `json:"external_subscription_id" gorm:"column:external_subscription_id;uniqueIndex:idx_subscriptions_provider_external"`                  // provider's subscription ID
+	ExternalCustomerID     string               `json:"external_customer_id" gorm:"column:external_customer_id"`                                                                          // stripe customer_id or app_user_id
+	ProductID              string               `json:"product_id" gorm:"column:product_id"`                                                                                              // product/price identifier
+	Status                 string               `json:"status" gorm:"column:status;not null;index:idx_subscriptions_provider_status"`                                                     // active, expired, cancelled, billing_issue
+	ExpiresAt              *time.Time           `json:"expires_at" gorm:"column:expires_at;index:idx_subscriptions_expires_at"`                                                           // unified expiration field
 	CreatedAt              time.Time            `json:"created_at" gorm:"column:created_at;not null"`
 	UpdatedAt              time.Time            `json:"updated_at" gorm:"column:updated_at;not null"`
 	ProviderData           string               `json:"provider_data" gorm:"column:provider_data;type:text"` // JSON for provider-specific fields

@@ -102,6 +102,7 @@ type ServerConfig struct {
 	RateLimit        int           `mapstructure:"rate_limit" yaml:"rate_limit"`
 	ReadTimeout      time.Duration `mapstructure:"read_timeout" yaml:"read_timeout"`
 	WriteTimeout     time.Duration `mapstructure:"write_timeout" yaml:"write_timeout"`
+	WebhookTimeout   time.Duration `mapstructure:"webhook_timeout" yaml:"webhook_timeout"`
 	CorsAllowOrigins []string      `mapstructure:"cors_allow_origins" yaml:"cors_allow_origins"`
 	ServeFrontend    bool          `mapstructure:"serve_frontend" yaml:"serve_frontend"`
 }

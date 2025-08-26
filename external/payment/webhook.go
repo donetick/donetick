@@ -620,7 +620,7 @@ func Webhooks(cfg *config.Config, w *Webhook, r *gin.Engine, auth *jwt.GinJWTMid
 
 	paymentsWithoutAuth := r.Group("webhooks")
 
-	paymentsWithoutAuth.Use(utils.TimeoutMiddleware(cfg.Server.WriteTimeout))
+	paymentsWithoutAuth.Use(utils.TimeoutMiddleware(cfg.Server.WebhookTimeout))
 	{
 		paymentsWithoutAuth.POST("stripe", w.StripeWebhook)
 		paymentsWithoutAuth.POST("revenuecat", w.RevenueCatWebhook)

@@ -368,19 +368,24 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 		return
 	case "apple":
 		c.Set("auth_provider", "3rdPartyAuth")
+		// AppleAuthRequest matches the structure of the incoming Apple auth payload
 		type AppleAuthRequest struct {
-			Data struct {
-				Profile struct {
-					User       string `json:"user"`
-					GivenName  string `json:"givenName"`
-					FamilyName string `json:"familyName"`
-					Email      string `json:"email"`
-				} `json:"profile"`
-				AccessToken struct {
-					Token string `json:"token"`
-				} `json:"accessToken"`
+			Provider string `json:"provider" binding:"required"`
+			Data     struct {
+				Provider string `json:"provider"`
+				Result   struct {
+					IDToken     string `json:"idToken"`
+					AccessToken struct {
+						Token string `json:"token"`
+					} `json:"accessToken"`
+					Profile struct {
+						User       string `json:"user"`
+						GivenName  string `json:"givenName"`
+						FamilyName string `json:"familyName"`
+						Email      string `json:"email"`
+					} `json:"profile"`
+				} `json:"result"`
 			} `json:"data"`
-			IDToken string `json:"idToken"`
 		}
 
 		var body AppleAuthRequest
@@ -392,8 +397,13 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 			return
 		}
 
-		// Validate the ID token
-		userInfo, err := h.appleService.ValidateIDToken(c.Request.Context(), body.Data.AccessToken.Token)
+		// Validate the ID token - use the JWT from accessToken.token, not the short idToken
+		idToken := body.Data.Result.IDToken
+		if idToken == "" || len(idToken) < 100 { // JWT tokens are much longer
+			// Fallback to accessToken.token which contains the actual JWT
+			idToken = body.Data.Result.AccessToken.Token
+		}
+		userInfo, err := h.appleService.ValidateIDToken(c.Request.Context(), idToken)
 		if err != nil {
 			logger.Errorw("account.handler.thirdPartyAuthCallback (apple) failed to validate token", "err", err)
 			c.JSON(http.StatusBadRequest, gin.H{
@@ -420,7 +430,7 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 			}
 
 			// Use provided names from profile or fallback to email
-			displayName := body.Data.Profile.GivenName
+			displayName := body.Data.Result.Profile.GivenName
 			if displayName == "" {
 				displayName = userInfo.Email
 			}

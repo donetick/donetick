@@ -19,7 +19,6 @@ import (
 
 	auth "donetick.com/core/internal/auth"
 	"donetick.com/core/internal/auth/apple"
-	"donetick.com/core/internal/backup"
 	"donetick.com/core/internal/chore"
 	chRepo "donetick.com/core/internal/chore/repo"
 	"donetick.com/core/internal/circle"
@@ -146,8 +145,8 @@ func main() {
 		fx.Provide(storageRepo.NewStorageRepository),
 
 		// backup service
-		fx.Provide(backup.NewService),
-		fx.Provide(backup.NewHandler),
+		// fx.Provide(backup.NewService),
+		// fx.Provide(backup.NewHandler),
 
 		// Real-time service and components
 		fx.Provide(realtime.NewRealTimeService),
@@ -167,7 +166,7 @@ func main() {
 			storage.Routes,
 			frontend.Routes,
 			resource.Routes,
-			backup.Routes,
+			// backup.Routes,
 
 			realtime.Routes, //(router, rts, authMiddleware, pollingHandler)
 

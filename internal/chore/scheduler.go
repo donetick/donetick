@@ -367,10 +367,24 @@ func scheduleAdaptiveNextDueDate(chore *chModel.Chore, completedDate time.Time, 
 	decayFactor := 0.5 // Adjust this value to control the decay rate
 
 	for i := 0; i < len(history)-1; i++ {
+		// Skip entries with nil PerformedAt
+		if history[i].PerformedAt == nil || history[i+1].PerformedAt == nil {
+			continue
+		}
 		delay := history[i].PerformedAt.UTC().Sub(history[i+1].PerformedAt.UTC()).Seconds()
 		weight := math.Pow(decayFactor, float64(i))
 		totalDelay += delay * weight
 		totalWeight += weight
+	}
+
+	// If no valid history entries, fall back to default behavior
+	if totalWeight == 0 {
+		if chore.NextDueDate != nil {
+			diff := completedDate.UTC().Sub(chore.NextDueDate.UTC())
+			nextDueDate := completedDate.UTC().Add(diff)
+			return &nextDueDate, nil
+		}
+		return nil, nil
 	}
 
 	averageDelay := totalDelay / totalWeight

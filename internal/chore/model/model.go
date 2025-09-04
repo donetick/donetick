@@ -31,6 +31,19 @@ const (
 	FrequencyTypeNoRepeat      FrequencyType = "no_repeat"
 )
 
+// IsValid checks if the FrequencyType is one of the predefined valid values
+func (ft FrequencyType) IsValid() bool {
+	switch ft {
+	case FrequencyTypeOnce, FrequencyTypeDaily, FrequencyTypeWeekly,
+		FrequencyTypeMonthly, FrequencyTypeYearly, FrequencyTypeAdaptive,
+		FrequencyTypeInterval, FrequencyTypeDayOfTheWeek, FrequencyTypeDayOfTheMonth,
+		FrequencyTypeTrigger, FrequencyTypeNoRepeat:
+		return true
+	default:
+		return false
+	}
+}
+
 type AssignmentStrategy string
 
 const (

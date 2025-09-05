@@ -203,10 +203,23 @@ func (r *UserRepository) StoreAPIToken(c context.Context, userID int, name strin
 
 func (r *UserRepository) GetUserByToken(c context.Context, token string) (*uModel.UserDetails, error) {
 	var user *uModel.UserDetails
+	now := time.Now().UTC()
 
-	if err := r.db.WithContext(c).Table("users u").Select("u.*, c.webhook_url as webhook_url").Joins("left join api_tokens at on at.user_id = u.id").Joins("left join circles c on c.id = u.circle_id").Where("at.token = ?", token).First(&user).Error; err != nil {
-		return nil, err
+	if r.isDonetickDotCom {
+		if err := r.db.WithContext(c).Table("users u").Select("u.*, s.status as subscription, s.expires_at as expiration, c.webhook_url as webhook_url").Joins("left join api_tokens at on at.user_id = u.id").Joins("left join subscriptions s on s.circle_id = u.circle_id AND s.status = 'active' AND (s.expires_at IS NULL OR s.expires_at > ?)", now).Joins("left join circles c on c.id = u.circle_id").Where("at.token = ?", token).First(&user).Error; err != nil {
+			return nil, err
+		}
+	} else {
+		if err := r.db.WithContext(c).Table("users u").Select("u.*, c.webhook_url as webhook_url").Joins("left join api_tokens at on at.user_id = u.id").Joins("left join circles c on c.id = u.circle_id").Where("at.token = ?", token).First(&user).Error; err != nil {
+			return nil, err
+		}
+		// Set default subscription/expiration for self-hosted
+		subscription := "active"
+		futureDate := time.Date(2999, 12, 31, 0, 0, 0, 0, time.UTC)
+		user.Subscription = &subscription
+		user.Expiration = &futureDate
 	}
+
 	return user, nil
 }
 

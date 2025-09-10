@@ -39,7 +39,14 @@ func (r *CircleRepository) CreateCircle(c context.Context, circle *cModel.Circle
 }
 
 func (r *CircleRepository) AddUserToCircle(c context.Context, circleUser *cModel.UserCircle) error {
-	return r.db.WithContext(c).Save(circleUser).Error
+	// Use FirstOrCreate to handle the unique constraint
+	// This will create the record if it doesn't exist, or return the existing one
+	result := r.db.WithContext(c).Where(cModel.UserCircle{
+		UserID:   circleUser.UserID,
+		CircleID: circleUser.CircleID,
+	}).FirstOrCreate(circleUser)
+
+	return result.Error
 }
 
 func (r *CircleRepository) GetCircleUsers(c context.Context, circleID int) ([]*cModel.UserCircleDetail, error) {

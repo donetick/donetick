@@ -10,6 +10,7 @@ import (
 
 	"go.uber.org/zap/zapcore"
 
+	"github.com/mcuadros/go-defaults"
 	"github.com/spf13/viper"
 )
 
@@ -67,8 +68,8 @@ type DonetickCloudConfig struct {
 	GoogleAndroidClientID string `mapstructure:"google_android_client_id" yaml:"google_android_client_id"`
 	GoogleIOSClientID     string `mapstructure:"google_ios_client_id" yaml:"google_ios_client_id"`
 	AppleClientID         string `mapstructure:"apple_client_id" yaml:"apple_client_id"`
-	MaxCircleMembers      int    `mapstructure:"max_circle_members" yaml:"max_circle_members"`
-	PlusCircleMaxMembers  int    `mapstructure:"plus_circle_max_members" yaml:"plus_circle_max_members"`
+	MaxCircleMembers      int    `mapstructure:"max_circle_members" yaml:"max_circle_members" default:"2"`
+	PlusCircleMaxMembers  int    `mapstructure:"plus_circle_max_members" yaml:"plus_circle_max_members" default:"6"`
 }
 
 type TelegramConfig struct {
@@ -215,7 +216,7 @@ func NewConfig() *Config {
 		panic(fmt.Sprintf("Failed to generate secure JWT secret: %v", err))
 	}
 
-	return &Config{
+	config := &Config{
 		Telegram: TelegramConfig{
 			Token: "",
 		},
@@ -250,6 +251,11 @@ func NewConfig() *Config {
 			Development: false,
 		},
 	}
+
+	// Apply default values for fields with default tags
+	defaults.SetDefaults(config)
+
+	return config
 }
 func configEnvironmentOverrides(Config *Config) {
 	if os.Getenv("DONETICK_TELEGRAM_TOKEN") != "" {
@@ -306,6 +312,9 @@ func LoadConfig() *Config {
 	if err != nil {
 		panic(err)
 	}
+
+	// Apply default values for fields with default tags
+	defaults.SetDefaults(&config)
 
 	fmt.Printf("--ConfigLoad name : %s ", config.Name)
 

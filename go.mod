@@ -16,6 +16,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.3
 	github.com/gregdel/pushover v1.3.1
+	github.com/mcuadros/go-defaults v1.2.0
 	github.com/pquerna/otp v1.5.0
 	github.com/rubenv/sql-migrate v1.7.0
 	github.com/spf13/viper v1.19.0

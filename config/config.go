@@ -41,6 +41,7 @@ type Config struct {
 	IsUserCreationDisabled bool                `mapstructure:"is_user_creation_disabled" yaml:"is_user_creation_disabled"`
 	MinVersion             string              `mapstructure:"min_version" yaml:"min_version"`
 	DonetickCloudConfig    DonetickCloudConfig `mapstructure:"donetick_cloud" yaml:"donetick_cloud"`
+	FeatureLimits          FeatureLimitsConfig `mapstructure:"feature_limits" yaml:"feature_limits"`
 	Storage                StorageConfig       `mapstructure:"storage" yaml:"storage"`
 	Info                   Info
 }
@@ -68,8 +69,11 @@ type DonetickCloudConfig struct {
 	GoogleAndroidClientID string `mapstructure:"google_android_client_id" yaml:"google_android_client_id"`
 	GoogleIOSClientID     string `mapstructure:"google_ios_client_id" yaml:"google_ios_client_id"`
 	AppleClientID         string `mapstructure:"apple_client_id" yaml:"apple_client_id"`
-	MaxCircleMembers      int    `mapstructure:"max_circle_members" yaml:"max_circle_members" default:"2"`
-	PlusCircleMaxMembers  int    `mapstructure:"plus_circle_max_members" yaml:"plus_circle_max_members" default:"6"`
+}
+
+type FeatureLimitsConfig struct {
+	MaxCircleMembers     int `mapstructure:"max_circle_members" yaml:"max_circle_members" default:"2"`
+	PlusCircleMaxMembers int `mapstructure:"plus_circle_max_members" yaml:"plus_circle_max_members" default:"6"`
 }
 
 type TelegramConfig struct {

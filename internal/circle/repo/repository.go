@@ -134,7 +134,9 @@ func (r *CircleRepository) GetCircleAdmins(c context.Context, circleID int) ([]*
 
 func (r *CircleRepository) GetDefaultCircle(c context.Context, userID int) (*cModel.Circle, error) {
 	var circle cModel.Circle
-	if err := r.db.WithContext(c).Raw("SELECT circles.* FROM circles LEFT JOIN user_circles on circles.id = user_circles.circle_id WHERE user_circles.user_id = ? AND user_circles.role = 'admin'", userID).Scan(&circle).Error; err != nil {
+	if err := r.db.WithContext(c).
+		Raw("SELECT circles.* FROM circles LEFT JOIN user_circles ON circles.id = user_circles.circle_id WHERE user_circles.user_id = ? AND user_circles.role = 'admin' ORDER BY user_circles.created_at ASC LIMIT 1", userID).
+		Scan(&circle).Error; err != nil {
 		return nil, err
 	}
 	return &circle, nil

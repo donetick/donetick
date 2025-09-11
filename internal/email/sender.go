@@ -17,13 +17,18 @@ type EmailSender struct {
 
 func NewEmailSender(conf *config.Config) *EmailSender {
 
-	client := gomail.NewDialer(conf.EmailConfig.Host, conf.EmailConfig.Port, conf.EmailConfig.Email, conf.EmailConfig.Key)
+    // if no user is set, use the email as user
+	if conf.EmailConfig.User == "" {
+		conf.EmailConfig.User = conf.EmailConfig.Email
+	}
+
+	client := gomail.NewDialer(conf.EmailConfig.Host, conf.EmailConfig.Port, conf.EmailConfig.User, conf.EmailConfig.Key)
 
 	// format conf.EmailConfig.Host and port :
 
 	// auth := smtp.PlainAuth("", conf.EmailConfig.Email, conf.EmailConfig.Password, host)
 	return &EmailSender{
-
+        fromMail: conf.EmailConfig.Email
 		client:  client,
 		appHost: conf.EmailConfig.AppHost,
 	}
@@ -32,9 +37,9 @@ func NewEmailSender(conf *config.Config) *EmailSender {
 func (es *EmailSender) SendVerificationEmail(to, code string) error {
 	// msg := []byte(fmt.Sprintf("To: %s\r\nSubject: %s\r\n\r\n%s\r\n", to, subject, body))
 	msg := gomail.NewMessage()
-	msg.SetHeader("From", es.client.Username)
+	msg.SetHeader("From", es.fromMail)
 	msg.SetHeader("To", to)
-	msg.SetHeader("Subject", "Welcome to Donetick! Verifiy you email")
+	msg.SetHeader("Subject", "Welcome to Donetick! Verify your email")
 	// text/html for a html email
 	htmlBody := `
 	<!--
@@ -259,7 +264,7 @@ func (es *EmailSender) SendVerificationEmail(to, code string) error {
 
 func (es *EmailSender) SendResetPasswordEmail(c context.Context, to, code string) error {
 	msg := gomail.NewMessage()
-	msg.SetHeader("From", es.client.Username)
+	msg.SetHeader("From", es.fromMail)
 	msg.SetHeader("To", to)
 	msg.SetHeader("Subject", "Donetick! Password Reset")
 	htmlBody := `

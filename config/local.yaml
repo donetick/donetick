@@ -43,7 +43,8 @@ email:
   host: 
   port: 
   key: 
-  email:  
+  email:
+  user:  
   appHost:  
 mfa:
   session_timeout: 10m

@@ -151,16 +151,14 @@ func (h *Handler) getChore(c *gin.Context) {
 		})
 		return
 	}
-	isAssignee := false
-
-	for _, assignee := range chore.Assignees {
-		if assignee.UserID == currentUser.ID {
-			isAssignee = true
-			break
-		}
+	circleUsers, err := h.circleRepo.GetCircleUsers(c, currentUser.CircleID)
+	if err != nil {
+		logger.Error("Failed to retrieve circle users", "error", err, "circleID", currentUser.CircleID, "userID", currentUser.ID)
+		c.JSON(500, gin.H{"error": "Failed to retrieve circle users"})
+		return
 	}
 
-	if currentUser.ID != chore.CreatedBy && !isAssignee {
+	if !chore.CanView(currentUser.ID, circleUsers) {
 		c.JSON(403, gin.H{
 			"error": "You are not allowed to view this chore",
 		})

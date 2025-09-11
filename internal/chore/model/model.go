@@ -264,7 +264,28 @@ func (c *Chore) CanEdit(userID int, circleUsers []*cModel.UserCircleDetail, upda
 	return nil
 
 }
+func (c *Chore) CanView(userID int, circleUsers []*cModel.UserCircleDetail) bool {
+	// if private then only creator and assignees can view:
+	if c.IsPrivate {
+		if c.CreatedBy == userID {
+			return true
+		}
 
+		for _, a := range c.Assignees {
+			if a.UserID == userID {
+				return true
+			}
+		}
+		return false
+	}
+	// if public then anyone in the circle can view:
+	for _, cu := range circleUsers {
+		if cu.UserID == userID {
+			return true
+		}
+	}
+	return false
+}
 func (c *Chore) CanComplete(userID int) bool {
 	if c.AssignedTo == userID {
 		return true

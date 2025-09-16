@@ -220,6 +220,7 @@ func newServer(lc fx.Lifecycle, cfg *config.Config, db *gorm.DB, notifier *notif
 		"Sec-Ch-Ua-Platform",
 		"User-Agent",
 		"Referer",
+		"X-Impersonate-User-ID",
 	)
 	// Expose headers that the frontend might need
 	config.AddExposeHeaders("Content-Type")

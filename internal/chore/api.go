@@ -277,7 +277,15 @@ func (h *API) CompleteChore(c *gin.Context) {
 	}
 
 	// user need to be assigned to the chore to complete it
-	if !chore.CanComplete(performer) {
+	circleUsers, err := h.circleRepo.GetCircleUsers(c, currentUser.CircleID)
+	if err != nil {
+		log.Errorw("Failed to retrieve circle users", "error", err)
+		c.JSON(500, gin.H{
+			"error": "Failed to retrieve circle users",
+		})
+		return
+	}
+	if !chore.CanComplete(performer, circleUsers) {
 		log.Debugw("chore.api.CompleteChore user is not assigned to chore", "userID", performer, "choreID", choreID)
 		c.JSON(400, gin.H{
 			"error": "User is not assigned to chore",

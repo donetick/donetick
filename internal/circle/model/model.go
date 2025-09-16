@@ -70,3 +70,7 @@ func IsValidRole(r Role) bool {
 		return false
 	}
 }
+
+func (ucd UserCircleDetail) IsManagerOrAdmin() bool {
+	return ucd.Role == UserRoleAdmin || ucd.Role == UserRoleManager
+}

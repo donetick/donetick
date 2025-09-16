@@ -3,6 +3,7 @@ package user
 import (
 	"time"
 
+	cModel "donetick.com/core/internal/circle/model"
 	nModel "donetick.com/core/internal/notifier/model"
 )
 
@@ -98,5 +99,14 @@ func (u User) IsPlusMember() bool {
 		return u.Expiration.After(time.Now().UTC())
 	}
 
+	return false
+}
+
+func (u User) IsAdminOrManager(circleUsers []*cModel.UserCircleDetail) bool {
+	for _, cu := range circleUsers {
+		if cu.UserID == u.ID {
+			return cu.Role == cModel.UserRoleAdmin || cu.Role == cModel.UserRoleManager
+		}
+	}
 	return false
 }

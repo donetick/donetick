@@ -5,10 +5,13 @@ import (
 	"fmt"
 	"time"
 
+	errorx "donetick.com/core/internal/error"
 	uModel "donetick.com/core/internal/user/model"
 	"donetick.com/core/logging"
 	"gorm.io/gorm"
 )
+
+const MaxDevicesPerUser = 5
 
 type IDeviceRepository interface {
 	RegisterDeviceToken(c context.Context, deviceToken *uModel.UserDeviceToken) error
@@ -16,6 +19,7 @@ type IDeviceRepository interface {
 	UnregisterDeviceTokenByToken(c context.Context, userID int, token string) error
 	GetUserDeviceTokens(c context.Context, userID int) ([]*uModel.UserDeviceToken, error)
 	GetActiveDeviceTokens(c context.Context, userID int) ([]*uModel.UserDeviceToken, error)
+	GetActiveDeviceCount(c context.Context, userID int) (int64, error)
 	UpdateDeviceTokenActivity(c context.Context, userID int, deviceID string) error
 	CleanupInactiveTokens(c context.Context, inactiveDays int) error
 }
@@ -31,6 +35,28 @@ func NewDeviceRepository(db *gorm.DB) *DeviceRepository {
 // RegisterDeviceToken registers or updates a device token for a user
 func (r *DeviceRepository) RegisterDeviceToken(c context.Context, deviceToken *uModel.UserDeviceToken) error {
 	log := logging.FromContext(c)
+
+	// Check if adding this device would exceed the limit
+	var existingDevice uModel.UserDeviceToken
+	isNewDevice := r.db.WithContext(c).
+		Where("user_id = ? AND device_id = ? AND is_active = ?",
+			deviceToken.UserID, deviceToken.DeviceID, true).
+		First(&existingDevice).Error == gorm.ErrRecordNotFound
+
+	if isNewDevice {
+		// Count current active devices for this user
+		var activeDeviceCount int64
+		if err := r.db.WithContext(c).Model(&uModel.UserDeviceToken{}).
+			Where("user_id = ? AND is_active = ?", deviceToken.UserID, true).
+			Count(&activeDeviceCount).Error; err != nil {
+			log.Error("Failed to count active devices", "error", err)
+			return err
+		}
+
+		if activeDeviceCount >= MaxDevicesPerUser {
+			return errorx.ErrDeviceLimitExceeded
+		}
+	}
 
 	// Start a transaction
 	return r.db.WithContext(c).Transaction(func(tx *gorm.DB) error {
@@ -144,6 +170,15 @@ func (r *DeviceRepository) UpdateDeviceTokenActivity(c context.Context, userID i
 	return r.db.WithContext(c).Model(&uModel.UserDeviceToken{}).
 		Where("user_id = ? AND device_id = ? AND is_active = ?", userID, deviceID, true).
 		Update("last_active_at", time.Now()).Error
+}
+
+// GetActiveDeviceCount returns the count of active devices for a user
+func (r *DeviceRepository) GetActiveDeviceCount(c context.Context, userID int) (int64, error) {
+	var count int64
+	err := r.db.WithContext(c).Model(&uModel.UserDeviceToken{}).
+		Where("user_id = ? AND is_active = ?", userID, true).
+		Count(&count).Error
+	return count, err
 }
 
 // CleanupInactiveTokens removes tokens that haven't been active for the specified number of days

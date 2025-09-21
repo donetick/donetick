@@ -32,6 +32,12 @@ type IUserRepository interface {
 	UpdateMFASession(c context.Context, session *uModel.MFASession) error
 	DeleteMFASession(c context.Context, sessionToken string) error
 	CleanupExpiredMFASessions(c context.Context) error
+	// Device Token methods
+	RegisterDeviceToken(c context.Context, deviceToken *uModel.UserDeviceToken) error
+	UnregisterDeviceToken(c context.Context, userID int, deviceID string) error
+	GetUserDeviceTokens(c context.Context, userID int) ([]*uModel.UserDeviceToken, error)
+	GetActiveDeviceTokens(c context.Context, userID int) ([]*uModel.UserDeviceToken, error)
+	UpdateDeviceTokenActivity(c context.Context, userID int, deviceID string) error
 }
 
 type UserRepository struct {

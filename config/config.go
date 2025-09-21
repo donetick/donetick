@@ -41,6 +41,7 @@ type Config struct {
 	IsUserCreationDisabled bool                `mapstructure:"is_user_creation_disabled" yaml:"is_user_creation_disabled"`
 	MinVersion             string              `mapstructure:"min_version" yaml:"min_version"`
 	DonetickCloudConfig    DonetickCloudConfig `mapstructure:"donetick_cloud" yaml:"donetick_cloud"`
+	FCM                    FCMConfig           `mapstructure:"fcm" yaml:"fcm"`
 	FeatureLimits          FeatureLimitsConfig `mapstructure:"feature_limits" yaml:"feature_limits"`
 	Storage                StorageConfig       `mapstructure:"storage" yaml:"storage"`
 	Info                   Info
@@ -157,6 +158,10 @@ type GoogleIAPConfig struct {
 	ServiceAccountJSON string `mapstructure:"service_account_json" yaml:"service_account_json"`
 }
 
+type FCMConfig struct {
+	CredentialsPath string `json:"credentials_path" mapstructure:"credentials_path"`
+	ProjectID       string `json:"project_id" mapstructure:"project_id"`
+}
 type EmailConfig struct {
 	Email   string `mapstructure:"email"`
 	Key     string `mapstructure:"key"`

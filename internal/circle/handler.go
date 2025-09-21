@@ -366,6 +366,13 @@ func (h *Handler) AcceptJoinRequest(c *gin.Context) {
 	}
 
 	currentMembers, err := h.circleRepo.GetCircleUsers(c, currentUser.CircleID)
+	// filter to the active members only:
+	activeMembers := make([]*cModel.UserCircleDetail, 0)
+	for _, member := range currentMembers {
+		if member.IsActive {
+			activeMembers = append(activeMembers, member)
+		}
+	}
 	if err != nil {
 		log.Error("Error getting circle members:", err)
 		c.JSON(500, gin.H{
@@ -378,7 +385,7 @@ func (h *Handler) AcceptJoinRequest(c *gin.Context) {
 		if currentUser.IsPlusMember() {
 			maxMembers = h.plusMaxCircleMembers
 		}
-		if len(currentMembers) >= maxMembers {
+		if len(activeMembers) >= maxMembers {
 			log.Error("Circle is full")
 			c.JSON(400, gin.H{
 				"error": "Circle is full, you can only have " + strconv.Itoa(maxMembers) + " members in a circle",

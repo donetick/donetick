@@ -6,6 +6,7 @@ import (
 
 	auth "donetick.com/core/internal/auth"
 	dRepo "donetick.com/core/internal/device/repo"
+	errorx "donetick.com/core/internal/error"
 	uModel "donetick.com/core/internal/user/model"
 	"donetick.com/core/logging"
 	jwt "github.com/appleboy/gin-jwt/v2"
@@ -62,6 +63,16 @@ func (h *Handler) RegisterDeviceToken(c *gin.Context) {
 
 	if err := h.deviceRepo.RegisterDeviceToken(c, deviceToken); err != nil {
 		log.Error("Failed to register device token", "error", err)
+
+		// Check for device limit error
+		if err == errorx.ErrDeviceLimitExceeded {
+			c.JSON(http.StatusConflict, gin.H{
+				"error": err.Error(),
+				"code":  "DEVICE_LIMIT_EXCEEDED",
+			})
+			return
+		}
+
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to register device token"})
 		return
 	}
@@ -169,6 +180,28 @@ func (h *Handler) UpdateDeviceActivity(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Device activity updated successfully"})
 }
 
+// GetDeviceCount returns the number of active devices for the current user
+func (h *Handler) GetDeviceCount(c *gin.Context) {
+	log := logging.FromContext(c)
+	currentUser, ok := auth.CurrentUser(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
+		return
+	}
+
+	count, err := h.deviceRepo.GetActiveDeviceCount(c, currentUser.ID)
+	if err != nil {
+		log.Error("Failed to get device count", "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get device count"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"count": count,
+		"limit": dRepo.MaxDevicesPerUser,
+	})
+}
+
 // CleanupInactiveTokens removes tokens that haven't been active for specified days (admin only)
 func (h *Handler) CleanupInactiveTokens(c *gin.Context) {
 	log := logging.FromContext(c)
@@ -206,6 +239,7 @@ func Routes(router *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware) {
 		deviceRoutes.POST("/tokens", h.RegisterDeviceToken)
 		deviceRoutes.DELETE("/tokens", h.UnregisterDeviceToken)
 		deviceRoutes.GET("/tokens", h.GetDeviceTokens)
+		deviceRoutes.GET("/count", h.GetDeviceCount)
 		deviceRoutes.PUT("/tokens/:deviceId/activity", h.UpdateDeviceActivity)
 	}
 }

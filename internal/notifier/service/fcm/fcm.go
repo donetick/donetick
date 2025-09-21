@@ -28,7 +28,12 @@ type FCMNotificationPayload struct {
 
 func NewFCMNotifier(config *config.Config) (*FCMNotifier, error) {
 	if config == nil {
-		return nil, fmt.Errorf("FCM config is required")
+		return nil, nil // Return nil when config is nil - allows app to start without FCM
+	}
+
+	// Check if FCM is configured - if not, return nil to allow app to start without FCM
+	if config.FCM.ProjectID == "" {
+		return nil, nil
 	}
 
 	var app *firebase.App

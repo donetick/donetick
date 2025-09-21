@@ -107,7 +107,7 @@ func ImpersonationMiddleware(userRepo *uRepo.UserRepository, circleRepo *cRepo.C
 		c.Set(ActualUserKey, currentUser)
 		c.Set(ImpersonatedUserKey, impersonatedUserDetails)
 
-		logger.Info("User impersonation started",
+		logger.Debugw("User impersonation started",
 			"actualUserID", currentUser.ID,
 			"actualUsername", currentUser.Username,
 			"impersonatedUserID", impersonatedUser.ID,

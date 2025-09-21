@@ -53,6 +53,7 @@ func Migration(db *gorm.DB) error {
 		storageModel.StorageFile{},
 		storageModel.StorageUsage{},
 		chModel.TimeSession{},
+		uModel.UserDeviceToken{},
 	); err != nil {
 		return err
 	}

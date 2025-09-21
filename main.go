@@ -24,6 +24,8 @@ import (
 	"donetick.com/core/internal/circle"
 	cRepo "donetick.com/core/internal/circle/repo"
 	"donetick.com/core/internal/database"
+	"donetick.com/core/internal/device"
+	dRepo "donetick.com/core/internal/device/repo"
 	"donetick.com/core/internal/email"
 	"donetick.com/core/internal/events"
 	label "donetick.com/core/internal/label"
@@ -40,6 +42,7 @@ import (
 	nRepo "donetick.com/core/internal/notifier/repo"
 	nps "donetick.com/core/internal/notifier/service"
 	discord "donetick.com/core/internal/notifier/service/discord"
+	"donetick.com/core/internal/notifier/service/fcm"
 	"donetick.com/core/internal/notifier/service/pushover"
 	telegram "donetick.com/core/internal/notifier/service/telegram"
 	pRepo "donetick.com/core/internal/points/repo"
@@ -82,6 +85,10 @@ func main() {
 		fx.Provide(cRepo.NewCircleRepository),
 		fx.Provide(circle.NewHandler),
 
+		// Device management:
+		fx.Provide(dRepo.NewDeviceRepository),
+		fx.Provide(device.NewHandler),
+
 		fx.Provide(nRepo.NewNotificationRepository),
 		fx.Provide(nps.NewNotificationPlanner),
 
@@ -91,6 +98,7 @@ func main() {
 		fx.Provide(discord.NewDiscordNotifier),
 		fx.Provide(notifier.NewNotifier),
 		fx.Provide(events.NewEventsProducer),
+		fx.Provide(fcm.NewFCMNotifier),
 
 		// Rate limiter
 		fx.Provide(utils.NewRateLimiter),
@@ -160,6 +168,7 @@ func main() {
 			chore.APIs,
 			user.Routes,
 			circle.Routes,
+			device.Routes,
 			thing.Routes,
 			thing.APIs,
 			label.Routes,

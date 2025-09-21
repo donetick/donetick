@@ -72,4 +72,4 @@ donetick_cloud:
   google_client_id: ""
   google_android_client_id: ""
   google_ios_client_id: ""
-  apple_client_id: "com.donetick.app" # Your Apple app bundle identifier
+  apple_client_id: "com.donetick.app" 

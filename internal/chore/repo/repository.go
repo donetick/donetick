@@ -574,8 +574,9 @@ func (r *ChoreRepository) GetChoreDetailByID(c context.Context, choreID int, cir
 		time_sessions.start_time as start_time,
 		time_sessions.updated_at as timer_updated_at,
         recent_history.last_completed_date,
+		recent_history.last_assigned_to,
 		recent_history.notes,
-        recent_history.last_assigned_to as last_completed_by,
+        recent_history.last_completed_by as last_completed_by,
         COUNT(chore_histories.id) as total_completed`).
 		Joins("LEFT JOIN chore_histories ON chores.id = chore_histories.chore_id").
 		Joins(`LEFT JOIN (
@@ -583,6 +584,7 @@ func (r *ChoreRepository) GetChoreDetailByID(c context.Context, choreID int, cir
             chore_id, 
             assigned_to AS last_assigned_to, 
             performed_at AS last_completed_date,
+			completed_by AS last_completed_by,
 			notes
 			
         FROM chore_histories

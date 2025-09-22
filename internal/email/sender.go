@@ -13,6 +13,7 @@ import (
 type EmailSender struct {
 	client  *gomail.Dialer
 	appHost string
+	fromMail string
 }
 
 func NewEmailSender(conf *config.Config) *EmailSender {
@@ -28,7 +29,7 @@ func NewEmailSender(conf *config.Config) *EmailSender {
 
 	// auth := smtp.PlainAuth("", conf.EmailConfig.Email, conf.EmailConfig.Password, host)
 	return &EmailSender{
-        fromMail: conf.EmailConfig.Email
+        fromMail: conf.EmailConfig.Email,
 		client:  client,
 		appHost: conf.EmailConfig.AppHost,
 	}

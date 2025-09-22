@@ -597,7 +597,7 @@ func (r *ChoreRepository) GetChoreDetailByID(c context.Context, choreID int, cir
 		Joins("LEFT JOIN time_sessions ON chores.id = time_sessions.chore_id AND time_sessions.status < ?", chModel.TimeSessionStatusCompleted).
 		Joins("LEFT JOIN chore_assignees ON chores.id = chore_assignees.chore_id AND chore_assignees.user_id = ?", userID).
 		Where("chores.id = ? AND chores.circle_id = ? AND ((chores.is_private = false) OR (chores.is_private = true AND (chores.created_by = ? OR chore_assignees.user_id = ?)))", choreID, circleID, userID, userID).
-		Group("chores.id, recent_history.last_completed_date, recent_history.last_assigned_to, recent_history.notes, time_sessions.start_time, time_sessions.updated_at").
+		Group("chores.id, recent_history.last_completed_date, recent_history.last_assigned_to, recent_history.last_completed_by, recent_history.notes, time_sessions.start_time, time_sessions.updated_at").
 		First(&choreDetail).Error; err != nil {
 		return nil, err
 

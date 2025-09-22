@@ -97,25 +97,25 @@ func (r *DeviceRepository) RegisterDeviceToken(c context.Context, deviceToken *u
 	})
 }
 
-// UnregisterDeviceToken deactivates a device token by device ID
+// UnregisterDeviceToken deletes a device token by device ID
 func (r *DeviceRepository) UnregisterDeviceToken(c context.Context, userID int, deviceID string) error {
 	log := logging.FromContext(c)
 
-	result := r.db.WithContext(c).Model(&uModel.UserDeviceToken{}).
+	result := r.db.WithContext(c).
 		Where("user_id = ? AND device_id = ? AND is_active = ?", userID, deviceID, true).
-		Update("is_active", false)
+		Delete(&uModel.UserDeviceToken{})
 
 	if result.Error != nil {
-		log.Error("Failed to unregister device token", "error", result.Error)
+		log.Error("Failed to delete device token", "error", result.Error)
 		return result.Error
 	}
 
 	if result.RowsAffected == 0 {
-		log.Warn("No active device token found to unregister", "user_id", userID, "device_id", deviceID)
+		log.Warn("No active device token found to delete", "user_id", userID, "device_id", deviceID)
 		return fmt.Errorf("no active device token found for user_id: %d, device_id: %s", userID, deviceID)
 	}
 
-	log.Info("Device token unregistered successfully", "user_id", userID, "device_id", deviceID)
+	log.Info("Device token deleted successfully", "user_id", userID, "device_id", deviceID)
 	return nil
 }
 

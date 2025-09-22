@@ -11,6 +11,7 @@ import (
 	"donetick.com/core/logging"
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
+	"github.com/ulule/limiter/v3"
 )
 
 type Handler struct {
@@ -77,7 +78,7 @@ func (h *Handler) RegisterDeviceToken(c *gin.Context) {
 		return
 	}
 
-	log.Info("Device token registered successfully", "user_id", currentUser.ID, "device_id", req.DeviceID)
+	log.Debugw("Device token registered successfully", "user_id", currentUser.ID, "device_id", req.DeviceID)
 	c.JSON(http.StatusCreated, gin.H{
 		"message":   "Device token registered successfully",
 		"device_id": deviceToken.DeviceID,
@@ -232,7 +233,7 @@ func (h *Handler) CleanupInactiveTokens(c *gin.Context) {
 }
 
 // Routes sets up the device token management routes
-func Routes(router *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware) {
+func Routes(router *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware, limiter *limiter.Limiter) {
 	deviceRoutes := router.Group("api/v1/devices")
 	deviceRoutes.Use(auth.MiddlewareFunc())
 	{

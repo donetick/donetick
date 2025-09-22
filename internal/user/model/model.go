@@ -3,6 +3,7 @@ package user
 import (
 	"time"
 
+	cModel "donetick.com/core/internal/circle/model"
 	nModel "donetick.com/core/internal/notifier/model"
 )
 
@@ -58,6 +59,20 @@ type UserNotificationTarget struct {
 	TargetID  string                      `json:"target_id" gorm:"column:target_id"`             // Target ID
 	CreatedAt time.Time                   `json:"-" gorm:"column:created_at"`
 }
+
+// UserDeviceToken represents FCM/push notification tokens for user devices
+type UserDeviceToken struct {
+	ID           int       `json:"id" gorm:"primaryKey;autoIncrement"`                                             // Primary key
+	UserID       int       `json:"userId" gorm:"column:user_id;not null;uniqueIndex:idx_user_device"`              // User ID
+	Token        string    `json:"-" gorm:"column:token;not null"`                                                 // FCM token (unique across system)
+	DeviceID     string    `json:"deviceId" gorm:"column:device_id;type:varchar(255);uniqueIndex:idx_user_device"` // Device identifier
+	Platform     string    `json:"platform" gorm:"column:platform;type:varchar(10)"`                               // ios, android
+	AppVersion   string    `json:"appVersion,omitempty" gorm:"column:app_version;type:varchar(50)"`                // App version
+	DeviceModel  string    `json:"deviceModel,omitempty" gorm:"column:device_model;type:varchar(100)"`             // Device model
+	IsActive     bool      `json:"isActive" gorm:"column:is_active;default:true;not null;index:idx_user_active"`   // Active status
+	LastActiveAt time.Time `json:"lastActiveAt,omitempty" gorm:"column:last_active_at"`                            // Last active timestamp
+	CreatedAt    time.Time `json:"createdAt" gorm:"column:created_at"`                                             // Created timestamp
+}
 type AuthProviderType int
 
 const (
@@ -98,5 +113,14 @@ func (u User) IsPlusMember() bool {
 		return u.Expiration.After(time.Now().UTC())
 	}
 
+	return false
+}
+
+func (u User) IsAdminOrManager(circleUsers []*cModel.UserCircleDetail) bool {
+	for _, cu := range circleUsers {
+		if cu.UserID == u.ID {
+			return cu.Role == cModel.UserRoleAdmin || cu.Role == cModel.UserRoleManager
+		}
+	}
 	return false
 }

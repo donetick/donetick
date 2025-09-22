@@ -264,14 +264,56 @@ func (c *Chore) CanEdit(userID int, circleUsers []*cModel.UserCircleDetail, upda
 	return nil
 
 }
-
-func (c *Chore) CanComplete(userID int) bool {
-	if c.AssignedTo == userID {
-		return true
-	}
-	for _, a := range c.Assignees {
-		if a.UserID == userID {
+func (c *Chore) CanView(userID int, circleUsers []*cModel.UserCircleDetail) bool {
+	// if private then only creator and assignees can view:
+	if c.IsPrivate {
+		if c.CreatedBy == userID {
 			return true
+		}
+
+		for _, a := range c.Assignees {
+			if a.UserID == userID {
+				return true
+			}
+		}
+		return false
+	}
+	// if public then anyone in the circle can view:
+	for _, cu := range circleUsers {
+		if cu.UserID == userID {
+			return true
+		}
+	}
+	return false
+}
+func (c *Chore) CanComplete(userID int, circleUsers []*cModel.UserCircleDetail) bool {
+	if !c.IsPrivate {
+		if c.AssignedTo == userID {
+			return true
+		}
+		for _, a := range c.Assignees {
+			if a.UserID == userID {
+				return true
+			}
+		}
+		// manager and admin can complete any chore in the circle:
+		for _, cu := range circleUsers {
+			if cu.UserID == userID && cu.IsManagerOrAdmin() {
+				return true
+			}
+		}
+	} else {
+		// if private then only creator, assigned to and assignees can complete:
+		if c.CreatedBy == userID {
+			return true
+		}
+		if c.AssignedTo == userID {
+			return true
+		}
+		for _, a := range c.Assignees {
+			if a.UserID == userID {
+				return true
+			}
 		}
 	}
 	return false

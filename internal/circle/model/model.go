@@ -25,10 +25,10 @@ type CircleDetail struct {
 }
 
 type UserCircle struct {
-	ID             int       `json:"id" gorm:"primary_key"`            // Unique identifier
-	UserID         int       `json:"userId" gorm:"column:user_id"`     // User ID
-	CircleID       int       `json:"circleId" gorm:"column:circle_id"` // Circle ID
-	Role           UserRole  `json:"role" gorm:"column:role"`          // Role
+	ID             int       `json:"id" gorm:"primary_key"`                                        // Unique identifier
+	UserID         int       `json:"userId" gorm:"column:user_id;uniqueIndex:idx_user_circle"`     // User ID
+	CircleID       int       `json:"circleId" gorm:"column:circle_id;uniqueIndex:idx_user_circle"` // Circle ID
+	Role           UserRole  `json:"role" gorm:"column:role"`                                      // Role
 	IsActive       bool      `json:"isActive" gorm:"column:is_active;default:false"`
 	CreatedAt      time.Time `json:"createdAt" gorm:"column:created_at"`                              // Created at
 	UpdatedAt      time.Time `json:"updatedAt" gorm:"column:updated_at"`                              // Updated at
@@ -69,4 +69,8 @@ func IsValidRole(r Role) bool {
 	default:
 		return false
 	}
+}
+
+func (ucd UserCircleDetail) IsManagerOrAdmin() bool {
+	return ucd.Role == UserRoleAdmin || ucd.Role == UserRoleManager
 }

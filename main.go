@@ -19,12 +19,13 @@ import (
 
 	auth "donetick.com/core/internal/auth"
 	"donetick.com/core/internal/auth/apple"
-	"donetick.com/core/internal/backup"
 	"donetick.com/core/internal/chore"
 	chRepo "donetick.com/core/internal/chore/repo"
 	"donetick.com/core/internal/circle"
 	cRepo "donetick.com/core/internal/circle/repo"
 	"donetick.com/core/internal/database"
+	"donetick.com/core/internal/device"
+	dRepo "donetick.com/core/internal/device/repo"
 	"donetick.com/core/internal/email"
 	"donetick.com/core/internal/events"
 	label "donetick.com/core/internal/label"
@@ -41,6 +42,7 @@ import (
 	nRepo "donetick.com/core/internal/notifier/repo"
 	nps "donetick.com/core/internal/notifier/service"
 	discord "donetick.com/core/internal/notifier/service/discord"
+	"donetick.com/core/internal/notifier/service/fcm"
 	"donetick.com/core/internal/notifier/service/pushover"
 	telegram "donetick.com/core/internal/notifier/service/telegram"
 	pRepo "donetick.com/core/internal/points/repo"
@@ -83,6 +85,10 @@ func main() {
 		fx.Provide(cRepo.NewCircleRepository),
 		fx.Provide(circle.NewHandler),
 
+		// Device management:
+		fx.Provide(dRepo.NewDeviceRepository),
+		fx.Provide(device.NewHandler),
+
 		fx.Provide(nRepo.NewNotificationRepository),
 		fx.Provide(nps.NewNotificationPlanner),
 
@@ -92,6 +98,7 @@ func main() {
 		fx.Provide(discord.NewDiscordNotifier),
 		fx.Provide(notifier.NewNotifier),
 		fx.Provide(events.NewEventsProducer),
+		fx.Provide(fcm.NewFCMNotifier),
 
 		// Rate limiter
 		fx.Provide(utils.NewRateLimiter),
@@ -146,8 +153,8 @@ func main() {
 		fx.Provide(storageRepo.NewStorageRepository),
 
 		// backup service
-		fx.Provide(backup.NewService),
-		fx.Provide(backup.NewHandler),
+		// fx.Provide(backup.NewService),
+		// fx.Provide(backup.NewHandler),
 
 		// Real-time service and components
 		fx.Provide(realtime.NewRealTimeService),
@@ -161,13 +168,14 @@ func main() {
 			chore.APIs,
 			user.Routes,
 			circle.Routes,
+			device.Routes,
 			thing.Routes,
 			thing.APIs,
 			label.Routes,
 			storage.Routes,
 			frontend.Routes,
 			resource.Routes,
-			backup.Routes,
+			// backup.Routes,
 
 			realtime.Routes, //(router, rts, authMiddleware, pollingHandler)
 
@@ -221,6 +229,7 @@ func newServer(lc fx.Lifecycle, cfg *config.Config, db *gorm.DB, notifier *notif
 		"Sec-Ch-Ua-Platform",
 		"User-Agent",
 		"Referer",
+		"X-Impersonate-User-ID",
 	)
 	// Expose headers that the frontend might need
 	config.AddExposeHeaders("Content-Type")

@@ -547,8 +547,15 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"token": tokenString, "expire": expire})
 		return
 	case "oauth2":
+		// Check if OAuth2 provider is enabled
+		if h.identityProvider == nil {
+			logger.Errorw("account.handler.thirdPartyAuthCallback (oauth2) identity provider is not configured")
+			c.JSON(http.StatusBadRequest, gin.H{"error": "OAuth2 provider is not configured"})
+			return
+		}
+
 		c.Set("auth_provider", "3rdPartyAuth")
-		// Read the ID token from the request bod
+		// Read the ID token from the request body
 		type Request struct {
 			Code string `json:"code"`
 		}
@@ -569,6 +576,9 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 		logger.Infow("account.handler.thirdPartyAuthCallback (oauth2) attempting to exchange code", "codeLength", len(req.Code))
 
 		token, err := h.identityProvider.ExchangeToken(c, req.Code)
+		if err == nil {
+			logger.Infow("account.handler.thirdPartyAuthCallback (oauth2) successfully exchanged code for token")
+		}
 
 		if err != nil {
 			logger.Errorw("account.handler.thirdPartyAuthCallback (oauth2) failed to exchange token", "err", err, "code", req.Code[:min(len(req.Code), 10)]+"...")
@@ -587,8 +597,14 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 
 		claims, err := h.identityProvider.GetUserInfo(c, token)
 		if err != nil {
-			logger.Error("account.handler.thirdPartyAuthCallback (oauth2) failed to get claims", "err", err)
+			logger.Errorw("account.handler.thirdPartyAuthCallback (oauth2) failed to get claims", "err", err)
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "Failed to get user information from identity provider",
+			})
+			return
 		}
+
+		logger.Infow("account.handler.thirdPartyAuthCallback (oauth2) successfully retrieved user info", "email", claims.Email, "displayName", claims.DisplayName)
 
 		acc, err := h.userRepo.FindByEmail(c, claims.Email)
 		if err != nil {
@@ -693,12 +709,14 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 		h.jwtAuth.Authenticator(c)
 		tokenString, expire, err := h.jwtAuth.TokenGenerator(acc)
 		if err != nil {
-			logger.Error("Unable to Generate a Token")
+			logger.Errorw("Unable to Generate a Token for OAuth2 user", "err", err)
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": "Unable to Generate a Token",
 			})
 			return
 		}
+
+		logger.Infow("account.handler.thirdPartyAuthCallback (oauth2) successfully generated JWT token", "userEmail", acc.Email, "expire", expire)
 		c.JSON(http.StatusOK, gin.H{"token": tokenString, "expire": expire})
 		return
 	}

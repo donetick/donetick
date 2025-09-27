@@ -359,6 +359,7 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 		c.Set("user_account", acc)
 		c.Set("auth_provider", "3rdPartyAuth")
 
+		h.jwtAuth.Authenticator(c)
 		tokenString, expire, err := h.jwtAuth.TokenGenerator(acc)
 		if err != nil {
 			logger.Errorw("Unable to Generate a Token")
@@ -689,6 +690,7 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 		c.Set("user_account", acc)
 		c.Set("auth_provider", "3rdPartyAuth")
 
+		h.jwtAuth.Authenticator(c)
 		tokenString, expire, err := h.jwtAuth.TokenGenerator(acc)
 		if err != nil {
 			logger.Error("Unable to Generate a Token")

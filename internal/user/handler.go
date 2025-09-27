@@ -748,7 +748,27 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 			return
 		}
 
-		logger.Infow("account.handler.thirdPartyAuthCallback (oauth2) successfully generated JWT token", "userEmail", acc.Email, "expire", expire)
+		logger.Infow("account.handler.thirdPartyAuthCallback (oauth2) successfully generated JWT token", "userEmail", acc.Email, "expire", expire, "tokenLength", len(tokenString))
+
+		// Debug: Log the actual token to see its format
+		logger.Debugw("Generated JWT token", "token", tokenString)
+
+		// Ensure the token is properly formatted
+		if tokenString == "" {
+			logger.Errorw("Generated token is empty")
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Token generation failed"})
+			return
+		}
+
+		// Validate token format (should have 3 segments separated by dots)
+		parts := strings.Split(tokenString, ".")
+		if len(parts) != 3 {
+			logger.Errorw("Generated token has invalid format", "segments", len(parts), "token", tokenString)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Token format is invalid"})
+			return
+		}
+
+		logger.Infow("Token format validation passed", "segments", len(parts))
 		c.JSON(http.StatusOK, gin.H{"token": tokenString, "expire": expire})
 		return
 	}

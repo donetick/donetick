@@ -355,14 +355,24 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 			})
 			return
 		}
-		// Generate JWT token for Google OAuth user
+		// Generate JWT token for Google OAuth user using proper JWT middleware flow
 		c.Set("user_account", acc)
 		c.Set("auth_provider", "3rdPartyAuth")
 
-		h.jwtAuth.Authenticator(c)
-		tokenString, expire, err := h.jwtAuth.TokenGenerator(acc)
+		// Use the JWT middleware's authenticator to get the user data
+		userData, err := h.jwtAuth.Authenticator(c)
 		if err != nil {
-			logger.Errorw("Unable to Generate a Token")
+			logger.Errorw("Unable to authenticate Google OAuth user", "err", err)
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "Unable to authenticate user",
+			})
+			return
+		}
+
+		// Generate token using the JWT middleware's token generation
+		tokenString, expire, err := h.jwtAuth.TokenGenerator(userData)
+		if err != nil {
+			logger.Errorw("Unable to Generate a Token for Google OAuth user", "err", err)
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": "Unable to Generate a Token",
 			})
@@ -533,12 +543,24 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 			return
 		}
 
-		// Generate JWT token for the user
+		// Generate JWT token for Apple user using proper JWT middleware flow
 		c.Set("user_account", acc)
-		h.jwtAuth.Authenticator(c)
-		tokenString, expire, err := h.jwtAuth.TokenGenerator(acc)
+		c.Set("auth_provider", "3rdPartyAuth")
+
+		// Use the JWT middleware's authenticator to get the user data
+		userData, err := h.jwtAuth.Authenticator(c)
 		if err != nil {
-			logger.Errorw("Unable to Generate a Token for Apple user")
+			logger.Errorw("Unable to authenticate Apple user", "err", err)
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "Unable to authenticate user",
+			})
+			return
+		}
+
+		// Generate token using the JWT middleware's token generation
+		tokenString, expire, err := h.jwtAuth.TokenGenerator(userData)
+		if err != nil {
+			logger.Errorw("Unable to Generate a Token for Apple user", "err", err)
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": "Unable to Generate a Token",
 			})
@@ -702,12 +724,22 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 			})
 			return
 		}
-		// Generate JWT token for OAuth2 user
+		// Generate JWT token for OAuth2 user using proper JWT middleware flow
 		c.Set("user_account", acc)
 		c.Set("auth_provider", "3rdPartyAuth")
 
-		h.jwtAuth.Authenticator(c)
-		tokenString, expire, err := h.jwtAuth.TokenGenerator(acc)
+		// Use the JWT middleware's authenticator to get the user data
+		userData, err := h.jwtAuth.Authenticator(c)
+		if err != nil {
+			logger.Errorw("Unable to authenticate OAuth2 user", "err", err)
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "Unable to authenticate user",
+			})
+			return
+		}
+
+		// Generate token using the JWT middleware's token generation
+		tokenString, expire, err := h.jwtAuth.TokenGenerator(userData)
 		if err != nil {
 			logger.Errorw("Unable to Generate a Token for OAuth2 user", "err", err)
 			c.JSON(http.StatusInternalServerError, gin.H{

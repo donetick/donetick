@@ -319,6 +319,8 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 				})
 				return
 			}
+			// Set acc to the created user for consistency with the rest of the function
+			acc = &uModel.UserDetails{User: *createdUser}
 		}
 		// Check if user has MFA enabled
 		if acc.MFAEnabled {
@@ -646,6 +648,8 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 				})
 				return
 			}
+			// Set acc to the created user for consistency with the rest of the function
+			acc = &uModel.UserDetails{User: *createdUser}
 		}
 		// Check if user has MFA enabled
 		if acc.MFAEnabled {

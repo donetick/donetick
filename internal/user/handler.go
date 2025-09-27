@@ -355,9 +355,10 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 			})
 			return
 		}
-		// use auth to generate a token for the user:
+		// Generate JWT token for Google OAuth user
 		c.Set("user_account", acc)
-		h.jwtAuth.Authenticator(c)
+		c.Set("auth_provider", "3rdPartyAuth")
+
 		tokenString, expire, err := h.jwtAuth.TokenGenerator(acc)
 		if err != nil {
 			logger.Errorw("Unable to Generate a Token")
@@ -684,9 +685,10 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 			})
 			return
 		}
-		// ... (JWT generation and response)
+		// Generate JWT token for OAuth2 user
 		c.Set("user_account", acc)
-		h.jwtAuth.Authenticator(c)
+		c.Set("auth_provider", "3rdPartyAuth")
+
 		tokenString, expire, err := h.jwtAuth.TokenGenerator(acc)
 		if err != nil {
 			logger.Error("Unable to Generate a Token")

@@ -134,6 +134,22 @@ func (r *UserRepository) GetUserByID(c context.Context, userID int) (*uModel.Use
 	return user, nil
 }
 
+func (r *UserRepository) GetChildUsersByParentID(c context.Context, parentID int) ([]*uModel.User, error) {
+	var childUsers []*uModel.User
+	if err := r.db.WithContext(c).Where("parent_user_id = ? AND user_type = ?", parentID, uModel.UserTypeChild).Find(&childUsers).Error; err != nil {
+		return nil, err
+	}
+	return childUsers, nil
+}
+
+func (r *UserRepository) GetChildUserCount(c context.Context, parentID int) (int64, error) {
+	var count int64
+	if err := r.db.WithContext(c).Model(&uModel.User{}).Where("parent_user_id = ? AND user_type = ?", parentID, uModel.UserTypeChild).Count(&count).Error; err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
 func (r *UserRepository) UpdateUser(c context.Context, user *uModel.User) error {
 	return r.db.WithContext(c).Save(user).Error
 }

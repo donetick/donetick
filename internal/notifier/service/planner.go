@@ -29,7 +29,7 @@ func (n *NotificationPlanner) GenerateNotifications(c context.Context, chore *ch
 	circleMembers, err := n.cRepo.GetCircleUsers(c, chore.CircleID)
 	var assignedUser *cModel.UserCircleDetail
 	for _, member := range circleMembers {
-		if member.UserID == chore.AssignedTo {
+		if chore.AssignedTo != nil && *chore.AssignedTo == member.UserID {
 			assignedUser = member
 			break
 		}
@@ -50,11 +50,11 @@ func (n *NotificationPlanner) GenerateNotifications(c context.Context, chore *ch
 		return true
 	}
 
-	if len(chore.NotificationMetadataV2.Templates) > 0 {
+	if len(chore.NotificationMetadataV2.Templates) > 0 && assignedUser != nil {
 		notifications = append(notifications, generateNotificationsFromTemplate(chore, assignedUser, nil)...)
 	}
 
-	if chore.NotificationMetadataV2.CircleGroup {
+	if chore.NotificationMetadataV2.CircleGroup && assignedUser != nil {
 		notifications = append(notifications, generateNotificationsFromTemplate(chore, assignedUser, chore.NotificationMetadataV2.CircleGroupID)...)
 	}
 

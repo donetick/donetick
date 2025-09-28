@@ -64,6 +64,12 @@ func (s *DeletionService) deleteUserAccount(ctx context.Context, userID int, tra
 		DeletedData: make(map[string]int),
 	}
 
+	// Check if this is a parent user and get their child users
+	childUsers, err := s.getChildUsers(tx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get child users: %w", err)
+	}
+
 	// Check if user owns circles that need transfer
 	circlesOwned, err := s.getOwnedCircles(tx, userID)
 	if err != nil {
@@ -139,6 +145,34 @@ func (s *DeletionService) deleteUserAccount(ctx context.Context, userID int, tra
 		}
 	}
 
+	// Delete child users first if this is a parent user
+	if len(childUsers) > 0 && !dryRun {
+		for _, childUserID := range childUsers {
+			childResult, err := s.deleteUserAccount(ctx, childUserID, nil, false)
+			if err != nil {
+				return nil, fmt.Errorf("failed to delete child user %d: %w", childUserID, err)
+			}
+			// Aggregate child deletion counts
+			for key, count := range childResult.DeletedData {
+				result.DeletedData[key] += count
+			}
+		}
+	}
+
+	// For dry run, count child users that would be deleted
+	if dryRun && len(childUsers) > 0 {
+		for _, childUserID := range childUsers {
+			childResult, err := s.deleteUserAccount(ctx, childUserID, nil, true)
+			if err != nil {
+				return nil, fmt.Errorf("failed to count child user %d data: %w", childUserID, err)
+			}
+			// Aggregate child deletion counts
+			for key, count := range childResult.DeletedData {
+				result.DeletedData[key] += count
+			}
+		}
+	}
+
 	// Delete user-related data in order (respecting foreign key constraints)
 	deletionSteps := []struct {
 		name     string
@@ -195,6 +229,15 @@ func (s *DeletionService) deleteUserAccount(ctx context.Context, userID int, tra
 	result.Success = true
 	result.Message = "Account deleted successfully"
 	return result, nil
+}
+
+func (s *DeletionService) getChildUsers(tx *gorm.DB, userID int) ([]int, error) {
+	var childUserIDs []int
+	err := tx.Model(&uModel.User{}).Where("parent_user_id = ?", userID).Pluck("id", &childUserIDs).Error
+	if err != nil {
+		return nil, err
+	}
+	return childUserIDs, nil
 }
 
 func (s *DeletionService) getOwnedCircles(tx *gorm.DB, userID int) ([]CircleTransferInfo, error) {

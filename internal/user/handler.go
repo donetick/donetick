@@ -46,6 +46,8 @@ type Handler struct {
 	signer                 *storage.URLSignerS3
 	deletionService        *DeletionService
 	appleService           *apple.AppleService
+	maxSubaccounts         int
+	plusMaxSubaccounts     int
 }
 
 func NewHandler(ur *uRepo.UserRepository, cr *cRepo.CircleRepository,
@@ -68,6 +70,8 @@ func NewHandler(ur *uRepo.UserRepository, cr *cRepo.CircleRepository,
 		signer:                 signer,
 		deletionService:        deletionService,
 		appleService:           appleService,
+		maxSubaccounts:         config.FeatureLimits.MaxSubaccounts,
+		plusMaxSubaccounts:     config.FeatureLimits.PlusMaxSubaccounts,
 	}
 }
 
@@ -1258,6 +1262,268 @@ func (h *Handler) deleteAccount(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
 }
 
+// Child User Management endpoints
+
+// CreateChildUserRequest represents the request to create a child user
+type CreateChildUserRequest struct {
+	ChildName   string `json:"childName" binding:"required,min=2,max=20"`
+	DisplayName string `json:"displayName"`
+	Password    string `json:"password" binding:"required,min=8,max=45"`
+}
+
+// UpdateChildPasswordRequest represents the request to update a child user's password
+type UpdateChildPasswordRequest struct {
+	ChildUserID int    `json:"childUserId" binding:"required"`
+	Password    string `json:"password" binding:"required,min=8,max=45"`
+}
+
+// ChildUserResponse represents the response for child user operations
+type ChildUserResponse struct {
+	ID          int    `json:"id"`
+	Username    string `json:"username"`
+	DisplayName string `json:"displayName"`
+	UserType    string `json:"userType"`
+	CreatedAt   string `json:"createdAt"`
+}
+
+func (h *Handler) createChildUser(c *gin.Context) {
+	currentUser, ok := auth.CurrentUser(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	// Only parent users can create child users
+	if currentUser.UserType != uModel.UserTypeParent {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Only parent users can create child accounts"})
+		return
+	}
+
+	var req CreateChildUserRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Check current child user count to enforce limit (only for donetick.com)
+	if h.isDonetickDotCom {
+		currentChildCount, err := h.userRepo.GetChildUserCount(c, currentUser.ID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check existing subaccounts"})
+			return
+		}
+
+		maxSubaccounts := h.maxSubaccounts
+		if currentUser.IsPlusMember() {
+			maxSubaccounts = h.plusMaxSubaccounts
+		}
+
+		if int(currentChildCount) >= maxSubaccounts {
+			c.JSON(http.StatusForbidden, gin.H{
+				"error": fmt.Sprintf("Maximum of %d subaccounts allowed per account", maxSubaccounts),
+			})
+			return
+		}
+	}
+
+	// Generate child username
+	childUsername := uModel.GenerateChildUsername(currentUser.Username, req.ChildName)
+
+	// Set default display name if not provided
+	if req.DisplayName == "" {
+		req.DisplayName = req.ChildName
+	}
+
+	// Encode password
+	encodedPassword, err := auth.EncodePassword(req.Password)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process password"})
+		return
+	}
+
+	// Create child user
+	childUser := &uModel.User{
+		Username:     childUsername,
+		DisplayName:  html.EscapeString(req.DisplayName),
+		Password:     encodedPassword,
+		CircleID:     currentUser.CircleID,
+		ParentUserID: &currentUser.ID,
+		UserType:     uModel.UserTypeChild,
+		Provider:     uModel.AuthProviderDonetick,
+		CreatedAt:    time.Now().UTC(),
+		UpdatedAt:    time.Now().UTC(),
+	}
+
+	// Validate child user
+	if err := childUser.ValidateChildUser(); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	createdUser, err := h.userRepo.CreateUser(c, childUser)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create child user"})
+		return
+	}
+
+	// Add child user to the same circle as parent
+	if err := h.circleRepo.AddUserToCircle(c, &cModel.UserCircle{
+		UserID:    createdUser.ID,
+		CircleID:  currentUser.CircleID,
+		Role:      "member", // Child users are members, not admins
+		IsActive:  true,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to add child user to circle"})
+		return
+	}
+
+	response := ChildUserResponse{
+		ID:          createdUser.ID,
+		Username:    createdUser.Username,
+		DisplayName: createdUser.DisplayName,
+		UserType:    "child",
+		CreatedAt:   createdUser.CreatedAt.Format(time.RFC3339),
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"res": response})
+}
+
+func (h *Handler) updateChildPassword(c *gin.Context) {
+	currentUser, ok := auth.CurrentUser(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	// Only parent users can update child passwords
+	if currentUser.UserType != uModel.UserTypeParent {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Only parent users can update child passwords"})
+		return
+	}
+
+	var req UpdateChildPasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Verify that the child user belongs to the current parent
+	childUser, err := h.userRepo.GetUserByID(c, req.ChildUserID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Child user not found"})
+		return
+	}
+
+	if childUser.ParentUserID == nil || *childUser.ParentUserID != currentUser.ID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "You can only update passwords for your own child users"})
+		return
+	}
+
+	// Encode new password
+	encodedPassword, err := auth.EncodePassword(req.Password)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process password"})
+		return
+	}
+
+	// Update password
+	err = h.userRepo.UpdatePasswordByUserId(c.Request.Context(), req.ChildUserID, encodedPassword)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update password"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Child user password updated successfully"})
+}
+
+func (h *Handler) deleteChildUser(c *gin.Context) {
+	currentUser, ok := auth.CurrentUser(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	// Only parent users can delete child users
+	if currentUser.UserType != uModel.UserTypeParent {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Only parent users can delete child accounts"})
+		return
+	}
+
+	childUserID := c.Param("id")
+	if childUserID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Child user ID is required"})
+		return
+	}
+
+	// Parse child user ID
+	childID := 0
+	if _, err := fmt.Sscanf(childUserID, "%d", &childID); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid child user ID"})
+		return
+	}
+
+	// Verify that the child user belongs to the current parent
+	childUser, err := h.userRepo.GetUserByID(c, childID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Child user not found"})
+		return
+	}
+
+	if childUser.ParentUserID == nil || *childUser.ParentUserID != currentUser.ID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "You can only delete your own child users"})
+		return
+	}
+
+	// Delete child user account (this will cascade delete all associated data)
+	result, err := h.deletionService.DeleteUserAccount(c.Request.Context(), childID, nil)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete child user: " + err.Error()})
+		return
+	}
+
+	if !result.Success {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete child user"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Child user deleted successfully"})
+}
+
+func (h *Handler) getChildUsers(c *gin.Context) {
+	currentUser, ok := auth.CurrentUser(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	// Only parent users can view child users
+	if currentUser.UserType != uModel.UserTypeParent {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Only parent users can view child accounts"})
+		return
+	}
+
+	childUsers, err := h.userRepo.GetChildUsersByParentID(c, currentUser.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get child users"})
+		return
+	}
+
+	var response []ChildUserResponse
+	for _, child := range childUsers {
+		response = append(response, ChildUserResponse{
+			ID:          child.ID,
+			Username:    child.Username,
+			DisplayName: child.DisplayName,
+			UserType:    "child",
+			CreatedAt:   child.CreatedAt.Format(time.RFC3339),
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{"res": response})
+}
+
 func Routes(router *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware, limiter *limiter.Limiter) {
 
 	userRoutes := router.Group("api/v1/users")
@@ -1285,6 +1551,12 @@ func Routes(router *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware, limiter 
 		// Account deletion endpoints
 		userRoutes.POST("/delete/check", h.checkAccountDeletion)
 		userRoutes.DELETE("/delete", h.deleteAccount)
+
+		// Child user management endpoints
+		userRoutes.POST("/subaccounts", h.createChildUser)
+		userRoutes.GET("/subaccounts", h.getChildUsers)
+		userRoutes.PUT("/subaccounts/password", h.updateChildPassword)
+		userRoutes.DELETE("/subaccounts/:id", h.deleteChildUser)
 	}
 
 	authRoutes := router.Group("api/v1/auth")

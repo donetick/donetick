@@ -1,6 +1,8 @@
 package user
 
 import (
+	"errors"
+	"strings"
 	"time"
 
 	cModel "donetick.com/core/internal/circle/model"
@@ -11,13 +13,16 @@ type User struct {
 	ID          int              `json:"id" gorm:"primary_key"`                  // Unique identifier
 	DisplayName string           `json:"displayName" gorm:"column:display_name"` // Display name
 	Username    string           `json:"username" gorm:"column:username;unique"` // Username (unique)
-	Email       string           `json:"email" gorm:"column:email;unique"`       // Email (unique)
+	Email       string           `json:"email" gorm:"column:email;uniqueIndex:idx_email_not_null,where:email != ''"`       // Email (unique when not empty, allows empty for child users)
 	Provider    AuthProviderType `json:"provider" gorm:"column:provider"`        // Provider
 	Password    string           `json:"-" gorm:"column:password"`               // Password
 	CircleID    int              `json:"circleID" gorm:"column:circle_id"`       // Circle ID
 	ChatID      int64            `json:"chatID" gorm:"column:chat_id"`           // Telegram chat ID
 	Image       string           `json:"image" gorm:"column:image"`              // Image
 	Timezone    string           `json:"timezone" gorm:"column:timezone"`        // Timezone
+	// Parent-Child relationship fields
+	ParentUserID *int     `json:"parentUserId,omitempty" gorm:"column:parent_user_id;index"`
+	UserType     UserType `json:"userType" gorm:"column:user_type;default:0"`
 	// MFA fields
 	MFAEnabled      bool      `json:"mfaEnabled" gorm:"column:mfa_enabled;default:false;not null"`    // MFA enabled status
 	MFASecret       string    `json:"-" gorm:"column:mfa_secret;type:text"`                           // TOTP secret (hidden from JSON)
@@ -82,6 +87,13 @@ const (
 	AuthProviderApple
 )
 
+type UserType int
+
+const (
+	UserTypeParent UserType = iota
+	UserTypeChild
+)
+
 // MFASession represents a temporary session during MFA verification
 type MFASession struct {
 	ID           int       `json:"id" gorm:"primary_key;auto_increment"`
@@ -108,7 +120,16 @@ type MFAVerifyRequest struct {
 }
 
 func (u User) IsPlusMember() bool {
-	// if the user has a subscription, and the expiration date is in the future, then the user is a plus member
+	// For child users, they inherit parent's subscription status
+	// Note: This method signature cannot be changed to accept a repository parameter
+	// The actual parent subscription check should be implemented at the service layer
+	if u.UserType == UserTypeChild && u.ParentUserID != nil {
+		// Child users will need their subscription status checked via the parent user
+		// This is a placeholder - the actual check should be done in the service layer
+		return false // Will be properly implemented in service layer
+	}
+
+	// For parent users, check their own subscription
 	if u.Expiration != nil {
 		return u.Expiration.After(time.Now().UTC())
 	}
@@ -123,4 +144,93 @@ func (u User) IsAdminOrManager(circleUsers []*cModel.UserCircleDetail) bool {
 		}
 	}
 	return false
+}
+
+// Parent-Child relationship helper methods
+
+// IsParent returns true if the user is a parent user
+func (u User) IsParent() bool {
+	return u.UserType == UserTypeParent
+}
+
+// IsChild returns true if the user is a child user
+func (u User) IsChild() bool {
+	return u.UserType == UserTypeChild
+}
+
+// HasParent returns true if the user has a parent (is a child with valid parent ID)
+func (u User) HasParent() bool {
+	return u.UserType == UserTypeChild && u.ParentUserID != nil
+}
+
+// GetParentUserID returns the parent user ID if this is a child user
+func (u User) GetParentUserID() *int {
+	if u.UserType == UserTypeChild {
+		return u.ParentUserID
+	}
+	return nil
+}
+
+// GenerateChildUsername creates a username for a child user based on parent username
+func GenerateChildUsername(parentUsername, childName string) string {
+	return parentUsername + "_" + childName
+}
+
+// IsValidChildUsername checks if a username follows the parent_child pattern
+func IsValidChildUsername(username string) bool {
+	parts := strings.Split(username, "_")
+	return len(parts) >= 2
+}
+
+// ExtractParentUsernameFromChild extracts parent username from child username
+func ExtractParentUsernameFromChild(childUsername string) string {
+	parts := strings.Split(childUsername, "_")
+	if len(parts) >= 2 {
+		return strings.Join(parts[:len(parts)-1], "_")
+	}
+	return ""
+}
+
+// ValidateChildUser validates a child user before creation
+func (u User) ValidateChildUser() error {
+	if u.UserType != UserTypeChild {
+		return nil // Not a child user, no validation needed
+	}
+
+	// Child user must have a parent
+	if u.ParentUserID == nil {
+		return errors.New("child user must have a parent user ID")
+	}
+
+	// Username should follow parent_child pattern
+	if !IsValidChildUsername(u.Username) {
+		return errors.New("child username must follow parent_child pattern")
+	}
+
+	// Email is optional for child users (can be empty)
+	// Password is required for child users
+	if u.Password == "" {
+		return errors.New("child user must have a password")
+	}
+
+	return nil
+}
+
+// ValidateParentUser validates a parent user before creation
+func (u User) ValidateParentUser() error {
+	if u.UserType != UserTypeParent {
+		return nil // Not a parent user, no validation needed
+	}
+
+	// Parent user should not have a parent
+	if u.ParentUserID != nil {
+		return errors.New("parent user cannot have a parent user ID")
+	}
+
+	// Parent user must have an email for authentication and subscription management
+	if u.Email == "" {
+		return errors.New("parent user must have an email")
+	}
+
+	return nil
 }

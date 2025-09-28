@@ -551,7 +551,10 @@ func (r *ChoreRepository) SetDueDate(c context.Context, choreID int, dueDate tim
 }
 
 func (r *ChoreRepository) SetDueDateIfNotExisted(c context.Context, choreID int, dueDate time.Time) error {
-	return r.db.WithContext(c).Model(&chModel.Chore{}).Where("id = ? and next_due_date is null and is_active = ?", choreID, true).Update("next_due_date", dueDate).Error
+	return r.db.WithContext(c).Model(&chModel.Chore{}).Where("id = ? and next_due_date is null", choreID).Updates(map[string]interface{}{
+		"next_due_date": dueDate,
+		"is_active":     true,
+	}).Error
 }
 
 func (r *ChoreRepository) GetChoreDetailByID(c context.Context, choreID int, circleID int, userID int) (*chModel.ChoreDetail, error) {

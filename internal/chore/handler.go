@@ -336,7 +336,7 @@ func (h *Handler) createChore(c *gin.Context) {
 		broadcaster.BroadcastChoreCreated(createdChore, &currentUser.User)
 	}
 
-	shouldReturn := HandleThingAssociation(choreReq, h, c, &currentUser.User)
+	shouldReturn := HandleThingAssociation(choreReq, createdChore, h, c, &currentUser.User)
 	if shouldReturn {
 		return
 	}
@@ -644,7 +644,7 @@ func (h *Handler) editChore(c *gin.Context) {
 		h.tRepo.DissociateThingWithChore(c, oldChore.ThingChore.ThingID, oldChore.ID)
 
 	}
-	shouldReturn := HandleThingAssociation(choreReq, h, c, &currentUser.User)
+	shouldReturn := HandleThingAssociation(choreReq, updatedChore, h, c, &currentUser.User)
 	if shouldReturn {
 		return
 	}
@@ -682,7 +682,7 @@ func (h *Handler) cleanUpUnreferencedFiles(ctx *gin.Context, userID int, entityT
 	return nil
 }
 
-func HandleThingAssociation(choreReq chModel.ChoreReq, h *Handler, c *gin.Context, currentUser *uModel.User) bool {
+func HandleThingAssociation(choreReq chModel.ChoreReq, savedChore *chModel.Chore, h *Handler, c *gin.Context, currentUser *uModel.User) bool {
 	if choreReq.ThingTrigger != nil {
 		thing, err := h.tRepo.GetThingByID(c, choreReq.ThingTrigger.ID)
 		if err != nil {
@@ -697,7 +697,7 @@ func HandleThingAssociation(choreReq chModel.ChoreReq, h *Handler, c *gin.Contex
 			})
 			return true
 		}
-		if err := h.tRepo.AssociateThingWithChore(c, choreReq.ThingTrigger.ID, choreReq.ID, choreReq.ThingTrigger.TriggerState, choreReq.ThingTrigger.Condition); err != nil {
+		if err := h.tRepo.AssociateThingWithChore(c, choreReq.ThingTrigger.ID, savedChore.ID, choreReq.ThingTrigger.TriggerState, choreReq.ThingTrigger.Condition); err != nil {
 			c.JSON(500, gin.H{
 				"error": "Error associating thing with chore",
 			})

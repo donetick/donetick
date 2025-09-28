@@ -385,10 +385,16 @@ func RemoveAssigneeAndReassign(chore *chModel.Chore, userID int) {
 			break
 		}
 	}
-	if len(chore.Assignees) == 0 {
-		chore.AssignedTo = chore.CreatedBy
+
+	// Handle no assignee strategy
+	if chore.AssignStrategy == chModel.AssignmentStrategyNoAssignee {
+		chore.AssignedTo = nil // Set to nil to indicate no assignee
+	} else if len(chore.Assignees) == 0 {
+		createdBy := chore.CreatedBy
+		chore.AssignedTo = &createdBy
 	} else {
-		chore.AssignedTo = chore.Assignees[rand.Intn(len(chore.Assignees))].UserID
+		userID := chore.Assignees[rand.Intn(len(chore.Assignees))].UserID
+		chore.AssignedTo = &userID
 	}
 	chore.UpdatedAt = time.Now()
 }

@@ -188,12 +188,12 @@ func handleUserLeavingCircle(h *Handler, c *gin.Context, leavingUser *uModel.Use
 	}
 	for _, ch := range userAssignedCircleChores {
 
-		if ch.CreatedBy == leavingUser.ID && ch.AssignedTo != leavingUser.ID {
-			ch.AssignedTo = leavingUser.ID
+		if ch.CreatedBy == leavingUser.ID && (ch.AssignedTo == nil || *ch.AssignedTo != leavingUser.ID) {
+			ch.AssignedTo = &leavingUser.ID
 			ch.UpdatedAt = time.Now()
 			ch.UpdatedBy = leavingUser.ID
 			ch.CircleID = orginalCircleID
-		} else if ch.CreatedBy != leavingUser.ID && ch.AssignedTo == leavingUser.ID {
+		} else if ch.CreatedBy != leavingUser.ID && (ch.AssignedTo != nil && *ch.AssignedTo == leavingUser.ID) {
 			chore.RemoveAssigneeAndReassign(ch, leavingUser.ID)
 		}
 

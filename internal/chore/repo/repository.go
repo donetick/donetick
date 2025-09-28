@@ -29,7 +29,7 @@ func (r *ChoreRepository) UpsertChore(c context.Context, chore *chModel.Chore) e
 }
 func (r *ChoreRepository) UpdateChorePriority(c context.Context, userID int, choreID int, priority int) error {
 	var affectedRows int64
-	r.db.WithContext(c).Model(&chModel.Chore{}).Where("id = ? and created_by = ?", choreID, userID).Update("priority", priority).Count(&affectedRows)
+	r.db.WithContext(c).Model(&chModel.Chore{}).Where("id = ?", choreID).Update("priority", priority).Count(&affectedRows)
 	if affectedRows == 0 {
 		return errors.New("no rows affected")
 	}
@@ -334,7 +334,7 @@ func (r *ChoreRepository) CompleteChore(c context.Context, chore *chModel.Chore,
 	return err
 }
 
-func (r *ChoreRepository) SkipChore(c context.Context, chore *chModel.Chore, userID int, dueDate *time.Time, nextAssignedTo int) error {
+func (r *ChoreRepository) SkipChore(c context.Context, chore *chModel.Chore, userID int, dueDate *time.Time, nextAssignedTo *int) error {
 	err := r.db.WithContext(c).Transaction(func(tx *gorm.DB) error {
 		choreUpdates := map[string]interface{}{}
 		choreUpdates["next_due_date"] = dueDate

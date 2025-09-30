@@ -123,6 +123,15 @@ func (h *Handler) signUp(c *gin.Context) {
 	if signupReq.DisplayName == "" {
 		signupReq.DisplayName = signupReq.Username
 	}
+
+	// Validate username format
+	if !utils.IsValidUsername(signupReq.Username) {
+		c.JSON(400, gin.H{
+			"error": "Username can only contain lowercase letters (a-z), numbers (0-9), dots (.), and hyphens (-)",
+		})
+		return
+	}
+
 	password, err := auth.EncodePassword(signupReq.Password)
 	signupReq.Username = html.EscapeString(signupReq.Username)
 	signupReq.DisplayName = html.EscapeString(signupReq.DisplayName)
@@ -1324,6 +1333,15 @@ func (h *Handler) createChildUser(c *gin.Context) {
 			})
 			return
 		}
+	}
+	// Validate username and child username:
+	if !utils.IsValidUsername(currentUser.Username) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid parent username format"})
+		return
+	}
+	if !utils.IsValidUsername(req.ChildName) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid child username format"})
+		return
 	}
 
 	// Generate child username

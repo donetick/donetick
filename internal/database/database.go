@@ -39,7 +39,10 @@ func NewDatabase(cfg *config.Config) (*gorm.DB, error) {
 	var err error
 	switch cfg.Database.Type {
 	case "postgres":
-		dsn := fmt.Sprintf("host=%s port=%v user=%s password=%s dbname=%s sslmode=disable TimeZone=Asia/Shanghai", cfg.Database.Host, cfg.Database.Port, cfg.Database.User, cfg.Database.Password, cfg.Database.Name)
+		dsn := os.Getenv("DT_POSTGRES_DSN")
+		if dsn == "" {
+			dsn = fmt.Sprintf("host=%s port=%v user=%s password=%s dbname=%s sslmode=disable TimeZone=Asia/Shanghai", cfg.Database.Host, cfg.Database.Port, cfg.Database.User, cfg.Database.Password, cfg.Database.Name)
+		}
 		for i := 0; i <= 30; i++ {
 			// Use GORM logger level based on application log level from config
 			gormLogLevel := convertLogLevelToGorm(cfg.Logging.Level)

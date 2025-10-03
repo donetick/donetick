@@ -659,6 +659,7 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 				})
 				return
 			}
+			acc = &uModel.UserDetails{User: *createdUser}
 		}
 		// Check if user has MFA enabled
 		if acc.MFAEnabled {

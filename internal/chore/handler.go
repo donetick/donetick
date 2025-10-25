@@ -226,10 +226,7 @@ func (h *Handler) createChore(c *gin.Context) {
 		}
 
 	}
-	if choreReq.AssignedTo <= 0 && len(choreReq.Assignees) > 0 {
-		// if the assigned to field is not set, randomly assign the chore to one of the assignees
-		choreReq.AssignedTo = choreReq.Assignees[rand.Intn(len(choreReq.Assignees))].UserID
-	}
+	// Remove the auto-assignment logic - if no assignee then keep no assignee
 
 	var dueDate *time.Time
 
@@ -320,11 +317,13 @@ func (h *Handler) createChore(c *gin.Context) {
 			return
 		}
 	}
-	if err := h.choreRepo.UpdateChoreAssignees(c, choreAssignees); err != nil {
-		c.JSON(500, gin.H{
-			"error": "Error adding chore assignees",
-		})
-		return
+	if len(choreAssignees) > 0 {
+		if err := h.choreRepo.UpdateChoreAssignees(c, choreAssignees); err != nil {
+			c.JSON(500, gin.H{
+				"error": "Error adding chore assignees",
+			})
+			return
+		}
 	}
 	go func() {
 		h.nPlanner.GenerateNotifications(c, createdChore)
@@ -336,7 +335,7 @@ func (h *Handler) createChore(c *gin.Context) {
 		broadcaster.BroadcastChoreCreated(createdChore, &currentUser.User)
 	}
 
-	shouldReturn := HandleThingAssociation(choreReq, h, c, &currentUser.User)
+	shouldReturn := HandleThingAssociation(choreReq, createdChore, h, c, &currentUser.User)
 	if shouldReturn {
 		return
 	}
@@ -446,24 +445,23 @@ func (h *Handler) editChore(c *gin.Context) {
 	}
 
 	//  validate assignedTo part of the assignees:
-	assigneeFound := false
-	for _, assignee := range choreReq.Assignees {
-		if assignee.UserID == choreReq.AssignedTo {
-			assigneeFound = true
-			break
+	if choreReq.AssignedTo != nil {
+		assigneeFound := false
+		for _, assignee := range choreReq.Assignees {
+			if assignee.UserID == *choreReq.AssignedTo {
+				assigneeFound = true
+				break
+			}
+		}
+		if !assigneeFound {
+			c.JSON(400, gin.H{
+				"error": "Assigned to not found in assignees",
+			})
+			return
 		}
 	}
-	if !assigneeFound {
-		c.JSON(400, gin.H{
-			"error": "Assigned to not found in assignees",
-		})
-		return
-	}
 
-	if choreReq.AssignedTo <= 0 && len(choreReq.Assignees) > 0 {
-		// if the assigned to field is not set, randomly assign the chore to one of the assignees
-		choreReq.AssignedTo = choreReq.Assignees[rand.Intn(len(choreReq.Assignees))].UserID
-	}
+	// Remove the auto-assignment logic - if no assignee then keep no assignee
 	oldChore, err := h.choreRepo.GetChore(c, choreReq.ID, currentUser.ID)
 
 	if err != nil {
@@ -644,7 +642,7 @@ func (h *Handler) editChore(c *gin.Context) {
 		h.tRepo.DissociateThingWithChore(c, oldChore.ThingChore.ThingID, oldChore.ID)
 
 	}
-	shouldReturn := HandleThingAssociation(choreReq, h, c, &currentUser.User)
+	shouldReturn := HandleThingAssociation(choreReq, updatedChore, h, c, &currentUser.User)
 	if shouldReturn {
 		return
 	}
@@ -682,7 +680,7 @@ func (h *Handler) cleanUpUnreferencedFiles(ctx *gin.Context, userID int, entityT
 	return nil
 }
 
-func HandleThingAssociation(choreReq chModel.ChoreReq, h *Handler, c *gin.Context, currentUser *uModel.User) bool {
+func HandleThingAssociation(choreReq chModel.ChoreReq, savedChore *chModel.Chore, h *Handler, c *gin.Context, currentUser *uModel.User) bool {
 	if choreReq.ThingTrigger != nil {
 		thing, err := h.tRepo.GetThingByID(c, choreReq.ThingTrigger.ID)
 		if err != nil {
@@ -697,7 +695,7 @@ func HandleThingAssociation(choreReq chModel.ChoreReq, h *Handler, c *gin.Contex
 			})
 			return true
 		}
-		if err := h.tRepo.AssociateThingWithChore(c, choreReq.ThingTrigger.ID, choreReq.ID, choreReq.ThingTrigger.TriggerState, choreReq.ThingTrigger.Condition); err != nil {
+		if err := h.tRepo.AssociateThingWithChore(c, choreReq.ThingTrigger.ID, savedChore.ID, choreReq.ThingTrigger.TriggerState, choreReq.ThingTrigger.Condition); err != nil {
 			c.JSON(500, gin.H{
 				"error": "Error associating thing with chore",
 			})
@@ -1874,7 +1872,7 @@ func (h *Handler) ModifyHistory(c *gin.Context) {
 		return
 	}
 
-	if currentUser.ID != history.CompletedBy && currentUser.ID != history.AssignedTo && !currentUser.IsAdminOrManager(circleUsers) {
+	if currentUser.ID != history.CompletedBy && (history.AssignedTo == nil || currentUser.ID != *history.AssignedTo) && !currentUser.IsAdminOrManager(circleUsers) {
 		c.JSON(403, gin.H{
 			"error": "You are not allowed to modify this history",
 		})
@@ -1935,7 +1933,33 @@ func (h *Handler) updatePriority(c *gin.Context) {
 		return
 	}
 
+	// config user can edit:
+	chore, err := h.choreRepo.GetChore(c, id, currentUser.ID)
+	if err != nil {
+		logger.Error("Failed to retrieve chore", "error", err)
+		c.JSON(500, gin.H{
+			"error": "Failed to retrieve chore",
+		})
+		return
+	}
+	circleUsers, err := h.circleRepo.GetCircleUsers(c, currentUser.CircleID)
+	if err != nil {
+		logger.Error("Failed to retrieve circle users", "error", err)
+		c.JSON(500, gin.H{
+			"error": "Failed to retrieve circle users",
+		})
+		return
+	}
+	if err := chore.CanEdit(currentUser.ID, circleUsers, nil); err != nil {
+		logger.Error("User not allowed to edit chore", "userID", currentUser.ID, "choreID", chore.ID)
+		c.JSON(403, gin.H{
+			"error": "You are not allowed to edit this chore",
+		})
+		return
+	}
+
 	if err := h.choreRepo.UpdateChorePriority(c, currentUser.ID, id, *priorityReq.Priority); err != nil {
+		logger.Error("Failed to update priority", "error", err)
 		c.JSON(500, gin.H{
 			"error": "Error updating priority",
 		})
@@ -2028,7 +2052,7 @@ func (h *Handler) DeleteHistory(c *gin.Context) {
 		return
 	}
 
-	if currentUser.ID != history.CompletedBy || currentUser.ID != history.AssignedTo {
+	if currentUser.ID != history.CompletedBy || (history.AssignedTo != nil && currentUser.ID != *history.AssignedTo) {
 		c.JSON(403, gin.H{
 			"error": "You are not allowed to delete this history",
 		})
@@ -2185,17 +2209,15 @@ func (h *Handler) GetChoreTimeSessions(c *gin.Context) {
 		return
 	}
 
-	// Check if user has permission to view time sessions for this chore
-	// User can view if they are the creator OR an assignee
-	isAssignee := false
-	for _, assignee := range chore.Assignees {
-		if assignee.UserID == currentUser.ID {
-			isAssignee = true
-			break
-		}
+	circleUsers, err := h.circleRepo.GetCircleUsers(c, currentUser.CircleID)
+	if err != nil {
+		logger.Error("Failed to retrieve circle users", "error", err)
+		c.JSON(500, gin.H{
+			"error": "Failed to retrieve circle users",
+		})
+		return
 	}
-
-	if currentUser.ID != chore.CreatedBy && !isAssignee {
+	if !chore.CanView(currentUser.ID, circleUsers) {
 		c.JSON(403, gin.H{
 			"error": "You are not allowed to view time sessions for this chore",
 		})
@@ -2896,7 +2918,7 @@ func checkNextAssignee(chore *chModel.Chore, choresHistory []*chModel.ChoreHisto
 	if len(history) == 0 {
 		// if there is no history, just assume the current operation as the first
 		history = append(history, &chModel.ChoreHistory{
-			AssignedTo: performerID,
+			AssignedTo: &performerID,
 		})
 	}
 
@@ -2908,9 +2930,11 @@ func checkNextAssignee(chore *chModel.Chore, choresHistory []*chModel.ChoreHisto
 			assigneeChores[performer.UserID] = 0
 		}
 		for _, history := range history {
-			if ok := assigneesMap[history.AssignedTo]; ok {
-				// calculate the number of chores assigned to each assignee
-				assigneeChores[history.AssignedTo]++
+			if history.AssignedTo != nil {
+				if ok := assigneesMap[*history.AssignedTo]; ok {
+					// calculate the number of chores assigned to each assignee
+					assigneeChores[*history.AssignedTo]++
+				}
 			}
 		}
 
@@ -2949,24 +2973,39 @@ func checkNextAssignee(chore *chModel.Chore, choresHistory []*chModel.ChoreHisto
 		}
 	case chModel.AssignmentStrategyRandom:
 		nextAssignee = chore.Assignees[rand.Intn(len(chore.Assignees))].UserID
+	case chModel.AssignmentStrategyNoAssignee:
+		nextAssignee = 0
 	case chModel.AssignmentStrategyKeepLastAssigned:
 		// keep the last assignee
-		nextAssignee = chore.AssignedTo
+		if chore.AssignedTo != nil {
+			nextAssignee = *chore.AssignedTo
+		} else {
+			nextAssignee = 0
+		}
 	case chModel.AssignmentStrategyRandomExceptLastAssigned:
-		var lastAssigned = chore.AssignedTo
+		var lastAssigned *int = chore.AssignedTo
 		AssigneesCopy := make([]chModel.ChoreAssignees, len(chore.Assignees))
 		copy(AssigneesCopy, chore.Assignees)
-		var removeLastAssigned = remove(AssigneesCopy, lastAssigned)
+		var removeLastAssigned []chModel.ChoreAssignees
+		if lastAssigned != nil {
+			removeLastAssigned = remove(AssigneesCopy, *lastAssigned)
+		} else {
+			removeLastAssigned = AssigneesCopy
+		}
 		nextAssignee = removeLastAssigned[rand.Intn(len(removeLastAssigned))].UserID
 	case chModel.AssignmentStrategyRoundRobin:
 		if len(chore.Assignees) == 0 {
-			return chore.AssignedTo, fmt.Errorf("no assignees available")
+			if chore.AssignedTo != nil {
+				return *chore.AssignedTo, fmt.Errorf("no assignees available")
+			} else {
+				return 0, fmt.Errorf("no assignees available")
+			}
 		}
 
 		// Find current assignee index
 		currentIndex := -1
 		for i, assignee := range chore.Assignees {
-			if assignee.UserID == chore.AssignedTo {
+			if chore.AssignedTo != nil && assignee.UserID == *chore.AssignedTo {
 				currentIndex = i
 				break
 			}
@@ -2980,7 +3019,11 @@ func checkNextAssignee(chore *chModel.Chore, choresHistory []*chModel.ChoreHisto
 			nextAssignee = chore.Assignees[nextIndex].UserID
 		}
 	default:
-		return chore.AssignedTo, fmt.Errorf("invalid assign strategy")
+		if chore.AssignedTo != nil {
+			return *chore.AssignedTo, fmt.Errorf("invalid assign strategy")
+		} else {
+			return 0, fmt.Errorf("invalid assign strategy")
+		}
 
 	}
 	return nextAssignee, nil
@@ -3055,11 +3098,11 @@ func (h *Handler) sendNudgeNotification(c *gin.Context) {
 		}
 	} else {
 		// Send to current assignee only
-		if chore.AssignedTo == 0 {
+		if chore.AssignedTo == nil || *chore.AssignedTo == 0 {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Chore has no current assignee"})
 			return
 		}
-		targetUserIDs = []int{chore.AssignedTo}
+		targetUserIDs = []int{*chore.AssignedTo}
 	}
 
 	// Remove current user from targets (can't nudge yourself)

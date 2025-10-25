@@ -75,6 +75,8 @@ type DonetickCloudConfig struct {
 type FeatureLimitsConfig struct {
 	MaxCircleMembers     int `mapstructure:"max_circle_members" yaml:"max_circle_members" default:"2"`
 	PlusCircleMaxMembers int `mapstructure:"plus_circle_max_members" yaml:"plus_circle_max_members" default:"6"`
+	MaxSubaccounts       int `mapstructure:"max_subaccounts" yaml:"max_subaccounts" default:"1"`
+	PlusMaxSubaccounts   int `mapstructure:"plus_max_subaccounts" yaml:"plus_max_subaccounts" default:"5"`
 }
 
 type TelegramConfig struct {

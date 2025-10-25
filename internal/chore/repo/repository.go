@@ -29,7 +29,7 @@ func (r *ChoreRepository) UpsertChore(c context.Context, chore *chModel.Chore) e
 }
 func (r *ChoreRepository) UpdateChorePriority(c context.Context, userID int, choreID int, priority int) error {
 	var affectedRows int64
-	r.db.WithContext(c).Model(&chModel.Chore{}).Where("id = ? and created_by = ?", choreID, userID).Update("priority", priority).Count(&affectedRows)
+	r.db.WithContext(c).Model(&chModel.Chore{}).Where("id = ?", choreID).Update("priority", priority).Count(&affectedRows)
 	if affectedRows == 0 {
 		return errors.New("no rows affected")
 	}
@@ -334,7 +334,7 @@ func (r *ChoreRepository) CompleteChore(c context.Context, chore *chModel.Chore,
 	return err
 }
 
-func (r *ChoreRepository) SkipChore(c context.Context, chore *chModel.Chore, userID int, dueDate *time.Time, nextAssignedTo int) error {
+func (r *ChoreRepository) SkipChore(c context.Context, chore *chModel.Chore, userID int, dueDate *time.Time, nextAssignedTo *int) error {
 	err := r.db.WithContext(c).Transaction(func(tx *gorm.DB) error {
 		choreUpdates := map[string]interface{}{}
 		choreUpdates["next_due_date"] = dueDate
@@ -551,7 +551,10 @@ func (r *ChoreRepository) SetDueDate(c context.Context, choreID int, dueDate tim
 }
 
 func (r *ChoreRepository) SetDueDateIfNotExisted(c context.Context, choreID int, dueDate time.Time) error {
-	return r.db.WithContext(c).Model(&chModel.Chore{}).Where("id = ? and next_due_date is null and is_active = ?", choreID, true).Update("next_due_date", dueDate).Error
+	return r.db.WithContext(c).Model(&chModel.Chore{}).Where("id = ? and next_due_date is null", choreID).Updates(map[string]interface{}{
+		"next_due_date": dueDate,
+		"is_active":     true,
+	}).Error
 }
 
 func (r *ChoreRepository) GetChoreDetailByID(c context.Context, choreID int, circleID int, userID int) (*chModel.ChoreDetail, error) {

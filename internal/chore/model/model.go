@@ -40,6 +40,7 @@ const (
 	AssignmentStrategyKeepLastAssigned         AssignmentStrategy = "keep_last_assigned"
 	AssignmentStrategyRandomExceptLastAssigned AssignmentStrategy = "random_except_last_assigned"
 	AssignmentStrategyRoundRobin               AssignmentStrategy = "round_robin"
+	AssignmentStrategyNoAssignee               AssignmentStrategy = "no_assignee"
 )
 
 type Chore struct {
@@ -51,7 +52,7 @@ type Chore struct {
 	FrequencyMetadataV2    *FrequencyMetadata    `json:"frequencyMetadata" gorm:"column:frequency_meta_v2;type:json"`       // Additional frequency information for v2 (if used)
 	NextDueDate            *time.Time            `json:"nextDueDate" gorm:"column:next_due_date;index"`                     // When the chore is due
 	IsRolling              bool                  `json:"isRolling" gorm:"column:is_rolling"`                                // Whether the chore is rolling
-	AssignedTo             int                   `json:"assignedTo" gorm:"column:assigned_to"`                              // Who the chore is assigned to
+	AssignedTo             *int                  `json:"assignedTo" gorm:"column:assigned_to"`                              // Who the chore is assigned to
 	Assignees              []ChoreAssignees      `json:"assignees" gorm:"foreignkey:ChoreID;references:ID"`                 // Assignees of the chore
 	AssignStrategy         AssignmentStrategy    `json:"assignStrategy" gorm:"column:assign_strategy"`                      // How the chore is assigned
 	IsActive               bool                  `json:"isActive" gorm:"column:is_active"`                                  // Whether the chore is active
@@ -74,6 +75,7 @@ type Chore struct {
 	SubTasks               *[]stModel.SubTask    `json:"subTasks,omitempty" gorm:"foreignkey:ChoreID;references:ID"` // Subtasks for the chore
 	RequireApproval        bool                  `json:"requireApproval" gorm:"column:require_approval"`             // Whether chore completion requires admin approval
 	IsPrivate              bool                  `json:"isPrivate" gorm:"column:is_private;default:false"`           // Whether the chore is private
+	DeadlineOffset         *int                  `json:"deadlineOffset,omitempty" gorm:"column:deadline_offset"`     // Seconds after NextDueDate when chore deadline is reached
 }
 
 type Status int8
@@ -95,7 +97,7 @@ type ChoreHistory struct {
 	ChoreID     int                `json:"choreId" gorm:"column:chore_id"`                    // The chore this history is for
 	PerformedAt *time.Time         `json:"performedAt" gorm:"column:performed_at"`            // When the chore was performed (completed or skipped)
 	CompletedBy int                `json:"completedBy" gorm:"column:completed_by"`            // Who completed the chore
-	AssignedTo  int                `json:"assignedTo" gorm:"column:assigned_to"`              // Who the chore was assigned to
+	AssignedTo  *int               `json:"assignedTo" gorm:"column:assigned_to"`              // Who the chore was assigned to
 	Note        *string            `json:"notes" gorm:"column:notes"`                         // Notes about the chore
 	DueDate     *time.Time         `json:"dueDate" gorm:"column:due_date"`                    // When the chore was due
 	UpdatedAt   *time.Time         `json:"updatedAt" gorm:"column:updated_at"`                // When the record was last updated
@@ -113,6 +115,7 @@ const (
 	ChoreHistoryStatusSkipped         ChoreHistoryStatus = 2
 	ChoreHistoryStatusPendingApproval ChoreHistoryStatus = 3
 	ChoreHistoryStatusRejected        ChoreHistoryStatus = 4
+	ChoreHistoryStatusMissed          ChoreHistoryStatus = 5
 )
 
 type FrequencyMetadata struct {
@@ -168,7 +171,7 @@ type ChoreDetail struct {
 	Description         *string            `json:"description" gorm:"column:description"`
 	FrequencyType       string             `json:"frequencyType" gorm:"column:frequency_type"`
 	NextDueDate         *time.Time         `json:"nextDueDate" gorm:"column:next_due_date"`
-	AssignedTo          int                `json:"assignedTo" gorm:"column:assigned_to"`
+	AssignedTo          *int               `json:"assignedTo" gorm:"column:assigned_to"`
 	LastCompletedDate   *time.Time         `json:"lastCompletedDate" gorm:"column:last_completed_date"`
 	LastCompletedBy     *int               `json:"lastCompletedBy" gorm:"column:last_completed_by"`
 	TotalCompletedCount int                `json:"totalCompletedCount" gorm:"column:total_completed"`
@@ -181,6 +184,7 @@ type ChoreDetail struct {
 	Duration            int                `json:"duration" gorm:"column:duration"` // Total duration in seconds for the chore
 	StartTime           *time.Time         `json:"startTime" gorm:"column:start_time"`
 	TimerUpdatedAt      *time.Time         `json:"timerUpdatedAt" gorm:"column:timer_updated_at"` // When the chore was last started
+	DeadlineOffset      *int               `json:"deadlineOffset,omitempty"`
 }
 
 type Label struct {
@@ -212,7 +216,7 @@ type ChoreReq struct {
 	DueDate              string                `json:"dueDate"`
 	Assignees            []ChoreAssignees      `json:"assignees"`
 	AssignStrategy       AssignmentStrategy    `json:"assignStrategy" binding:"required"`
-	AssignedTo           int                   `json:"assignedTo"`
+	AssignedTo           *int                  `json:"assignedTo"`
 	IsRolling            bool                  `json:"isRolling"`
 	IsActive             bool                  `json:"isActive"`
 	Frequency            int                   `json:"frequency"`
@@ -229,7 +233,16 @@ type ChoreReq struct {
 	SubTasks             *[]stModel.SubTask    `json:"subTasks"`
 	RequireApproval      bool                  `json:"requireApproval"`
 	IsPrivate            bool                  `json:"isPrivate"`
+	DeadlineOffset       *int                  `json:"deadlineOffset,omitempty"`
 	UpdatedAt            *time.Time            `json:"updatedAt,omitempty"` // For internal use only when syncing a chore updated offline
+}
+
+func (c *Chore) GetDeadline() *time.Time {
+	if c.DeadlineOffset == nil || c.NextDueDate == nil {
+		return nil
+	}
+	deadline := c.NextDueDate.Add(time.Duration(*c.DeadlineOffset) * time.Second)
+	return &deadline
 }
 
 func (c *Chore) CanEdit(userID int, circleUsers []*cModel.UserCircleDetail, updatedAt *time.Time) error {
@@ -287,8 +300,26 @@ func (c *Chore) CanView(userID int, circleUsers []*cModel.UserCircleDetail) bool
 	return false
 }
 func (c *Chore) CanComplete(userID int, circleUsers []*cModel.UserCircleDetail) bool {
+	// If using no assignee strategy, allow any circle member to complete
+	if c.AssignStrategy == AssignmentStrategyNoAssignee && (c.AssignedTo == nil || *c.AssignedTo == 0) {
+		if !c.IsPrivate {
+			// For public chores with no assignee, any circle member can complete
+			for _, cu := range circleUsers {
+				if cu.UserID == userID {
+					return true
+				}
+			}
+		} else {
+			// For private chores with no assignee, only creator can complete
+			if c.CreatedBy == userID {
+				return true
+			}
+		}
+		return false
+	}
+
 	if !c.IsPrivate {
-		if c.AssignedTo == userID {
+		if c.AssignedTo != nil && *c.AssignedTo == userID {
 			return true
 		}
 		for _, a := range c.Assignees {
@@ -307,7 +338,7 @@ func (c *Chore) CanComplete(userID int, circleUsers []*cModel.UserCircleDetail) 
 		if c.CreatedBy == userID {
 			return true
 		}
-		if c.AssignedTo == userID {
+		if c.AssignedTo != nil && *c.AssignedTo == userID {
 			return true
 		}
 		for _, a := range c.Assignees {

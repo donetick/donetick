@@ -124,7 +124,7 @@ func (h *API) CreateChore(c *gin.Context) {
 		FrequencyType: chModel.FrequencyTypeOnce,
 		// Frequency:                choreRequest.Frequency,
 		AssignStrategy: chModel.AssignmentStrategyRandom,
-		AssignedTo:     createdBy,
+		AssignedTo:     &createdBy,
 		Assignees:      []chModel.ChoreAssignees{{UserID: createdBy}},
 		Description:    choreRequest.Description,
 		NextDueDate:    nextDueDate,

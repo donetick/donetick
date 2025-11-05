@@ -5,7 +5,7 @@
 
 **Simplify Tasks & Chores, Together!**
 
-Donetick is an open-source, user-friendly app designed to help you organize tasks and chores effectively. featuring customizable options to help you and others stay organized
+Donetick is an open-source, user-friendly app designed to help you organize tasks and chores effectively. Featuring customizable options to help you and others stay organized
 
 ![Screenshot](assets/screenshot.png)
 
@@ -61,7 +61,7 @@ Donetick is an open-source, user-friendly app designed to help you organize task
 
 **Realtime Sync**: Enable realtime sync to instantly reflect task changes across all connected devices and users.  whether you are adding, editing, or completing a task. It reflects immediately on enabled devices!
 
-**Offline Support**: You can access donetick if you lose connection and navigate some areas, but this is very limited functionality at the moment. 
+**Offline Support**: You can access Donetick if you lose connection and navigate some areas, but this is very limited functionality at the moment. 
 
 **Multi-Platform Notifications**: Get reminders through the mobile app (we have an alpha iOS app on TestFlight, and the Android APK is available in releases), as well as via Telegram, Discord, or Pushover.
 
@@ -70,7 +70,7 @@ Donetick is an open-source, user-friendly app designed to help you organize task
 ### Developer & API Features
 **REST API**: Full access to Donetick’s features through a REST API, great for custom automations and integrations. (For external use, we recommend using the eAPI, which offers limited access intended for long-lived access tokens.)
 
-**Webhook System**: Connect Donetick to external systems using flexible webhook support good for custom notification flows or automations.
+**Webhook System**: Connect Donetick to external systems using flexible webhook support, good for custom notification flows or automations.
 
 ---
 

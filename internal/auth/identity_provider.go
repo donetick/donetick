@@ -16,6 +16,7 @@ type IdentityProviderUserInfo struct {
 	Identifier  string
 	DisplayName string
 	Email       string
+	Picture     string
 }
 
 type IdentityProvider struct {
@@ -104,6 +105,9 @@ func (i *IdentityProvider) GetUserInfo(ctx context.Context, accessToken string) 
 	}
 	if val, ok := claims["email"]; ok {
 		userInfo.Email = val.(string)
+	}
+	if val, ok := claims["picture"]; ok {
+		userInfo.Picture = val.(string)
 	}
 	return &userInfo, nil
 }

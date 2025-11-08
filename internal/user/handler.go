@@ -613,6 +613,7 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 				Username:    claims.Email,
 				Email:       claims.Email,
 				Password:    encodedPassword,
+				Image:       claims.Picture,
 				DisplayName: claims.DisplayName,
 				Provider:    uModel.AuthProviderOAuth2,
 			}

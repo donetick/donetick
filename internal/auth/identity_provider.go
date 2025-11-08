@@ -107,7 +107,27 @@ func (i *IdentityProvider) GetUserInfo(ctx context.Context, accessToken string) 
 		userInfo.Email = val.(string)
 	}
 	if val, ok := claims["picture"]; ok {
-		userInfo.Picture = val.(string)
+		pictureURL := val.(string)
+		isValid := isPictureURLValid(pictureURL)
+		if isValid {
+			userInfo.Picture = pictureURL
+		}
 	}
 	return &userInfo, nil
+}
+
+// Check if the provided URL is reachable and returns a valid image
+func isPictureURLValid(url string) bool {
+	resp, err := http.Get(url)
+	if err != nil {
+		return false
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return false
+	}
+
+	contentType := resp.Header.Get("Content-Type")
+	return strings.HasPrefix(contentType, "image/")
 }

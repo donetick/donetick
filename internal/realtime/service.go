@@ -26,13 +26,13 @@ type RealTimeService struct {
 
 // ServiceStats tracks real-time service metrics
 type ServiceStats struct {
-	TotalConnections    int64
-	ActiveConnections   int64
-	EventsPublished     int64
-	EventsDelivered     int64
-	ConnectionsDropped  int64
-	CirclesActive       int64
-	mu                  sync.RWMutex
+	TotalConnections   int64
+	ActiveConnections  int64
+	EventsPublished    int64
+	EventsDelivered    int64
+	ConnectionsDropped int64
+	CirclesActive      int64
+	mu                 sync.RWMutex
 }
 
 // NewRealTimeService creates a new real-time service instance
@@ -41,9 +41,9 @@ func NewRealTimeService(cfg *config.Config) *RealTimeService {
 	if err := validateConfig(&cfg.RealTimeConfig); err != nil {
 		panic(fmt.Sprintf("Invalid real-time configuration: %v", err))
 	}
-	
+
 	ctx, cancel := context.WithCancel(context.Background())
-	
+
 	service := &RealTimeService{
 		config:          &cfg.RealTimeConfig,
 		connectionPools: make(map[int]*ConnectionPool),
@@ -53,9 +53,9 @@ func NewRealTimeService(cfg *config.Config) *RealTimeService {
 		started:         false,
 		stats:           &ServiceStats{},
 	}
-	
+
 	service.broadcaster = NewEventBroadcaster(service, cfg)
-	
+
 	return service
 }
 
@@ -63,27 +63,27 @@ func NewRealTimeService(cfg *config.Config) *RealTimeService {
 func (s *RealTimeService) Start(ctx context.Context) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	
+
 	if s.started {
 		return nil
 	}
-	
+
 	s.logger = logging.FromContext(ctx)
 	s.logger.Info("Starting real-time service")
-	
+
 	if !s.config.Enabled {
 		s.logger.Info("Real-time service is disabled in configuration")
 		return nil
 	}
-	
+
 	// Start cleanup routine
 	go s.cleanupRoutine()
-	
+
 	s.started = true
-	s.logger.Infow("Real-time service started", 
+	s.logger.Infow("Real-time service started",
 		"websocket_enabled", s.config.WebSocketEnabled,
 		"max_connections", s.config.MaxConnections)
-	
+
 	return nil
 }
 
@@ -91,25 +91,25 @@ func (s *RealTimeService) Start(ctx context.Context) error {
 func (s *RealTimeService) Stop() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	
+
 	if !s.started {
 		return nil
 	}
-	
+
 	s.logger.Info("Stopping real-time service")
-	
+
 	// Cancel context to signal shutdown
 	s.cancel()
-	
+
 	// Close all connection pools
 	for circleID, pool := range s.connectionPools {
 		pool.Close()
 		delete(s.connectionPools, circleID)
 	}
-	
+
 	s.started = false
 	s.logger.Info("Real-time service stopped")
-	
+
 	return nil
 }
 
@@ -122,14 +122,14 @@ func (s *RealTimeService) GetEventBroadcaster() *EventBroadcaster {
 func (s *RealTimeService) GetConnectionPool(circleID int) *ConnectionPool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	
+
 	pool, exists := s.connectionPools[circleID]
 	if !exists {
 		pool = NewConnectionPool(circleID, s.config)
 		s.connectionPools[circleID] = pool
 		s.updateStats()
 	}
-	
+
 	return pool
 }
 
@@ -138,7 +138,7 @@ func (s *RealTimeService) AddConnection(conn *Connection) error {
 	if !s.started || !s.config.Enabled {
 		return ErrServiceNotEnabled
 	}
-	
+
 	pool := s.GetConnectionPool(conn.CircleID)
 	return pool.AddConnection(conn)
 }
@@ -148,7 +148,7 @@ func (s *RealTimeService) RemoveConnection(conn *Connection) {
 	s.mu.RLock()
 	pool, exists := s.connectionPools[conn.CircleID]
 	s.mu.RUnlock()
-	
+
 	if exists {
 		pool.RemoveConnection(conn)
 		s.updateStats()
@@ -160,11 +160,11 @@ func (s *RealTimeService) BroadcastToCircle(circleID int, event *Event) {
 	if !s.started || !s.config.Enabled {
 		return
 	}
-	
+
 	s.mu.RLock()
 	pool, exists := s.connectionPools[circleID]
 	s.mu.RUnlock()
-	
+
 	if exists {
 		pool.Broadcast(event)
 		s.stats.mu.Lock()
@@ -177,7 +177,7 @@ func (s *RealTimeService) BroadcastToCircle(circleID int, event *Event) {
 func (s *RealTimeService) GetStats() ServiceStats {
 	s.stats.mu.RLock()
 	defer s.stats.mu.RUnlock()
-	
+
 	// Create a copy without the mutex to avoid copying sync.RWMutex
 	return ServiceStats{
 		TotalConnections:   s.stats.TotalConnections,
@@ -194,7 +194,7 @@ func (s *RealTimeService) GetStats() ServiceStats {
 func (s *RealTimeService) cleanupRoutine() {
 	ticker := time.NewTicker(s.config.CleanupInterval)
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-s.ctx.Done():
@@ -209,30 +209,30 @@ func (s *RealTimeService) cleanupRoutine() {
 func (s *RealTimeService) performCleanup() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	
+
 	for circleID, pool := range s.connectionPools {
 		// Clean up stale connections in the pool
 		pool.CleanupStaleConnections(s.config.StaleThreshold)
-		
+
 		// Remove empty pools
 		if pool.IsEmpty() {
 			pool.Close()
 			delete(s.connectionPools, circleID)
 		}
 	}
-	
+
 	s.updateStats()
 }
 
 // updateStats recalculates service statistics
 func (s *RealTimeService) updateStats() {
 	var activeConnections int64
-	
+
 	for _, pool := range s.connectionPools {
 		stats := pool.GetStats()
 		activeConnections += stats.ActiveConnections
 	}
-	
+
 	s.stats.mu.Lock()
 	s.stats.ActiveConnections = activeConnections
 	s.stats.CirclesActive = int64(len(s.connectionPools))
@@ -251,32 +251,32 @@ func validateConfig(cfg *config.RealTimeConfig) error {
 	if cfg.MaxConnections <= 0 {
 		return fmt.Errorf("maxConnections must be positive, got %d", cfg.MaxConnections)
 	}
-	
+
 	if cfg.MaxConnectionsPerUser <= 0 {
 		return fmt.Errorf("maxConnectionsPerUser must be positive, got %d", cfg.MaxConnectionsPerUser)
 	}
-	
+
 	if cfg.MaxConnectionsPerUser > cfg.MaxConnections {
-		return fmt.Errorf("maxConnectionsPerUser (%d) cannot exceed maxConnections (%d)", 
+		return fmt.Errorf("maxConnectionsPerUser (%d) cannot exceed maxConnections (%d)",
 			cfg.MaxConnectionsPerUser, cfg.MaxConnections)
 	}
-	
+
 	if cfg.EventQueueSize <= 0 {
 		return fmt.Errorf("eventQueueSize must be positive, got %d", cfg.EventQueueSize)
 	}
-	
+
 	if cfg.CleanupInterval <= 0 {
 		return fmt.Errorf("cleanupInterval must be positive, got %v", cfg.CleanupInterval)
 	}
-	
+
 	if cfg.StaleThreshold <= 0 {
 		return fmt.Errorf("staleThreshold must be positive, got %v", cfg.StaleThreshold)
 	}
-	
+
 	if cfg.StaleThreshold <= cfg.CleanupInterval {
-		return fmt.Errorf("staleThreshold (%v) should be greater than cleanupInterval (%v)", 
+		return fmt.Errorf("staleThreshold (%v) should be greater than cleanupInterval (%v)",
 			cfg.StaleThreshold, cfg.CleanupInterval)
 	}
-	
+
 	return nil
 }

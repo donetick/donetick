@@ -9,12 +9,12 @@ import (
 
 // ConnectionPool manages WebSocket connections for a specific circle
 type ConnectionPool struct {
-	CircleID     int
-	connections  map[string]*Connection
-	userConns    map[int][]*Connection // userID -> connections
-	mu           sync.RWMutex
-	config       *config.RealTimeConfig
-	stats        ConnectionPoolStats
+	CircleID    int
+	connections map[string]*Connection
+	userConns   map[int][]*Connection // userID -> connections
+	mu          sync.RWMutex
+	config      *config.RealTimeConfig
+	stats       ConnectionPoolStats
 }
 
 // ConnectionPoolStats tracks metrics for a connection pool
@@ -39,26 +39,26 @@ func NewConnectionPool(circleID int, config *config.RealTimeConfig) *ConnectionP
 func (p *ConnectionPool) AddConnection(conn *Connection) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	
+
 	// Check max connections limit
 	if len(p.connections) >= p.config.MaxConnections {
 		return ErrMaxConnectionsReached
 	}
-	
+
 	// Check per-user connection limit
 	userConnections := p.userConns[conn.UserID]
 	if len(userConnections) >= p.config.MaxConnectionsPerUser {
 		return ErrUserMaxConnectionsReached
 	}
-	
+
 	// Add connection
 	p.connections[conn.ID] = conn
 	p.userConns[conn.UserID] = append(p.userConns[conn.UserID], conn)
-	
+
 	p.stats.mu.Lock()
 	p.stats.ActiveConnections++
 	p.stats.mu.Unlock()
-	
+
 	return nil
 }
 
@@ -66,10 +66,10 @@ func (p *ConnectionPool) AddConnection(conn *Connection) error {
 func (p *ConnectionPool) RemoveConnection(conn *Connection) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	
+
 	// Remove from connections map
 	delete(p.connections, conn.ID)
-	
+
 	// Remove from user connections
 	userConnections := p.userConns[conn.UserID]
 	for i, userConn := range userConnections {
@@ -82,12 +82,12 @@ func (p *ConnectionPool) RemoveConnection(conn *Connection) {
 			break
 		}
 	}
-	
+
 	// Clean up empty user connection slice to prevent memory accumulation
 	if len(p.userConns[conn.UserID]) == 0 {
 		delete(p.userConns, conn.UserID)
 	}
-	
+
 	p.stats.mu.Lock()
 	if p.stats.ActiveConnections > 0 {
 		p.stats.ActiveConnections--
@@ -105,7 +105,7 @@ func (p *ConnectionPool) Broadcast(event *Event) {
 		}
 	}
 	p.mu.RUnlock()
-	
+
 	// Send to connections outside of the lock
 	for _, conn := range connections {
 		if conn.SendEvent(event) {
@@ -122,7 +122,7 @@ func (p *ConnectionPool) BroadcastToUser(userID int, event *Event) {
 	userConnections := make([]*Connection, len(p.userConns[userID]))
 	copy(userConnections, p.userConns[userID])
 	p.mu.RUnlock()
-	
+
 	for _, conn := range userConnections {
 		if !conn.IsClosed() {
 			if conn.SendEvent(event) {
@@ -146,7 +146,7 @@ func (p *ConnectionPool) GetConnection(connectionID string) (*Connection, bool) 
 func (p *ConnectionPool) GetUserConnections(userID int) []*Connection {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
-	
+
 	userConnections := p.userConns[userID]
 	result := make([]*Connection, len(userConnections))
 	copy(result, userConnections)
@@ -163,7 +163,7 @@ func (p *ConnectionPool) CleanupStaleConnections(threshold time.Duration) {
 		}
 	}
 	p.mu.RUnlock()
-	
+
 	// Close stale connections
 	for _, conn := range staleConnections {
 		conn.Close()
@@ -182,14 +182,14 @@ func (p *ConnectionPool) IsEmpty() bool {
 func (p *ConnectionPool) Close() {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	
+
 	for _, conn := range p.connections {
 		conn.Close()
 	}
-	
+
 	p.connections = make(map[string]*Connection)
 	p.userConns = make(map[int][]*Connection)
-	
+
 	p.stats.mu.Lock()
 	p.stats.ActiveConnections = 0
 	p.stats.mu.Unlock()

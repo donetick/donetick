@@ -7,13 +7,13 @@ import (
 	"testing"
 	"time"
 
-	"donetick.com/core/internal/database"
-	"donetick.com/core/internal/storage"
 	chModel "donetick.com/core/internal/chore/model"
 	cModel "donetick.com/core/internal/circle/model"
+	"donetick.com/core/internal/database"
+	"donetick.com/core/internal/storage"
+	storageModel "donetick.com/core/internal/storage/model"
 	stModel "donetick.com/core/internal/subtask/model"
 	uModel "donetick.com/core/internal/user/model"
-	storageModel "donetick.com/core/internal/storage/model"
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
@@ -67,7 +67,7 @@ func NewMockDeletionService(db *gorm.DB, mockStor *mockStorage) *DeletionService
 func TestDeleteUserAccount_SimpleUser(t *testing.T) {
 	db := setupTestDeletionDB(t)
 	mockStor := &mockStorage{}
-	
+
 	service := NewMockDeletionService(db, mockStor)
 
 	// Insert test user using GORM model
@@ -146,7 +146,7 @@ func TestDeleteUserAccount_SimpleUser(t *testing.T) {
 func TestDeleteUserAccount_CircleOwner(t *testing.T) {
 	db := setupTestDeletionDB(t)
 	mockStor := &mockStorage{}
-	
+
 	service := NewMockDeletionService(db, mockStor)
 
 	now := time.Now()
@@ -262,7 +262,7 @@ func TestDeleteUserAccount_CircleOwner(t *testing.T) {
 func TestDeleteUserAccount_WithChores(t *testing.T) {
 	db := setupTestDeletionDB(t)
 	mockStor := &mockStorage{}
-	
+
 	service := NewMockDeletionService(db, mockStor)
 
 	now := time.Now()

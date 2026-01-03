@@ -24,6 +24,7 @@ var (
 type Config struct {
 	Name                   string              `mapstructure:"name" yaml:"name"`
 	Telegram               TelegramConfig      `mapstructure:"telegram" yaml:"telegram"`
+	Shoutrrr               ShoutrrrConfig      `mapstructure:"shoutrrr" yaml:"shoutrrr"`
 	Pushover               PushoverConfig      `mapstructure:"pushover" yaml:"pushover"`
 	Database               DatabaseConfig      `mapstructure:"database" yaml:"database"`
 	Jwt                    JwtConfig           `mapstructure:"jwt" yaml:"jwt"`
@@ -82,6 +83,10 @@ type FeatureLimitsConfig struct {
 
 type TelegramConfig struct {
 	Token string `mapstructure:"token" yaml:"token"`
+}
+
+type ShoutrrrConfig struct {
+	ShoutrrrUrl string `mapstructure:"url" yaml:"url"`
 }
 
 type PushoverConfig struct {

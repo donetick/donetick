@@ -2910,6 +2910,7 @@ func (h *Handler) updateTimer(c *gin.Context) {
 // shouldRotate determines if enough completions have occurred to trigger assignee rotation.
 // It counts consecutive completions by the current assignee and compares against RotateEvery threshold.
 // Only completed chores count toward the rotation threshold (skipped chores don't count).
+// Note: This is called BEFORE the current completion is saved to history, so we add 1 to account for it.
 func shouldRotate(chore *chModel.Chore, history []*chModel.ChoreHistory) bool {
 	if chore.AssignedTo == nil || chore.RotateEvery == nil || *chore.RotateEvery <= 0 {
 		return true // Always rotate if no threshold set or no current assignee
@@ -2933,9 +2934,9 @@ func shouldRotate(chore *chModel.Chore, history []*chModel.ChoreHistory) bool {
 		}
 	}
 
-	// Rotate if we've reached or exceeded the threshold
-	// Note: we use >= because the current completion (about to happen) will be the Nth one
-	return consecutiveCount >= *chore.RotateEvery
+	// Add 1 to account for the current completion that's about to happen
+	// Rotate if we've reached the threshold
+	return (consecutiveCount + 1) >= *chore.RotateEvery
 }
 
 func checkNextAssignee(chore *chModel.Chore, choresHistory []*chModel.ChoreHistory, performerID int) (int, error) {

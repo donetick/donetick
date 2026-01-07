@@ -55,6 +55,7 @@ type Chore struct {
 	AssignedTo             *int                  `json:"assignedTo" gorm:"column:assigned_to"`                              // Who the chore is assigned to
 	Assignees              []ChoreAssignees      `json:"assignees" gorm:"foreignkey:ChoreID;references:ID"`                 // Assignees of the chore
 	AssignStrategy         AssignmentStrategy    `json:"assignStrategy" gorm:"column:assign_strategy"`                      // How the chore is assigned
+	RotateEvery            *int                  `json:"rotateEvery,omitempty" gorm:"column:rotate_every"`                   // Number of completions before rotating assignee (nil or 0 = rotate every time)
 	IsActive               bool                  `json:"isActive" gorm:"column:is_active"`                                  // Whether the chore is active
 	Notification           bool                  `json:"notification" gorm:"column:notification"`                           // Whether the chore has notification
 	NotificationMetadata   *string               `json:"-" gorm:"column:notification_meta"`                                 // TODO: Clean up after v0.1.39
@@ -216,6 +217,7 @@ type ChoreReq struct {
 	DueDate              string                `json:"dueDate"`
 	Assignees            []ChoreAssignees      `json:"assignees"`
 	AssignStrategy       AssignmentStrategy    `json:"assignStrategy" binding:"required"`
+	RotateEvery          *int                  `json:"rotateEvery,omitempty"`
 	AssignedTo           *int                  `json:"assignedTo"`
 	IsRolling            bool                  `json:"isRolling"`
 	IsActive             bool                  `json:"isActive"`

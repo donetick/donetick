@@ -252,6 +252,7 @@ func (h *Handler) createChore(c *gin.Context) {
 		FrequencyMetadataV2:    choreReq.FrequencyMetadata,
 		NextDueDate:            dueDate,
 		AssignStrategy:         choreReq.AssignStrategy,
+		RotateEvery:            choreReq.RotateEvery,
 		AssignedTo:             choreReq.AssignedTo,
 		IsRolling:              choreReq.IsRolling,
 		UpdatedBy:              currentUser.ID,
@@ -530,6 +531,7 @@ func (h *Handler) editChore(c *gin.Context) {
 		// Assignees:         &assignees,
 		NextDueDate:            dueDate,
 		AssignStrategy:         choreReq.AssignStrategy,
+		RotateEvery:            choreReq.RotateEvery,
 		AssignedTo:             choreReq.AssignedTo,
 		IsRolling:              choreReq.IsRolling,
 		IsActive:               choreReq.IsActive,
@@ -2905,6 +2907,38 @@ func (h *Handler) updateTimer(c *gin.Context) {
 	})
 }
 
+// shouldRotate determines if enough completions have occurred to trigger assignee rotation.
+// It counts consecutive completions by the current assignee and compares against RotateEvery threshold.
+// Only completed chores count toward the rotation threshold (skipped chores don't count).
+// Note: This is called BEFORE the current completion is saved to history, so we add 1 to account for it.
+func shouldRotate(chore *chModel.Chore, history []*chModel.ChoreHistory) bool {
+	if chore.AssignedTo == nil || chore.RotateEvery == nil || *chore.RotateEvery <= 0 {
+		return true // Always rotate if no threshold set or no current assignee
+	}
+
+	// Count consecutive completions by current assignee since last rotation
+	// History is ordered most recent first
+	consecutiveCount := 0
+	for _, h := range history {
+		// Only count completed chores (not skipped, pending, etc.)
+		if h.Status != chModel.ChoreHistoryStatusCompleted {
+			continue
+		}
+		// Check if this completion was by the current assignee
+		if h.AssignedTo != nil && *h.AssignedTo == *chore.AssignedTo {
+			consecutiveCount++
+		} else {
+			// Different assignee found, stop counting
+			// This means we've reached the point of last rotation
+			break
+		}
+	}
+
+	// Add 1 to account for the current completion that's about to happen
+	// Rotate if we've reached the threshold
+	return (consecutiveCount + 1) >= *chore.RotateEvery
+}
+
 func checkNextAssignee(chore *chModel.Chore, choresHistory []*chModel.ChoreHistory, performerID int) (int, error) {
 	// copy the history to avoid modifying the original:
 	history := make([]*chModel.ChoreHistory, len(choresHistory))
@@ -2920,6 +2954,18 @@ func checkNextAssignee(chore *chModel.Chore, choresHistory []*chModel.ChoreHisto
 		history = append(history, &chModel.ChoreHistory{
 			AssignedTo: &performerID,
 		})
+	}
+
+	// Check if we should rotate based on RotateEvery threshold
+	// This applies to strategies that actually rotate (not keep_last_assigned or no_assignee)
+	if chore.RotateEvery != nil && *chore.RotateEvery > 0 {
+		if !shouldRotate(chore, history) {
+			// Keep current assignee - not enough completions yet
+			if chore.AssignedTo != nil {
+				return *chore.AssignedTo, nil
+			}
+			return performerID, nil
+		}
 	}
 
 	switch chore.AssignStrategy {

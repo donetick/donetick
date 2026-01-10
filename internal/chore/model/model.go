@@ -207,6 +207,7 @@ type ChoreLiteReq struct {
 	ID          int     `json:"id"`
 	DueDate     string  `json:"dueDate"`
 	CreatedBy   *int    `json:"createdBy"`
+	SubTasks    *[]stModel.SubTask `json:"subTasks,omitempty"`
 }
 
 type ChoreReq struct {

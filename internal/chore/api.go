@@ -116,16 +116,62 @@ func (h *API) CreateChore(c *gin.Context) {
 		}
 	}
 
+	// Build assignees list
+	var assignees []chModel.ChoreAssignees
+	var assignedTo *int
+
+	if len(choreRequest.Assignees) > 0 {
+		// Validate all assignees are circle members
+		for _, assignee := range choreRequest.Assignees {
+			isCircleMember := false
+			for _, cu := range circleUsers {
+				if assignee.UserID == cu.UserID {
+					isCircleMember = true
+					break
+				}
+			}
+			if !isCircleMember {
+				log.Debugw("chore.api.CreateChore assignee not in circle", "userID", assignee.UserID)
+				c.JSON(400, gin.H{"error": "Assignee not found in circle"})
+				return
+			}
+			assignees = append(assignees, chModel.ChoreAssignees{UserID: assignee.UserID})
+		}
+
+		// Handle AssignedTo
+		if choreRequest.AssignedTo != nil {
+			// Validate AssignedTo is in the assignees list
+			isInAssignees := false
+			for _, assignee := range choreRequest.Assignees {
+				if assignee.UserID == *choreRequest.AssignedTo {
+					isInAssignees = true
+					break
+				}
+			}
+			if !isInAssignees {
+				c.JSON(400, gin.H{"error": "AssignedTo must be one of the assignees"})
+				return
+			}
+			assignedTo = choreRequest.AssignedTo
+		} else {
+			// Default to first assignee
+			assignedTo = &choreRequest.Assignees[0].UserID
+		}
+	} else {
+		// Default: creator is sole assignee
+		assignees = []chModel.ChoreAssignees{{UserID: createdBy}}
+		assignedTo = &createdBy
+	}
+
 	chore := &chModel.Chore{
-		CreatedBy:     createdBy,
-		CircleID:      user.CircleID,
-		Name:          choreRequest.Name,
-		IsActive:      true,
-		FrequencyType: chModel.FrequencyTypeOnce,
-		// Frequency:                choreRequest.Frequency,
+		CreatedBy:      createdBy,
+		CircleID:       user.CircleID,
+		Name:           choreRequest.Name,
+		IsActive:       true,
+		FrequencyType:  chModel.FrequencyTypeOnce,
 		AssignStrategy: chModel.AssignmentStrategyRandom,
-		AssignedTo:     &createdBy,
-		Assignees:      []chModel.ChoreAssignees{{UserID: createdBy}},
+		AssignedTo:     assignedTo,
+		Assignees:      assignees,
 		Description:    choreRequest.Description,
 		NextDueDate:    nextDueDate,
 		CreatedAt:      time.Now().UTC(),
@@ -219,13 +265,98 @@ func (h *API) UpdateChore(c *gin.Context) {
 		nextDueDate = &parsedDate
 	}
 
-	// Update only name and due date
+	// Update basic fields
 	updates := map[string]interface{}{
 		"name":          choreRequest.Name,
 		"description":   choreRequest.Description,
 		"next_due_date": nextDueDate,
 		"updated_by":    user.ID,
 		"updated_at":    time.Now().UTC(),
+	}
+
+	// Handle assignees if provided
+	if len(choreRequest.Assignees) > 0 {
+		// Validate all assignees are circle members
+		for _, assignee := range choreRequest.Assignees {
+			isCircleMember := false
+			for _, cu := range circleUsers {
+				if assignee.UserID == cu.UserID {
+					isCircleMember = true
+					break
+				}
+			}
+			if !isCircleMember {
+				log.Debugw("chore.api.UpdateChore assignee not in circle", "userID", assignee.UserID)
+				c.JSON(400, gin.H{"error": "Assignee not found in circle"})
+				return
+			}
+		}
+
+		// Get existing assignees
+		existingAssignees, err := h.choreRepo.GetChoreAssignees(c, choreID)
+		if err != nil {
+			log.Errorw("chore.api.UpdateChore failed to get existing assignees", "error", err)
+			c.JSON(500, gin.H{"error": "Failed to get existing assignees"})
+			return
+		}
+
+		// Build maps for diffing
+		existingMap := make(map[int]*chModel.ChoreAssignees)
+		for _, ea := range existingAssignees {
+			existingMap[ea.UserID] = ea
+		}
+		requestedMap := make(map[int]bool)
+		for _, ra := range choreRequest.Assignees {
+			requestedMap[ra.UserID] = true
+		}
+
+		// Find assignees to add
+		var toAdd []*chModel.ChoreAssignees
+		for _, ra := range choreRequest.Assignees {
+			if _, exists := existingMap[ra.UserID]; !exists {
+				toAdd = append(toAdd, &chModel.ChoreAssignees{
+					ChoreID: choreID,
+					UserID:  ra.UserID,
+				})
+			}
+		}
+
+		// Find assignees to remove
+		var toRemove []*chModel.ChoreAssignees
+		for _, ea := range existingAssignees {
+			if !requestedMap[ea.UserID] {
+				toRemove = append(toRemove, ea)
+			}
+		}
+
+		// Apply assignee changes
+		if len(toAdd) > 0 {
+			if err := h.choreRepo.UpdateChoreAssignees(c, toAdd); err != nil {
+				log.Errorw("chore.api.UpdateChore failed to add assignees", "error", err)
+				c.JSON(500, gin.H{"error": "Failed to add assignees"})
+				return
+			}
+		}
+		if len(toRemove) > 0 {
+			if err := h.choreRepo.DeleteChoreAssignees(c, toRemove); err != nil {
+				log.Errorw("chore.api.UpdateChore failed to remove assignees", "error", err)
+				c.JSON(500, gin.H{"error": "Failed to remove assignees"})
+				return
+			}
+		}
+
+		// Handle AssignedTo
+		if choreRequest.AssignedTo != nil {
+			// Validate AssignedTo is in the new assignees list
+			if !requestedMap[*choreRequest.AssignedTo] {
+				c.JSON(400, gin.H{"error": "AssignedTo must be one of the assignees"})
+				return
+			}
+			updates["assigned_to"] = *choreRequest.AssignedTo
+		} else if existingChore.AssignedTo != nil && !requestedMap[*existingChore.AssignedTo] {
+			// Current AssignedTo was removed, set to first new assignee
+			updates["assigned_to"] = choreRequest.Assignees[0].UserID
+		}
 	}
 
 	err = h.choreRepo.UpdateChoreFields(c, choreID, updates)

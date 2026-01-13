@@ -202,13 +202,19 @@ type ChoreLabels struct {
 	Label   Label
 }
 type ChoreLiteReq struct {
-	Name        string           `json:"name" binding:"required"`
-	Description *string          `json:"description"`
-	ID          int              `json:"id"`
-	DueDate     string           `json:"dueDate"`
-	CreatedBy   *int             `json:"createdBy"`
-	Assignees   []ChoreAssignees `json:"assignees"`
-	AssignedTo  *int             `json:"assignedTo"`
+	Name              string              `json:"name" binding:"required"`
+	Description       *string             `json:"description"`
+	ID                int                 `json:"id"`
+	DueDate           string              `json:"dueDate"`
+	CreatedBy         *int                `json:"createdBy"`
+	Assignees         []ChoreAssignees    `json:"assignees"`
+	AssignedTo        *int                `json:"assignedTo"`
+	FrequencyType     FrequencyType       `json:"frequencyType"`
+	Frequency         int                 `json:"frequency"`
+	FrequencyMetadata *FrequencyMetadata  `json:"frequencyMetadata"`
+	IsRolling         bool                `json:"isRolling"`
+	AssignStrategy    *AssignmentStrategy `json:"assignStrategy"`
+	Points            *int                `json:"points"`
 }
 
 type ChoreReq struct {

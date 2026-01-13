@@ -163,18 +163,34 @@ func (h *API) CreateChore(c *gin.Context) {
 		assignedTo = &createdBy
 	}
 
+	// Set frequency type (default to "once" if not provided)
+	frequencyType := choreRequest.FrequencyType
+	if frequencyType == "" {
+		frequencyType = chModel.FrequencyTypeOnce
+	}
+
+	// Set assign strategy (default to "random" if not provided)
+	assignStrategy := chModel.AssignmentStrategyRandom
+	if choreRequest.AssignStrategy != nil {
+		assignStrategy = *choreRequest.AssignStrategy
+	}
+
 	chore := &chModel.Chore{
-		CreatedBy:      createdBy,
-		CircleID:       user.CircleID,
-		Name:           choreRequest.Name,
-		IsActive:       true,
-		FrequencyType:  chModel.FrequencyTypeOnce,
-		AssignStrategy: chModel.AssignmentStrategyRandom,
-		AssignedTo:     assignedTo,
-		Assignees:      assignees,
-		Description:    choreRequest.Description,
-		NextDueDate:    nextDueDate,
-		CreatedAt:      time.Now().UTC(),
+		CreatedBy:           createdBy,
+		CircleID:            user.CircleID,
+		Name:                choreRequest.Name,
+		IsActive:            true,
+		FrequencyType:       frequencyType,
+		Frequency:           choreRequest.Frequency,
+		FrequencyMetadataV2: choreRequest.FrequencyMetadata,
+		IsRolling:           choreRequest.IsRolling,
+		AssignStrategy:      assignStrategy,
+		AssignedTo:          assignedTo,
+		Assignees:           assignees,
+		Description:         choreRequest.Description,
+		NextDueDate:         nextDueDate,
+		Points:              choreRequest.Points,
+		CreatedAt:           time.Now().UTC(),
 	}
 
 	id, err := h.choreRepo.CreateChore(c, chore)
@@ -272,6 +288,24 @@ func (h *API) UpdateChore(c *gin.Context) {
 		"next_due_date": nextDueDate,
 		"updated_by":    user.ID,
 		"updated_at":    time.Now().UTC(),
+	}
+
+	// Update frequency fields if provided
+	if choreRequest.FrequencyType != "" {
+		updates["frequency_type"] = choreRequest.FrequencyType
+		updates["frequency"] = choreRequest.Frequency
+		updates["frequency_meta_v2"] = choreRequest.FrequencyMetadata
+		updates["is_rolling"] = choreRequest.IsRolling
+	}
+
+	// Update assign strategy if provided
+	if choreRequest.AssignStrategy != nil {
+		updates["assign_strategy"] = *choreRequest.AssignStrategy
+	}
+
+	// Update points if provided
+	if choreRequest.Points != nil {
+		updates["points"] = *choreRequest.Points
 	}
 
 	// Handle assignees if provided

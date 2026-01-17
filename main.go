@@ -9,14 +9,11 @@ import (
 	"time"
 
 	"donetick.com/core/config"
+	"donetick.com/core/docs"
 	"donetick.com/core/external/payment"
+	sRepo "donetick.com/core/external/payment/repo"
+	sService "donetick.com/core/external/payment/service"
 	"donetick.com/core/frontend"
-	"donetick.com/core/migrations"
-	"github.com/gin-contrib/cors"
-	"github.com/gin-gonic/gin"
-	"go.uber.org/fx"
-	"gorm.io/gorm"
-
 	auth "donetick.com/core/internal/auth"
 	"donetick.com/core/internal/auth/apple"
 	"donetick.com/core/internal/chore"
@@ -31,13 +28,6 @@ import (
 	label "donetick.com/core/internal/label"
 	lRepo "donetick.com/core/internal/label/repo"
 	"donetick.com/core/internal/mfa"
-	"donetick.com/core/internal/resource"
-	"donetick.com/core/internal/storage"
-	storageRepo "donetick.com/core/internal/storage/repo"
-	spRepo "donetick.com/core/internal/subtask/repo"
-
-	sRepo "donetick.com/core/external/payment/repo"
-	sService "donetick.com/core/external/payment/service"
 	notifier "donetick.com/core/internal/notifier"
 	nRepo "donetick.com/core/internal/notifier/repo"
 	nps "donetick.com/core/internal/notifier/service"
@@ -47,13 +37,32 @@ import (
 	telegram "donetick.com/core/internal/notifier/service/telegram"
 	pRepo "donetick.com/core/internal/points/repo"
 	"donetick.com/core/internal/realtime"
+	"donetick.com/core/internal/resource"
+	"donetick.com/core/internal/storage"
+	storageRepo "donetick.com/core/internal/storage/repo"
+	spRepo "donetick.com/core/internal/subtask/repo"
 	"donetick.com/core/internal/thing"
 	tRepo "donetick.com/core/internal/thing/repo"
 	"donetick.com/core/internal/user"
 	uRepo "donetick.com/core/internal/user/repo"
 	"donetick.com/core/internal/utils"
 	"donetick.com/core/logging"
+	"donetick.com/core/migrations"
+	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
+	"go.uber.org/fx"
+	"gorm.io/gorm"
 )
+
+// gin-swagger middleware
+// swagger embed files
+// gin-swagger middleware
+// swagger embed files
+
+// gin-swagger middleware
+// swagger embed files
 
 func main() {
 	// Load configuration first
@@ -65,7 +74,6 @@ func main() {
 		cfg.Logging.Encoding,
 		cfg.Logging.Development,
 	)
-
 	app := fx.New(
 		fx.Supply(cfg),
 		fx.Supply(logging.DefaultLogger().Desugar()),
@@ -183,6 +191,13 @@ func main() {
 		),
 	)
 
+	docs.SwaggerInfo.Title = "Swagger Example API"
+	docs.SwaggerInfo.Description = "Example Donetick swagger documentation."
+	docs.SwaggerInfo.Version = "1.0"
+	docs.SwaggerInfo.Host = "localhost:2021"
+	docs.SwaggerInfo.BasePath = "/api/v1"
+	docs.SwaggerInfo.Schemes = []string{"http"}
+
 	if err := app.Err(); err != nil {
 		log.Fatal(err)
 	}
@@ -202,6 +217,7 @@ func newServer(lc fx.Lifecycle, cfg *config.Config, db *gorm.DB, notifier *notif
 	// log when http request is made:
 
 	r := gin.New()
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.Server.Port),
 		Handler:      r,

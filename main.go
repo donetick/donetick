@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -56,13 +57,9 @@ import (
 	"gorm.io/gorm"
 )
 
-// gin-swagger middleware
-// swagger embed files
-// gin-swagger middleware
-// swagger embed files
-
-// gin-swagger middleware
-// swagger embed files
+//	@securityDefinitions.apikey	ApiKeyAuth
+//	@in							header
+//	@name						Authorization
 
 func main() {
 	// Load configuration first
@@ -191,10 +188,10 @@ func main() {
 		),
 	)
 
-	docs.SwaggerInfo.Title = "Swagger Example API"
-	docs.SwaggerInfo.Description = "Example Donetick swagger documentation."
+	docs.SwaggerInfo.Title = "Donetick Swagger API"
+	docs.SwaggerInfo.Description = "Donetick swagger documentation."
 	docs.SwaggerInfo.Version = "1.0"
-	docs.SwaggerInfo.Host = "localhost:2021"
+	docs.SwaggerInfo.Host = "localhost" + ":" + strconv.Itoa(cfg.Server.Port) //TODO include public addr. and proper localhost.
 	docs.SwaggerInfo.BasePath = "/api/v1"
 	docs.SwaggerInfo.Schemes = []string{"http"}
 

@@ -3090,6 +3090,13 @@ const docTemplate = `{
                 "WeekPatternWeekOfQuarter"
             ]
         }
+    },
+    "securityDefinitions": {
+        "ApiKeyAuth": {
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        }
     }
 }`
 

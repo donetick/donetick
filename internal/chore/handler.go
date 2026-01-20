@@ -987,7 +987,7 @@ func (h *Handler) updateAssignee(c *gin.Context) {
 // StartChore godoc
 // @Summary Start a chore timer
 // @Description Starts or resumes a chore timer session (supports impersonation)
-// @Tags chores,timer
+// @Tags chores
 // @Accept json
 // @Produce json
 // @Security Bearer
@@ -1117,7 +1117,7 @@ func (h *Handler) startChore(c *gin.Context) {
 // PauseChore godoc
 // @Summary Pause a chore timer
 // @Description Pauses an active chore timer session (supports impersonation)
-// @Tags chores,timer
+// @Tags chores
 // @Accept json
 // @Produce json
 // @Security Bearer
@@ -1232,7 +1232,7 @@ func (h *Handler) pauseChore(c *gin.Context) {
 // ResetChoreTimer godoc
 // @Summary Reset chore timer
 // @Description Resets the chore timer to zero and starts a new session
-// @Tags chores,timer
+// @Tags chores
 // @Accept json
 // @Produce json
 // @Security Bearer
@@ -1963,7 +1963,7 @@ func authorizeChoreCompletionForUser(h *Handler, c *gin.Context, currentUser *uM
 // GetChoreHistory godoc
 // @Summary Get chore history
 // @Description Retrieves the completion history for a specific chore
-// @Tags chores,history
+// @Tags chores
 // @Accept json
 // @Produce json
 // @Security Bearer
@@ -2046,7 +2046,7 @@ func (h *Handler) GetChoreDetail(c *gin.Context) {
 // ModifyHistory godoc
 // @Summary Modify chore history entry
 // @Description Updates a specific chore history entry (performed date, due date, notes)
-// @Tags chores,history
+// @Tags chores
 // @Accept json
 // @Produce json
 // @Security Bearer
@@ -2237,7 +2237,7 @@ func (h *Handler) updatePriority(c *gin.Context) {
 // GetChoresHistory godoc
 // @Summary Get chores history for user
 // @Description Retrieves completion history for all chores for the current user
-// @Tags chores,history
+// @Tags chores
 // @Accept json
 // @Produce json
 // @Security Bearer
@@ -2293,7 +2293,7 @@ func (h *Handler) getChoresHistory(c *gin.Context) {
 // DeleteHistory godoc
 // @Summary Delete chore history entry
 // @Description Deletes a specific chore history entry (creator only)
-// @Tags chores,history
+// @Tags chores
 // @Accept json
 // @Produce json
 // @Security Bearer
@@ -2366,7 +2366,7 @@ func (h *Handler) DeleteHistory(c *gin.Context) {
 // UpdateSubtaskCompletedAt godoc
 // @Summary Update subtask completion status
 // @Description Marks a subtask as completed or uncompleted (supports impersonation)
-// @Tags chores,subtasks
+// @Tags chores
 // @Accept json
 // @Produce json
 // @Security Bearer
@@ -2488,7 +2488,7 @@ func (h *Handler) UpdateSubtaskCompletedAt(c *gin.Context) {
 // GetChoreTimeSessions godoc
 // @Summary Get chore time sessions
 // @Description Retrieves all time tracking sessions for a chore
-// @Tags chores,timer
+// @Tags chores
 // @Accept json
 // @Produce json
 // @Security Bearer
@@ -2582,7 +2582,7 @@ func (h *Handler) GetChoreTimeSessions(c *gin.Context) {
 // UpdateTimeSession godoc
 // @Summary Update a time session
 // @Description Updates start time, end time, or pause log for a time session
-// @Tags chores,timer
+// @Tags chores
 // @Accept json
 // @Produce json
 // @Security Bearer
@@ -2711,7 +2711,7 @@ func (h *Handler) UpdateTimeSession(c *gin.Context) {
 // DeleteTimeSession godoc
 // @Summary Delete a time session
 // @Description Deletes a specific time tracking session
-// @Tags chores,timer
+// @Tags chores
 // @Accept json
 // @Produce json
 // @Security Bearer
@@ -2816,7 +2816,7 @@ func (h *Handler) DeleteTimeSession(c *gin.Context) {
 // ApproveChore godoc
 // @Summary Approve a chore completion
 // @Description Approves a pending chore completion (admin/manager only)
-// @Tags chores,approval
+// @Tags chores
 // @Accept json
 // @Produce json
 // @Security Bearer
@@ -2994,7 +2994,7 @@ func (h *Handler) approveChore(c *gin.Context) {
 // RejectChore godoc
 // @Summary Reject a chore completion
 // @Description Rejects a pending chore completion and returns it to no status (admin/manager only)
-// @Tags chores,approval
+// @Tags chores
 // @Accept json
 // @Produce json
 // @Security Bearer
@@ -3219,7 +3219,7 @@ func (h *Handler) updateChoreStatus(c *gin.Context) {
 // UpdateTimer godoc
 // @Summary Update chore timer duration
 // @Description Manually updates the timer duration for a chore
-// @Tags chores,timer
+// @Tags chores
 // @Accept json
 // @Produce json
 // @Security Bearer
@@ -3468,7 +3468,7 @@ type NudgeRequest struct {
 // SendNudgeNotification godoc
 // @Summary Send a nudge notification
 // @Description Sends a reminder notification to chore assignee(s)
-// @Tags chores,notifications
+// @Tags chores
 // @Accept json
 // @Produce json
 // @Security Bearer

@@ -3659,7 +3659,7 @@ func (h *Handler) sendNudgeToDevices(c context.Context, fcmTokens []string, titl
 func Routes(router *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware) {
 
 	choresRoutes := router.Group("api/v1/chores")
-	choresRoutes.Use(auth.MiddlewareFunc())
+	choresRoutes.Use(authMiddleware.JWTOrAPIKeyMiddleware(auth, h.uRepo))
 	choresRoutes.Use(authMiddleware.ImpersonationMiddleware(h.uRepo, h.circleRepo))
 	{
 		choresRoutes.GET("/", h.getChores)

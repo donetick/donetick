@@ -87,7 +87,7 @@ func NewHandler(cr *chRepo.ChoreRepository, circleRepo *cRepo.CircleRepository, 
 // @Tags chores
 // @Accept json
 // @Produce json
-// @Security Bearer
+// @Security JWTKeyAuth
 // @Param includeArchived query boolean false "Include archived chores"
 // @Success 200 {object} map[string][]model.Chore "res: array of chores"
 // @Failure 401 {object} map[string]string "error: Authentication failed"
@@ -129,7 +129,7 @@ func (h *Handler) getChores(c *gin.Context) {
 // @Tags chores
 // @Accept json
 // @Produce json
-// @Security Bearer
+// @Security JWTKeyAuth
 // @Success 200 {object} map[string][]model.Chore "res: array of archived chores"
 // @Failure 401 {object} map[string]string "error: Authentication failed"
 // @Failure 500 {object} map[string]string "error: Failed to retrieve archived chores"
@@ -164,7 +164,7 @@ func (h *Handler) getArchivedChores(c *gin.Context) {
 // @Tags chores
 // @Accept json
 // @Produce json
-// @Security Bearer
+// @Security JWTKeyAuth
 // @Param id path int true "Chore ID"
 // @Success 200 {object} map[string]model.Chore "res: chore object"
 // @Failure 400 {object} map[string]string "error: Invalid chore ID"
@@ -226,7 +226,7 @@ func (h *Handler) getChore(c *gin.Context) {
 // @Tags chores
 // @Accept json
 // @Produce json
-// @Security Bearer
+// @Security JWTKeyAuth
 // @Param chore body model.ChoreReq true "Chore creation request"
 // @Success 200 {object} map[string]int "res: created chore ID"
 // @Failure 400 {object} map[string]string "error: Invalid request format | Assignee not found in circle | Invalid date"
@@ -401,7 +401,7 @@ func (h *Handler) createChore(c *gin.Context) {
 // @Tags chores
 // @Accept json
 // @Produce json
-// @Security Bearer
+// @Security JWTKeyAuth
 // @Param chore body model.ChoreReq true "Chore update request"
 // @Success 200 {object} map[string]string "message: Chore added successfully"
 // @Failure 400 {object} map[string]string "error: Invalid request format | Invalid date | Assignee not found in circle | Assigned to not found in assignees"
@@ -777,7 +777,7 @@ func HandleThingAssociation(choreReq chModel.ChoreReq, savedChore *chModel.Chore
 // @Tags chores
 // @Accept json
 // @Produce json
-// @Security Bearer
+// @Security JWTKeyAuth
 // @Param id path int true "Chore ID"
 // @Success 200 {object} map[string]string "message: Chore deleted successfully"
 // @Failure 400 {object} map[string]string "error: Invalid ID"
@@ -874,7 +874,7 @@ func (h *Handler) deleteChore(c *gin.Context) {
 // @Tags chores
 // @Accept json
 // @Produce json
-// @Security Bearer
+// @Security JWTKeyAuth
 // @Param id path int true "Chore ID"
 // @Param assignee body object{assignee=int,updatedAt=string} true "Assignee update request"
 // @Success 200 {object} map[string]model.Chore "res: updated chore"
@@ -990,7 +990,7 @@ func (h *Handler) updateAssignee(c *gin.Context) {
 // @Tags chores
 // @Accept json
 // @Produce json
-// @Security Bearer
+// @Security JWTKeyAuth
 // @Param id path int true "Chore ID"
 // @Success 200 {object} map[string]interface{} "res: {timerUpdatedAt, status, duration}"
 // @Failure 400 {object} map[string]string "error: Invalid ID | Chore is not in a state that can be started"
@@ -1120,7 +1120,7 @@ func (h *Handler) startChore(c *gin.Context) {
 // @Tags chores
 // @Accept json
 // @Produce json
-// @Security Bearer
+// @Security JWTKeyAuth
 // @Param id path int true "Chore ID"
 // @Success 200 {object} map[string]interface{} "res: {duration, status, timerUpdatedAt}"
 // @Failure 400 {object} map[string]string "error: Invalid ID | No active time session found for this chore"
@@ -1235,7 +1235,7 @@ func (h *Handler) pauseChore(c *gin.Context) {
 // @Tags chores
 // @Accept json
 // @Produce json
-// @Security Bearer
+// @Security JWTKeyAuth
 // @Param id path int true "Chore ID"
 // @Success 200 {object} map[string]interface{} "res: {timerUpdatedAt, status, duration}"
 // @Failure 400 {object} map[string]string "error: Invalid ID | No active time session found for this chore"
@@ -1356,7 +1356,7 @@ func (h *Handler) ResetChoreTimer(c *gin.Context) {
 // @Tags chores
 // @Accept json
 // @Produce json
-// @Security Bearer
+// @Security JWTKeyAuth
 // @Param id path int true "Chore ID"
 // @Success 200 {object} map[string]model.Chore "res: updated chore"
 // @Failure 400 {object} map[string]string "error: Invalid ID"
@@ -1454,7 +1454,7 @@ func (h *Handler) skipChore(c *gin.Context) {
 // @Tags chores
 // @Accept json
 // @Produce json
-// @Security Bearer
+// @Security JWTKeyAuth
 // @Param id path int true "Chore ID"
 // @Param dueDate body object{dueDate=string,updatedAt=string} true "Due date update request"
 // @Success 200 {object} map[string]model.Chore "res: updated chore"
@@ -1568,7 +1568,7 @@ func (h *Handler) updateDueDate(c *gin.Context) {
 // @Tags chores
 // @Accept json
 // @Produce json
-// @Security Bearer
+// @Security JWTKeyAuth
 // @Param id path int true "Chore ID"
 // @Success 200 {object} map[string]string "message: Chore archived successfully"
 // @Failure 400 {object} map[string]string "error: Invalid ID"
@@ -1629,7 +1629,7 @@ func (h *Handler) archiveChore(c *gin.Context) {
 // @Tags chores
 // @Accept json
 // @Produce json
-// @Security Bearer
+// @Security JWTKeyAuth
 // @Param id path int true "Chore ID"
 // @Success 200 {object} map[string]string "message: Chore unarchived successfully"
 // @Failure 400 {object} map[string]string "error: Invalid ID"
@@ -1690,7 +1690,7 @@ func (h *Handler) UnarchiveChore(c *gin.Context) {
 // @Tags chores
 // @Accept json
 // @Produce json
-// @Security Bearer
+// @Security JWTKeyAuth
 // @Param id path int true "Chore ID"
 // @Param completedDate query string false "Completion date in RFC3339 format (defaults to now)"
 // @Param completion body object{note=string,completedBy=int} false "Completion details"
@@ -1966,7 +1966,7 @@ func authorizeChoreCompletionForUser(h *Handler, c *gin.Context, currentUser *uM
 // @Tags chores
 // @Accept json
 // @Produce json
-// @Security Bearer
+// @Security JWTKeyAuth
 // @Param id path int true "Chore ID"
 // @Success 200 {object} map[string][]model.ChoreHistory "res: array of chore history entries"
 // @Failure 400 {object} map[string]string "error: Invalid ID"
@@ -2002,7 +2002,7 @@ func (h *Handler) GetChoreHistory(c *gin.Context) {
 // @Tags chores
 // @Accept json
 // @Produce json
-// @Security Bearer
+// @Security JWTKeyAuth
 // @Param id path int true "Chore ID"
 // @Success 200 {object} map[string]interface{} "res: detailed chore information"
 // @Failure 400 {object} map[string]string "error: Invalid ID"
@@ -2049,7 +2049,7 @@ func (h *Handler) GetChoreDetail(c *gin.Context) {
 // @Tags chores
 // @Accept json
 // @Produce json
-// @Security Bearer
+// @Security JWTKeyAuth
 // @Param id path int true "Chore ID"
 // @Param history_id path int true "History ID"
 // @Param history body object{performedAt=string,dueDate=string,notes=string} true "History modification request"
@@ -2154,7 +2154,7 @@ func (h *Handler) ModifyHistory(c *gin.Context) {
 // @Tags chores
 // @Accept json
 // @Produce json
-// @Security Bearer
+// @Security JWTKeyAuth
 // @Param id path int true "Chore ID"
 // @Param priority body object{priority=int} true "Priority value (0-4)"
 // @Success 200 {object} map[string]string "message: Priority updated successfully"
@@ -2240,7 +2240,7 @@ func (h *Handler) updatePriority(c *gin.Context) {
 // @Tags chores
 // @Accept json
 // @Produce json
-// @Security Bearer
+// @Security JWTKeyAuth
 // @Param limit query int false "Number of days to retrieve history (default: 7)"
 // @Param members query boolean false "Include other circle members' history"
 // @Success 200 {object} map[string][]model.ChoreHistory "res: array of chore history entries"
@@ -2296,7 +2296,7 @@ func (h *Handler) getChoresHistory(c *gin.Context) {
 // @Tags chores
 // @Accept json
 // @Produce json
-// @Security Bearer
+// @Security JWTKeyAuth
 // @Param id path int true "Chore ID"
 // @Param history_id path int true "History ID"
 // @Success 200 {object} map[string]string "message: History deleted successfully"
@@ -2369,7 +2369,7 @@ func (h *Handler) DeleteHistory(c *gin.Context) {
 // @Tags chores
 // @Accept json
 // @Produce json
-// @Security Bearer
+// @Security JWTKeyAuth
 // @Param id path int true "Chore ID"
 // @Param subtask body object{id=int,choreId=int,completedAt=string} true "Subtask completion request"
 // @Success 200 {object} map[string]interface{} "Empty success response"
@@ -2491,7 +2491,7 @@ func (h *Handler) UpdateSubtaskCompletedAt(c *gin.Context) {
 // @Tags chores
 // @Accept json
 // @Produce json
-// @Security Bearer
+// @Security JWTKeyAuth
 // @Param id path int true "Chore ID"
 // @Param choreHistoryId query int false "Filter by specific history ID"
 // @Success 200 {object} map[string][]model.TimeSession "res: array of time sessions"
@@ -2585,7 +2585,7 @@ func (h *Handler) GetChoreTimeSessions(c *gin.Context) {
 // @Tags chores
 // @Accept json
 // @Produce json
-// @Security Bearer
+// @Security JWTKeyAuth
 // @Param id path int true "Chore ID"
 // @Param session_id path int true "Session ID"
 // @Param session body object{startTime=string,endTime=string,pauseLog=array} true "Time session update request"
@@ -2714,7 +2714,7 @@ func (h *Handler) UpdateTimeSession(c *gin.Context) {
 // @Tags chores
 // @Accept json
 // @Produce json
-// @Security Bearer
+// @Security JWTKeyAuth
 // @Param id path int true "Chore ID"
 // @Param session_id path int true "Session ID"
 // @Success 200 {object} map[string]string "message: Time session deleted successfully"
@@ -2819,7 +2819,7 @@ func (h *Handler) DeleteTimeSession(c *gin.Context) {
 // @Tags chores
 // @Accept json
 // @Produce json
-// @Security Bearer
+// @Security JWTKeyAuth
 // @Param id path int true "Chore ID"
 // @Success 200 {object} map[string]model.Chore "res: updated chore"
 // @Failure 400 {object} map[string]string "error: Invalid ID | Chore is not pending approval"
@@ -2997,7 +2997,7 @@ func (h *Handler) approveChore(c *gin.Context) {
 // @Tags chores
 // @Accept json
 // @Produce json
-// @Security Bearer
+// @Security JWTKeyAuth
 // @Param id path int true "Chore ID"
 // @Param rejection body object{note=string} false "Rejection details"
 // @Success 200 {object} map[string]interface{} "res: updated chore, message: Chore rejected successfully"
@@ -3120,7 +3120,7 @@ func (h *Handler) rejectChore(c *gin.Context) {
 // @Tags chores
 // @Accept json
 // @Produce json
-// @Security Bearer
+// @Security JWTKeyAuth
 // @Param id path int true "Chore ID"
 // @Param status body object{status=string,updatedAt=string} true "Status update request"
 // @Success 200 {object} map[string]string "message: Chore status updated successfully"
@@ -3222,7 +3222,7 @@ func (h *Handler) updateChoreStatus(c *gin.Context) {
 // @Tags chores
 // @Accept json
 // @Produce json
-// @Security Bearer
+// @Security JWTKeyAuth
 // @Param id path int true "Chore ID"
 // @Param timer body object{duration=int,updatedAt=string} true "Timer update request"
 // @Success 200 {object} map[string]string "message: Chore timer updated successfully"
@@ -3471,7 +3471,7 @@ type NudgeRequest struct {
 // @Tags chores
 // @Accept json
 // @Produce json
-// @Security Bearer
+// @Security JWTKeyAuth
 // @Param id path int true "Chore ID"
 // @Param nudge body object{all_assignees=boolean,message=string} true "Nudge request"
 // @Success 200 {object} map[string]interface{} "message: Nudge sent status"

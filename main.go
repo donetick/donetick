@@ -57,7 +57,7 @@ import (
 	"gorm.io/gorm"
 )
 
-//	@securityDefinitions.apikey	ApiKeyAuth
+//  @securityDefinitions.apikey JWTKeyAuth
 //	@in							header
 //	@name						Authorization
 

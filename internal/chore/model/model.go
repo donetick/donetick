@@ -203,7 +203,7 @@ type ChoreLiteReq struct {
 
 type ChoreReq struct {
 	Name                 string                `json:"name" binding:"required"`
-	FrequencyType        FrequencyType         `json:"frequencyType" binding:`
+	FrequencyType        FrequencyType         `json:"frequencyType" binding:"required"`
 	ID                   int                   `json:"id"`
 	DueDate              string                `json:"dueDate"`
 	Assignees            []ChoreAssignees      `json:"assignees"`

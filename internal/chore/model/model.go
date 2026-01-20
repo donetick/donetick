@@ -60,7 +60,7 @@ type Chore struct {
 	NotificationMetadata   *string               `json:"-" gorm:"column:notification_meta"`                                 // TODO: Clean up after v0.1.39
 	NotificationMetadataV2 *NotificationMetadata `json:"notificationMetadata" gorm:"column:notification_meta_v2;type:json"` // Additional notification information
 	Labels                 *string               `json:"labels" gorm:"column:labels"`                                       // Labels for the chore
-	LabelsV2               *[]Label              `json:"labelsV2" gorm:"many2many:chore_labels"`                            // Labels for the chore
+	LabelsV2               *[]lModel.Label       `json:"labelsV2" gorm:"many2many:chore_labels"`                            // Labels for the chore
 	CircleID               int                   `json:"circleId" gorm:"column:circle_id;index"`                            // The circle this chore is in
 	CreatedAt              time.Time             `json:"createdAt" gorm:"column:created_at"`                                // When the chore was created
 	UpdatedAt              time.Time             `json:"updatedAt" gorm:"column:updated_at"`                                // When the chore was last updated
@@ -187,19 +187,11 @@ type ChoreDetail struct {
 	DeadlineOffset      *int               `json:"deadlineOffset,omitempty"`
 }
 
-type Label struct {
-	ID        int    `json:"id" gorm:"primary_key"`
-	Name      string `json:"name" gorm:"column:name"`
-	Color     string `json:"color" gorm:"column:color"`
-	CircleID  *int   `json:"-" gorm:"column:circle_id"`
-	CreatedBy int    `json:"created_by" gorm:"column:created_by"`
-}
-
 type ChoreLabels struct {
 	ChoreID int `json:"choreId" gorm:"primaryKey;autoIncrement:false;not null"`
 	LabelID int `json:"labelId" gorm:"primaryKey;autoIncrement:false;not null"`
 	UserID  int `json:"userId" gorm:"primaryKey;autoIncrement:false;not null"`
-	Label   Label
+	Label   lModel.Label
 }
 type ChoreLiteReq struct {
 	Name        string  `json:"name" binding:"required"`
@@ -211,7 +203,7 @@ type ChoreLiteReq struct {
 
 type ChoreReq struct {
 	Name                 string                `json:"name" binding:"required"`
-	FrequencyType        FrequencyType         `json:"frequencyType"`
+	FrequencyType        FrequencyType         `json:"frequencyType" binding:`
 	ID                   int                   `json:"id"`
 	DueDate              string                `json:"dueDate"`
 	Assignees            []ChoreAssignees      `json:"assignees"`

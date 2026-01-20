@@ -60,7 +60,7 @@ import (
 //  @securityDefinitions.apikey JWTKeyAuth
 //	@in							header
 //	@name						Authorization
-// @description Type "Bearer" followed by a space and JWT token.
+//  @description Type "Bearer" followed by a space and JWT token.
 
 func main() {
 	// Load configuration first

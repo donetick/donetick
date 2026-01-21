@@ -3,6 +3,7 @@ package config
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -268,6 +269,7 @@ func NewConfig() *Config {
 
 	return config
 }
+
 func configEnvironmentOverrides(Config *Config) {
 	if os.Getenv("DONETICK_TELEGRAM_TOKEN") != "" {
 		Config.Telegram.Token = os.Getenv("DONETICK_TELEGRAM_TOKEN")
@@ -291,8 +293,10 @@ func configEnvironmentOverrides(Config *Config) {
 	}
 }
 func LoadConfig() *Config {
-	// set the config name based on the environment:
+	// https://github.com/spf13/viper/issues/1895#issuecomment-3316091229
+	viper.SetOptions(viper.ExperimentalBindStruct())
 
+	// set the config name based on the environment:
 	if os.Getenv("DT_ENV") == "local" {
 		viper.SetConfigName("local")
 	} else if os.Getenv("DT_ENV") == "prod" {
@@ -303,7 +307,7 @@ func LoadConfig() *Config {
 		viper.SetConfigName("local")
 	}
 	// get logger and log the current environment:
-	fmt.Printf("--ConfigLoad config for environment: %s ", os.Getenv("DT_ENV"))
+	fmt.Printf("--ConfigLoad config for environment: %s\n", os.Getenv("DT_ENV"))
 	viper.SetEnvPrefix("DT")
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 
@@ -313,7 +317,13 @@ func LoadConfig() *Config {
 	err := viper.ReadInConfig()
 	// print a useful error:
 	if err != nil {
-		panic(err)
+		var configNotFoundError viper.ConfigFileNotFoundError
+		if errors.As(err, &configNotFoundError) {
+			fmt.Printf("Config file not found, using defaults and environment variables")
+		} else {
+			fmt.Printf("Error reading config file: %v", err)
+			panic(err)
+		}
 	}
 	// Override with environment variables if set:
 	viper.AutomaticEnv()

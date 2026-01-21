@@ -2047,6 +2047,22 @@ func (h *Handler) DeleteHistory(c *gin.Context) {
 		return
 	}
 
+	chore, err := h.choreRepo.GetChore(c, choreID, currentUser.ID)
+	if err != nil {
+		logger.Error("Failed to retrieve chore", "error", err)
+		c.JSON(500, gin.H{
+			"error": "Failed to retrieve chore",
+		})
+		return
+	}
+
+	circleUsers, err := h.circleRepo.GetCircleUsers(c, currentUser.CircleID)
+	if err != nil {
+		logger.Error("Failed to retrieve circle users", "error", err, "circleID", currentUser.CircleID, "userID", currentUser.ID)
+		c.JSON(500, gin.H{"error": "Failed to retrieve circle users"})
+		return
+	}
+
 	history, err := h.choreRepo.GetChoreHistoryByID(c, choreID, historyID)
 	if err != nil {
 		logging.FromContext(c).Errorw("Failed to fetch chore history entry", "error", err, "choreID", choreID, "historyID", historyID)
@@ -2056,7 +2072,7 @@ func (h *Handler) DeleteHistory(c *gin.Context) {
 		return
 	}
 
-	if currentUser.ID != history.CompletedBy || (history.AssignedTo != nil && currentUser.ID != *history.AssignedTo) {
+	if !chore.CanDeleteHistory(currentUser.ID, circleUsers, history) {
 		c.JSON(403, gin.H{
 			"error": "You are not allowed to delete this history",
 		})

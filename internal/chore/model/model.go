@@ -251,6 +251,31 @@ func (c *Chore) GetDeadline() *time.Time {
 	return &deadline
 }
 
+func (c *Chore) CanDeleteHistory(
+	userID int,
+	circleUsers []*cModel.UserCircleDetail,
+	history *ChoreHistory,
+) bool {
+	if userID == c.CreatedBy {
+		return true
+	}
+	if userID == history.CompletedBy {
+		return true
+	}
+	if history.AssignedTo == nil {
+		return true
+	}
+	if userID == *history.AssignedTo {
+		return true
+	}
+	for _, cu := range circleUsers {
+		if cu.UserID == userID && cu.Role == "admin" {
+			return true
+		}
+	}
+	return false
+}
+
 func (c *Chore) CanEdit(userID int, circleUsers []*cModel.UserCircleDetail, updatedAt *time.Time) error {
 	userHasPermission := false
 	choreCanModified := true

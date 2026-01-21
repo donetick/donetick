@@ -62,6 +62,11 @@ import (
 //	@name						Authorization
 //  @description Type "Bearer" followed by a space and JWT token.
 
+//  @securityDefinitions.apikey APIKeyAuth
+//	@in							header
+//	@name						secretkey
+//  @description donetick issued apikey
+
 func main() {
 	// Load configuration first
 	cfg := config.LoadConfig()

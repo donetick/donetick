@@ -13,8 +13,8 @@ jwt:
   # Generate one with: openssl rand -base64 32
   # Or use the suggested value from the application startup error message
   secret: "change_this_to_a_secure_random_string_32_characters_long"
-  session_time: 168h
-  max_refresh: 168h
+  session_time: 1h        # Token valid for 1 hour (access token lifetime)
+  max_refresh: 24h       # Can refresh for 24 hours from original login (24h)
 server:
   port: 2021
   read_timeout: 10s

@@ -2,6 +2,7 @@ package chore
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"math/rand"
@@ -36,6 +37,7 @@ import (
 	"donetick.com/core/logging"
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 type Handler struct {
@@ -269,6 +271,7 @@ func (h *Handler) createChore(c *gin.Context) {
 		Priority:               choreReq.Priority,
 		RequireApproval:        choreReq.RequireApproval,
 		IsPrivate:              choreReq.IsPrivate,
+		ProjectID:              choreReq.ProjectID,
 		// SubTasks removed to prevent duplicate creation - handled by UpdateSubtask call below
 		// it's need custom logic to handle subtask creation as we send negative ids sometimes when we creating parent child releationship
 		// when the subtask is not yet created
@@ -547,6 +550,7 @@ func (h *Handler) editChore(c *gin.Context) {
 		Priority:               choreReq.Priority,
 		RequireApproval:        choreReq.RequireApproval,
 		IsPrivate:              choreReq.IsPrivate,
+		ProjectID:              choreReq.ProjectID,
 		Status:                 oldChore.Status,
 	}
 	if err := h.choreRepo.UpsertChore(c, updatedChore); err != nil {
@@ -2905,7 +2909,7 @@ func (h *Handler) updateTimer(c *gin.Context) {
 	})
 }
 
-func checkNextAssignee(chore *chModel.Chore, choresHistory []*chModel.ChoreHistory, performerID int) (int, error) {
+func checkNextAssignee(chore *chModel.Chore, choresHistory []*chModel.ChoreHistory, performerID int) (*int, error) {
 	// copy the history to avoid modifying the original:
 	history := make([]*chModel.ChoreHistory, len(choresHistory))
 	copy(history, choresHistory)
@@ -2914,7 +2918,7 @@ func checkNextAssignee(chore *chModel.Chore, choresHistory []*chModel.ChoreHisto
 	for _, assignee := range chore.Assignees {
 		assigneesMap[assignee.UserID] = true
 	}
-	var nextAssignee int
+	var nextAssignee *int
 	if len(history) == 0 {
 		// if there is no history, just assume the current operation as the first
 		history = append(history, &chModel.ChoreHistory{
@@ -2939,14 +2943,18 @@ func checkNextAssignee(chore *chModel.Chore, choresHistory []*chModel.ChoreHisto
 		}
 
 		var minChores int64 = math.MaxInt64
+		var bestAssignee int
 		for assignee, numChores := range assigneeChores {
 			// if this is the first assignee or if the number of
 			// chores assigned to this assignee is less than the current minimum
 			if int64(numChores) < minChores {
 				minChores = int64(numChores)
 				// set the next assignee to this assignee
-				nextAssignee = assignee
+				bestAssignee = assignee
 			}
+		}
+		if len(assigneeChores) > 0 {
+			nextAssignee = &bestAssignee
 		}
 	case chModel.AssignmentStrategyLeastCompleted:
 		// find the assignee who has completed the least number of chores
@@ -2961,6 +2969,7 @@ func checkNextAssignee(chore *chModel.Chore, choresHistory []*chModel.ChoreHisto
 
 		// max Int value
 		var minChores int64 = math.MaxInt64
+		var bestAssignee int
 
 		for assignee, numChores := range assigneeChores {
 			// if this is the first assignee or if the number of
@@ -2968,20 +2977,22 @@ func checkNextAssignee(chore *chModel.Chore, choresHistory []*chModel.ChoreHisto
 			if int64(numChores) < minChores {
 				minChores = int64(numChores)
 				// set the next assignee to this assignee
-				nextAssignee = assignee
+				bestAssignee = assignee
 			}
 		}
+		if len(assigneeChores) > 0 {
+			nextAssignee = &bestAssignee
+		}
 	case chModel.AssignmentStrategyRandom:
-		nextAssignee = chore.Assignees[rand.Intn(len(chore.Assignees))].UserID
+		if len(chore.Assignees) > 0 {
+			assigneeID := chore.Assignees[rand.Intn(len(chore.Assignees))].UserID
+			nextAssignee = &assigneeID
+		}
 	case chModel.AssignmentStrategyNoAssignee:
-		nextAssignee = 0
+		nextAssignee = nil
 	case chModel.AssignmentStrategyKeepLastAssigned:
 		// keep the last assignee
-		if chore.AssignedTo != nil {
-			nextAssignee = *chore.AssignedTo
-		} else {
-			nextAssignee = 0
-		}
+		nextAssignee = chore.AssignedTo
 	case chModel.AssignmentStrategyRandomExceptLastAssigned:
 		var lastAssigned *int = chore.AssignedTo
 		AssigneesCopy := make([]chModel.ChoreAssignees, len(chore.Assignees))
@@ -2992,14 +3003,13 @@ func checkNextAssignee(chore *chModel.Chore, choresHistory []*chModel.ChoreHisto
 		} else {
 			removeLastAssigned = AssigneesCopy
 		}
-		nextAssignee = removeLastAssigned[rand.Intn(len(removeLastAssigned))].UserID
+		if len(removeLastAssigned) > 0 {
+			assigneeID := removeLastAssigned[rand.Intn(len(removeLastAssigned))].UserID
+			nextAssignee = &assigneeID
+		}
 	case chModel.AssignmentStrategyRoundRobin:
 		if len(chore.Assignees) == 0 {
-			if chore.AssignedTo != nil {
-				return *chore.AssignedTo, fmt.Errorf("no assignees available")
-			} else {
-				return 0, fmt.Errorf("no assignees available")
-			}
+			return chore.AssignedTo, fmt.Errorf("no assignees available")
 		}
 
 		// Find current assignee index
@@ -3012,19 +3022,16 @@ func checkNextAssignee(chore *chModel.Chore, choresHistory []*chModel.ChoreHisto
 		}
 
 		// If current assignee is not found, start from the beginning
+		var assigneeID int
 		if currentIndex == -1 {
-			nextAssignee = chore.Assignees[0].UserID
+			assigneeID = chore.Assignees[0].UserID
 		} else {
 			nextIndex := (currentIndex + 1) % len(chore.Assignees)
-			nextAssignee = chore.Assignees[nextIndex].UserID
+			assigneeID = chore.Assignees[nextIndex].UserID
 		}
+		nextAssignee = &assigneeID
 	default:
-		if chore.AssignedTo != nil {
-			return *chore.AssignedTo, fmt.Errorf("invalid assign strategy")
-		} else {
-			return 0, fmt.Errorf("invalid assign strategy")
-		}
-
+		return chore.AssignedTo, fmt.Errorf("invalid assign strategy")
 	}
 	return nextAssignee, nil
 }
@@ -3229,6 +3236,160 @@ func (h *Handler) sendNudgeToDevices(c context.Context, fcmTokens []string, titl
 	return nil
 }
 
+func (h *Handler) undoChore(c *gin.Context) {
+	logger := logging.FromContext(c)
+	currentUser, ok := auth.CurrentUser(c)
+	if !ok {
+		logger.Error("Failed to get current user from authentication context")
+		c.JSON(401, gin.H{
+			"error": "Authentication failed",
+		})
+		return
+	}
+
+	rawID := c.Param("id")
+	choreID, err := strconv.Atoi(rawID)
+	if err != nil {
+		c.JSON(400, gin.H{
+			"error": "Invalid chore ID",
+		})
+		return
+	}
+
+	// Check if user can access this chore
+	chore, err := h.choreRepo.GetChore(c, choreID, currentUser.ID)
+	if err != nil {
+		logger.Error("Failed to retrieve chore", "error", err)
+		c.JSON(500, gin.H{
+			"error": "Failed to retrieve chore",
+		})
+		return
+	}
+
+	// Find user's last action on this chore within 5 minutes
+	fiveMinutes := 5 * time.Minute
+	lastAction, err := h.choreRepo.GetUserLastChoreAction(c, choreID, currentUser.ID, fiveMinutes)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(400, gin.H{
+				"error": "No recent action found to undo (actions can only be undone within 5 minutes)",
+			})
+		} else {
+			logger.Error("Failed to get user's last action", "error", err)
+			c.JSON(500, gin.H{
+				"error": "Failed to check recent actions",
+			})
+		}
+		return
+	}
+
+	// Determine previous state based on action type
+	var previousAssignedTo *int
+	var previousDueDate *time.Time
+
+	switch lastAction.Status {
+	case chModel.ChoreHistoryStatusCompleted, chModel.ChoreHistoryStatusSkipped:
+		// For completed/skipped, restore to the state before this completion
+		// Get the previous completion/skip to determine what the assignee and due date should be
+		previousHistory, err := h.choreRepo.GetChoreStateBefore(c, choreID, lastAction.ID)
+		if err != nil {
+			// No previous history found - restore to original state (assigned to original assignee)
+			if len(chore.Assignees) > 0 {
+				// Use the assignee from the action being undone as the original assignee
+				previousAssignedTo = lastAction.AssignedTo
+			}
+			previousDueDate = lastAction.DueDate
+		} else {
+			// Use the state from before this action
+			previousAssignedTo = previousHistory.AssignedTo
+			previousDueDate = previousHistory.DueDate
+		}
+
+	case chModel.ChoreHistoryStatusPendingApproval:
+		// For pending approval, restore to the state before submission
+		previousAssignedTo = lastAction.AssignedTo
+		previousDueDate = lastAction.DueDate
+
+	case chModel.ChoreHistoryStatusRejected:
+		// For rejected, restore to pending approval
+		previousAssignedTo = lastAction.AssignedTo
+		previousDueDate = lastAction.DueDate
+
+	default:
+		c.JSON(400, gin.H{
+			"error": "Cannot undo this type of action",
+		})
+		return
+	}
+
+	// Perform the undo
+	err = h.choreRepo.UndoChoreAction(c, choreID, lastAction.ID, previousAssignedTo, previousDueDate)
+	if err != nil {
+		logger.Error("Failed to undo chore action", "error", err)
+		c.JSON(500, gin.H{
+			"error": "Failed to undo action",
+		})
+		return
+	}
+
+	// Special handling for rejected actions - restore to pending approval
+	if lastAction.Status == chModel.ChoreHistoryStatusRejected {
+		if err := h.choreRepo.UpdateChoreFields(c, choreID, map[string]interface{}{
+			"status": chModel.ChoreStatusPendingApproval,
+		}); err != nil {
+			logger.Error("Failed to restore pending approval status", "error", err)
+			c.JSON(500, gin.H{
+				"error": "Failed to restore pending approval status",
+			})
+			return
+		}
+	}
+
+	// Get updated chore
+	updatedChore, err := h.choreRepo.GetChore(c, choreID, currentUser.ID)
+	if err != nil {
+		logger.Error("Failed to retrieve updated chore", "error", err)
+		c.JSON(500, gin.H{
+			"error": "Failed to retrieve updated chore",
+		})
+		return
+	}
+
+	// Broadcast real-time undo event
+	if h.realTimeService != nil {
+		broadcaster := h.realTimeService.GetEventBroadcaster()
+		changes := map[string]interface{}{
+			"undoAction":  lastAction.Status,
+			"undoneBy":    currentUser.ID,
+			"undoneAt":    time.Now().UTC(),
+			"assignedTo":  previousAssignedTo,
+			"nextDueDate": previousDueDate,
+			"status":      updatedChore.Status,
+		}
+		broadcaster.BroadcastChoreUpdated(updatedChore, &currentUser.User, changes, nil)
+	}
+
+	c.JSON(200, gin.H{
+		"message": fmt.Sprintf("Successfully undid %s action", getActionName(lastAction.Status)),
+		"res":     updatedChore,
+	})
+}
+
+func getActionName(status chModel.ChoreHistoryStatus) string {
+	switch status {
+	case chModel.ChoreHistoryStatusCompleted:
+		return "completion"
+	case chModel.ChoreHistoryStatusSkipped:
+		return "skip"
+	case chModel.ChoreHistoryStatusPendingApproval:
+		return "approval submission"
+	case chModel.ChoreHistoryStatusRejected:
+		return "rejection"
+	default:
+		return "action"
+	}
+}
+
 func Routes(router *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware) {
 
 	choresRoutes := router.Group("api/v1/chores")
@@ -3264,6 +3425,7 @@ func Routes(router *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware) {
 		choresRoutes.PUT("/:id/timer/:session_id", h.UpdateTimeSession)
 		choresRoutes.DELETE("/:id/timer/:session_id", h.DeleteTimeSession)
 		choresRoutes.POST("/:id/nudge", h.sendNudgeNotification)
+		choresRoutes.POST("/:id/undo", h.undoChore)
 	}
 
 }

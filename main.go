@@ -31,6 +31,8 @@ import (
 	label "donetick.com/core/internal/label"
 	lRepo "donetick.com/core/internal/label/repo"
 	"donetick.com/core/internal/mfa"
+	"donetick.com/core/internal/project"
+	pjRepo "donetick.com/core/internal/project/repo"
 	"donetick.com/core/internal/resource"
 	"donetick.com/core/internal/storage"
 	storageRepo "donetick.com/core/internal/storage/repo"
@@ -127,6 +129,10 @@ func main() {
 		fx.Provide(lRepo.NewLabelRepository),
 		fx.Provide(label.NewHandler),
 
+		// Projects:
+		fx.Provide(pjRepo.NewProjectRepository),
+		fx.Provide(project.NewHandler),
+
 		fx.Provide(thing.NewAPI),
 		fx.Provide(thing.NewHandler),
 
@@ -172,6 +178,8 @@ func main() {
 			thing.Routes,
 			thing.APIs,
 			label.Routes,
+			project.Routes,
+
 			storage.Routes,
 			frontend.Routes,
 			resource.Routes,
@@ -209,11 +217,18 @@ func newServer(lc fx.Lifecycle, cfg *config.Config, db *gorm.DB, notifier *notif
 		WriteTimeout: cfg.Server.WriteTimeout,
 	}
 	config := cors.DefaultConfig()
-	if cfg.IsDoneTickDotCom {
-		// config.AllowOrigins = cfg.Server.CorsAllowOrigins
-		config.AllowAllOrigins = true
+
+	// Use specific origins from config when credentials are needed
+	// Cannot use AllowAllOrigins with AllowCredentials
+	if len(cfg.Server.CorsAllowOrigins) > 0 {
+		config.AllowOrigins = cfg.Server.CorsAllowOrigins
 	} else {
-		config.AllowAllOrigins = true
+		// Fallback to localhost for development
+		config.AllowOrigins = []string{
+			"http://localhost:5173",
+			"http://localhost:7926",
+			"http://localhost:3000",
+		}
 	}
 
 	config.AllowCredentials = true
@@ -230,6 +245,7 @@ func newServer(lc fx.Lifecycle, cfg *config.Config, db *gorm.DB, notifier *notif
 		"User-Agent",
 		"Referer",
 		"X-Impersonate-User-ID",
+		"refresh_token",
 	)
 	// Expose headers that the frontend might need
 	config.AddExposeHeaders("Content-Type")

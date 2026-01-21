@@ -198,7 +198,7 @@ func (h *PollingHandler) setSSEHeaders(c *gin.Context) {
 
 	// CORS headers for cross-origin requests from frontend
 	origin := c.GetHeader("Origin")
-	if origin == "http://localhost:5173" || origin == "http://localhost:3000" {
+	if origin == "http://localhost:5173" || origin == "http://localhost:3000" || origin == "http://localhost" || origin == "https://localhost" {
 		c.Header("Access-Control-Allow-Origin", origin)
 	} else {
 		// Fallback for other development origins

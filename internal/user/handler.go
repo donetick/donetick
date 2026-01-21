@@ -1543,10 +1543,68 @@ func (h *Handler) getChildUsers(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"res": response})
 }
 
-func Routes(router *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware, limiter *limiter.Limiter) {
+// RefreshRequest represents a refresh token request
+type RefreshRequest struct {
+	RefreshToken string `json:"refreshToken"`
+}
+
+// logout handles user logout by clearing cookies and revoking refresh tokens
+func (h *Handler) logout(c *gin.Context) {
+	logger := logging.FromContext(c)
+
+	// Try to get refresh token from cookie first (httpOnly), fallback to body
+	refreshToken, err := c.Cookie("refresh_token")
+	if err != nil {
+		// Fallback to JSON body for backward compatibility
+		var req RefreshRequest
+		if err := c.ShouldBindJSON(&req); err != nil {
+			// No token provided, but logout should still succeed
+			refreshToken = ""
+		} else {
+			refreshToken = req.RefreshToken
+		}
+	}
+
+	// Revoke the refresh token if we have one
+	if refreshToken != "" {
+		// Hash the refresh token before looking it up (tokens are stored hashed)
+		tokenHash := hashToken(refreshToken)
+
+		// Get the session by token hash
+		session, err := h.userRepo.GetUserSessionByTokenHash(c.Request.Context(), tokenHash)
+		if err != nil {
+			logger.Infow("Refresh token session not found during logout", "note", "Token may already be expired or invalid")
+			// Don't return error - logout should always succeed from client perspective
+		} else {
+			// Revoke the session
+			if err := h.userRepo.RevokeSession(c.Request.Context(), session.ID); err != nil {
+				logger.Errorw("Failed to revoke session during logout", "error", err)
+				// Don't return error - logout should always succeed from client perspective
+			}
+		}
+	}
+
+	// Clear the httpOnly cookie by setting it with negative max age
+	c.SetCookie("refresh_token", "", 0, "/", "", true, true)
+
+	// Also clear any access token cookie if it exists
+	c.SetCookie("access_token", "", 0, "/", "", true, true)
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Logged out successfully",
+	})
+}
+
+// hashToken creates a SHA-256 hash of the token for database lookup
+func hashToken(token string) string {
+	hash := sha256.Sum256([]byte(token))
+	return hex.EncodeToString(hash[:])
+}
+
+func Routes(router *gin.Engine, h *Handler, jwtAuth *jwt.GinJWTMiddleware, limiter *limiter.Limiter, cfg *config.Config) {
 
 	userRoutes := router.Group("api/v1/users")
-	userRoutes.Use(auth.MiddlewareFunc(), utils.RateLimitMiddleware(limiter))
+	userRoutes.Use(jwtAuth.MiddlewareFunc(), utils.RateLimitMiddleware(limiter))
 	{
 		userRoutes.GET("/", h.GetAllUsers())
 		userRoutes.GET("/profile", h.GetUserProfile)
@@ -1559,6 +1617,7 @@ func Routes(router *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware, limiter 
 		userRoutes.PUT("change_password", h.updateUserPasswordLoggedInOnly)
 		userRoutes.POST("profile_photo", h.updateProfilePhoto)
 		userRoutes.GET("storage", h.getStorageUsage)
+		userRoutes.POST("/logout", h.logout) // Logout endpoint to clear cookies and expire refresh tokens
 
 		// MFA endpoints
 		userRoutes.GET("/mfa/status", h.getMFAStatus)
@@ -1578,15 +1637,27 @@ func Routes(router *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware, limiter 
 		userRoutes.DELETE("/subaccounts/:id", h.deleteChildUser)
 	}
 
+	// Create new auth handler for enhanced token management
+	authHandler := auth.NewAuthHandler(h.userRepo, jwtAuth, cfg)
+
 	authRoutes := router.Group("api/v1/auth")
 	authRoutes.Use(utils.RateLimitMiddleware(limiter))
 	{
 		authRoutes.POST("/:provider/callback", h.thirdPartyAuthCallback)
 		authRoutes.POST("/", h.signUp)
-		authRoutes.POST("login", auth.LoginHandler)
-		authRoutes.GET("refresh", auth.RefreshHandler)
+		authRoutes.POST("login", authHandler.EnhancedLoginHandler)  // Enhanced login with refresh tokens
+		authRoutes.POST("login/legacy", jwtAuth.LoginHandler)       // Legacy login for backward compatibility
+		authRoutes.POST("refresh", authHandler.RefreshTokenHandler) // Changed from GET to POST
+		authRoutes.POST("logout", authHandler.LogoutHandler)        // New logout endpoint
 		authRoutes.POST("reset", h.resetPassword)
 		authRoutes.POST("password", h.updateUserPassword)
 		authRoutes.POST("mfa/verify", h.verifyMFA) // Add MFA verification endpoint
+	}
+
+	// Protected auth routes (require JWT)
+	protectedAuthRoutes := router.Group("api/v1/auth")
+	protectedAuthRoutes.Use(jwtAuth.MiddlewareFunc(), utils.RateLimitMiddleware(limiter))
+	{
+		protectedAuthRoutes.POST("revoke-all", authHandler.RevokeAllHandler) // New revoke all endpoint
 	}
 }

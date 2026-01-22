@@ -238,7 +238,7 @@ func NewConfig() *Config {
 		},
 		Jwt: JwtConfig{
 			Secret:      secureSecret,
-			SessionTime: 7 * 24 * time.Hour,
+			SessionTime: 15 * time.Minute,
 			MaxRefresh:  7 * 24 * time.Hour,
 		},
 		RealTimeConfig: RealTimeConfig{
@@ -349,6 +349,13 @@ func LoadConfig() *Config {
 	config.Info.Version = Version
 	config.Info.Commit = Commit
 	config.Info.BuildDate = BuildDate
+
+	// set the timezone to UTC if not set:
+	if os.Getenv("TZ") == "" {
+		os.Setenv("TZ", "UTC")
+	}
+	time.Local, _ = time.LoadLocation(os.Getenv("TZ"))
+
 	return &config
 
 	// return LocalConfig()

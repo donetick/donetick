@@ -69,10 +69,27 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
+      - name: Extract Docker tags
+        id: meta
+        run: |
+          VERSION=${{ github.ref_name }}
+          DOCKER_USER=${{ secrets.DOCKER_USERNAME }}
+
+          # Check if this is a pre-release (contains -, like v1.0.0-beta.1)
+          if [[ "$VERSION" =~ - ]]; then
+            # Extract pre-release channel (alpha, beta, rc, etc.)
+            CHANNEL=$(echo "$VERSION" | sed -E 's/v[0-9]+\.[0-9]+\.[0-9]+-([a-z]+).*/\1/')
+            echo "Pre-release detected: $VERSION (channel: $CHANNEL)"
+            echo "tags=${DOCKER_USER}/donetick:${VERSION},${DOCKER_USER}/donetick:${CHANNEL}" >> $GITHUB_OUTPUT
+          else
+            echo "Stable release detected: $VERSION"
+            echo "tags=${DOCKER_USER}/donetick:latest,${DOCKER_USER}/donetick:${VERSION}" >> $GITHUB_OUTPUT
+          fi
+
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/donetick:latest, ${{ secrets.DOCKER_USERNAME }}/donetick:${{ github.ref_name }}
+          tags: ${{ steps.meta.outputs.tags }}
           platforms: linux/amd64,linux/arm64,linux/arm/v7

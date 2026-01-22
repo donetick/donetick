@@ -9,6 +9,7 @@ import (
 
 	cModel "donetick.com/core/internal/circle/model"
 	lModel "donetick.com/core/internal/label/model"
+	pModel "donetick.com/core/internal/project/model"
 	stModel "donetick.com/core/internal/subtask/model"
 	tModel "donetick.com/core/internal/thing/model"
 )
@@ -69,13 +70,15 @@ type Chore struct {
 	ThingChore             *tModel.ThingChore    `json:"thingChore" gorm:"foreignkey:chore_id;references:id;<-:false"`      // ThingChore relationship
 	Status                 Status                `json:"status" gorm:"column:status"`
 	Priority               int                   `json:"priority" gorm:"column:priority"`
-	CompletionWindow       *int                  `json:"completionWindow,omitempty" gorm:"column:completion_window"` // Number seconds before the chore is due that it can be completed
-	Points                 *int                  `json:"points,omitempty" gorm:"column:points"`                      // Points for completing the chore
-	Description            *string               `json:"description,omitempty" gorm:"type:text;column:description"`  // Description of the chore
-	SubTasks               *[]stModel.SubTask    `json:"subTasks,omitempty" gorm:"foreignkey:ChoreID;references:ID"` // Subtasks for the chore
-	RequireApproval        bool                  `json:"requireApproval" gorm:"column:require_approval"`             // Whether chore completion requires admin approval
-	IsPrivate              bool                  `json:"isPrivate" gorm:"column:is_private;default:false"`           // Whether the chore is private
-	DeadlineOffset         *int                  `json:"deadlineOffset,omitempty" gorm:"column:deadline_offset"`     // Seconds after NextDueDate when chore deadline is reached
+	CompletionWindow       *int                  `json:"completionWindow,omitempty" gorm:"column:completion_window"`  // Number seconds before the chore is due that it can be completed
+	Points                 *int                  `json:"points,omitempty" gorm:"column:points"`                       // Points for completing the chore
+	Description            *string               `json:"description,omitempty" gorm:"type:text;column:description"`   // Description of the chore
+	SubTasks               *[]stModel.SubTask    `json:"subTasks,omitempty" gorm:"foreignkey:ChoreID;references:ID"`  // Subtasks for the chore
+	RequireApproval        bool                  `json:"requireApproval" gorm:"column:require_approval"`              // Whether chore completion requires admin approval
+	IsPrivate              bool                  `json:"isPrivate" gorm:"column:is_private;default:false"`            // Whether the chore is private
+	DeadlineOffset         *int                  `json:"deadlineOffset,omitempty" gorm:"column:deadline_offset"`      // Seconds after NextDueDate when chore deadline is reached
+	ProjectID              *int                  `json:"projectId,omitempty" gorm:"column:project_id;index"`          // The project this chore belongs to
+	Project                *pModel.Project       `json:"project,omitempty" gorm:"foreignkey:ProjectID;references:ID"` // Project relationship
 }
 
 type Status int8
@@ -184,7 +187,9 @@ type ChoreDetail struct {
 	Duration            int                `json:"duration" gorm:"column:duration"` // Total duration in seconds for the chore
 	StartTime           *time.Time         `json:"startTime" gorm:"column:start_time"`
 	TimerUpdatedAt      *time.Time         `json:"timerUpdatedAt" gorm:"column:timer_updated_at"` // When the chore was last started
-	DeadlineOffset      *int               `json:"deadlineOffset,omitempty"`
+	DeadlineOffset      *int               `json:"deadlineOffset,omitempty" gorm:"column:deadline_offset"`
+	ProjectID           *int               `json:"projectId,omitempty" gorm:"column:project_id"`
+	IsActive            bool               `json:"isActive" gorm:"column:is_active"`
 }
 
 type ChoreLabels struct {
@@ -226,6 +231,7 @@ type ChoreReq struct {
 	RequireApproval      bool                  `json:"requireApproval"`
 	IsPrivate            bool                  `json:"isPrivate"`
 	DeadlineOffset       *int                  `json:"deadlineOffset,omitempty"`
+	ProjectID            *int                  `json:"projectId,omitempty"`
 	UpdatedAt            *time.Time            `json:"updatedAt,omitempty"` // For internal use only when syncing a chore updated offline
 }
 
@@ -235,6 +241,31 @@ func (c *Chore) GetDeadline() *time.Time {
 	}
 	deadline := c.NextDueDate.Add(time.Duration(*c.DeadlineOffset) * time.Second)
 	return &deadline
+}
+
+func (c *Chore) CanDeleteHistory(
+	userID int,
+	circleUsers []*cModel.UserCircleDetail,
+	history *ChoreHistory,
+) bool {
+	if userID == c.CreatedBy {
+		return true
+	}
+	if userID == history.CompletedBy {
+		return true
+	}
+	if history.AssignedTo == nil {
+		return true
+	}
+	if userID == *history.AssignedTo {
+		return true
+	}
+	for _, cu := range circleUsers {
+		if cu.UserID == userID && cu.Role == "admin" {
+			return true
+		}
+	}
+	return false
 }
 
 func (c *Chore) CanEdit(userID int, circleUsers []*cModel.UserCircleDetail, updatedAt *time.Time) error {

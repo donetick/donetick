@@ -15,6 +15,7 @@ import (
 	lModel "donetick.com/core/internal/label/model"
 	nModel "donetick.com/core/internal/notifier/model"
 	pModel "donetick.com/core/internal/points"
+	projModel "donetick.com/core/internal/project/model"
 	storageModel "donetick.com/core/internal/storage/model"
 	stModel "donetick.com/core/internal/subtask/model"
 	tModel "donetick.com/core/internal/thing/model"
@@ -41,6 +42,7 @@ func Migration(db *gorm.DB) error {
 		sModel.RevenueCatSubscription{},
 		sModel.Subscription{},
 		uModel.MFASession{},
+		uModel.UserSession{},
 		tModel.Thing{},
 		tModel.ThingChore{},
 		tModel.ThingHistory{},
@@ -48,6 +50,7 @@ func Migration(db *gorm.DB) error {
 		uModel.UserNotificationTarget{},
 		lModel.Label{},
 		chModel.ChoreLabels{},
+		projModel.Project{},
 		migrations.Migration{},
 		pModel.PointsHistory{},
 		stModel.SubTask{},

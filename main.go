@@ -98,9 +98,9 @@ func main() {
 		fx.Provide(pushover.NewPushover),
 		fx.Provide(telegram.NewTelegramNotifier),
 		fx.Provide(discord.NewDiscordNotifier),
-		fx.Provide(notifier.NewNotifier),
 		fx.Provide(events.NewEventsProducer),
 		fx.Provide(fcm.NewFCMNotifier),
+		fx.Provide(notifier.NewNotifier),
 
 		// Rate limiter
 		fx.Provide(utils.NewRateLimiter),
@@ -145,7 +145,6 @@ func main() {
 		fx.Provide(payment.NewHandler),
 		fx.Provide(payment.NewWebhook),
 		fx.Provide(chore.NewAPI),
-
 		fx.Provide(frontend.NewHandler),
 
 		// storage :

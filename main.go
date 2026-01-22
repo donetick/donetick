@@ -112,6 +112,9 @@ func main() {
 		fx.Provide(mfa.NewService),
 		fx.Provide(mfa.NewCleanupService),
 
+		// Auth services
+		fx.Provide(auth.NewCleanupService),
+
 		fx.Provide(apple.NewAppleService),
 
 		// add handlers also
@@ -199,7 +202,7 @@ func main() {
 
 }
 
-func newServer(lc fx.Lifecycle, cfg *config.Config, db *gorm.DB, notifier *notifier.Scheduler, eventProducer *events.EventsProducer, mfaCleanup *mfa.CleanupService, rts *realtime.RealTimeService) *gin.Engine {
+func newServer(lc fx.Lifecycle, cfg *config.Config, db *gorm.DB, notifier *notifier.Scheduler, eventProducer *events.EventsProducer, mfaCleanup *mfa.CleanupService, authCleanup *auth.CleanupService, rts *realtime.RealTimeService) *gin.Engine {
 	// Set Gin mode based on logging configuration
 	if cfg.Logging.Development || strings.ToLower(cfg.Logging.Level) == "debug" {
 		gin.SetMode(gin.DebugMode)
@@ -264,6 +267,7 @@ func newServer(lc fx.Lifecycle, cfg *config.Config, db *gorm.DB, notifier *notif
 			notifier.Start(context.Background())
 			eventProducer.Start(context.Background())
 			mfaCleanup.Start(context.Background())
+			authCleanup.Start(context.Background())
 
 			// Start real-time service
 			if err := rts.Start(ctx); err != nil {
@@ -294,6 +298,7 @@ func newServer(lc fx.Lifecycle, cfg *config.Config, db *gorm.DB, notifier *notif
 			}
 
 			mfaCleanup.Stop()
+			authCleanup.Stop()
 
 			// Shutdown HTTP server with timeout
 			shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

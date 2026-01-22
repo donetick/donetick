@@ -410,7 +410,7 @@ func (r *ChoreRepository) GetChoreHistory(c context.Context, choreID int) ([]*ch
 		Select("chore_histories.*, time_sessions.duration").
 		Joins("LEFT JOIN time_sessions ON chore_histories.id = time_sessions.chore_history_id").
 		Where("chore_histories.chore_id = ?", choreID).
-		Order("chore_histories.updated_at desc").
+		Order("chore_histories.performed_at desc").
 		Find(&histories).Error; err != nil {
 		return nil, err
 	}

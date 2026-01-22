@@ -3,7 +3,7 @@ FROM alpine:latest AS builder
 
 WORKDIR /usr/src/app
 
-RUN apk --no-cache add curl jq
+RUN apk --no-cache add curl jq tzdata
 
 RUN latest_release=$(curl --silent "https://api.github.com/repos/donetick/donetick/releases/latest" | jq -r .tag_name) && \
     set -ex; \

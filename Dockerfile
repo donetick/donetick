@@ -5,7 +5,12 @@ WORKDIR /usr/src/app
 
 RUN apk --no-cache add curl jq tzdata
 
-RUN latest_release=$(curl --silent "https://api.github.com/repos/donetick/donetick/releases/latest" | jq -r .tag_name) && \
+# Accept VERSION as build argument, fallback to latest stable release if not provided
+ARG VERSION
+RUN if [ -z "$VERSION" ]; then \
+        VERSION=$(curl --silent "https://api.github.com/repos/donetick/donetick/releases/latest" | jq -r .tag_name); \
+    fi && \
+    echo "Downloading version: $VERSION" && \
     set -ex; \
     apkArch="$(apk --print-arch)"; \
     case "$apkArch" in \
@@ -15,7 +20,7 @@ RUN latest_release=$(curl --silent "https://api.github.com/repos/donetick/doneti
     x86_64) arch='x86_64' ;; \
     *) echo >&2 "error: unsupported architecture: $apkArch"; exit 1 ;; \
     esac; \
-    curl -fL "https://github.com/donetick/donetick/releases/download/${latest_release}/donetick_Linux_$arch.tar.gz" | tar -xz -C .
+    curl -fL "https://github.com/donetick/donetick/releases/download/${VERSION}/donetick_Linux_$arch.tar.gz" | tar -xz -C .
 
 # Stage 2: Create a smaller runtime image
 FROM alpine:latest

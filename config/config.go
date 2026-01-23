@@ -238,8 +238,8 @@ func NewConfig() *Config {
 		},
 		Jwt: JwtConfig{
 			Secret:      secureSecret,
-			SessionTime: 15 * time.Minute,
-			MaxRefresh:  7 * 24 * time.Hour,
+			SessionTime: 24 * time.Hour,
+			MaxRefresh:  60 * 24 * time.Hour,
 		},
 		RealTimeConfig: RealTimeConfig{
 			Enabled:               true,

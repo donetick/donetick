@@ -101,8 +101,8 @@ type DatabaseConfig struct {
 
 type JwtConfig struct {
 	Secret      string        `mapstructure:"secret" yaml:"secret"`
-	SessionTime time.Duration `mapstructure:"session_time" yaml:"session_time"`
-	MaxRefresh  time.Duration `mapstructure:"max_refresh" yaml:"max_refresh"`
+	SessionTime time.Duration `mapstructure:"session_time" yaml:"session_time" default:"24h"` // 24 hours
+	MaxRefresh  time.Duration `mapstructure:"max_refresh" yaml:"max_refresh" default:"1440h"` // 60 days
 }
 
 type ServerConfig struct {

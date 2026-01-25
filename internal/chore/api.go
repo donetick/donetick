@@ -20,6 +20,7 @@ import (
 	chModel "donetick.com/core/internal/chore/model"
 	cRepo "donetick.com/core/internal/circle/repo"
 	stRepo "donetick.com/core/internal/subtask/repo"
+	stModel "donetick.com/core/internal/subtask/model"
 	uRepo "donetick.com/core/internal/user/repo"
 )
 
@@ -146,6 +147,20 @@ func (h *API) CreateChore(c *gin.Context) {
 		return
 	}
 
+	if choreRequest.SubTasks != nil {
+		if err := h.stRepo.UpdateSubtask(c, createdChore.ID, nil, *choreRequest.SubTasks); err != nil {
+			log.Errorw("chore.api.CreateChore failed to add subtasks", "error", err)
+			c.JSON(500, gin.H{"error": "Error adding subtasks"})
+			return
+		}
+		createdChore, err = h.choreRepo.GetChore(c, createdChore.ID, user.ID)
+		if err != nil {
+			log.Errorw("chore.api.CreateChore failed to fetch created chore with subtasks", "error", err)
+			c.JSON(500, gin.H{"error": "Error fetching created chore"})
+			return
+		}
+	}
+
 	c.JSON(201, createdChore)
 }
 
@@ -233,6 +248,57 @@ func (h *API) UpdateChore(c *gin.Context) {
 		log.Errorw("chore.api.UpdateChore failed to update chore", "error", err)
 		c.JSON(500, gin.H{"error": "Error updating chore"})
 		return
+	}
+
+	if choreRequest.SubTasks != nil {
+		existingChoreWithSubtasks, err := h.choreRepo.GetChore(c, choreID, user.ID)
+		if err != nil {
+			log.Errorw("chore.api.UpdateChore failed to fetch existing chore for subtasks", "error", err)
+			c.JSON(500, gin.H{"error": "Error fetching chore"})
+			return
+		}
+
+		toBeRemoved := []stModel.SubTask{}
+		toBeAdded := []stModel.SubTask{}
+		if existingChoreWithSubtasks.SubTasks == nil {
+			existingChoreWithSubtasks.SubTasks = &[]stModel.SubTask{}
+		}
+		for _, existedSubTask := range *existingChoreWithSubtasks.SubTasks {
+			found := false
+			for _, newSubTask := range *choreRequest.SubTasks {
+				if existedSubTask.ID == newSubTask.ID {
+					found = true
+					break
+				}
+			}
+			if !found {
+				toBeRemoved = append(toBeRemoved, existedSubTask)
+			}
+		}
+
+		for _, newSubTask := range *choreRequest.SubTasks {
+			found := false
+			newSubTask.ChoreID = existingChoreWithSubtasks.ID
+
+			for _, existedSubTask := range *existingChoreWithSubtasks.SubTasks {
+				if existedSubTask.ID == newSubTask.ID {
+					if existedSubTask.Name != newSubTask.Name || existedSubTask.OrderID != newSubTask.OrderID {
+						break
+					}
+					found = true
+					break
+				}
+			}
+			if !found {
+				toBeAdded = append(toBeAdded, newSubTask)
+			}
+		}
+
+		if err := h.stRepo.UpdateSubtask(c, choreID, toBeRemoved, toBeAdded); err != nil {
+			log.Errorw("chore.api.UpdateChore failed to update subtasks", "error", err)
+			c.JSON(500, gin.H{"error": "Error adding subtasks"})
+			return
+		}
 	}
 
 	// Fetch the updated chore

@@ -24,7 +24,7 @@ func (s *URLSignerLocal) Sign(rawPath string) (string, error) {
 	sig := s.sign(rawPath)
 	values := url.Values{}
 	values.Set("sig", sig)
-	return fmt.Sprintf("%s/%s?%s", s.PublicHost, rawPath, values.Encode()), nil //TODO: move the "/assets" to URL setup or remove "url" part from signature
+	return fmt.Sprintf("%s/%s?%s", s.PublicHost, rawPath, values.Encode()), nil
 }
 
 func (s *URLSignerLocal) sign(path string) string {

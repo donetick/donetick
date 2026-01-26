@@ -17,7 +17,7 @@ type LocalStorage struct {
 }
 
 func NewLocalStorage(config *config.Config) (*LocalStorage, error) {
-	return &LocalStorage{PublicHost: config.Storage.PublicHost + "/assets", BasePath: "./frontend/dist/assets"}, nil //TODO: do error checking in case the path is invalid, no permissions, etc.
+	return &LocalStorage{PublicHost: config.Storage.PublicHost + "api/v1/assets", BasePath: "./assets"}, nil //TODO: do error checking in case the path is invalid, no permissions, etc.
 }
 
 func sanitizePath(p string) (string, error) {

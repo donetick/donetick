@@ -16,7 +16,7 @@ type URLSignerLocal struct {
 }
 
 func NewURLSignerLocal(config *config.Config) *URLSignerLocal {
-	return &URLSignerLocal{PublicHost: config.Storage.PublicHost + "/assets", Secret: []byte(config.Jwt.Secret)}
+	return &URLSignerLocal{PublicHost: config.Storage.PublicHost + "/api/v1/assets", Secret: []byte(config.Jwt.Secret)}
 }
 
 // sign method without expiration:

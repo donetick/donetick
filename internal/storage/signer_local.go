@@ -11,11 +11,12 @@ import (
 )
 
 type URLSignerLocal struct {
-	Secret []byte
+	Secret     []byte
+	PublicHost string
 }
 
 func NewURLSignerLocal(config *config.Config) *URLSignerLocal {
-	return &URLSignerLocal{Secret: []byte(config.Jwt.Secret)}
+	return &URLSignerLocal{PublicHost: config.Storage.PublicHost + "/assets", Secret: []byte(config.Jwt.Secret)}
 }
 
 // sign method without expiration:
@@ -23,7 +24,7 @@ func (s *URLSignerLocal) Sign(rawPath string) (string, error) {
 	sig := s.sign(rawPath)
 	values := url.Values{}
 	values.Set("sig", sig)
-	return fmt.Sprintf("%s?%s", rawPath, values.Encode()), nil
+	return fmt.Sprintf("%s/%s?%s", s.PublicHost, rawPath, values.Encode()), nil //TODO: move the "/assets" to URL setup or remove "url" part from signature
 }
 
 func (s *URLSignerLocal) sign(path string) string {

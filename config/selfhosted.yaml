@@ -40,6 +40,8 @@ scheduler_jobs:
   overdue_job: 3h
   pre_due_job: 3h
 storage:
+  mode: "local" # "aws" or "local"
+  public_host: "http://localhost:2021"
   max_user_storage: 1000000000
   max_file_size: 10000000
   # aws:
@@ -49,8 +51,6 @@ storage:
   #   access_key: 
   #   secret_key: 
   #   endpoint:
-  local:
-    base_path: "./data/storage"
 email:
   host: 
   port: 

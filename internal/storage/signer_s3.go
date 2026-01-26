@@ -18,7 +18,7 @@ type URLSignerS3 struct {
 
 func NewURLSignerS3(storage *S3Storage, config *config.Config) *URLSignerS3 {
 	return &URLSignerS3{storage: storage,
-		PublicHost: config.Storage.AWS.PublicHost,
+		PublicHost: config.Storage.PublicHost,
 	}
 }
 

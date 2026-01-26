@@ -260,7 +260,6 @@ func newServer(lc fx.Lifecycle, cfg *config.Config, db *gorm.DB, notifier *notif
 	// Expose headers that the frontend might need
 	config.AddExposeHeaders("Content-Type")
 	r.Use(cors.New(config))
-
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
 			if cfg.Database.Migration {

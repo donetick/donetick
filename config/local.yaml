@@ -51,6 +51,8 @@ mfa:
   rate_limit_attempts: 5
   rate_limit_window: 15m 
 storage:
+  mode: "local" # "aws" or "local"
+  public_host: "http://localhost:2021"
   max_user_storage: 1000000000
   max_file_size: 10000000
   # aws:
@@ -60,8 +62,6 @@ storage:
   #   access_key: 
   #   secret_key: 
   #   endpoint:
-  local:
-    base_path: "./data/storage"
 realtime:
   enabled: true
   sse_enabled: true

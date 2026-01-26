@@ -16,11 +16,11 @@ type Storage interface {
 }
 
 func NewStorage(config *config.Config) (Storage, error) {
-	if config.Storage.Local != nil && config.Storage.Local.BasePath != "" {
+	if config.Storage.Mode == "local" {
 		return NewLocalStorage(config)
 	}
 
-	if config.Storage.AWS != nil {
+	if config.Storage.Mode == "aws" && config.Storage.AWS != nil {
 		return NewS3Storage(config)
 	}
 	return nil, errors.New("no storage configuration found.")

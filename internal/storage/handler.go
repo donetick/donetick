@@ -90,10 +90,10 @@ func (h *Handler) AssetHandler(c *gin.Context) {
 	// 	c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to read file"})
 	// 	return
 	// }
-
 	// Set headers
 	// c.Header("Content-Type", contentType)
-	c.Header("Cache-Control", "public, max-age=604800, immutable")
+	// c.Header("Cache-Control", "public, max-age=604800, immutable")
+	c.Header("Cache-Control", "private, max-age=86400, immutable")
 	c.Header("Expires", time.Now().Add(7*24*time.Hour).UTC().Format(http.TimeFormat))
 	c.Status(http.StatusOK)
 

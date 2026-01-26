@@ -51,14 +51,17 @@ mfa:
   rate_limit_attempts: 5
   rate_limit_window: 15m 
 storage:
-  max_user_storage:
-  max_file_size:
-  bucket_name: 
-  region: 
-  base_path:
-  access_key: 
-  secret_key: 
-  endpoint:
+  max_user_storage: 1000000000
+  max_file_size: 10000000
+  # aws:
+  #   bucket_name: 
+  #   region: 
+  #   base_path:
+  #   access_key: 
+  #   secret_key: 
+  #   endpoint:
+  local:
+    base_path: "./data/storage"
 realtime:
   enabled: true
   sse_enabled: true

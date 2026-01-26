@@ -27,7 +27,7 @@ import (
 // Handler handles file storage-related routes
 type Handler struct {
 	storage     Storage
-	signer      *URLSignerS3
+	signer      URLSigner
 	storageRepo *storageRepo.StorageRepository
 	choreRepo   *chRepo.ChoreRepository
 	circleRepo  *cRepo.CircleRepository
@@ -35,8 +35,8 @@ type Handler struct {
 }
 
 // NewHandler creates a new Handler
-func NewHandler(storage *S3Storage, choreRepo *chRepo.ChoreRepository, circleRepo *cRepo.CircleRepository,
-	repo *storageRepo.StorageRepository, signer *URLSignerS3, cfg *config.Config) *Handler {
+func NewHandler(storage Storage, choreRepo *chRepo.ChoreRepository, circleRepo *cRepo.CircleRepository,
+	repo *storageRepo.StorageRepository, signer URLSigner, cfg *config.Config) *Handler {
 	return &Handler{storage: storage, circleRepo: circleRepo,
 		choreRepo:   choreRepo,
 		storageRepo: repo,

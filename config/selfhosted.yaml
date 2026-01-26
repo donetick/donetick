@@ -39,6 +39,18 @@ scheduler_jobs:
   due_job: 30m
   overdue_job: 3h
   pre_due_job: 3h
+storage:
+  max_user_storage: 1000000000
+  max_file_size: 10000000
+  # aws:
+  #   bucket_name: 
+  #   region: 
+  #   base_path:
+  #   access_key: 
+  #   secret_key: 
+  #   endpoint:
+  local:
+    base_path: "./data/storage"
 email:
   host: 
   port: 

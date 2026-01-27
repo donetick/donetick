@@ -436,12 +436,11 @@ func validateCorsOrigins(origins []string) {
 			continue
 		}
 		if !strings.Contains(o, "://") {
-			fmt.Printf("\n⚠️  CORS CONFIG WARNING: origin %q has no scheme — expected format: scheme://host\n", o)
-			fmt.Printf("   Valid examples: http://localhost:5173, https://example.com, capacitor://localhost\n\n")
+			fmt.Printf("CORS WARNING: origin %q missing scheme (expected scheme://host)\n", o)
 			continue
 		}
 		if !strings.HasPrefix(o, "http://") && !strings.HasPrefix(o, "https://") {
-			fmt.Printf("ℹ️  CORS CONFIG: origin %q uses a non-standard scheme — this is supported (e.g. for Capacitor/Electron apps)\n", o)
+			fmt.Printf("CORS: origin %q uses non-standard scheme, handled via AllowOriginFunc\n", o)
 		}
 	}
 }

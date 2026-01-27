@@ -221,24 +221,43 @@ func newServer(lc fx.Lifecycle, cfg *config.Config, db *gorm.DB, notifier *notif
 		ReadTimeout:  cfg.Server.ReadTimeout,
 		WriteTimeout: cfg.Server.WriteTimeout,
 	}
-	config := cors.DefaultConfig()
+	corsConfig := cors.DefaultConfig()
 
-	// Use specific origins from config when credentials are needed
-	// Cannot use AllowAllOrigins with AllowCredentials
-	if len(cfg.Server.CorsAllowOrigins) > 0 {
-		config.AllowOrigins = cfg.Server.CorsAllowOrigins
-	} else {
-		// Fallback to localhost for development
-		config.AllowOrigins = []string{
+	origins := cfg.Server.CorsAllowOrigins
+	if len(origins) == 0 {
+		origins = []string{
 			"http://localhost:5173",
 			"http://localhost:7926",
 			"http://localhost:3000",
 		}
 	}
 
-	config.AllowCredentials = true
+	// gin-contrib/cors only supports http:// and https:// in AllowOrigins.
+	// Non-standard schemes (e.g. capacitor://) must be handled via AllowOriginFunc.
+	var standardOrigins []string
+	var customOrigins []string
+	for _, o := range origins {
+		if strings.HasPrefix(o, "http://") || strings.HasPrefix(o, "https://") || o == "*" {
+			standardOrigins = append(standardOrigins, o)
+		} else {
+			customOrigins = append(customOrigins, o)
+		}
+	}
+
+	corsConfig.AllowOrigins = standardOrigins
+	if len(customOrigins) > 0 {
+		customSet := make(map[string]bool, len(customOrigins))
+		for _, o := range customOrigins {
+			customSet[o] = true
+		}
+		corsConfig.AllowOriginFunc = func(origin string) bool {
+			return customSet[origin]
+		}
+	}
+
+	corsConfig.AllowCredentials = true
 	// Add all headers that browsers commonly send
-	config.AddAllowHeaders(
+	corsConfig.AddAllowHeaders(
 		"Authorization",
 		"secretkey",
 		"Cache-Control",
@@ -253,8 +272,8 @@ func newServer(lc fx.Lifecycle, cfg *config.Config, db *gorm.DB, notifier *notif
 		"refresh_token",
 	)
 	// Expose headers that the frontend might need
-	config.AddExposeHeaders("Content-Type")
-	r.Use(cors.New(config))
+	corsConfig.AddExposeHeaders("Content-Type")
+	r.Use(cors.New(corsConfig))
 
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {

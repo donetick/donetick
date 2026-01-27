@@ -354,6 +354,8 @@ func LoadConfig() *Config {
 		validateJWTSecret(config.Jwt.Secret)
 	}
 
+	validateCorsOrigins(config.Server.CorsAllowOrigins)
+
 	config.Info.Version = Version
 	config.Info.Commit = Commit
 	config.Info.BuildDate = BuildDate
@@ -424,6 +426,24 @@ func generateSecureSecret() (string, error) {
 		return "", err
 	}
 	return base64.URLEncoding.EncodeToString(bytes), nil
+}
+
+// validateCorsOrigins checks that CORS origins are well-formed and warns about
+// non-standard schemes that require special handling.
+func validateCorsOrigins(origins []string) {
+	for _, o := range origins {
+		if o == "*" {
+			continue
+		}
+		if !strings.Contains(o, "://") {
+			fmt.Printf("\n⚠️  CORS CONFIG WARNING: origin %q has no scheme — expected format: scheme://host\n", o)
+			fmt.Printf("   Valid examples: http://localhost:5173, https://example.com, capacitor://localhost\n\n")
+			continue
+		}
+		if !strings.HasPrefix(o, "http://") && !strings.HasPrefix(o, "https://") {
+			fmt.Printf("ℹ️  CORS CONFIG: origin %q uses a non-standard scheme — this is supported (e.g. for Capacitor/Electron apps)\n", o)
+		}
+	}
 }
 
 // ParseLogLevel converts a string log level to zapcore.Level

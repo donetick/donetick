@@ -25,6 +25,7 @@ type Config struct {
 	Name                   string              `mapstructure:"name" yaml:"name"`
 	Telegram               TelegramConfig      `mapstructure:"telegram" yaml:"telegram"`
 	Pushover               PushoverConfig      `mapstructure:"pushover" yaml:"pushover"`
+	Pushbullet             PushbulletConfig    `mapstructure:"pushbullet" yaml:"pushbullet"`
 	Database               DatabaseConfig      `mapstructure:"database" yaml:"database"`
 	Jwt                    JwtConfig           `mapstructure:"jwt" yaml:"jwt"`
 	Server                 ServerConfig        `mapstructure:"server" yaml:"server"`
@@ -86,6 +87,10 @@ type TelegramConfig struct {
 
 type PushoverConfig struct {
 	Token string `mapstructure:"token" yaml:"token"`
+}
+
+type PushbulletConfig struct {
+	APIToken string `mapstructure:"api_token" yaml:"api_token"`
 }
 
 type DatabaseConfig struct {
@@ -276,6 +281,9 @@ func configEnvironmentOverrides(Config *Config) {
 	}
 	if os.Getenv("DONETICK_PUSHOVER_TOKEN") != "" {
 		Config.Pushover.Token = os.Getenv("DONETICK_PUSHOVER_TOKEN")
+	}
+	if os.Getenv("DONETICK_PUSHBULLET_API_TOKEN") != "" {
+		Config.Pushbullet.APIToken = os.Getenv("DONETICK_PUSHBULLET_API_TOKEN")
 	}
 	if os.Getenv("DONETICK_DISABLE_SIGNUP") == "true" {
 		Config.IsUserCreationDisabled = true

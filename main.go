@@ -45,6 +45,7 @@ import (
 	nps "donetick.com/core/internal/notifier/service"
 	discord "donetick.com/core/internal/notifier/service/discord"
 	"donetick.com/core/internal/notifier/service/fcm"
+	"donetick.com/core/internal/notifier/service/pushbullet"
 	"donetick.com/core/internal/notifier/service/pushover"
 	telegram "donetick.com/core/internal/notifier/service/telegram"
 	pRepo "donetick.com/core/internal/points/repo"
@@ -96,6 +97,7 @@ func main() {
 
 		// add notifier
 		fx.Provide(pushover.NewPushover),
+		fx.Provide(pushbullet.NewPushbulletNotifier),
 		fx.Provide(telegram.NewTelegramNotifier),
 		fx.Provide(discord.NewDiscordNotifier),
 		fx.Provide(notifier.NewNotifier),

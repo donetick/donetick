@@ -5,6 +5,8 @@ telegram:
   token: ""
 pushover:
   token: ""
+shoutrrr:
+  url: ""
 database:
   type: "sqlite"
   migration: true

@@ -8,6 +8,7 @@ import (
 	"donetick.com/core/internal/notifier/service/discord"
 	"donetick.com/core/internal/notifier/service/fcm"
 	pushover "donetick.com/core/internal/notifier/service/pushover"
+	shoutrrrNotif "donetick.com/core/internal/notifier/service/shoutrrr"
 	telegram "donetick.com/core/internal/notifier/service/telegram"
 
 	"donetick.com/core/logging"
@@ -19,15 +20,26 @@ type Notifier struct {
 	discord        *discord.DiscordNotifier
 	FCM            *fcm.FCMNotifier
 	eventsProducer *events.EventsProducer
+	shoutrrr       *shoutrrrNotif.ShoutrrrNotifier
 }
 
-func NewNotifier(t *telegram.TelegramNotifier, p *pushover.Pushover, ep *events.EventsProducer, d *discord.DiscordNotifier, f *fcm.FCMNotifier) *Notifier {
+type NotifierParams struct {
+	Telegram       *telegram.TelegramNotifier
+	Pushover       *pushover.Pushover
+	EventsProducer *events.EventsProducer
+	Discord        *discord.DiscordNotifier
+	FCM            *fcm.FCMNotifier
+	Shoutrrr       *shoutrrrNotif.ShoutrrrNotifier
+}
+
+func NewNotifier(params *NotifierParams) *Notifier {
 	return &Notifier{
-		Telegram:       t,
-		Pushover:       p,
-		eventsProducer: ep,
-		discord:        d,
-		FCM:            f,
+		Telegram:       params.Telegram,
+		Pushover:       params.Pushover,
+		eventsProducer: params.EventsProducer,
+		discord:        params.Discord,
+		FCM:            params.FCM,
+		shoutrrr:       params.Shoutrrr,
 	}
 }
 
@@ -65,6 +77,13 @@ func (n *Notifier) SendNotification(c context.Context, notification *nModel.Noti
 		// currently we have eventProducer to send events always as a webhook
 		// if NotificationPlatform is selected. this a case to catch
 		// when we only want to send a webhook
+	case nModel.NotificationPlatformShoutrrr:
+		if n.FCM == nil {
+			log.Error("Shoutrrr is not initialized, Skipping sending message")
+
+			return nil
+		}
+		err = n.shoutrrr.SendNotification(c, notification)
 
 	default:
 		log.Error("Unknown notification type", "type", notification.TypeID)

@@ -244,15 +244,18 @@ func newServer(lc fx.Lifecycle, cfg *config.Config, db *gorm.DB, notifier *notif
 		}
 	}
 
-	corsConfig.AllowOrigins = standardOrigins
+	// When AllowOriginFunc is set, gin-contrib/cors ignores AllowOrigins entirely.
+	// So if we have any non-standard origins, we must handle ALL origins in the func.
 	if len(customOrigins) > 0 {
-		customSet := make(map[string]bool, len(customOrigins))
-		for _, o := range customOrigins {
-			customSet[o] = true
+		allOrigins := make(map[string]bool, len(origins))
+		for _, o := range origins {
+			allOrigins[o] = true
 		}
 		corsConfig.AllowOriginFunc = func(origin string) bool {
-			return customSet[origin]
+			return allOrigins[origin]
 		}
+	} else {
+		corsConfig.AllowOrigins = standardOrigins
 	}
 
 	corsConfig.AllowCredentials = true

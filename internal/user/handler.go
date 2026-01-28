@@ -613,6 +613,7 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 				Username:    claims.Email,
 				Email:       claims.Email,
 				Password:    encodedPassword,
+				Image:       claims.Picture,
 				DisplayName: claims.DisplayName,
 				Provider:    uModel.AuthProviderOAuth2,
 			}
@@ -693,6 +694,13 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 				"sessionToken": sessionToken,
 			})
 			return
+		}
+		// Set profile image from OAuth provider if not already set
+		if acc.Image == "" && claims.Picture != "" {
+			err := h.userRepo.UpdateUserImage(c, acc.ID, claims.Picture)
+			if err != nil {
+				logger.Warn("Failed to update profile image", "userID", acc.ID, "err", err)
+			}
 		}
 		// ... (JWT generation and response)
 		c.Set("user_account", acc)

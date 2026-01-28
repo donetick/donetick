@@ -39,6 +39,7 @@ const (
 	NotificationPlatformWebhook
 	NotificationPlatformDiscord
 	NotificationPlatformFCM
+	NotificationPlatformPushbullet
 )
 
 type JSONB map[string]interface{}

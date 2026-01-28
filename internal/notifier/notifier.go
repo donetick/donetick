@@ -7,6 +7,7 @@ import (
 	nModel "donetick.com/core/internal/notifier/model"
 	"donetick.com/core/internal/notifier/service/discord"
 	"donetick.com/core/internal/notifier/service/fcm"
+	"donetick.com/core/internal/notifier/service/pushbullet"
 	pushover "donetick.com/core/internal/notifier/service/pushover"
 	telegram "donetick.com/core/internal/notifier/service/telegram"
 
@@ -16,15 +17,17 @@ import (
 type Notifier struct {
 	Telegram       *telegram.TelegramNotifier
 	Pushover       *pushover.Pushover
+	Pushbullet     *pushbullet.PushbulletNotifier
 	discord        *discord.DiscordNotifier
 	FCM            *fcm.FCMNotifier
 	eventsProducer *events.EventsProducer
 }
 
-func NewNotifier(t *telegram.TelegramNotifier, p *pushover.Pushover, ep *events.EventsProducer, d *discord.DiscordNotifier, f *fcm.FCMNotifier) *Notifier {
+func NewNotifier(t *telegram.TelegramNotifier, p *pushover.Pushover, pb *pushbullet.PushbulletNotifier, ep *events.EventsProducer, d *discord.DiscordNotifier, f *fcm.FCMNotifier) *Notifier {
 	return &Notifier{
 		Telegram:       t,
 		Pushover:       p,
+		Pushbullet:     pb,
 		eventsProducer: ep,
 		discord:        d,
 		FCM:            f,
@@ -60,6 +63,12 @@ func (n *Notifier) SendNotification(c context.Context, notification *nModel.Noti
 		}
 		err = n.FCM.SendNotification(c, notification)
 
+	case nModel.NotificationPlatformPushbullet:
+		if n.Pushbullet == nil {
+			log.Error("Pushbullet is not initialized, Skipping sending message")
+			return nil
+		}
+		err = n.Pushbullet.SendNotification(c, notification)
 	case nModel.NotificationPlatformWebhook:
 		// TODO: Implement webhook notification
 		// currently we have eventProducer to send events always as a webhook

@@ -10,16 +10,16 @@ import (
 )
 
 type User struct {
-	ID          int              `json:"id" gorm:"primary_key"`                  // Unique identifier
-	DisplayName string           `json:"displayName" gorm:"column:display_name"` // Display name
-	Username    string           `json:"username" gorm:"column:username;unique"` // Username (unique)
-	Email       string           `json:"email" gorm:"column:email;uniqueIndex:idx_email_not_null,where:email != ''"`       // Email (unique when not empty, allows empty for child users)
-	Provider    AuthProviderType `json:"provider" gorm:"column:provider"`        // Provider
-	Password    string           `json:"-" gorm:"column:password"`               // Password
-	CircleID    int              `json:"circleID" gorm:"column:circle_id"`       // Circle ID
-	ChatID      int64            `json:"chatID" gorm:"column:chat_id"`           // Telegram chat ID
-	Image       string           `json:"image" gorm:"column:image"`              // Image
-	Timezone    string           `json:"timezone" gorm:"column:timezone"`        // Timezone
+	ID          int              `json:"id" gorm:"primary_key"`                                                      // Unique identifier
+	DisplayName string           `json:"displayName" gorm:"column:display_name"`                                     // Display name
+	Username    string           `json:"username" gorm:"column:username;unique"`                                     // Username (unique)
+	Email       string           `json:"email" gorm:"column:email;uniqueIndex:idx_email_not_null,where:email != ''"` // Email (unique when not empty, allows empty for child users)
+	Provider    AuthProviderType `json:"provider" gorm:"column:provider"`                                            // Provider
+	Password    string           `json:"-" gorm:"column:password"`                                                   // Password
+	CircleID    int              `json:"circleID" gorm:"column:circle_id"`                                           // Circle ID
+	ChatID      int64            `json:"chatID" gorm:"column:chat_id"`                                               // Telegram chat ID
+	Image       string           `json:"image" gorm:"column:image"`                                                  // Image
+	Timezone    string           `json:"timezone" gorm:"column:timezone"`                                            // Timezone
 	// Parent-Child relationship fields
 	ParentUserID *int     `json:"parentUserId,omitempty" gorm:"column:parent_user_id;index"`
 	UserType     UserType `json:"userType" gorm:"column:user_type;default:0"`

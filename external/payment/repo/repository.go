@@ -217,9 +217,9 @@ func (a *StripeDB) UpdateSubscription(ctx context.Context, subscription *pModel.
 // RevenueCat database operations
 func (r *RevenueCatDB) SaveSubscription(ctx context.Context, subscription *pModel.RevenueCatSubscription) (*pModel.RevenueCatSubscription, error) {
 	logger := logging.FromContext(ctx)
-	
+
 	logger.Debugw("revenuecat.subscription.db.Save", "subscription", subscription)
-	
+
 	if err := r.db.WithContext(ctx).Save(subscription).Error; err != nil {
 		logger.Error("revenuecat.subscription.db.Save failed to save", "err", err)
 		return nil, err
@@ -229,7 +229,7 @@ func (r *RevenueCatDB) SaveSubscription(ctx context.Context, subscription *pMode
 
 func (r *RevenueCatDB) GetSubscriptionByAppUserID(ctx context.Context, appUserID string) (*pModel.RevenueCatSubscription, error) {
 	logger := logging.FromContext(ctx)
-	
+
 	var subscription pModel.RevenueCatSubscription
 	if err := r.db.WithContext(ctx).Where("app_user_id = ? AND status = ?", appUserID, "active").First(&subscription).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -243,7 +243,7 @@ func (r *RevenueCatDB) GetSubscriptionByAppUserID(ctx context.Context, appUserID
 
 func (r *RevenueCatDB) GetSubscriptionByOriginalTransactionID(ctx context.Context, originalTransactionID string) (*pModel.RevenueCatSubscription, error) {
 	logger := logging.FromContext(ctx)
-	
+
 	var subscription pModel.RevenueCatSubscription
 	if err := r.db.WithContext(ctx).Where("original_transaction_id = ?", originalTransactionID).First(&subscription).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -257,27 +257,27 @@ func (r *RevenueCatDB) GetSubscriptionByOriginalTransactionID(ctx context.Contex
 
 func (r *RevenueCatDB) UpdateSubscription(ctx context.Context, subscription *pModel.RevenueCatSubscription) error {
 	logger := logging.FromContext(ctx)
-	
+
 	if subscription.OriginalTransactionID == "" {
 		return errors.New("original transaction id is required")
 	}
-	
+
 	now := time.Now().UTC()
 	subscription.UpdatedAt = &now
-	
+
 	if err := r.db.WithContext(ctx).Model(&pModel.RevenueCatSubscription{}).Where("original_transaction_id = ?", subscription.OriginalTransactionID).Updates(subscription).Error; err != nil {
 		logger.Error("revenuecat.subscription.db.Update failed to update", "err", err)
 		return err
 	}
-	
+
 	return nil
 }
 
 func (r *RevenueCatDB) SaveEvent(ctx context.Context, event *pModel.RevenueCatEvent) (*pModel.RevenueCatEvent, error) {
 	logger := logging.FromContext(ctx)
-	
+
 	logger.Debugw("revenuecat.event.db.Save", "event", event)
-	
+
 	if err := r.db.WithContext(ctx).Create(event).Error; err != nil {
 		logger.Error("revenuecat.event.db.Save failed to save", "err", err)
 		return nil, err
@@ -287,7 +287,7 @@ func (r *RevenueCatDB) SaveEvent(ctx context.Context, event *pModel.RevenueCatEv
 
 func (r *RevenueCatDB) EventExists(ctx context.Context, eventID string) (bool, error) {
 	logger := logging.FromContext(ctx)
-	
+
 	var count int64
 	if err := r.db.WithContext(ctx).Model(&pModel.RevenueCatEvent{}).Where("event_id = ?", eventID).Count(&count).Error; err != nil {
 		logger.Error("revenuecat.event.db.Exists failed to check", "err", err)
@@ -299,9 +299,9 @@ func (r *RevenueCatDB) EventExists(ctx context.Context, eventID string) (bool, e
 // Unified Subscription Database Operations
 func (s *SubscriptionDB) SaveSubscription(ctx context.Context, subscription *pModel.Subscription) (*pModel.Subscription, error) {
 	logger := logging.FromContext(ctx)
-	
+
 	logger.Debugw("subscription.db.Save", "subscription", subscription)
-	
+
 	if err := s.db.WithContext(ctx).Save(subscription).Error; err != nil {
 		logger.Error("subscription.db.Save failed to save", "err", err)
 		return nil, err
@@ -311,7 +311,7 @@ func (s *SubscriptionDB) SaveSubscription(ctx context.Context, subscription *pMo
 
 func (s *SubscriptionDB) GetSubscriptionByUserID(ctx context.Context, userID int) (*pModel.Subscription, error) {
 	logger := logging.FromContext(ctx)
-	
+
 	var subscription pModel.Subscription
 	if err := s.db.WithContext(ctx).Where("user_id = ? AND status = ?", userID, "active").
 		Order("created_at DESC").First(&subscription).Error; err != nil {
@@ -326,7 +326,7 @@ func (s *SubscriptionDB) GetSubscriptionByUserID(ctx context.Context, userID int
 
 func (s *SubscriptionDB) GetSubscriptionByID(ctx context.Context, id string) (*pModel.Subscription, error) {
 	logger := logging.FromContext(ctx)
-	
+
 	var subscription pModel.Subscription
 	if err := s.db.WithContext(ctx).Where("id = ?", id).First(&subscription).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -340,17 +340,17 @@ func (s *SubscriptionDB) GetSubscriptionByID(ctx context.Context, id string) (*p
 
 func (s *SubscriptionDB) UpdateSubscription(ctx context.Context, subscription *pModel.Subscription) error {
 	logger := logging.FromContext(ctx)
-	
+
 	if subscription.ID == "" {
 		return errors.New("subscription id is required")
 	}
-	
+
 	subscription.UpdatedAt = time.Now().UTC()
-	
+
 	if err := s.db.WithContext(ctx).Model(&pModel.Subscription{}).Where("id = ?", subscription.ID).Updates(subscription).Error; err != nil {
 		logger.Error("subscription.db.Update failed to update", "err", err)
 		return err
 	}
-	
+
 	return nil
 }

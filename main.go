@@ -98,9 +98,9 @@ func main() {
 		fx.Provide(pushover.NewPushover),
 		fx.Provide(telegram.NewTelegramNotifier),
 		fx.Provide(discord.NewDiscordNotifier),
-		fx.Provide(notifier.NewNotifier),
-		fx.Provide(events.NewEventsProducer),
 		fx.Provide(fcm.NewFCMNotifier),
+		fx.Provide(events.NewEventsProducer),
+		fx.Provide(notifier.NewNotifier),
 
 		// Rate limiter
 		fx.Provide(utils.NewRateLimiter),

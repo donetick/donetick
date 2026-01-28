@@ -3836,7 +3836,7 @@ func getActionName(status chModel.ChoreHistoryStatus) string {
 func Routes(router *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware) {
 
 	choresRoutes := router.Group("api/v1/chores")
-	choresRoutes.Use(authMiddleware.JWTOrAPIKeyMiddleware(auth, h.uRepo))
+	choresRoutes.Use(authMiddleware.MultiAuthMiddleware(auth, h.uRepo))
 	choresRoutes.Use(authMiddleware.ImpersonationMiddleware(h.uRepo, h.circleRepo))
 	{
 		choresRoutes.GET("/", h.getChores)

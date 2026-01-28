@@ -9,22 +9,21 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// JWTOrAPIKeyMiddleware tries JWT first, then API key authentication
-func JWTOrAPIKeyMiddleware(jwtMiddleware *jwt.GinJWTMiddleware, userRepo *uRepo.UserRepository) gin.HandlerFunc {
+const apiKeyHeader = "secretkey"
+const jwtPayloadKey = "JWT_PAYLOAD"
+
+// MultiAuthMiddleware tries JWT first, then API key authentication
+func MultiAuthMiddleware(jwtMiddleware *jwt.GinJWTMiddleware, userRepo *uRepo.UserRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		logger := logging.FromContext(c)
 		authenticated := false
 
-		// Attempt 1: Try JWT authentication
-		if tryJWTAuth(c, jwtMiddleware) {
-			authenticated = true
-		}
+		// Attempt 1: Try API key first
+		authenticated = authenticateAPIKey(c, userRepo)
 
-		// Attempt 2: If JWT failed, try API key
+		// Attempt 2: If API key failed, try JWT
 		if !authenticated {
-			if tryAPIKeyAuth(c, userRepo) {
-				authenticated = true
-			}
+			authenticated = authenticateJWT(c, jwtMiddleware)
 		}
 
 		// If neither succeeded, return unauthorized
@@ -41,8 +40,8 @@ func JWTOrAPIKeyMiddleware(jwtMiddleware *jwt.GinJWTMiddleware, userRepo *uRepo.
 	}
 }
 
-// tryJWTAuth attempts JWT authentication and returns true if successful
-func tryJWTAuth(c *gin.Context, jwtMiddleware *jwt.GinJWTMiddleware) bool {
+// authenticateJWT attempts JWT authentication and returns true if successful
+func authenticateJWT(c *gin.Context, jwtMiddleware *jwt.GinJWTMiddleware) bool {
 	token, err := jwtMiddleware.ParseToken(c)
 	if err != nil || !token.Valid {
 		return false
@@ -53,7 +52,8 @@ func tryJWTAuth(c *gin.Context, jwtMiddleware *jwt.GinJWTMiddleware) bool {
 		return false
 	}
 
-	c.Set("JWT_PAYLOAD", claims)
+	c.Set(jwtPayloadKey, claims)
+
 	identity := jwtMiddleware.IdentityHandler(c)
 
 	if identity != nil {
@@ -63,10 +63,12 @@ func tryJWTAuth(c *gin.Context, jwtMiddleware *jwt.GinJWTMiddleware) bool {
 	return jwtMiddleware.Authorizator(identity, c)
 }
 
-// tryAPIKeyAuth attempts API key authentication and returns true if successful
-func tryAPIKeyAuth(c *gin.Context, userRepo *uRepo.UserRepository) bool {
+// authenticateAPIKey attempts API key authentication and returns true if successful
+func authenticateAPIKey(c *gin.Context, userRepo *uRepo.UserRepository) bool {
 	logger := logging.FromContext(c)
-	apiToken := c.GetHeader("secretkey")
+
+	apiToken := c.GetHeader(apiKeyHeader)
+
 	if apiToken == "" {
 		return false
 	}

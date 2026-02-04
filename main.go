@@ -55,6 +55,9 @@ import (
 	uRepo "donetick.com/core/internal/user/repo"
 	"donetick.com/core/internal/utils"
 	"donetick.com/core/logging"
+
+	"donetick.com/core/internal/filter"
+	fRepo "donetick.com/core/internal/filter/repo"
 )
 
 func main() {
@@ -136,6 +139,10 @@ func main() {
 		fx.Provide(pjRepo.NewProjectRepository),
 		fx.Provide(project.NewHandler),
 
+		// Filters:
+		fx.Provide(fRepo.NewFilterRepository),
+		fx.Provide(filter.NewHandler),
+
 		fx.Provide(thing.NewAPI),
 		fx.Provide(thing.NewHandler),
 
@@ -182,6 +189,7 @@ func main() {
 			thing.APIs,
 			label.Routes,
 			project.Routes,
+			filter.Routes,
 
 			storage.Routes,
 			frontend.Routes,

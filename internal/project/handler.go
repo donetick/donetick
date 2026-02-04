@@ -63,6 +63,7 @@ func (h *Handler) createProject(c *gin.Context) {
 		Color:       req.Color,
 		CircleID:    currentUser.CircleID,
 		CreatedBy:   currentUser.ID,
+		Icon:        req.Icon,
 	}
 
 	if err := h.pRepo.CreateProject(c, project); err != nil {

@@ -12,8 +12,10 @@ import (
 	sModel "donetick.com/core/external/payment/model"
 	chModel "donetick.com/core/internal/chore/model"
 	cModel "donetick.com/core/internal/circle/model"
+	filterModel "donetick.com/core/internal/filter/model"
 	nModel "donetick.com/core/internal/notifier/model"
 	pModel "donetick.com/core/internal/points"
+	projModel "donetick.com/core/internal/project/model"
 	storageModel "donetick.com/core/internal/storage/model"
 	stModel "donetick.com/core/internal/subtask/model"
 	tModel "donetick.com/core/internal/thing/model"
@@ -40,6 +42,7 @@ func Migration(db *gorm.DB) error {
 		sModel.RevenueCatSubscription{},
 		sModel.Subscription{},
 		uModel.MFASession{},
+		uModel.UserSession{},
 		tModel.Thing{},
 		tModel.ThingChore{},
 		tModel.ThingHistory{},
@@ -47,6 +50,8 @@ func Migration(db *gorm.DB) error {
 		uModel.UserNotificationTarget{},
 		chModel.Label{},
 		chModel.ChoreLabels{},
+		projModel.Project{},
+		filterModel.Filter{},
 		migrations.Migration{},
 		pModel.PointsHistory{},
 		stModel.SubTask{},

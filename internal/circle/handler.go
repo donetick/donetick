@@ -455,8 +455,8 @@ func (h *Handler) AcceptJoinRequest(c *gin.Context) {
 }
 func (h *Handler) RedeemPoints(c *gin.Context) {
 	type RedeemPointsRequest struct {
-		Points int `json:"points"`
-		UserID int `json:"userId"`
+		Points int `json:"points" binding:"required"`
+		UserID int `json:"userId" binding:"required"`
 	}
 
 	log := logging.FromContext(c)
@@ -470,7 +470,7 @@ func (h *Handler) RedeemPoints(c *gin.Context) {
 	// parse body:
 	var redeemReq RedeemPointsRequest
 
-	if err := c.ShouldBind(&redeemReq); err != nil {
+	if err := c.ShouldBindJSON(&redeemReq); err != nil {
 		c.JSON(400, gin.H{
 			"error": "Invalid request",
 		})

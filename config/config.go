@@ -101,8 +101,8 @@ type DatabaseConfig struct {
 
 type JwtConfig struct {
 	Secret      string        `mapstructure:"secret" yaml:"secret"`
-	SessionTime time.Duration `mapstructure:"session_time" yaml:"session_time"`
-	MaxRefresh  time.Duration `mapstructure:"max_refresh" yaml:"max_refresh"`
+	SessionTime time.Duration `mapstructure:"session_time" yaml:"session_time" default:"24h"` // 24 hours
+	MaxRefresh  time.Duration `mapstructure:"max_refresh" yaml:"max_refresh" default:"1440h"` // 60 days
 }
 
 type ServerConfig struct {
@@ -239,8 +239,8 @@ func NewConfig() *Config {
 		},
 		Jwt: JwtConfig{
 			Secret:      secureSecret,
-			SessionTime: 7 * 24 * time.Hour,
-			MaxRefresh:  7 * 24 * time.Hour,
+			SessionTime: 24 * time.Hour,
+			MaxRefresh:  60 * 24 * time.Hour,
 		},
 		RealTimeConfig: RealTimeConfig{
 			Enabled:               true,
@@ -350,6 +350,13 @@ func LoadConfig() *Config {
 	config.Info.Version = Version
 	config.Info.Commit = Commit
 	config.Info.BuildDate = BuildDate
+
+	// set the timezone to UTC if not set:
+	if os.Getenv("TZ") == "" {
+		os.Setenv("TZ", "UTC")
+	}
+	time.Local, _ = time.LoadLocation(os.Getenv("TZ"))
+
 	return &config
 
 	// return LocalConfig()

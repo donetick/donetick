@@ -50,6 +50,10 @@ archives:
         dst: "config/local.yaml"
       - src: "config/selfhosted.yaml"
         dst: "config/selfhosted.yaml"
+release:
+  prerelease: auto  # Auto-detect pre-releases based on semver (e.g., v1.0.0-beta.1)
+  draft: false
+
 changelog:
   sort: asc
   filters:

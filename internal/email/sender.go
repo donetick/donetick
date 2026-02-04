@@ -20,21 +20,21 @@ func NewEmailSender(conf *config.Config) *EmailSender {
 	var client *gomail.Dialer
 
 	// Use username if provided, otherwise fall back to email for backwards compatibility
+	var emailIdentifier string
+
 	if conf.EmailConfig.Username != "" {
-		client = gomail.NewDialer(
-			conf.EmailConfig.Host,
-			conf.EmailConfig.Port,
-			conf.EmailConfig.Username,
-			conf.EmailConfig.Key,
-		)
+		emailIdentifier = conf.EmailConfig.Username
+	} else if conf.EmailConfig.Email != "" {
+		emailIdentifier = conf.EmailConfig.Email
 	} else {
-		client = gomail.NewDialer(
-			conf.EmailConfig.Host,
-			conf.EmailConfig.Port,
-			conf.EmailConfig.Email,
-			conf.EmailConfig.Key,
-		)
+		return nil
 	}
+
+	client = gomail.NewDialer(
+		conf.EmailConfig.Host,
+		conf.EmailConfig.Port,
+		emailIdentifier,
+		conf.EmailConfig.Key)
 
 	// format conf.EmailConfig.Host and port :
 

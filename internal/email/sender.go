@@ -17,13 +17,24 @@ type EmailSender struct {
 }
 
 func NewEmailSender(conf *config.Config) *EmailSender {
-	// Use username if provided, otherwise fall back to email for backwards compatibility
-	username := conf.EmailConfig.Username
-	if username == "" {
-		username = conf.EmailConfig.Email
-	}
+	var client *gomail.Dialer
 
-	client := gomail.NewDialer(conf.EmailConfig.Host, conf.EmailConfig.Port, username, conf.EmailConfig.Key)
+	// Use username if provided, otherwise fall back to email for backwards compatibility
+	if conf.EmailConfig.Username != "" {
+		client = gomail.NewDialer(
+			conf.EmailConfig.Host,
+			conf.EmailConfig.Port,
+			conf.EmailConfig.Username,
+			conf.EmailConfig.Key,
+		)
+	} else {
+		client = gomail.NewDialer(
+			conf.EmailConfig.Host,
+			conf.EmailConfig.Port,
+			conf.EmailConfig.Email,
+			conf.EmailConfig.Key,
+		)
+	}
 
 	// format conf.EmailConfig.Host and port :
 

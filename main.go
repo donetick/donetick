@@ -46,6 +46,7 @@ import (
 	discord "donetick.com/core/internal/notifier/service/discord"
 	"donetick.com/core/internal/notifier/service/fcm"
 	"donetick.com/core/internal/notifier/service/pushover"
+	"donetick.com/core/internal/notifier/service/shoutrrr"
 	telegram "donetick.com/core/internal/notifier/service/telegram"
 	pRepo "donetick.com/core/internal/points/repo"
 	"donetick.com/core/internal/realtime"
@@ -104,6 +105,7 @@ func main() {
 		fx.Provide(notifier.NewNotifier),
 		fx.Provide(events.NewEventsProducer),
 		fx.Provide(fcm.NewFCMNotifier),
+		fx.Provide(shoutrrr.NewShoutrrrNotifier),
 
 		// Rate limiter
 		fx.Provide(utils.NewRateLimiter),

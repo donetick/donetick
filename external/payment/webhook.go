@@ -1,6 +1,7 @@
 package payment
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -37,23 +38,30 @@ func NewWebhook(stripeDB pDB.StripeDB,
 	subscriptionDB pDB.SubscriptionDB,
 	stripeService *stripeService.StripeService,
 	uRepo *uRepo.UserRepository,
-	config *config.Config) *Webhook {
+	config *config.Config, c context.Context) *Webhook {
 
-	whitelistIPs := make(map[string]bool)
-	for _, ip := range config.StripeConfig.WhitelistedIPs {
-		whitelistIPs[ip] = true
+	log := logging.FromContext(c)
+	if stripeService != nil {
+		whitelistIPs := make(map[string]bool)
+		for _, ip := range config.StripeConfig.WhitelistedIPs {
+			whitelistIPs[ip] = true
+		}
+
+		return &Webhook{
+			stripeDB:         stripeDB,
+			revenueCatDB:     revenueCatDB,
+			subscriptionDB:   subscriptionDB,
+			whitelistIPs:     whitelistIPs,
+			stripe:           stripeService,
+			userRepo:         uRepo,
+			prices:           config.StripeConfig.Prices,
+			revenueCatConfig: config.RevenueCatConfig,
+		}
+	} else {
+		log.Info("Payment webhook is not set up.")
+		return nil
 	}
 
-	return &Webhook{
-		stripeDB:         stripeDB,
-		revenueCatDB:     revenueCatDB,
-		subscriptionDB:   subscriptionDB,
-		whitelistIPs:     whitelistIPs,
-		stripe:           stripeService,
-		userRepo:         uRepo,
-		prices:           config.StripeConfig.Prices,
-		revenueCatConfig: config.RevenueCatConfig,
-	}
 }
 
 // webhook handler

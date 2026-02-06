@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"donetick.com/core/config"
+	"donetick.com/core/logging"
 	gomail "gopkg.in/gomail.v2"
 )
 
@@ -15,18 +16,23 @@ type EmailSender struct {
 	appHost string
 }
 
-func NewEmailSender(conf *config.Config) *EmailSender {
+func NewEmailSender(conf *config.Config, c context.Context) *EmailSender {
+	log := logging.FromContext(c)
+	if conf.EmailConfig.Email != "" && conf.EmailConfig.Port != nil && conf.EmailConfig.Email != "" && conf.EmailConfig.Key != "" {
+		client := gomail.NewDialer(conf.EmailConfig.Host, *conf.EmailConfig.Port, conf.EmailConfig.Email, conf.EmailConfig.Key)
+		// format conf.EmailConfig.Host and port :
 
-	client := gomail.NewDialer(conf.EmailConfig.Host, conf.EmailConfig.Port, conf.EmailConfig.Email, conf.EmailConfig.Key)
+		// auth := smtp.PlainAuth("", conf.EmailConfig.Email, conf.EmailConfig.Password, host)
+		return &EmailSender{
 
-	// format conf.EmailConfig.Host and port :
-
-	// auth := smtp.PlainAuth("", conf.EmailConfig.Email, conf.EmailConfig.Password, host)
-	return &EmailSender{
-
-		client:  client,
-		appHost: conf.EmailConfig.AppHost,
+			client:  client,
+			appHost: conf.EmailConfig.AppHost,
+		}
+	} else {
+		log.Info("Email service is not set up.")
+		return nil
 	}
+
 }
 
 func (es *EmailSender) SendVerificationEmail(to, code string) error {

@@ -1,10 +1,12 @@
 package storage
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 
 	"donetick.com/core/config"
+	"donetick.com/core/logging"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/s3"
 )
@@ -16,9 +18,15 @@ type URLSignerS3 struct {
 	PublicHost string
 }
 
-func NewURLSignerS3(storage *S3Storage, config *config.Config) *URLSignerS3 {
-	return &URLSignerS3{storage: storage,
-		PublicHost: config.Storage.PublicHost,
+func NewURLSignerS3(storage *S3Storage, config *config.Config, c context.Context) *URLSignerS3 {
+	log := logging.FromContext(c)
+	if config.Storage.PublicHost != "" {
+		return &URLSignerS3{storage: storage,
+			PublicHost: config.Storage.PublicHost,
+		}
+	} else {
+		log.Info("AWS URL S3 URL Signer is not set up.")
+		return nil
 	}
 }
 

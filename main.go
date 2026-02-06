@@ -58,6 +58,9 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 	"go.uber.org/fx"
 	"gorm.io/gorm"
+
+	"donetick.com/core/internal/filter"
+	fRepo "donetick.com/core/internal/filter/repo"
 )
 
 //  @securityDefinitions.apikey JWTKeyAuth
@@ -149,6 +152,10 @@ func main() {
 		fx.Provide(pjRepo.NewProjectRepository),
 		fx.Provide(project.NewHandler),
 
+		// Filters:
+		fx.Provide(fRepo.NewFilterRepository),
+		fx.Provide(filter.NewHandler),
+
 		fx.Provide(thing.NewAPI),
 		fx.Provide(thing.NewHandler),
 
@@ -195,6 +202,7 @@ func main() {
 			thing.APIs,
 			label.Routes,
 			project.Routes,
+			filter.Routes,
 
 			storage.Routes,
 			frontend.Routes,

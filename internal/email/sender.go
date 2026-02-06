@@ -18,7 +18,7 @@ type EmailSender struct {
 
 func NewEmailSender(conf *config.Config, c context.Context) *EmailSender {
 	log := logging.FromContext(c)
-	if conf.EmailConfig.Email != "" && conf.EmailConfig.Port != nil && conf.EmailConfig.Email != "" && conf.EmailConfig.Key != "" {
+	if conf.EmailConfig.Host != "" && conf.EmailConfig.Port != nil && conf.EmailConfig.Email != "" && conf.EmailConfig.Key != "" {
 		client := gomail.NewDialer(conf.EmailConfig.Host, *conf.EmailConfig.Port, conf.EmailConfig.Email, conf.EmailConfig.Key)
 		// format conf.EmailConfig.Host and port :
 

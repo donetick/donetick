@@ -5,18 +5,14 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
 	"donetick.com/core/config"
+	"donetick.com/core/docs"
 	"donetick.com/core/external/payment"
 	"donetick.com/core/frontend"
-	"donetick.com/core/migrations"
-	"github.com/gin-contrib/cors"
-	"github.com/gin-gonic/gin"
-	"go.uber.org/fx"
-	"gorm.io/gorm"
-
 	auth "donetick.com/core/internal/auth"
 	"donetick.com/core/internal/auth/apple"
 	"donetick.com/core/internal/chore"
@@ -33,10 +29,6 @@ import (
 	"donetick.com/core/internal/mfa"
 	"donetick.com/core/internal/project"
 	pjRepo "donetick.com/core/internal/project/repo"
-	"donetick.com/core/internal/resource"
-	"donetick.com/core/internal/storage"
-	storageRepo "donetick.com/core/internal/storage/repo"
-	spRepo "donetick.com/core/internal/subtask/repo"
 
 	sRepo "donetick.com/core/external/payment/repo"
 	sService "donetick.com/core/external/payment/service"
@@ -49,16 +41,37 @@ import (
 	telegram "donetick.com/core/internal/notifier/service/telegram"
 	pRepo "donetick.com/core/internal/points/repo"
 	"donetick.com/core/internal/realtime"
+	"donetick.com/core/internal/resource"
+	"donetick.com/core/internal/storage"
+	storageRepo "donetick.com/core/internal/storage/repo"
+	spRepo "donetick.com/core/internal/subtask/repo"
 	"donetick.com/core/internal/thing"
 	tRepo "donetick.com/core/internal/thing/repo"
 	"donetick.com/core/internal/user"
 	uRepo "donetick.com/core/internal/user/repo"
 	"donetick.com/core/internal/utils"
 	"donetick.com/core/logging"
+	"donetick.com/core/migrations"
+	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
+	"go.uber.org/fx"
+	"gorm.io/gorm"
 
 	"donetick.com/core/internal/filter"
 	fRepo "donetick.com/core/internal/filter/repo"
 )
+
+//  @securityDefinitions.apikey JWTKeyAuth
+//	@in							header
+//	@name						Authorization
+//  @description Type "Bearer" followed by a space and JWT token.
+
+//  @securityDefinitions.apikey APIKeyAuth
+//	@in							header
+//	@name						secretkey
+//  @description donetick issued apikey
 
 func main() {
 	// Load configuration first
@@ -70,13 +83,13 @@ func main() {
 		cfg.Logging.Encoding,
 		cfg.Logging.Development,
 	)
-
 	app := fx.New(
 		fx.Supply(cfg),
 		fx.Supply(logging.DefaultLogger().Desugar()),
 
 		// fx.Provide(config.NewConfig),
 		fx.Provide(auth.NewAuthMiddleware),
+		fx.Provide(auth.APITokenMiddleware),
 		fx.Provide(auth.NewIdentityProvider),
 		fx.Provide(resource.NewHandler),
 
@@ -202,6 +215,13 @@ func main() {
 		),
 	)
 
+	docs.SwaggerInfo.Title = "Donetick Swagger API"
+	docs.SwaggerInfo.Description = "Donetick swagger documentation."
+	docs.SwaggerInfo.Version = "1.0"
+	docs.SwaggerInfo.Host = "localhost" + ":" + strconv.Itoa(cfg.Server.Port) //TODO include public addr. and proper localhost.
+	docs.SwaggerInfo.BasePath = "/api/v1"
+	docs.SwaggerInfo.Schemes = []string{"http"}
+
 	if err := app.Err(); err != nil {
 		log.Fatal(err)
 	}
@@ -221,6 +241,7 @@ func newServer(lc fx.Lifecycle, cfg *config.Config, db *gorm.DB, notifier *notif
 	// log when http request is made:
 
 	r := gin.New()
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.Server.Port),
 		Handler:      r,

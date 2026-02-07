@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
@@ -57,10 +58,12 @@ func NewAuthMiddleware(cfg *config.Config, userRepo *uRepo.UserRepository) (*jwt
 			claims := jwt.ExtractClaims(c)
 			username, ok := claims[identityKey].(string)
 			if !ok {
+				logging.FromContext(c).Debugw("IdentityHandler: username not found in claims", "claims", claims)
 				return nil
 			}
 			user, err := userRepo.GetUserByUsername(c.Request.Context(), username)
 			if err != nil {
+				logging.FromContext(c).Debugw("IdentityHandler: failed to get user by username", "username", username, "error", err)
 				return nil
 			}
 			return user
@@ -146,14 +149,27 @@ func NewAuthMiddleware(cfg *config.Config, userRepo *uRepo.UserRepository) (*jwt
 		},
 
 		Authorizator: func(data interface{}, c *gin.Context) bool {
+			logger := logging.FromContext(c)
 
-			if _, ok := data.(*uModel.UserDetails); ok {
+			if userDetails, ok := data.(*uModel.UserDetails); ok {
+				logger.Debugw("Authorizator: user authorized successfully", "username", userDetails.Username, "userID", userDetails.ID)
 				return true
 			}
+
+			logger.Debugw("Authorizator: authorization failed", "dataType", fmt.Sprintf("%T", data))
 			return false
 		},
 		Unauthorized: func(c *gin.Context, code int, message string) {
-			logging.FromContext(c).Info("middleware.jwt.Unauthorized", "code", code, "message", message)
+			logger := logging.FromContext(c)
+			logger.Info("middleware.jwt.Unauthorized", "code", code, "message", message)
+
+			// Debug: Log the Authorization header to see what token is being sent
+			authHeader := c.GetHeader("Authorization")
+			if authHeader != "" {
+				logger.Debugw("Authorization header received", "header", authHeader, "headerLength", len(authHeader))
+			} else {
+				logger.Debugw("No Authorization header found")
+			}
 
 			// Check if MFA is required
 			if mfaRequired, exists := c.Get("mfa_required"); exists && mfaRequired.(bool) {

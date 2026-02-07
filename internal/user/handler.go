@@ -332,6 +332,8 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 				})
 				return
 			}
+			// Set acc to the created user for consistency with the rest of the function
+			acc = &uModel.UserDetails{User: *createdUser}
 		}
 		// Check if user has MFA enabled
 		if acc.MFAEnabled {
@@ -366,12 +368,24 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 			})
 			return
 		}
-		// use auth to generate a token for the user:
+		// Generate JWT token for Google OAuth user using proper JWT middleware flow
 		c.Set("user_account", acc)
-		h.jwtAuth.Authenticator(c)
-		tokenString, expire, err := h.jwtAuth.TokenGenerator(acc)
+		c.Set("auth_provider", "3rdPartyAuth")
+
+		// Use the JWT middleware's authenticator to get the user data
+		userData, err := h.jwtAuth.Authenticator(c)
 		if err != nil {
-			logger.Errorw("Unable to Generate a Token")
+			logger.Errorw("Unable to authenticate Google OAuth user", "err", err)
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "Unable to authenticate user",
+			})
+			return
+		}
+
+		// Generate token using the JWT middleware's token generation
+		tokenString, expire, err := h.jwtAuth.TokenGenerator(userData)
+		if err != nil {
+			logger.Errorw("Unable to Generate a Token for Google OAuth user", "err", err)
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": "Unable to Generate a Token",
 			})
@@ -542,12 +556,24 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 			return
 		}
 
-		// Generate JWT token for the user
+		// Generate JWT token for Apple user using proper JWT middleware flow
 		c.Set("user_account", acc)
-		h.jwtAuth.Authenticator(c)
-		tokenString, expire, err := h.jwtAuth.TokenGenerator(acc)
+		c.Set("auth_provider", "3rdPartyAuth")
+
+		// Use the JWT middleware's authenticator to get the user data
+		userData, err := h.jwtAuth.Authenticator(c)
 		if err != nil {
-			logger.Errorw("Unable to Generate a Token for Apple user")
+			logger.Errorw("Unable to authenticate Apple user", "err", err)
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "Unable to authenticate user",
+			})
+			return
+		}
+
+		// Generate token using the JWT middleware's token generation
+		tokenString, expire, err := h.jwtAuth.TokenGenerator(userData)
+		if err != nil {
+			logger.Errorw("Unable to Generate a Token for Apple user", "err", err)
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": "Unable to Generate a Token",
 			})
@@ -556,8 +582,15 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"token": tokenString, "expire": expire})
 		return
 	case "oauth2":
+		// Check if OAuth2 provider is enabled
+		if h.identityProvider == nil {
+			logger.Errorw("account.handler.thirdPartyAuthCallback (oauth2) identity provider is not configured")
+			c.JSON(http.StatusBadRequest, gin.H{"error": "OAuth2 provider is not configured"})
+			return
+		}
+
 		c.Set("auth_provider", "3rdPartyAuth")
-		// Read the ID token from the request bod
+		// Read the ID token from the request body
 		type Request struct {
 			Code string `json:"code"`
 		}
@@ -578,6 +611,9 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 		logger.Infow("account.handler.thirdPartyAuthCallback (oauth2) attempting to exchange code", "codeLength", len(req.Code))
 
 		token, err := h.identityProvider.ExchangeToken(c, req.Code)
+		if err == nil {
+			logger.Infow("account.handler.thirdPartyAuthCallback (oauth2) successfully exchanged code for token")
+		}
 
 		if err != nil {
 			logger.Errorw("account.handler.thirdPartyAuthCallback (oauth2) failed to exchange token", "err", err, "code", req.Code[:min(len(req.Code), 10)]+"...")
@@ -596,8 +632,14 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 
 		claims, err := h.identityProvider.GetUserInfo(c, token)
 		if err != nil {
-			logger.Error("account.handler.thirdPartyAuthCallback (oauth2) failed to get claims", "err", err)
+			logger.Errorw("account.handler.thirdPartyAuthCallback (oauth2) failed to get claims", "err", err)
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "Failed to get user information from identity provider",
+			})
+			return
 		}
+
+		logger.Infow("account.handler.thirdPartyAuthCallback (oauth2) successfully retrieved user info", "email", claims.Email, "displayName", claims.DisplayName)
 
 		acc, err := h.userRepo.FindByEmail(c, claims.Email)
 		if err != nil {
@@ -694,17 +736,51 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 			})
 			return
 		}
-		// ... (JWT generation and response)
+		// Generate JWT token for OAuth2 user using proper JWT middleware flow
 		c.Set("user_account", acc)
-		h.jwtAuth.Authenticator(c)
-		tokenString, expire, err := h.jwtAuth.TokenGenerator(acc)
+		c.Set("auth_provider", "3rdPartyAuth")
+
+		// Use the JWT middleware's authenticator to get the user data
+		userData, err := h.jwtAuth.Authenticator(c)
 		if err != nil {
-			logger.Error("Unable to Generate a Token")
+			logger.Errorw("Unable to authenticate OAuth2 user", "err", err)
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "Unable to authenticate user",
+			})
+			return
+		}
+
+		// Generate token using the JWT middleware's token generation
+		tokenString, expire, err := h.jwtAuth.TokenGenerator(userData)
+		if err != nil {
+			logger.Errorw("Unable to Generate a Token for OAuth2 user", "err", err)
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": "Unable to Generate a Token",
 			})
 			return
 		}
+
+		logger.Infow("account.handler.thirdPartyAuthCallback (oauth2) successfully generated JWT token", "userEmail", acc.Email, "expire", expire, "tokenLength", len(tokenString))
+
+		// Debug: Log the actual token to see its format
+		logger.Debugw("Generated JWT token", "token", tokenString)
+
+		// Ensure the token is properly formatted
+		if tokenString == "" {
+			logger.Errorw("Generated token is empty")
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Token generation failed"})
+			return
+		}
+
+		// Validate token format (should have 3 segments separated by dots)
+		parts := strings.Split(tokenString, ".")
+		if len(parts) != 3 {
+			logger.Errorw("Generated token has invalid format", "segments", len(parts), "token", tokenString)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Token format is invalid"})
+			return
+		}
+
+		logger.Infow("Token format validation passed", "segments", len(parts))
 		c.JSON(http.StatusOK, gin.H{"token": tokenString, "expire": expire})
 		return
 	}

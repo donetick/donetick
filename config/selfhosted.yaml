@@ -16,8 +16,8 @@ database:
   name: "secret"
 jwt:
   secret: "change_this_to_a_secure_random_string_32_characters_long"
-  session_time: 168h
-  max_refresh: 168h
+  session_time: 168h # 7 days
+  max_refresh: 1440h # 60 days 
 server:
   port: 2021
   read_timeout: 10s
@@ -29,7 +29,7 @@ server:
     - "http://localhost:7926"
     # the below are required for the android app to work
     - "https://localhost"
-    - "capacitor://localhost"
+    - "http://localhost"
   serve_frontend: true
 logging:
   level: "info"

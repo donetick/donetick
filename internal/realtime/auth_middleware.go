@@ -53,6 +53,12 @@ func (am *AuthMiddleware) AuthenticateConnection(c *gin.Context) (*uModel.User, 
 	// Validate JWT token
 	claims, err := am.validateToken(token)
 	if err != nil {
+		if err.Error() == "Token is expired" {
+			c.Status(427)
+			c.Abort()
+			return nil, 0, ErrTokenExpired
+		}
+
 		am.logger.Errorw("Invalid token for WebSocket connection", "error", err)
 		return nil, 0, ErrInvalidToken
 	}

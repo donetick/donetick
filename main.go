@@ -5,18 +5,14 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
 	"donetick.com/core/config"
+	"donetick.com/core/docs"
 	"donetick.com/core/external/payment"
 	"donetick.com/core/frontend"
-	"donetick.com/core/migrations"
-	"github.com/gin-contrib/cors"
-	"github.com/gin-gonic/gin"
-	"go.uber.org/fx"
-	"gorm.io/gorm"
-
 	auth "donetick.com/core/internal/auth"
 	"donetick.com/core/internal/auth/apple"
 	"donetick.com/core/internal/chore"
@@ -31,10 +27,8 @@ import (
 	label "donetick.com/core/internal/label"
 	lRepo "donetick.com/core/internal/label/repo"
 	"donetick.com/core/internal/mfa"
-	"donetick.com/core/internal/resource"
-	"donetick.com/core/internal/storage"
-	storageRepo "donetick.com/core/internal/storage/repo"
-	spRepo "donetick.com/core/internal/subtask/repo"
+	"donetick.com/core/internal/project"
+	pjRepo "donetick.com/core/internal/project/repo"
 
 	sRepo "donetick.com/core/external/payment/repo"
 	sService "donetick.com/core/external/payment/service"
@@ -47,13 +41,37 @@ import (
 	telegram "donetick.com/core/internal/notifier/service/telegram"
 	pRepo "donetick.com/core/internal/points/repo"
 	"donetick.com/core/internal/realtime"
+	"donetick.com/core/internal/resource"
+	"donetick.com/core/internal/storage"
+	storageRepo "donetick.com/core/internal/storage/repo"
+	spRepo "donetick.com/core/internal/subtask/repo"
 	"donetick.com/core/internal/thing"
 	tRepo "donetick.com/core/internal/thing/repo"
 	"donetick.com/core/internal/user"
 	uRepo "donetick.com/core/internal/user/repo"
 	"donetick.com/core/internal/utils"
 	"donetick.com/core/logging"
+	"donetick.com/core/migrations"
+	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
+	"go.uber.org/fx"
+	"gorm.io/gorm"
+
+	"donetick.com/core/internal/filter"
+	fRepo "donetick.com/core/internal/filter/repo"
 )
+
+//  @securityDefinitions.apikey JWTKeyAuth
+//	@in							header
+//	@name						Authorization
+//  @description Type "Bearer" followed by a space and JWT token.
+
+//  @securityDefinitions.apikey APIKeyAuth
+//	@in							header
+//	@name						secretkey
+//  @description donetick issued apikey
 
 func main() {
 	// Load configuration first
@@ -65,13 +83,13 @@ func main() {
 		cfg.Logging.Encoding,
 		cfg.Logging.Development,
 	)
-
 	app := fx.New(
 		fx.Supply(cfg),
 		fx.Supply(logging.DefaultLogger().Desugar()),
 
 		// fx.Provide(config.NewConfig),
 		fx.Provide(auth.NewAuthMiddleware),
+		fx.Provide(auth.APITokenMiddleware),
 		fx.Provide(auth.NewIdentityProvider),
 		fx.Provide(resource.NewHandler),
 
@@ -110,6 +128,9 @@ func main() {
 		fx.Provide(mfa.NewService),
 		fx.Provide(mfa.NewCleanupService),
 
+		// Auth services
+		fx.Provide(auth.NewCleanupService),
+
 		fx.Provide(apple.NewAppleService),
 
 		// add handlers also
@@ -126,6 +147,14 @@ func main() {
 		// Labels:
 		fx.Provide(lRepo.NewLabelRepository),
 		fx.Provide(label.NewHandler),
+
+		// Projects:
+		fx.Provide(pjRepo.NewProjectRepository),
+		fx.Provide(project.NewHandler),
+
+		// Filters:
+		fx.Provide(fRepo.NewFilterRepository),
+		fx.Provide(filter.NewHandler),
 
 		fx.Provide(thing.NewAPI),
 		fx.Provide(thing.NewHandler),
@@ -172,6 +201,9 @@ func main() {
 			thing.Routes,
 			thing.APIs,
 			label.Routes,
+			project.Routes,
+			filter.Routes,
+
 			storage.Routes,
 			frontend.Routes,
 			resource.Routes,
@@ -183,6 +215,13 @@ func main() {
 		),
 	)
 
+	docs.SwaggerInfo.Title = "Donetick Swagger API"
+	docs.SwaggerInfo.Description = "Donetick swagger documentation."
+	docs.SwaggerInfo.Version = "1.0"
+	docs.SwaggerInfo.Host = "localhost" + ":" + strconv.Itoa(cfg.Server.Port) //TODO include public addr. and proper localhost.
+	docs.SwaggerInfo.BasePath = "/api/v1"
+	docs.SwaggerInfo.Schemes = []string{"http"}
+
 	if err := app.Err(); err != nil {
 		log.Fatal(err)
 	}
@@ -191,7 +230,7 @@ func main() {
 
 }
 
-func newServer(lc fx.Lifecycle, cfg *config.Config, db *gorm.DB, notifier *notifier.Scheduler, eventProducer *events.EventsProducer, mfaCleanup *mfa.CleanupService, rts *realtime.RealTimeService) *gin.Engine {
+func newServer(lc fx.Lifecycle, cfg *config.Config, db *gorm.DB, notifier *notifier.Scheduler, eventProducer *events.EventsProducer, mfaCleanup *mfa.CleanupService, authCleanup *auth.CleanupService, rts *realtime.RealTimeService) *gin.Engine {
 	// Set Gin mode based on logging configuration
 	if cfg.Logging.Development || strings.ToLower(cfg.Logging.Level) == "debug" {
 		gin.SetMode(gin.DebugMode)
@@ -202,6 +241,12 @@ func newServer(lc fx.Lifecycle, cfg *config.Config, db *gorm.DB, notifier *notif
 	// log when http request is made:
 
 	r := gin.New()
+
+	// Enable Swagger only for local development
+	if cfg.Name == "local" {
+		r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	}
+
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.Server.Port),
 		Handler:      r,
@@ -209,11 +254,18 @@ func newServer(lc fx.Lifecycle, cfg *config.Config, db *gorm.DB, notifier *notif
 		WriteTimeout: cfg.Server.WriteTimeout,
 	}
 	config := cors.DefaultConfig()
-	if cfg.IsDoneTickDotCom {
-		// config.AllowOrigins = cfg.Server.CorsAllowOrigins
-		config.AllowAllOrigins = true
+
+	// Use specific origins from config when credentials are needed
+	// Cannot use AllowAllOrigins with AllowCredentials
+	if len(cfg.Server.CorsAllowOrigins) > 0 {
+		config.AllowOrigins = cfg.Server.CorsAllowOrigins
 	} else {
-		config.AllowAllOrigins = true
+		// Fallback to localhost for development
+		config.AllowOrigins = []string{
+			"http://localhost:5173",
+			"http://localhost:7926",
+			"http://localhost:3000",
+		}
 	}
 
 	config.AllowCredentials = true
@@ -230,6 +282,7 @@ func newServer(lc fx.Lifecycle, cfg *config.Config, db *gorm.DB, notifier *notif
 		"User-Agent",
 		"Referer",
 		"X-Impersonate-User-ID",
+		"refresh_token",
 	)
 	// Expose headers that the frontend might need
 	config.AddExposeHeaders("Content-Type")
@@ -248,6 +301,7 @@ func newServer(lc fx.Lifecycle, cfg *config.Config, db *gorm.DB, notifier *notif
 			notifier.Start(context.Background())
 			eventProducer.Start(context.Background())
 			mfaCleanup.Start(context.Background())
+			authCleanup.Start(context.Background())
 
 			// Start real-time service
 			if err := rts.Start(ctx); err != nil {
@@ -278,6 +332,7 @@ func newServer(lc fx.Lifecycle, cfg *config.Config, db *gorm.DB, notifier *notif
 			}
 
 			mfaCleanup.Stop()
+			authCleanup.Stop()
 
 			// Shutdown HTTP server with timeout
 			shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

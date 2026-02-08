@@ -9,6 +9,7 @@ import (
 	authMiddleware "donetick.com/core/internal/auth"
 	chRepo "donetick.com/core/internal/chore/repo"
 	cRepo "donetick.com/core/internal/circle/repo"
+	"donetick.com/core/internal/events"
 	tModel "donetick.com/core/internal/thing/model"
 	tRepo "donetick.com/core/internal/thing/repo"
 	uRepo "donetick.com/core/internal/user/repo"
@@ -19,21 +20,23 @@ import (
 )
 
 type API struct {
-	choreRepo  *chRepo.ChoreRepository
-	circleRepo *cRepo.CircleRepository
-	thingRepo  *tRepo.ThingRepository
-	userRepo   *uRepo.UserRepository
-	tRepo      *tRepo.ThingRepository
+	choreRepo      *chRepo.ChoreRepository
+	circleRepo     *cRepo.CircleRepository
+	thingRepo      *tRepo.ThingRepository
+	userRepo       *uRepo.UserRepository
+	tRepo          *tRepo.ThingRepository
+	eventsProducer *events.EventsProducer
 }
 
 func NewAPI(cr *chRepo.ChoreRepository, circleRepo *cRepo.CircleRepository,
-	thingRepo *tRepo.ThingRepository, userRepo *uRepo.UserRepository, tRepo *tRepo.ThingRepository) *API {
+	thingRepo *tRepo.ThingRepository, userRepo *uRepo.UserRepository, tRepo *tRepo.ThingRepository, eventsProducer *events.EventsProducer) *API {
 	return &API{
-		choreRepo:  cr,
-		circleRepo: circleRepo,
-		thingRepo:  thingRepo,
-		userRepo:   userRepo,
-		tRepo:      tRepo,
+		choreRepo:      cr,
+		circleRepo:     circleRepo,
+		thingRepo:      thingRepo,
+		userRepo:       userRepo,
+		tRepo:          tRepo,
+		eventsProducer: eventsProducer,
 	}
 }
 
@@ -49,6 +52,7 @@ func (h *API) UpdateThingState(c *gin.Context) {
 		return
 	}
 
+	oldState := thing.State
 	thing.State = state
 	if !isValidThingState(thing) {
 		c.JSON(400, gin.H{"error": "Invalid state for thing"})
@@ -59,6 +63,21 @@ func (h *API) UpdateThingState(c *gin.Context) {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
+
+	shouldReturn = WebhookEvaluateTriggerAndScheduleDueDate(h, c, thing)
+	if shouldReturn {
+		return
+	}
+
+	currentUser := auth.MustCurrentUser(c)
+	h.eventsProducer.ThingsUpdated(c.Request.Context(), currentUser.WebhookURL, map[string]interface{}{
+		"id":         thing.ID,
+		"name":       thing.Name,
+		"type":       thing.Type,
+		"from_state": oldState,
+		"to_state":   state,
+	})
+
 	c.JSON(200, gin.H{})
 }
 
@@ -74,6 +93,8 @@ func (h *API) ChangeThingState(c *gin.Context) {
 		c.JSON(400, gin.H{"error": "Invalid increment value"})
 		return
 	}
+
+	oldState := thing.State
 	var xValue int
 	var err error
 	if addRemoveRaw != "" {
@@ -107,6 +128,15 @@ func (h *API) ChangeThingState(c *gin.Context) {
 	if shouldReturn1 {
 		return
 	}
+
+	currentUser := auth.MustCurrentUser(c)
+	h.eventsProducer.ThingsUpdated(c.Request.Context(), currentUser.WebhookURL, map[string]interface{}{
+		"id":         thing.ID,
+		"name":       thing.Name,
+		"type":       thing.Type,
+		"from_state": oldState,
+		"to_state":   thing.State,
+	})
 
 	c.JSON(200, gin.H{"state": thing.State})
 }

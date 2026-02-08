@@ -18,12 +18,15 @@ func MultiAuthMiddleware(jwtMiddleware *jwt.GinJWTMiddleware, userRepo *uRepo.Us
 		logger := logging.FromContext(c)
 		authenticated := false
 
-		// Attempt 1: Try API key first
-		authenticated = authenticateAPIKey(c, userRepo)
-
-		// Attempt 2: If API key failed, try JWT
-		if !authenticated {
-			authenticated = authenticateJWT(c, jwtMiddleware)
+		// Authenticate using API key first, it's just's a header check. if fails, try JWT next
+		if authenticateAPIKey(c, userRepo) {
+			c.Next()
+			return
+		}
+		// now we do the normal flow of JWT and check header, cookie, etc.
+		if authenticateJWT(c, jwtMiddleware) {
+			c.Next()
+			return
 		}
 
 		// If neither succeeded, return unauthorized

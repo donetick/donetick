@@ -572,7 +572,7 @@ func (h *Handler) ChangeMemberRole(c *gin.Context) {
 		Role     cModel.Role `json:"role"`
 	}
 	var req changeRoleRequest
-	if err := c.ShouldBind(&req); err != nil {
+	if err := c.ShouldBindJSON(&req); err != nil {
 		log.Error("Error changing member role:", err)
 		c.JSON(400, gin.H{
 			"error": "Invalid request",

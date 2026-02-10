@@ -30,7 +30,7 @@ func NewIdentityProvider(cfg *config.Config) *IdentityProvider {
 	return &IdentityProvider{config: &cfg.OAuth2Config, isEnabled: true}
 }
 
-func (i *IdentityProvider) ExchangeToken(ctx context.Context, code string) (string, error) {
+func (i *IdentityProvider) ExchangeToken(ctx context.Context, code string, redirectURL string) (string, error) {
 	if !i.isEnabled {
 		return "", errors.New("identity provider is not enabled")
 	}
@@ -39,10 +39,16 @@ func (i *IdentityProvider) ExchangeToken(ctx context.Context, code string) (stri
 		return "", errors.New("authorization code is empty")
 	}
 
+	// Use provided redirect URL if given, otherwise fall back to config
+	redirect := i.config.RedirectURL
+	if len(redirectURL) > 0 && redirectURL != "" {
+		redirect = redirectURL
+	}
+
 	conf := &oauth2.Config{
 		ClientID:     i.config.ClientID,
 		ClientSecret: i.config.ClientSecret,
-		RedirectURL:  i.config.RedirectURL,
+		RedirectURL:  redirect,
 		Scopes:       i.config.Scopes,
 		Endpoint: oauth2.Endpoint{
 			AuthURL:  i.config.AuthURL,

@@ -559,10 +559,11 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 		c.Set("auth_provider", "3rdPartyAuth")
 		// Read the ID token from the request bod
 		type Request struct {
-			Code string `json:"code"`
+			Code        string `json:"code"`
+			RedirectURI string `json:"redirect_uri"`
 		}
 		var req Request
-		if err := c.BindJSON(&req); err != nil {
+		if err := c.ShouldBindJSON(&req); err != nil {
 			logger.Errorw("account.handler.thirdPartyAuthCallback (oauth2) failed to bind request", "err", err)
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 			return
@@ -575,9 +576,10 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 			return
 		}
 
-		logger.Infow("account.handler.thirdPartyAuthCallback (oauth2) attempting to exchange code", "codeLength", len(req.Code))
+		logger.Infow("account.handler.thirdPartyAuthCallback (oauth2) attempting to exchange code", "codeLength", len(req.Code), "redirectURI", req.RedirectURI)
 
-		token, err := h.identityProvider.ExchangeToken(c, req.Code)
+		// Pass the redirect URI from the request if provided, otherwise use config default
+		token, err := h.identityProvider.ExchangeToken(c, req.Code, req.RedirectURI)
 
 		if err != nil {
 			logger.Errorw("account.handler.thirdPartyAuthCallback (oauth2) failed to exchange token", "err", err, "code", req.Code[:min(len(req.Code), 10)]+"...")

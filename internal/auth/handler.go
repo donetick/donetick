@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"time"
 
-	"donetick.com/core/config"
 	uModel "donetick.com/core/internal/user/model"
 	uRepo "donetick.com/core/internal/user/repo"
 	"donetick.com/core/logging"
@@ -22,8 +21,7 @@ type AuthHandler struct {
 }
 
 // NewAuthHandler creates a new auth handler
-func NewAuthHandler(userRepo *uRepo.UserRepository, jwtAuth *jwt.GinJWTMiddleware, cfg *config.Config) *AuthHandler {
-	tokenService := NewTokenService(userRepo, jwtAuth, cfg)
+func NewAuthHandler(tokenService *TokenService, userRepo *uRepo.UserRepository, jwtAuth *jwt.GinJWTMiddleware) *AuthHandler {
 	return &AuthHandler{
 		tokenService: tokenService,
 		userRepo:     userRepo,

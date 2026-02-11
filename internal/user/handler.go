@@ -36,6 +36,7 @@ type Handler struct {
 	userRepo               *uRepo.UserRepository
 	circleRepo             *cRepo.CircleRepository
 	jwtAuth                *jwt.GinJWTMiddleware
+	tokenService           *auth.TokenService
 	email                  *email.EmailSender
 	identityProvider       *auth.IdentityProvider
 	isDonetickDotCom       bool
@@ -51,7 +52,8 @@ type Handler struct {
 }
 
 func NewHandler(ur *uRepo.UserRepository, cr *cRepo.CircleRepository,
-	jwtAuth *jwt.GinJWTMiddleware, email *email.EmailSender,
+	jwtAuth *jwt.GinJWTMiddleware, tokenService *auth.TokenService,
+	email *email.EmailSender,
 	idp *auth.IdentityProvider, storage *storage.S3Storage,
 	signer *storage.URLSignerS3, storageRepo *storageRepo.StorageRepository,
 	appleService *apple.AppleService,
@@ -60,6 +62,7 @@ func NewHandler(ur *uRepo.UserRepository, cr *cRepo.CircleRepository,
 		userRepo:               ur,
 		circleRepo:             cr,
 		jwtAuth:                jwtAuth,
+		tokenService:           tokenService,
 		email:                  email,
 		identityProvider:       idp,
 		isDonetickDotCom:       config.IsDoneTickDotCom,
@@ -366,18 +369,17 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 			})
 			return
 		}
-		// use auth to generate a token for the user:
-		c.Set("user_account", acc)
-		h.jwtAuth.Authenticator(c)
-		tokenString, expire, err := h.jwtAuth.TokenGenerator(acc)
+		// Generate tokens including refresh token:
+		tokenResponse, err := h.tokenService.GenerateTokens(c.Request.Context(), acc)
 		if err != nil {
-			logger.Errorw("Unable to Generate a Token")
+			logger.Errorw("Unable to generate tokens", "error", err)
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": "Unable to Generate a Token",
 			})
 			return
 		}
-		c.JSON(http.StatusOK, gin.H{"token": tokenString, "expire": expire})
+		c.SetCookie("refresh_token", tokenResponse.RefreshToken, int(h.tokenService.RefreshTokenExpiry().Seconds()), "/", "", true, true)
+		c.JSON(http.StatusOK, tokenResponse)
 		return
 	case "apple":
 		c.Set("auth_provider", "3rdPartyAuth")
@@ -542,18 +544,17 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 			return
 		}
 
-		// Generate JWT token for the user
-		c.Set("user_account", acc)
-		h.jwtAuth.Authenticator(c)
-		tokenString, expire, err := h.jwtAuth.TokenGenerator(acc)
+		// Generate tokens including refresh token:
+		tokenResponse, err := h.tokenService.GenerateTokens(c.Request.Context(), acc)
 		if err != nil {
-			logger.Errorw("Unable to Generate a Token for Apple user")
+			logger.Errorw("Unable to generate tokens for Apple user", "error", err)
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": "Unable to Generate a Token",
 			})
 			return
 		}
-		c.JSON(http.StatusOK, gin.H{"token": tokenString, "expire": expire})
+		c.SetCookie("refresh_token", tokenResponse.RefreshToken, int(h.tokenService.RefreshTokenExpiry().Seconds()), "/", "", true, true)
+		c.JSON(http.StatusOK, tokenResponse)
 		return
 	case "oauth2":
 		c.Set("auth_provider", "3rdPartyAuth")
@@ -696,18 +697,17 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 			})
 			return
 		}
-		// ... (JWT generation and response)
-		c.Set("user_account", acc)
-		h.jwtAuth.Authenticator(c)
-		tokenString, expire, err := h.jwtAuth.TokenGenerator(acc)
+		// Generate tokens including refresh token:
+		tokenResponse, err := h.tokenService.GenerateTokens(c.Request.Context(), acc)
 		if err != nil {
-			logger.Error("Unable to Generate a Token")
+			logger.Errorw("Unable to generate tokens", "error", err)
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": "Unable to Generate a Token",
 			})
 			return
 		}
-		c.JSON(http.StatusOK, gin.H{"token": tokenString, "expire": expire})
+		c.SetCookie("refresh_token", tokenResponse.RefreshToken, int(h.tokenService.RefreshTokenExpiry().Seconds()), "/", "", true, true)
+		c.JSON(http.StatusOK, tokenResponse)
 		return
 	}
 }
@@ -1640,7 +1640,7 @@ func Routes(router *gin.Engine, h *Handler, jwtAuth *jwt.GinJWTMiddleware, limit
 	}
 
 	// Create new auth handler for enhanced token management
-	authHandler := auth.NewAuthHandler(h.userRepo, jwtAuth, cfg)
+	authHandler := auth.NewAuthHandler(h.tokenService, h.userRepo, jwtAuth)
 
 	authRoutes := router.Group("api/v1/auth")
 	authRoutes.Use(utils.RateLimitMiddleware(limiter))

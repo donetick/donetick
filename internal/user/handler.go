@@ -47,6 +47,7 @@ type Handler struct {
 	signer                 *storage.URLSignerS3
 	deletionService        *DeletionService
 	appleService           *apple.AppleService
+	mfaService             *mfa.MFAService
 	maxSubaccounts         int
 	plusMaxSubaccounts     int
 }
@@ -57,7 +58,7 @@ func NewHandler(ur *uRepo.UserRepository, cr *cRepo.CircleRepository,
 	idp *auth.IdentityProvider, storage *storage.S3Storage,
 	signer *storage.URLSignerS3, storageRepo *storageRepo.StorageRepository,
 	appleService *apple.AppleService,
-	deletionService *DeletionService, config *config.Config) *Handler {
+	deletionService *DeletionService, mfaService *mfa.MFAService, config *config.Config) *Handler {
 	return &Handler{
 		userRepo:               ur,
 		circleRepo:             cr,
@@ -73,6 +74,7 @@ func NewHandler(ur *uRepo.UserRepository, cr *cRepo.CircleRepository,
 		signer:                 signer,
 		deletionService:        deletionService,
 		appleService:           appleService,
+		mfaService:             mfaService,
 		maxSubaccounts:         config.FeatureLimits.MaxSubaccounts,
 		plusMaxSubaccounts:     config.FeatureLimits.PlusMaxSubaccounts,
 	}
@@ -339,8 +341,7 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 		// Check if user has MFA enabled
 		if acc.MFAEnabled {
 			// Create MFA session for third-party auth
-			mfaService := mfa.NewMFAService("Donetick")
-			sessionToken, err := mfaService.GenerateSessionToken()
+			sessionToken, err := h.mfaService.GenerateSessionToken()
 			if err != nil {
 				logger.Errorw("Failed to generate MFA session token", "error", err)
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Authentication failed"})
@@ -513,8 +514,7 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 		// Check if user has MFA enabled
 		if acc.MFAEnabled {
 			// Create MFA session for Apple auth
-			mfaService := mfa.NewMFAService("Donetick")
-			sessionToken, err := mfaService.GenerateSessionToken()
+			sessionToken, err := h.mfaService.GenerateSessionToken()
 			if err != nil {
 				logger.Errorw("Failed to generate MFA session token", "error", err)
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Authentication failed"})
@@ -667,8 +667,7 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 		// Check if user has MFA enabled
 		if acc.MFAEnabled {
 			// Create MFA session for OAuth2 auth
-			mfaService := mfa.NewMFAService("Donetick")
-			sessionToken, err := mfaService.GenerateSessionToken()
+			sessionToken, err := h.mfaService.GenerateSessionToken()
 			if err != nil {
 				logger.Error("Failed to generate MFA session token", "error", err)
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Authentication failed"})
@@ -885,8 +884,7 @@ func (h *Handler) CreateLongLivedToken(c *gin.Context) {
 
 	// If user has MFA enabled and provides an MFA code, verify it
 	if currentUser.MFAEnabled && req.MFACode != "" {
-		mfaService := mfa.NewMFAService("Donetick")
-		valid, newUsedCodes, err := mfaService.IsCodeValid(
+		valid, newUsedCodes, err := h.mfaService.IsCodeValid(
 			currentUser.MFASecret,
 			currentUser.MFABackupCodes,
 			currentUser.MFARecoveryUsed,
@@ -1640,7 +1638,7 @@ func Routes(router *gin.Engine, h *Handler, jwtAuth *jwt.GinJWTMiddleware, limit
 	}
 
 	// Create new auth handler for enhanced token management
-	authHandler := auth.NewAuthHandler(h.tokenService, h.userRepo, jwtAuth)
+	authHandler := auth.NewAuthHandler(h.tokenService, h.userRepo, jwtAuth, h.mfaService)
 
 	authRoutes := router.Group("api/v1/auth")
 	authRoutes.Use(utils.RateLimitMiddleware(limiter))

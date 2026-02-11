@@ -76,6 +76,9 @@ func (h *Handler) createLabel(c *gin.Context) {
 		CreatedBy: currentUser.ID,
 		CircleID:  &currentUser.CircleID,
 	}
+	// ensure labels are scoped to the user's circle so other members can see/use them
+	circleID := currentUser.CircleID
+	label.CircleID = &circleID
 	if err := h.lRepo.CreateLabels(c, []*lModel.Label{label}); err != nil {
 		c.JSON(500, gin.H{
 			"error": "Error creating label",

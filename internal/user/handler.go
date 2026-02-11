@@ -36,6 +36,7 @@ type Handler struct {
 	userRepo               *uRepo.UserRepository
 	circleRepo             *cRepo.CircleRepository
 	jwtAuth                *jwt.GinJWTMiddleware
+	tokenService           *auth.TokenService
 	email                  *email.EmailSender
 	identityProvider       *auth.IdentityProvider
 	isDonetickDotCom       bool
@@ -46,20 +47,23 @@ type Handler struct {
 	signer                 *storage.URLSignerS3
 	deletionService        *DeletionService
 	appleService           *apple.AppleService
+	mfaService             *mfa.MFAService
 	maxSubaccounts         int
 	plusMaxSubaccounts     int
 }
 
 func NewHandler(ur *uRepo.UserRepository, cr *cRepo.CircleRepository,
-	jwtAuth *jwt.GinJWTMiddleware, email *email.EmailSender,
+	jwtAuth *jwt.GinJWTMiddleware, tokenService *auth.TokenService,
+	email *email.EmailSender,
 	idp *auth.IdentityProvider, storage *storage.S3Storage,
 	signer *storage.URLSignerS3, storageRepo *storageRepo.StorageRepository,
 	appleService *apple.AppleService,
-	deletionService *DeletionService, config *config.Config) *Handler {
+	deletionService *DeletionService, mfaService *mfa.MFAService, config *config.Config) *Handler {
 	return &Handler{
 		userRepo:               ur,
 		circleRepo:             cr,
 		jwtAuth:                jwtAuth,
+		tokenService:           tokenService,
 		email:                  email,
 		identityProvider:       idp,
 		isDonetickDotCom:       config.IsDoneTickDotCom,
@@ -70,6 +74,7 @@ func NewHandler(ur *uRepo.UserRepository, cr *cRepo.CircleRepository,
 		signer:                 signer,
 		deletionService:        deletionService,
 		appleService:           appleService,
+		mfaService:             mfaService,
 		maxSubaccounts:         config.FeatureLimits.MaxSubaccounts,
 		plusMaxSubaccounts:     config.FeatureLimits.PlusMaxSubaccounts,
 	}
@@ -336,8 +341,7 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 		// Check if user has MFA enabled
 		if acc.MFAEnabled {
 			// Create MFA session for third-party auth
-			mfaService := mfa.NewMFAService("Donetick")
-			sessionToken, err := mfaService.GenerateSessionToken()
+			sessionToken, err := h.mfaService.GenerateSessionToken()
 			if err != nil {
 				logger.Errorw("Failed to generate MFA session token", "error", err)
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Authentication failed"})
@@ -366,18 +370,17 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 			})
 			return
 		}
-		// use auth to generate a token for the user:
-		c.Set("user_account", acc)
-		h.jwtAuth.Authenticator(c)
-		tokenString, expire, err := h.jwtAuth.TokenGenerator(acc)
+		// Generate tokens including refresh token:
+		tokenResponse, err := h.tokenService.GenerateTokens(c.Request.Context(), acc)
 		if err != nil {
-			logger.Errorw("Unable to Generate a Token")
+			logger.Errorw("Unable to generate tokens", "error", err)
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": "Unable to Generate a Token",
 			})
 			return
 		}
-		c.JSON(http.StatusOK, gin.H{"token": tokenString, "expire": expire})
+		c.SetCookie("refresh_token", tokenResponse.RefreshToken, int(h.tokenService.RefreshTokenExpiry().Seconds()), "/", "", true, true)
+		c.JSON(http.StatusOK, tokenResponse)
 		return
 	case "apple":
 		c.Set("auth_provider", "3rdPartyAuth")
@@ -511,8 +514,7 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 		// Check if user has MFA enabled
 		if acc.MFAEnabled {
 			// Create MFA session for Apple auth
-			mfaService := mfa.NewMFAService("Donetick")
-			sessionToken, err := mfaService.GenerateSessionToken()
+			sessionToken, err := h.mfaService.GenerateSessionToken()
 			if err != nil {
 				logger.Errorw("Failed to generate MFA session token", "error", err)
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Authentication failed"})
@@ -542,18 +544,17 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 			return
 		}
 
-		// Generate JWT token for the user
-		c.Set("user_account", acc)
-		h.jwtAuth.Authenticator(c)
-		tokenString, expire, err := h.jwtAuth.TokenGenerator(acc)
+		// Generate tokens including refresh token:
+		tokenResponse, err := h.tokenService.GenerateTokens(c.Request.Context(), acc)
 		if err != nil {
-			logger.Errorw("Unable to Generate a Token for Apple user")
+			logger.Errorw("Unable to generate tokens for Apple user", "error", err)
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": "Unable to Generate a Token",
 			})
 			return
 		}
-		c.JSON(http.StatusOK, gin.H{"token": tokenString, "expire": expire})
+		c.SetCookie("refresh_token", tokenResponse.RefreshToken, int(h.tokenService.RefreshTokenExpiry().Seconds()), "/", "", true, true)
+		c.JSON(http.StatusOK, tokenResponse)
 		return
 	case "oauth2":
 		c.Set("auth_provider", "3rdPartyAuth")
@@ -667,8 +668,7 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 		// Check if user has MFA enabled
 		if acc.MFAEnabled {
 			// Create MFA session for OAuth2 auth
-			mfaService := mfa.NewMFAService("Donetick")
-			sessionToken, err := mfaService.GenerateSessionToken()
+			sessionToken, err := h.mfaService.GenerateSessionToken()
 			if err != nil {
 				logger.Error("Failed to generate MFA session token", "error", err)
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Authentication failed"})
@@ -704,18 +704,17 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 				logger.Warn("Failed to update profile image", "userID", acc.ID, "err", err)
 			}
 		}
-		// ... (JWT generation and response)
-		c.Set("user_account", acc)
-		h.jwtAuth.Authenticator(c)
-		tokenString, expire, err := h.jwtAuth.TokenGenerator(acc)
+		// Generate tokens including refresh token:
+		tokenResponse, err := h.tokenService.GenerateTokens(c.Request.Context(), acc)
 		if err != nil {
-			logger.Error("Unable to Generate a Token")
+			logger.Errorw("Unable to generate tokens", "error", err)
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": "Unable to Generate a Token",
 			})
 			return
 		}
-		c.JSON(http.StatusOK, gin.H{"token": tokenString, "expire": expire})
+		c.SetCookie("refresh_token", tokenResponse.RefreshToken, int(h.tokenService.RefreshTokenExpiry().Seconds()), "/", "", true, true)
+		c.JSON(http.StatusOK, tokenResponse)
 		return
 	}
 }
@@ -893,8 +892,7 @@ func (h *Handler) CreateLongLivedToken(c *gin.Context) {
 
 	// If user has MFA enabled and provides an MFA code, verify it
 	if currentUser.MFAEnabled && req.MFACode != "" {
-		mfaService := mfa.NewMFAService("Donetick")
-		valid, newUsedCodes, err := mfaService.IsCodeValid(
+		valid, newUsedCodes, err := h.mfaService.IsCodeValid(
 			currentUser.MFASecret,
 			currentUser.MFABackupCodes,
 			currentUser.MFARecoveryUsed,
@@ -1648,7 +1646,7 @@ func Routes(router *gin.Engine, h *Handler, jwtAuth *jwt.GinJWTMiddleware, limit
 	}
 
 	// Create new auth handler for enhanced token management
-	authHandler := auth.NewAuthHandler(h.userRepo, jwtAuth, cfg)
+	authHandler := auth.NewAuthHandler(h.tokenService, h.userRepo, jwtAuth, h.mfaService)
 
 	authRoutes := router.Group("api/v1/auth")
 	authRoutes.Use(utils.RateLimitMiddleware(limiter))

@@ -129,6 +129,7 @@ func main() {
 		fx.Provide(mfa.NewCleanupService),
 
 		// Auth services
+		fx.Provide(auth.NewTokenService),
 		fx.Provide(auth.NewCleanupService),
 
 		fx.Provide(apple.NewAppleService),

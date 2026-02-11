@@ -26,12 +26,6 @@ func NewService(cfg *config.Config) *MFAService {
 	}
 }
 
-func NewMFAService(appName string) *MFAService {
-	return &MFAService{
-		appName: appName,
-	}
-}
-
 func (s *MFAService) GenerateSecret(userEmail string) (*otp.Key, error) {
 	return totp.Generate(totp.GenerateOpts{
 		Issuer:      s.appName,

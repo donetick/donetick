@@ -25,6 +25,7 @@ type Config struct {
 	Name                   string              `mapstructure:"name" yaml:"name"`
 	Telegram               TelegramConfig      `mapstructure:"telegram" yaml:"telegram"`
 	Pushover               PushoverConfig      `mapstructure:"pushover" yaml:"pushover"`
+	Pushbullet             PushbulletConfig    `mapstructure:"pushbullet" yaml:"pushbullet"`
 	Database               DatabaseConfig      `mapstructure:"database" yaml:"database"`
 	Jwt                    JwtConfig           `mapstructure:"jwt" yaml:"jwt"`
 	Server                 ServerConfig        `mapstructure:"server" yaml:"server"`
@@ -86,6 +87,10 @@ type TelegramConfig struct {
 
 type PushoverConfig struct {
 	Token string `mapstructure:"token" yaml:"token"`
+}
+
+type PushbulletConfig struct {
+	APIToken string `mapstructure:"api_token" yaml:"api_token"`
 }
 
 type DatabaseConfig struct {
@@ -277,6 +282,9 @@ func configEnvironmentOverrides(Config *Config) {
 	if os.Getenv("DONETICK_PUSHOVER_TOKEN") != "" {
 		Config.Pushover.Token = os.Getenv("DONETICK_PUSHOVER_TOKEN")
 	}
+	if os.Getenv("DONETICK_PUSHBULLET_API_TOKEN") != "" {
+		Config.Pushbullet.APIToken = os.Getenv("DONETICK_PUSHBULLET_API_TOKEN")
+	}
 	if os.Getenv("DONETICK_DISABLE_SIGNUP") == "true" {
 		Config.IsUserCreationDisabled = true
 	}
@@ -345,6 +353,8 @@ func LoadConfig() *Config {
 	if config.Name != "local" {
 		validateJWTSecret(config.Jwt.Secret)
 	}
+
+	validateCorsOrigins(config.Server.CorsAllowOrigins)
 
 	config.Info.Version = Version
 	config.Info.Commit = Commit
@@ -416,6 +426,23 @@ func generateSecureSecret() (string, error) {
 		return "", err
 	}
 	return base64.URLEncoding.EncodeToString(bytes), nil
+}
+
+// validateCorsOrigins checks that CORS origins are well-formed and warns about
+// non-standard schemes that require special handling.
+func validateCorsOrigins(origins []string) {
+	for _, o := range origins {
+		if o == "*" {
+			continue
+		}
+		if !strings.Contains(o, "://") {
+			fmt.Printf("CORS WARNING: origin %q missing scheme (expected scheme://host)\n", o)
+			continue
+		}
+		if !strings.HasPrefix(o, "http://") && !strings.HasPrefix(o, "https://") {
+			fmt.Printf("CORS: origin %q uses non-standard scheme, handled via AllowOriginFunc\n", o)
+		}
+	}
 }
 
 // ParseLogLevel converts a string log level to zapcore.Level

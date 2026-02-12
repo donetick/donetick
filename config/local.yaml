@@ -30,6 +30,7 @@ server:
   cors_allow_origins:
     - "http://localhost:5173"
     - "http://localhost:7926"
+    - "capacitor://localhost"
   serve_frontend: false
 logging:
   level: "debug"
@@ -51,14 +52,16 @@ mfa:
   rate_limit_attempts: 5
   rate_limit_window: 15m 
 storage:
-  max_user_storage:
-  max_file_size:
-  bucket_name: 
-  region: 
-  base_path:
-  access_key: 
-  secret_key: 
-  endpoint:
+  storage_type: "remote"
+  max_user_storage: 104857600 # 100MB = 104857600 bytes
+  max_file_size: 2097152   # 2MB = 2097152 bytes
+  bucket_name: donetick-test
+  region: "auto" 
+  base_path: "assets"
+  access_key: "db4f9e338754638e01deda3604bfb527"
+  secret_key: "d8a0db2230a3f85179c76520eaa5554e4c05d12617edcdca154cc224b8310825"
+  endpoint: "https://8fcbfe5d9de610a8eb366e40be7bb790.r2.cloudflarestorage.com/donetick"
+  public_host: "assets.donetick.com"
 realtime:
   enabled: true
   sse_enabled: true

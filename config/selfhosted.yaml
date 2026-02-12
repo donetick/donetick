@@ -30,6 +30,8 @@ server:
     # the below are required for the android app to work
     - "https://localhost"
     - "http://localhost"
+    - "capacitor://localhost"
+    
   serve_frontend: true
 logging:
   level: "info"

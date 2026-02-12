@@ -3,7 +3,7 @@ FROM alpine:latest AS builder
 
 WORKDIR /usr/src/app
 
-RUN apk --no-cache add curl jq tzdata
+RUN apk --no-cache add curl jq
 
 # Accept VERSION as build argument, fallback to latest stable release if not provided
 ARG VERSION
@@ -27,6 +27,9 @@ FROM alpine:latest
 
 # Install necessary CA certificates
 RUN apk --no-cache add ca-certificates libc6-compat
+
+# Install timezone package
+RUN apk --no-cache add tzdata
 
 # Copy the binary and config folder from the builder stage
 COPY --from=builder /usr/src/app/donetick /donetick

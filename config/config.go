@@ -62,7 +62,7 @@ type StorageConfig struct {
 	AccessKey      string `mapstructure:"access_key" yaml:"access_key"`
 	SecretKey      string `mapstructure:"secret_key" yaml:"secret_key"`
 	Endpoint       string `mapstructure:"endpoint" yaml:"endpoint"`
-	MaxUserStorage int    `mapstructure:"max_user_storage" yaml:"max_user_storage"`
+	MaxUserStorage *int   `mapstructure:"max_user_storage" yaml:"max_user_storage"`
 	MaxFileSize    int64  `mapstructure:"max_file_size" yaml:"max_file_size"`
 	PublicHost     string `mapstructure:"public_host" yaml:"public_host"`
 }
@@ -169,7 +169,7 @@ type EmailConfig struct {
 	Email   string `mapstructure:"email"`
 	Key     string `mapstructure:"key"`
 	Host    string `mapstructure:"host"`
-	Port    int    `mapstructure:"port"`
+	Port    *int   `mapstructure:"port"`
 	AppHost string `mapstructure:"appHost"`
 }
 

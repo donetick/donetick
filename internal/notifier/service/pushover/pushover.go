@@ -14,13 +14,19 @@ type Pushover struct {
 	pushover *pushover.Pushover
 }
 
-func NewPushover(cfg *config.Config) *Pushover {
+func NewPushover(cfg *config.Config, c context.Context) *Pushover {
+	log := logging.FromContext(c)
+	if cfg.Pushover.Token != "" {
+		pushoverApp := pushover.New(cfg.Pushover.Token)
 
-	pushoverApp := pushover.New(cfg.Pushover.Token)
-
-	return &Pushover{
-		pushover: pushoverApp,
+		return &Pushover{
+			pushover: pushoverApp,
+		}
+	} else {
+		log.Info("No pushover token found!")
+		return nil
 	}
+
 }
 
 func (p *Pushover) SendNotification(c context.Context, notification *nModel.NotificationDetails) error {

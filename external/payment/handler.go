@@ -1,6 +1,7 @@
 package payment
 
 import (
+	"context"
 	"net/http"
 
 	auth "donetick.com/core/internal/auth"
@@ -23,20 +24,26 @@ type Handler struct {
 	prices         []config.StripePrices
 }
 
-func NewHandler(stripeDB pDB.StripeDB, subscriptionDB pDB.SubscriptionDB, stripeService *stripeService.StripeService, config *config.Config) *Handler {
+func NewHandler(stripeDB pDB.StripeDB, subscriptionDB pDB.SubscriptionDB, stripeService *stripeService.StripeService, config *config.Config, c context.Context) *Handler {
+	log := logging.FromContext(c)
+	if stripeService != nil {
+		whitelistIPs := make(map[string]bool)
+		for _, ip := range config.StripeConfig.WhitelistedIPs {
+			whitelistIPs[ip] = true
+		}
 
-	whitelistIPs := make(map[string]bool)
-	for _, ip := range config.StripeConfig.WhitelistedIPs {
-		whitelistIPs[ip] = true
+		return &Handler{
+			stripeDB:       stripeDB,
+			subscriptionDB: subscriptionDB,
+			whitelistIPs:   whitelistIPs,
+			stripe:         stripeService,
+			prices:         config.StripeConfig.Prices,
+		}
+	} else {
+		log.Info("Payment service is not set up.")
+		return nil
 	}
 
-	return &Handler{
-		stripeDB:       stripeDB,
-		subscriptionDB: subscriptionDB,
-		whitelistIPs:   whitelistIPs,
-		stripe:         stripeService,
-		prices:         config.StripeConfig.Prices,
-	}
 }
 
 func (h *Handler) CreateSubscription(c *gin.Context) {

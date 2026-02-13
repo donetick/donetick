@@ -18,12 +18,19 @@ type StripeService struct {
 	CancelURL  string
 }
 
-func NewStripeService(config *config.Config) *StripeService {
-	return &StripeService{
-		Key:        config.StripeConfig.APIKey,
-		SuccessURL: config.StripeConfig.SuccessURL,
-		CancelURL:  config.StripeConfig.CancelURL,
+func NewStripeService(config *config.Config, c context.Context) *StripeService {
+	log := logging.FromContext(c)
+	if config.StripeConfig.APIKey != "" && config.StripeConfig.SuccessURL != "" && config.StripeConfig.CancelURL != "" {
+		return &StripeService{
+			Key:        config.StripeConfig.APIKey,
+			SuccessURL: config.StripeConfig.SuccessURL,
+			CancelURL:  config.StripeConfig.CancelURL,
+		}
+	} else {
+		log.Info("Stripe is not set up.")
+		return nil
 	}
+
 }
 
 func (s *StripeService) CreateCustomer(c context.Context, user *uModel.UserDetails) (*stripe.Customer, error) {

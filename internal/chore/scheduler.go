@@ -101,7 +101,7 @@ func scheduleNextDueDate(ctx context.Context, chore *chModel.Chore, completedDat
 
 			// Convert baseDate to the target timezone for weekday calculations
 			baseDateInTimezone := baseDate.In(loc)
-			
+
 			// Find the next valid day of the week in the target timezone
 			for i := 1; i <= 7; i++ {
 				nextDueDateInTimezone := baseDateInTimezone.AddDate(0, 0, i)
@@ -410,5 +410,5 @@ func RemoveAssigneeAndReassign(chore *chModel.Chore, userID int) {
 		userID := chore.Assignees[rand.Intn(len(chore.Assignees))].UserID
 		chore.AssignedTo = &userID
 	}
-	chore.UpdatedAt = time.Now()
+	chore.UpdatedAt = time.Now().UTC()
 }

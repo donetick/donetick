@@ -165,8 +165,8 @@ func (h *Handler) signUp(c *gin.Context) {
 	// var userRole string
 	userCircle, err := h.circleRepo.CreateCircle(c, &cModel.Circle{
 		Name:       signupReq.DisplayName + "'s circle",
-		CreatedAt:  time.Now(),
-		UpdatedAt:  time.Now(),
+		CreatedAt:  time.Now().UTC(),
+		UpdatedAt:  time.Now().UTC(),
 		InviteCode: utils.GenerateInviteCode(c),
 	})
 
@@ -182,8 +182,8 @@ func (h *Handler) signUp(c *gin.Context) {
 		CircleID:  userCircle.ID,
 		Role:      "admin",
 		IsActive:  true,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
+		CreatedAt: time.Now().UTC(),
+		UpdatedAt: time.Now().UTC(),
 	}); err != nil {
 		c.JSON(500, gin.H{
 			"error": "Error adding user to circle",
@@ -305,8 +305,8 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 			// Create Circle for the user:
 			userCircle, err := h.circleRepo.CreateCircle(c, &cModel.Circle{
 				Name:       userinfo.GivenName + "'s circle",
-				CreatedAt:  time.Now(),
-				UpdatedAt:  time.Now(),
+				CreatedAt:  time.Now().UTC(),
+				UpdatedAt:  time.Now().UTC(),
 				InviteCode: utils.GenerateInviteCode(c),
 			})
 
@@ -322,8 +322,8 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 				CircleID:  userCircle.ID,
 				Role:      "admin",
 				IsActive:  true,
-				CreatedAt: time.Now(),
-				UpdatedAt: time.Now(),
+				CreatedAt: time.Now().UTC(),
+				UpdatedAt: time.Now().UTC(),
 			}); err != nil {
 				c.JSON(500, gin.H{
 					"error": "Error adding user to circle",
@@ -353,8 +353,8 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 				UserID:       acc.ID,
 				AuthMethod:   "google",
 				Verified:     false,
-				CreatedAt:    time.Now(),
-				ExpiresAt:    time.Now().Add(10 * time.Minute),
+				CreatedAt:    time.Now().UTC(),
+				ExpiresAt:    time.Now().UTC().Add(10 * time.Minute),
 				UserData:     acc.Username,
 			}
 
@@ -471,8 +471,8 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 			// Create Circle for the user
 			userCircle, err := h.circleRepo.CreateCircle(c, &cModel.Circle{
 				Name:       displayName + "'s circle",
-				CreatedAt:  time.Now(),
-				UpdatedAt:  time.Now(),
+				CreatedAt:  time.Now().UTC(),
+				UpdatedAt:  time.Now().UTC(),
 				InviteCode: utils.GenerateInviteCode(c),
 			})
 
@@ -489,8 +489,8 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 				CircleID:  userCircle.ID,
 				Role:      "admin",
 				IsActive:  true,
-				CreatedAt: time.Now(),
-				UpdatedAt: time.Now(),
+				CreatedAt: time.Now().UTC(),
+				UpdatedAt: time.Now().UTC(),
 			}); err != nil {
 				logger.Errorw("account.handler.thirdPartyAuthCallback (apple) failed to add user to circle", "err", err)
 				c.JSON(500, gin.H{
@@ -526,8 +526,8 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 				UserID:       acc.ID,
 				AuthMethod:   "apple",
 				Verified:     false,
-				CreatedAt:    time.Now(),
-				ExpiresAt:    time.Now().Add(10 * time.Minute),
+				CreatedAt:    time.Now().UTC(),
+				ExpiresAt:    time.Now().UTC().Add(10 * time.Minute),
 				UserData:     acc.Username,
 			}
 
@@ -631,8 +631,8 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 			// Create Circle for the user:
 			userCircle, err := h.circleRepo.CreateCircle(c, &cModel.Circle{
 				Name:       claims.DisplayName + "'s circle",
-				CreatedAt:  time.Now(),
-				UpdatedAt:  time.Now(),
+				CreatedAt:  time.Now().UTC(),
+				UpdatedAt:  time.Now().UTC(),
 				InviteCode: utils.GenerateInviteCode(c),
 			})
 
@@ -648,8 +648,8 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 				CircleID:  userCircle.ID,
 				Role:      "admin",
 				IsActive:  true,
-				CreatedAt: time.Now(),
-				UpdatedAt: time.Now(),
+				CreatedAt: time.Now().UTC(),
+				UpdatedAt: time.Now().UTC(),
 			}); err != nil {
 				c.JSON(500, gin.H{
 					"error": "Error adding user to circle",
@@ -680,8 +680,8 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 				UserID:       acc.ID,
 				AuthMethod:   "oauth2",
 				Verified:     false,
-				CreatedAt:    time.Now(),
-				ExpiresAt:    time.Now().Add(10 * time.Minute),
+				CreatedAt:    time.Now().UTC(),
+				ExpiresAt:    time.Now().UTC().Add(10 * time.Minute),
 				UserData:     acc.Username,
 			}
 
@@ -925,7 +925,7 @@ func (h *Handler) CreateLongLivedToken(c *gin.Context) {
 		return
 	}
 
-	timestamp := time.Now().Unix()
+	timestamp := time.Now().UTC().Unix()
 	hashInput := fmt.Sprintf("%s:%d:%x", currentUser.Username, timestamp, randomBytes)
 	hash := sha256.Sum256([]byte(hashInput))
 	token := hex.EncodeToString(hash[:])
@@ -1399,8 +1399,8 @@ func (h *Handler) createChildUser(c *gin.Context) {
 		CircleID:  currentUser.CircleID,
 		Role:      "member", // Child users are members, not admins
 		IsActive:  true,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
+		CreatedAt: time.Now().UTC(),
+		UpdatedAt: time.Now().UTC(),
 	}); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to add child user to circle"})
 		return

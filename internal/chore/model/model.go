@@ -425,12 +425,14 @@ func (f *FrequencyMetadata) Scan(value interface{}) error {
 		return nil
 	}
 
-	bytes, ok := value.([]byte)
-	if !ok {
-		return errors.New("type assertion to []byte failed")
+	switch v := value.(type) {
+	case []byte:
+		return json.Unmarshal(v, f)
+	case string:
+		return json.Unmarshal([]byte(v), f)
+	default:
+		return errors.New("type assertion to []byte or string failed")
 	}
-
-	return json.Unmarshal(bytes, f)
 }
 
 type TimeSession struct {

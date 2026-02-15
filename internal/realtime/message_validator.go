@@ -11,10 +11,10 @@ import (
 
 // MessageValidator handles validation of WebSocket messages
 type MessageValidator struct {
-	maxMessageSize   int
-	maxFieldLength   int
-	allowedTypes     map[string]bool
-	sanitizedLogger  *SanitizedLogger
+	maxMessageSize  int
+	maxFieldLength  int
+	allowedTypes    map[string]bool
+	sanitizedLogger *SanitizedLogger
 }
 
 // WebSocketMessage represents the structure of WebSocket messages
@@ -26,28 +26,28 @@ type WebSocketMessage struct {
 
 // ValidationResult contains validation results and sanitized message
 type ValidationResult struct {
-	Valid           bool
+	Valid            bool
 	SanitizedMessage *WebSocketMessage
-	Errors          []string
+	Errors           []string
 }
 
 // NewMessageValidator creates a new message validator
 func NewMessageValidator(logger *SanitizedLogger) *MessageValidator {
 	return &MessageValidator{
-		maxMessageSize:  8192,   // 8KB max message size
-		maxFieldLength:  1024,   // 1KB max field length
+		maxMessageSize:  8192, // 8KB max message size
+		maxFieldLength:  1024, // 1KB max field length
 		sanitizedLogger: logger,
 		allowedTypes: map[string]bool{
-			"ping":           true,
-			"pong":           true,
-			"chore_updated":  true,
+			"ping":            true,
+			"pong":            true,
+			"chore_updated":   true,
 			"chore_completed": true,
-			"chore_skipped":  true,
-			"user_joined":    true,
-			"user_left":      true,
-			"circle_updated": true,
-			"notification":   true,
-			"heartbeat":      true,
+			"chore_skipped":   true,
+			"user_joined":     true,
+			"user_left":       true,
+			"circle_updated":  true,
+			"notification":    true,
+			"heartbeat":       true,
 		},
 	}
 }
@@ -195,8 +195,8 @@ func (mv *MessageValidator) validateDataFields(data map[string]interface{}, pref
 // isValidFieldName checks if a field name contains only safe characters
 func (mv *MessageValidator) isValidFieldName(name string) bool {
 	for _, r := range name {
-		if !((r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || 
-			 (r >= '0' && r <= '9') || r == '_' || r == '-') {
+		if !((r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') ||
+			(r >= '0' && r <= '9') || r == '_' || r == '-') {
 			return false
 		}
 	}
@@ -224,7 +224,7 @@ func (mv *MessageValidator) sanitizeDataFields(data map[string]interface{}) map[
 
 	for key, value := range data {
 		sanitizedKey := mv.sanitizeString(key)
-		
+
 		switch v := value.(type) {
 		case string:
 			sanitized[sanitizedKey] = mv.sanitizeString(v)
@@ -243,7 +243,7 @@ func (mv *MessageValidator) sanitizeDataFields(data map[string]interface{}) map[
 // sanitizeArray sanitizes array elements
 func (mv *MessageValidator) sanitizeArray(arr []interface{}) []interface{} {
 	sanitized := make([]interface{}, len(arr))
-	
+
 	for i, item := range arr {
 		switch v := item.(type) {
 		case string:
@@ -254,7 +254,7 @@ func (mv *MessageValidator) sanitizeArray(arr []interface{}) []interface{} {
 			sanitized[i] = item
 		}
 	}
-	
+
 	return sanitized
 }
 
@@ -268,15 +268,15 @@ func (mv *MessageValidator) sanitizeString(s string) string {
 		}
 		result.WriteRune(r)
 	}
-	
+
 	cleaned := result.String()
-	
+
 	// Basic XSS prevention - remove script tags and event handlers
 	cleaned = strings.ReplaceAll(cleaned, "<script", "&lt;script")
 	cleaned = strings.ReplaceAll(cleaned, "</script>", "&lt;/script&gt;")
 	cleaned = strings.ReplaceAll(cleaned, "javascript:", "")
 	cleaned = strings.ReplaceAll(cleaned, "vbscript:", "")
-	
+
 	return cleaned
 }
 
@@ -285,11 +285,11 @@ func (mv *MessageValidator) ValidateMessageType(messageType string) error {
 	if messageType == "" {
 		return errors.New("message type is required")
 	}
-	
+
 	if !mv.allowedTypes[messageType] {
 		return fmt.Errorf("message type '%s' is not allowed", messageType)
 	}
-	
+
 	return nil
 }
 

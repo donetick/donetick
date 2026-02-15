@@ -22,19 +22,19 @@ func (sl *SanitizedLogger) sanitizeToken(token string) string {
 	if token == "" {
 		return ""
 	}
-	
+
 	// Only show first 8 and last 4 characters of token
 	if len(token) <= 12 {
 		return strings.Repeat("*", len(token))
 	}
-	
+
 	return token[:8] + strings.Repeat("*", len(token)-12) + token[len(token)-4:]
 }
 
 // sanitizeUserData removes or masks sensitive user information
 func (sl *SanitizedLogger) sanitizeUserData(fields map[string]interface{}) map[string]interface{} {
 	sanitized := make(map[string]interface{})
-	
+
 	for key, value := range fields {
 		switch strings.ToLower(key) {
 		case "token", "jwt", "password", "secret", "key":
@@ -67,7 +67,7 @@ func (sl *SanitizedLogger) sanitizeUserData(fields map[string]interface{}) map[s
 			sanitized[key] = value
 		}
 	}
-	
+
 	return sanitized
 }
 
@@ -108,7 +108,7 @@ func (sl *SanitizedLogger) LogConnectionEvent(event string, userID int, circleID
 // LogSecurityEvent logs security-related events
 func (sl *SanitizedLogger) LogSecurityEvent(event string, userID int, remoteAddr string, details map[string]interface{}) {
 	sanitizedDetails := sl.sanitizeUserData(details)
-	
+
 	sl.logger.Warnw("Security event detected",
 		"event", event,
 		"user_id", userID,
@@ -143,7 +143,7 @@ func (sl *SanitizedLogger) LogMessageValidation(userID int, connectionID string,
 // LogPerformanceMetric logs performance-related metrics
 func (sl *SanitizedLogger) LogPerformanceMetric(metric string, value interface{}, tags map[string]interface{}) {
 	sanitizedTags := sl.sanitizeUserData(tags)
-	
+
 	sl.logger.Infow("Performance metric",
 		"metric", metric,
 		"value", value,
@@ -155,7 +155,7 @@ func (sl *SanitizedLogger) LogPerformanceMetric(metric string, value interface{}
 // LogError logs errors with context sanitization
 func (sl *SanitizedLogger) LogError(message string, err error, context map[string]interface{}) {
 	sanitizedContext := sl.sanitizeUserData(context)
-	
+
 	sl.logger.Errorw(message,
 		"error", err.Error(),
 		"context", sanitizedContext,

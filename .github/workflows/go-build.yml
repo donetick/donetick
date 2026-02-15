@@ -7,6 +7,14 @@ on:
     branches: [ "main" ]
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Check time.Now().UTC() usage
+      run: bash scripts/check-time-utc.sh
+
   test:
     name: 🔬 Test
     runs-on: ubuntu-latest

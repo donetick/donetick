@@ -184,7 +184,7 @@ func (r *ChoreRepository) SetChorePendingApproval(c context.Context, chore *chMo
 	return err
 }
 
-func (r *ChoreRepository) ApproveChore(c context.Context, chore *chModel.Chore, adminUserID int, dueDate *time.Time, nextAssignedTo int, applyPoints bool) error {
+func (r *ChoreRepository) ApproveChore(c context.Context, chore *chModel.Chore, adminUserID int, dueDate *time.Time, nextAssignedTo *int, applyPoints bool) error {
 	err := r.db.WithContext(c).Transaction(func(tx *gorm.DB) error {
 		choreUpdates := map[string]interface{}{}
 		choreUpdates["next_due_date"] = dueDate
@@ -260,7 +260,7 @@ func (r *ChoreRepository) RejectChore(c context.Context, choreID int, rejectionN
 	})
 }
 
-func (r *ChoreRepository) CompleteChore(c context.Context, chore *chModel.Chore, note *string, userID int, dueDate *time.Time, completedDate *time.Time, nextAssignedTo int, applyPoints bool) error {
+func (r *ChoreRepository) CompleteChore(c context.Context, chore *chModel.Chore, note *string, userID int, dueDate *time.Time, completedDate *time.Time, nextAssignedTo *int, applyPoints bool) error {
 	err := r.db.WithContext(c).Transaction(func(tx *gorm.DB) error {
 
 		choreUpdates := map[string]interface{}{}
@@ -497,7 +497,7 @@ func (r *ChoreRepository) RemoveChoreAssigneeByCircleID(c context.Context, userI
 // func (r *ChoreReposity) GetOverdueChoresForNotification(c context.Context, overdueDuration time.Duration, everyDuration time.Duration, untilDuration time.Duration) ([]*chModel.Chore, error) {
 // 	var chores []*chModel.Chore
 // 	query := r.db.Debug().WithContext(c).Table("chores").Select("chores.*, MAX(n.created_at) as max_notification_created_at").Joins("left join notifications n on n.chore_id = chores.id and n.scheduled_for = chores.next_due_date and n.type = 2")
-// 	if err := query.Where("chores.is_active = ? and chores.notification = ? and chores.next_due_date < ? and chores.next_due_date > ?", true, true, time.Now().Add(overdueDuration).UTC(), time.Now().Add(untilDuration).UTC()).Where(readJSONBooleanField(r.dbType, "chores.notification_meta", "nagging")).Having("MAX(n.created_at) is null or MAX(n.created_at) < ?", time.Now().Add(everyDuration).UTC()).Group("chores.id").Find(&chores).Error; err != nil {
+// 	if err := query.Where("chores.is_active = ? and chores.notification = ? and chores.next_due_date < ? and chores.next_due_date > ?", true, true, time.Now().UTC().Add(overdueDuration).UTC(), time.Now().Add(untilDuration).UTC()).Where(readJSONBooleanField(r.dbType, "chores.notification_meta", "nagging")).Having("MAX(n.created_at) is null or MAX(n.created_at) < ?", time.Now().Add(everyDuration).UTC()).Group("chores.id").Find(&chores).Error; err != nil {
 // 		return nil, err
 // 	}
 // 	return chores, nil
@@ -530,7 +530,7 @@ func (r *ChoreRepository) GetOverdueChoresForNotification(c context.Context, ove
 func (r *ChoreRepository) GetPreDueChoresForNotification(c context.Context, preDueDuration time.Duration, everyDuration time.Duration) ([]*chModel.Chore, error) {
 	var chores []*chModel.Chore
 	query := r.db.WithContext(c).Table("chores").Select("chores.*, MAX(n.created_at) as max_notification_created_at").Joins("left join notifications n on n.chore_id = chores.id and n.scheduled_for = chores.next_due_date and n.type = 3")
-	if err := query.Where("chores.is_active = ? and chores.notification = ? and chores.next_due_date > ? and chores.next_due_date < ?", true, true, time.Now().UTC(), time.Now().Add(everyDuration*2).UTC()).Where(readJSONBooleanField(r.dbType, "chores.notification_meta", "predue")).Having("MAX(n.created_at) is null or MAX(n.created_at) < ?", time.Now().Add(everyDuration).UTC()).Group("chores.id").Find(&chores).Error; err != nil {
+	if err := query.Where("chores.is_active = ? and chores.notification = ? and chores.next_due_date > ? and chores.next_due_date < ?", true, true, time.Now().UTC(), time.Now().UTC().Add(everyDuration*2)).Where(readJSONBooleanField(r.dbType, "chores.notification_meta", "predue")).Having("MAX(n.created_at) is null or MAX(n.created_at) < ?", time.Now().UTC().Add(everyDuration)).Group("chores.id").Find(&chores).Error; err != nil {
 		return nil, err
 	}
 	return chores, nil
@@ -573,6 +573,7 @@ func (r *ChoreRepository) GetChoreDetailByID(c context.Context, choreID int, cir
 		chores.priority,
 		chores.completion_window,
 		chores.status,
+		chores.is_active,
 		CAST(MAX(time_sessions.duration) AS INTEGER) as duration,
 		time_sessions.start_time as start_time,
 		time_sessions.updated_at as timer_updated_at,
@@ -619,7 +620,7 @@ func (r *ChoreRepository) UnarchiveChore(c context.Context, choreID int, userID 
 func (r *ChoreRepository) GetChoresHistoryByUserID(c context.Context, userID int, circleID int, days int, includeCircle bool) ([]*chModel.ChoreHistory, error) {
 
 	var chores []*chModel.ChoreHistory
-	since := time.Now().AddDate(0, 0, days*-1)
+	since := time.Now().UTC().AddDate(0, 0, days*-1)
 	query := r.db.WithContext(c).
 		Table("chore_histories").
 		Select("chore_histories.*, circles.id as circle_id, time_sessions.duration, time_sessions.start_time, time_sessions.updated_at as timer_updated_at").
@@ -770,4 +771,121 @@ func (r *ChoreRepository) DeleteTimeSession(c context.Context, sessionID int, ch
 	})
 	// delete where session ID matches and chore ID matches
 
+}
+
+// GetUserLastChoreAction gets the user's most recent action on a chore (within time limit)
+func (r *ChoreRepository) GetUserLastChoreAction(c context.Context, choreID int, userID int, timeLimit time.Duration) (*chModel.ChoreHistory, error) {
+	var history chModel.ChoreHistory
+	cutoffTime := time.Now().UTC().Add(-timeLimit)
+
+	err := r.db.WithContext(c).
+		Where("chore_id = ? AND completed_by = ? AND created_at > ?", choreID, userID, cutoffTime).
+		Where("status IN (?)", []chModel.ChoreHistoryStatus{
+			chModel.ChoreHistoryStatusCompleted,
+			chModel.ChoreHistoryStatusSkipped,
+			chModel.ChoreHistoryStatusPendingApproval,
+			chModel.ChoreHistoryStatusRejected,
+		}).
+		Order("created_at desc").
+		First(&history).Error
+
+	if err != nil {
+		return nil, err
+	}
+	return &history, nil
+}
+
+// GetChoreStateBefore gets the chore state before a specific history entry
+func (r *ChoreRepository) GetChoreStateBefore(c context.Context, choreID int, beforeHistoryID int) (*chModel.ChoreHistory, error) {
+	var targetHistory chModel.ChoreHistory
+	if err := r.db.WithContext(c).First(&targetHistory, beforeHistoryID).Error; err != nil {
+		return nil, err
+	}
+
+	var previousHistory chModel.ChoreHistory
+	err := r.db.WithContext(c).
+		Where("chore_id = ? AND id < ? AND status IN (?)",
+			choreID,
+			beforeHistoryID,
+			[]chModel.ChoreHistoryStatus{
+				chModel.ChoreHistoryStatusCompleted,
+				chModel.ChoreHistoryStatusSkipped,
+			}).
+		Order("id desc").
+		First(&previousHistory).Error
+
+	if err != nil {
+		return nil, err // No previous history found
+	}
+	return &previousHistory, nil
+}
+
+// UndoChoreAction undoes a chore action by restoring previous state and removing the history entry
+func (r *ChoreRepository) UndoChoreAction(c context.Context, choreID int, historyID int, previousAssignedTo *int, previousDueDate *time.Time) error {
+	return r.db.WithContext(c).Transaction(func(tx *gorm.DB) error {
+		// Get the history entry to undo
+		var historyToUndo chModel.ChoreHistory
+		if err := tx.First(&historyToUndo, historyID).Error; err != nil {
+			return err
+		}
+
+		// Prepare chore updates
+		choreUpdates := map[string]interface{}{
+			"status": chModel.ChoreStatusNoStatus,
+		}
+
+		// Build list of fields to explicitly update (including nullable fields)
+		selectFields := []string{"status"}
+
+		// Restore previous assignee
+		if previousAssignedTo != nil {
+			choreUpdates["assigned_to"] = *previousAssignedTo
+		} else {
+			choreUpdates["assigned_to"] = nil
+		}
+		selectFields = append(selectFields, "assigned_to")
+
+		// Restore previous due date
+		if previousDueDate != nil {
+			choreUpdates["next_due_date"] = *previousDueDate
+			choreUpdates["is_active"] = true
+		} else {
+			choreUpdates["next_due_date"] = nil
+			choreUpdates["is_active"] = false
+		}
+		selectFields = append(selectFields, "next_due_date", "is_active")
+
+		// Update the chore with explicit field selection to handle nil values
+		if err := tx.Model(&chModel.Chore{}).Where("id = ?", choreID).Select(selectFields).Updates(choreUpdates).Error; err != nil {
+			return err
+		}
+
+		// Remove points if they were added during completion/approval
+		if historyToUndo.Points != nil && *historyToUndo.Points > 0 &&
+			(historyToUndo.Status == chModel.ChoreHistoryStatusCompleted) {
+			// Get the chore to find circle ID
+			var chore chModel.Chore
+			if err := tx.Select("circle_id").First(&chore, choreID).Error; err != nil {
+				return err
+			}
+			// Subtract points from user
+			if err := tx.Model(&cModel.UserCircle{}).
+				Where("user_id = ? AND circle_id = ?", historyToUndo.CompletedBy, chore.CircleID).
+				Update("points", gorm.Expr("points - ?", *historyToUndo.Points)).Error; err != nil {
+				return err
+			}
+		}
+
+		// Delete the history entry being undone
+		if err := tx.Delete(&chModel.ChoreHistory{}, historyID).Error; err != nil {
+			return err
+		}
+
+		// Delete associated time sessions for this history entry
+		if err := tx.Where("chore_history_id = ?", historyID).Delete(&chModel.TimeSession{}).Error; err != nil {
+			return err
+		}
+
+		return nil
+	})
 }

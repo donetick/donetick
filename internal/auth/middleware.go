@@ -38,7 +38,7 @@ func MustCurrentUser(c *gin.Context) *uModel.UserDetails {
 	panic("no account in gin.Context")
 }
 
-func NewAuthMiddleware(cfg *config.Config, userRepo *uRepo.UserRepository) (*jwt.GinJWTMiddleware, error) {
+func NewAuthMiddleware(cfg *config.Config, userRepo *uRepo.UserRepository, mfaService *mfa.MFAService) (*jwt.GinJWTMiddleware, error) {
 	return jwt.New(&jwt.GinJWTMiddleware{
 		Realm:       "test zone",
 		Key:         []byte(cfg.Jwt.Secret),
@@ -90,7 +90,6 @@ func NewAuthMiddleware(cfg *config.Config, userRepo *uRepo.UserRepository) (*jwt
 				// Check if MFA is enabled for this user
 				if user.MFAEnabled {
 					// Create MFA session for verification
-					mfaService := mfa.NewMFAService("Donetick")
 					sessionToken, err := mfaService.GenerateSessionToken()
 					if err != nil {
 						logging.FromContext(c).Errorw("Failed to generate MFA session token", "error", err)
@@ -102,8 +101,8 @@ func NewAuthMiddleware(cfg *config.Config, userRepo *uRepo.UserRepository) (*jwt
 						UserID:       user.ID,
 						AuthMethod:   "local",
 						Verified:     false,
-						CreatedAt:    time.Now(),
-						ExpiresAt:    time.Now().Add(10 * time.Minute), // 10-minute expiry
+						CreatedAt:    time.Now().UTC(),
+						ExpiresAt:    time.Now().UTC().Add(10 * time.Minute), // 10-minute expiry
 						UserData:     user.Username,                    // Store username for later verification
 					}
 
@@ -169,6 +168,9 @@ func NewAuthMiddleware(cfg *config.Config, userRepo *uRepo.UserRepository) (*jwt
 				"code":    code,
 				"message": message,
 			})
+			c.Abort()
+			return
+
 		},
 		LoginResponse: func(c *gin.Context, code int, token string, expire time.Time) {
 			// Check if MFA is required

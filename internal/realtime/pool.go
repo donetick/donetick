@@ -21,6 +21,7 @@ type ConnectionPool struct {
 type ConnectionPoolStats struct {
 	ActiveConnections int64
 	TotalMessages     int64
+	QueueSize         int64
 	mu                sync.RWMutex
 }
 
@@ -197,9 +198,24 @@ func (p *ConnectionPool) Close() {
 
 // GetStats returns current pool statistics
 func (p *ConnectionPool) GetStats() ConnectionPoolStats {
+	p.mu.RLock()
+	
+	// Calculate queue size by summing all connection Send channel lengths
+	var queueSize int64
+	for _, conn := range p.connections {
+		queueSize += int64(len(conn.Send))
+	}
+	p.mu.RUnlock()
+	
 	p.stats.mu.RLock()
-	defer p.stats.mu.RUnlock()
-	return p.stats
+	stats := ConnectionPoolStats{
+		ActiveConnections: p.stats.ActiveConnections,
+		TotalMessages:     p.stats.TotalMessages,
+		QueueSize:         queueSize,
+	}
+	p.stats.mu.RUnlock()
+	
+	return stats
 }
 
 // GetConnectionCount returns the number of active connections

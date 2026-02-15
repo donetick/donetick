@@ -38,6 +38,14 @@ type IUserRepository interface {
 	GetUserDeviceTokens(c context.Context, userID int) ([]*uModel.UserDeviceToken, error)
 	GetActiveDeviceTokens(c context.Context, userID int) ([]*uModel.UserDeviceToken, error)
 	UpdateDeviceTokenActivity(c context.Context, userID int, deviceID string) error
+	// UserSession methods for refresh token management
+	CreateUserSession(c context.Context, session *uModel.UserSession) error
+	GetUserSessionByTokenHash(c context.Context, tokenHash string) (*uModel.UserSession, error)
+	MarkSessionUsed(c context.Context, sessionID string) error
+	RevokeSession(c context.Context, sessionID string) error
+	RevokeSessionFamily(c context.Context, familyID string) error
+	RevokeAllUserSessions(c context.Context, userID int) error
+	CleanupExpiredSessions(c context.Context) error
 }
 
 type UserRepository struct {
@@ -322,7 +330,7 @@ func (r *UserRepository) CreateMFASession(c context.Context, session *uModel.MFA
 // GetMFASession retrieves an MFA session by token
 func (r *UserRepository) GetMFASession(c context.Context, sessionToken string) (*uModel.MFASession, error) {
 	var session uModel.MFASession
-	if err := r.db.WithContext(c).Where("session_token = ? AND expires_at > ?", sessionToken, time.Now()).First(&session).Error; err != nil {
+	if err := r.db.WithContext(c).Where("session_token = ? AND expires_at > ?", sessionToken, time.Now().UTC()).First(&session).Error; err != nil {
 		return nil, err
 	}
 	return &session, nil
@@ -340,5 +348,51 @@ func (r *UserRepository) DeleteMFASession(c context.Context, sessionToken string
 
 // CleanupExpiredMFASessions removes expired MFA sessions
 func (r *UserRepository) CleanupExpiredMFASessions(c context.Context) error {
-	return r.db.WithContext(c).Where("expires_at < ?", time.Now()).Delete(&uModel.MFASession{}).Error
+	return r.db.WithContext(c).Where("expires_at < ?", time.Now().UTC()).Delete(&uModel.MFASession{}).Error
+}
+
+// UserSession methods for refresh token management
+
+// CreateUserSession creates a new user session (refresh token)
+func (r *UserRepository) CreateUserSession(c context.Context, session *uModel.UserSession) error {
+	return r.db.WithContext(c).Create(session).Error
+}
+
+// GetUserSessionByTokenHash retrieves a user session by token hash
+func (r *UserRepository) GetUserSessionByTokenHash(c context.Context, tokenHash string) (*uModel.UserSession, error) {
+	var session uModel.UserSession
+	if err := r.db.WithContext(c).Where("token_hash = ? AND expires_at > ? AND revoked_at IS NULL", tokenHash, time.Now().UTC()).First(&session).Error; err != nil {
+		return nil, err
+	}
+	return &session, nil
+}
+
+// MarkSessionUsed marks a session as used (for token rotation detection)
+func (r *UserRepository) MarkSessionUsed(c context.Context, sessionID string) error {
+	now := time.Now().UTC()
+	return r.db.WithContext(c).Model(&uModel.UserSession{}).Where("id = ?", sessionID).Update("used_at", now).Error
+}
+
+// RevokeSession revokes a specific session
+func (r *UserRepository) RevokeSession(c context.Context, sessionID string) error {
+	now := time.Now().UTC()
+	return r.db.WithContext(c).Model(&uModel.UserSession{}).Where("id = ?", sessionID).Update("revoked_at", now).Error
+}
+
+// RevokeSessionFamily revokes all sessions in a token family (security measure)
+func (r *UserRepository) RevokeSessionFamily(c context.Context, familyID string) error {
+	now := time.Now().UTC()
+	return r.db.WithContext(c).Model(&uModel.UserSession{}).Where("family_id = ? AND revoked_at IS NULL", familyID).Update("revoked_at", now).Error
+}
+
+// RevokeAllUserSessions revokes all sessions for a user (logout from all devices)
+func (r *UserRepository) RevokeAllUserSessions(c context.Context, userID int) error {
+	now := time.Now().UTC()
+	return r.db.WithContext(c).Model(&uModel.UserSession{}).Where("user_id = ? AND revoked_at IS NULL", userID).Update("revoked_at", now).Error
+}
+
+// CleanupExpiredSessions removes expired and revoked sessions
+func (r *UserRepository) CleanupExpiredSessions(c context.Context) error {
+	now := time.Now().UTC()
+	return r.db.WithContext(c).Where("expires_at < ? OR revoked_at IS NOT NULL", now).Delete(&uModel.UserSession{}).Error
 }

@@ -2,6 +2,7 @@ package database
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"strings"
 	"time"
@@ -37,16 +38,29 @@ func convertLogLevelToGorm(appLogLevel string) logger.LogLevel {
 func NewDatabase(cfg *config.Config) (*gorm.DB, error) {
 	var db *gorm.DB
 	var err error
+
+	// Use GORM logger level based on application log level from config
+	gormLogLevel := convertLogLevelToGorm(cfg.Logging.Level)
+	newLogger := logger.New(
+		log.New(os.Stdout, "\r\n", log.LstdFlags),
+		logger.Config{
+			SlowThreshold:             200 * time.Millisecond, // Default Logger behaviour
+			LogLevel:                  gormLogLevel,
+			IgnoreRecordNotFoundError: false,                        // Default Logger behaviour
+			Colorful:                  true,                         // Default Logger behaviour
+			ParameterizedQueries:      cfg.Logging.Level != "debug", // ParameterizedQueries=true => Don't show data in logs
+		},
+	)
+
+	gormConfig := gorm.Config{
+		Logger: newLogger,
+	}
+
 	switch cfg.Database.Type {
 	case "postgres":
 		dsn := fmt.Sprintf("host=%s port=%v user=%s password=%s dbname=%s sslmode=disable TimeZone=Asia/Shanghai", cfg.Database.Host, cfg.Database.Port, cfg.Database.User, cfg.Database.Password, cfg.Database.Name)
 		for i := 0; i <= 30; i++ {
-			// Use GORM logger level based on application log level from config
-			gormLogLevel := convertLogLevelToGorm(cfg.Logging.Level)
-
-			db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{
-				Logger: logger.Default.LogMode(gormLogLevel),
-			})
+			db, err = gorm.Open(postgres.Open(dsn), &gormConfig)
 			if err == nil {
 				break
 			}
@@ -59,7 +73,7 @@ func NewDatabase(cfg *config.Config) (*gorm.DB, error) {
 		if path == "" {
 			path = "donetick.db"
 		}
-		db, err = gorm.Open(sqlite.Open(path), &gorm.Config{})
+		db, err = gorm.Open(sqlite.Open(path), &gormConfig)
 
 	}
 

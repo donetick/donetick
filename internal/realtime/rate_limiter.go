@@ -45,7 +45,7 @@ func (rl *RateLimiter) Allow(connectionID string, maxTokens int, refillRate time
 		conn = &ConnectionRateLimit{
 			tokens:     maxTokens,
 			maxTokens:  maxTokens,
-			lastRefill: time.Now(),
+			lastRefill: time.Now().UTC(),
 		}
 		rl.connections[connectionID] = conn
 	}
@@ -54,7 +54,7 @@ func (rl *RateLimiter) Allow(connectionID string, maxTokens int, refillRate time
 	defer conn.mu.Unlock()
 
 	// Refill tokens based on elapsed time
-	now := time.Now()
+	now := time.Now().UTC()
 	elapsed := now.Sub(conn.lastRefill)
 	tokensToAdd := int(elapsed / refillRate)
 
@@ -93,7 +93,7 @@ func (rl *RateLimiter) cleanup() {
 			return
 		case <-rl.cleanupTick.C:
 			rl.mu.Lock()
-			cutoff := time.Now().Add(-10 * time.Minute) // Remove connections inactive for 10+ minutes
+			cutoff := time.Now().UTC().Add(-10 * time.Minute) // Remove connections inactive for 10+ minutes
 
 			for id, conn := range rl.connections {
 				conn.mu.Lock()

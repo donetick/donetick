@@ -36,6 +36,7 @@ type Handler struct {
 	userRepo               *uRepo.UserRepository
 	circleRepo             *cRepo.CircleRepository
 	jwtAuth                *jwt.GinJWTMiddleware
+	tokenService           *auth.TokenService
 	email                  *email.EmailSender
 	identityProvider       *auth.IdentityProvider
 	isDonetickDotCom       bool
@@ -46,20 +47,23 @@ type Handler struct {
 	signer                 *storage.URLSignerS3
 	deletionService        *DeletionService
 	appleService           *apple.AppleService
+	mfaService             *mfa.MFAService
 	maxSubaccounts         int
 	plusMaxSubaccounts     int
 }
 
 func NewHandler(ur *uRepo.UserRepository, cr *cRepo.CircleRepository,
-	jwtAuth *jwt.GinJWTMiddleware, email *email.EmailSender,
+	jwtAuth *jwt.GinJWTMiddleware, tokenService *auth.TokenService,
+	email *email.EmailSender,
 	idp *auth.IdentityProvider, storage *storage.S3Storage,
 	signer *storage.URLSignerS3, storageRepo *storageRepo.StorageRepository,
 	appleService *apple.AppleService,
-	deletionService *DeletionService, config *config.Config) *Handler {
+	deletionService *DeletionService, mfaService *mfa.MFAService, config *config.Config) *Handler {
 	return &Handler{
 		userRepo:               ur,
 		circleRepo:             cr,
 		jwtAuth:                jwtAuth,
+		tokenService:           tokenService,
 		email:                  email,
 		identityProvider:       idp,
 		isDonetickDotCom:       config.IsDoneTickDotCom,
@@ -70,6 +74,7 @@ func NewHandler(ur *uRepo.UserRepository, cr *cRepo.CircleRepository,
 		signer:                 signer,
 		deletionService:        deletionService,
 		appleService:           appleService,
+		mfaService:             mfaService,
 		maxSubaccounts:         config.FeatureLimits.MaxSubaccounts,
 		plusMaxSubaccounts:     config.FeatureLimits.PlusMaxSubaccounts,
 	}
@@ -109,7 +114,7 @@ func (h *Handler) signUp(c *gin.Context) {
 
 	type SignUpReq struct {
 		Username    string `json:"username" binding:"required,min=4,max=20"`
-		Password    string `json:"password" binding:"required,min=8,max=45"`
+		Password    string `json:"password" binding:"required,min=8,max=64"`
 		Email       string `json:"email" binding:"required,email"`
 		DisplayName string `json:"displayName"`
 	}
@@ -160,8 +165,8 @@ func (h *Handler) signUp(c *gin.Context) {
 	// var userRole string
 	userCircle, err := h.circleRepo.CreateCircle(c, &cModel.Circle{
 		Name:       signupReq.DisplayName + "'s circle",
-		CreatedAt:  time.Now(),
-		UpdatedAt:  time.Now(),
+		CreatedAt:  time.Now().UTC(),
+		UpdatedAt:  time.Now().UTC(),
 		InviteCode: utils.GenerateInviteCode(c),
 	})
 
@@ -177,8 +182,8 @@ func (h *Handler) signUp(c *gin.Context) {
 		CircleID:  userCircle.ID,
 		Role:      "admin",
 		IsActive:  true,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
+		CreatedAt: time.Now().UTC(),
+		UpdatedAt: time.Now().UTC(),
 	}); err != nil {
 		c.JSON(500, gin.H{
 			"error": "Error adding user to circle",
@@ -300,8 +305,8 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 			// Create Circle for the user:
 			userCircle, err := h.circleRepo.CreateCircle(c, &cModel.Circle{
 				Name:       userinfo.GivenName + "'s circle",
-				CreatedAt:  time.Now(),
-				UpdatedAt:  time.Now(),
+				CreatedAt:  time.Now().UTC(),
+				UpdatedAt:  time.Now().UTC(),
 				InviteCode: utils.GenerateInviteCode(c),
 			})
 
@@ -317,8 +322,8 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 				CircleID:  userCircle.ID,
 				Role:      "admin",
 				IsActive:  true,
-				CreatedAt: time.Now(),
-				UpdatedAt: time.Now(),
+				CreatedAt: time.Now().UTC(),
+				UpdatedAt: time.Now().UTC(),
 			}); err != nil {
 				c.JSON(500, gin.H{
 					"error": "Error adding user to circle",
@@ -336,8 +341,7 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 		// Check if user has MFA enabled
 		if acc.MFAEnabled {
 			// Create MFA session for third-party auth
-			mfaService := mfa.NewMFAService("Donetick")
-			sessionToken, err := mfaService.GenerateSessionToken()
+			sessionToken, err := h.mfaService.GenerateSessionToken()
 			if err != nil {
 				logger.Errorw("Failed to generate MFA session token", "error", err)
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Authentication failed"})
@@ -349,8 +353,8 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 				UserID:       acc.ID,
 				AuthMethod:   "google",
 				Verified:     false,
-				CreatedAt:    time.Now(),
-				ExpiresAt:    time.Now().Add(10 * time.Minute),
+				CreatedAt:    time.Now().UTC(),
+				ExpiresAt:    time.Now().UTC().Add(10 * time.Minute),
 				UserData:     acc.Username,
 			}
 
@@ -366,18 +370,17 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 			})
 			return
 		}
-		// use auth to generate a token for the user:
-		c.Set("user_account", acc)
-		h.jwtAuth.Authenticator(c)
-		tokenString, expire, err := h.jwtAuth.TokenGenerator(acc)
+		// Generate tokens including refresh token:
+		tokenResponse, err := h.tokenService.GenerateTokens(c.Request.Context(), acc)
 		if err != nil {
-			logger.Errorw("Unable to Generate a Token")
+			logger.Errorw("Unable to generate tokens", "error", err)
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": "Unable to Generate a Token",
 			})
 			return
 		}
-		c.JSON(http.StatusOK, gin.H{"token": tokenString, "expire": expire})
+		c.SetCookie("refresh_token", tokenResponse.RefreshToken, int(h.tokenService.RefreshTokenExpiry().Seconds()), "/", "", true, true)
+		c.JSON(http.StatusOK, tokenResponse)
 		return
 	case "apple":
 		c.Set("auth_provider", "3rdPartyAuth")
@@ -468,8 +471,8 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 			// Create Circle for the user
 			userCircle, err := h.circleRepo.CreateCircle(c, &cModel.Circle{
 				Name:       displayName + "'s circle",
-				CreatedAt:  time.Now(),
-				UpdatedAt:  time.Now(),
+				CreatedAt:  time.Now().UTC(),
+				UpdatedAt:  time.Now().UTC(),
 				InviteCode: utils.GenerateInviteCode(c),
 			})
 
@@ -486,8 +489,8 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 				CircleID:  userCircle.ID,
 				Role:      "admin",
 				IsActive:  true,
-				CreatedAt: time.Now(),
-				UpdatedAt: time.Now(),
+				CreatedAt: time.Now().UTC(),
+				UpdatedAt: time.Now().UTC(),
 			}); err != nil {
 				logger.Errorw("account.handler.thirdPartyAuthCallback (apple) failed to add user to circle", "err", err)
 				c.JSON(500, gin.H{
@@ -511,8 +514,7 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 		// Check if user has MFA enabled
 		if acc.MFAEnabled {
 			// Create MFA session for Apple auth
-			mfaService := mfa.NewMFAService("Donetick")
-			sessionToken, err := mfaService.GenerateSessionToken()
+			sessionToken, err := h.mfaService.GenerateSessionToken()
 			if err != nil {
 				logger.Errorw("Failed to generate MFA session token", "error", err)
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Authentication failed"})
@@ -524,8 +526,8 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 				UserID:       acc.ID,
 				AuthMethod:   "apple",
 				Verified:     false,
-				CreatedAt:    time.Now(),
-				ExpiresAt:    time.Now().Add(10 * time.Minute),
+				CreatedAt:    time.Now().UTC(),
+				ExpiresAt:    time.Now().UTC().Add(10 * time.Minute),
 				UserData:     acc.Username,
 			}
 
@@ -542,27 +544,27 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 			return
 		}
 
-		// Generate JWT token for the user
-		c.Set("user_account", acc)
-		h.jwtAuth.Authenticator(c)
-		tokenString, expire, err := h.jwtAuth.TokenGenerator(acc)
+		// Generate tokens including refresh token:
+		tokenResponse, err := h.tokenService.GenerateTokens(c.Request.Context(), acc)
 		if err != nil {
-			logger.Errorw("Unable to Generate a Token for Apple user")
+			logger.Errorw("Unable to generate tokens for Apple user", "error", err)
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": "Unable to Generate a Token",
 			})
 			return
 		}
-		c.JSON(http.StatusOK, gin.H{"token": tokenString, "expire": expire})
+		c.SetCookie("refresh_token", tokenResponse.RefreshToken, int(h.tokenService.RefreshTokenExpiry().Seconds()), "/", "", true, true)
+		c.JSON(http.StatusOK, tokenResponse)
 		return
 	case "oauth2":
 		c.Set("auth_provider", "3rdPartyAuth")
 		// Read the ID token from the request bod
 		type Request struct {
-			Code string `json:"code"`
+			Code        string `json:"code"`
+			RedirectURI string `json:"redirect_uri"`
 		}
 		var req Request
-		if err := c.BindJSON(&req); err != nil {
+		if err := c.ShouldBindJSON(&req); err != nil {
 			logger.Errorw("account.handler.thirdPartyAuthCallback (oauth2) failed to bind request", "err", err)
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 			return
@@ -575,9 +577,10 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 			return
 		}
 
-		logger.Infow("account.handler.thirdPartyAuthCallback (oauth2) attempting to exchange code", "codeLength", len(req.Code))
+		logger.Infow("account.handler.thirdPartyAuthCallback (oauth2) attempting to exchange code", "codeLength", len(req.Code), "redirectURI", req.RedirectURI)
 
-		token, err := h.identityProvider.ExchangeToken(c, req.Code)
+		// Pass the redirect URI from the request if provided, otherwise use config default
+		token, err := h.identityProvider.ExchangeToken(c, req.Code, req.RedirectURI)
 
 		if err != nil {
 			logger.Errorw("account.handler.thirdPartyAuthCallback (oauth2) failed to exchange token", "err", err, "code", req.Code[:min(len(req.Code), 10)]+"...")
@@ -613,6 +616,7 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 				Username:    claims.Email,
 				Email:       claims.Email,
 				Password:    encodedPassword,
+				Image:       claims.Picture,
 				DisplayName: claims.DisplayName,
 				Provider:    uModel.AuthProviderOAuth2,
 			}
@@ -627,8 +631,8 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 			// Create Circle for the user:
 			userCircle, err := h.circleRepo.CreateCircle(c, &cModel.Circle{
 				Name:       claims.DisplayName + "'s circle",
-				CreatedAt:  time.Now(),
-				UpdatedAt:  time.Now(),
+				CreatedAt:  time.Now().UTC(),
+				UpdatedAt:  time.Now().UTC(),
 				InviteCode: utils.GenerateInviteCode(c),
 			})
 
@@ -644,8 +648,8 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 				CircleID:  userCircle.ID,
 				Role:      "admin",
 				IsActive:  true,
-				CreatedAt: time.Now(),
-				UpdatedAt: time.Now(),
+				CreatedAt: time.Now().UTC(),
+				UpdatedAt: time.Now().UTC(),
 			}); err != nil {
 				c.JSON(500, gin.H{
 					"error": "Error adding user to circle",
@@ -664,8 +668,7 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 		// Check if user has MFA enabled
 		if acc.MFAEnabled {
 			// Create MFA session for OAuth2 auth
-			mfaService := mfa.NewMFAService("Donetick")
-			sessionToken, err := mfaService.GenerateSessionToken()
+			sessionToken, err := h.mfaService.GenerateSessionToken()
 			if err != nil {
 				logger.Error("Failed to generate MFA session token", "error", err)
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Authentication failed"})
@@ -677,8 +680,8 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 				UserID:       acc.ID,
 				AuthMethod:   "oauth2",
 				Verified:     false,
-				CreatedAt:    time.Now(),
-				ExpiresAt:    time.Now().Add(10 * time.Minute),
+				CreatedAt:    time.Now().UTC(),
+				ExpiresAt:    time.Now().UTC().Add(10 * time.Minute),
 				UserData:     acc.Username,
 			}
 
@@ -694,18 +697,24 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 			})
 			return
 		}
-		// ... (JWT generation and response)
-		c.Set("user_account", acc)
-		h.jwtAuth.Authenticator(c)
-		tokenString, expire, err := h.jwtAuth.TokenGenerator(acc)
+		// Set profile image from OAuth provider if not already set
+		if acc.Image == "" && claims.Picture != "" {
+			err := h.userRepo.UpdateUserImage(c, acc.ID, claims.Picture)
+			if err != nil {
+				logger.Warn("Failed to update profile image", "userID", acc.ID, "err", err)
+			}
+		}
+		// Generate tokens including refresh token:
+		tokenResponse, err := h.tokenService.GenerateTokens(c.Request.Context(), acc)
 		if err != nil {
-			logger.Error("Unable to Generate a Token")
+			logger.Errorw("Unable to generate tokens", "error", err)
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": "Unable to Generate a Token",
 			})
 			return
 		}
-		c.JSON(http.StatusOK, gin.H{"token": tokenString, "expire": expire})
+		c.SetCookie("refresh_token", tokenResponse.RefreshToken, int(h.tokenService.RefreshTokenExpiry().Seconds()), "/", "", true, true)
+		c.JSON(http.StatusOK, tokenResponse)
 		return
 	}
 }
@@ -883,8 +892,7 @@ func (h *Handler) CreateLongLivedToken(c *gin.Context) {
 
 	// If user has MFA enabled and provides an MFA code, verify it
 	if currentUser.MFAEnabled && req.MFACode != "" {
-		mfaService := mfa.NewMFAService("Donetick")
-		valid, newUsedCodes, err := mfaService.IsCodeValid(
+		valid, newUsedCodes, err := h.mfaService.IsCodeValid(
 			currentUser.MFASecret,
 			currentUser.MFABackupCodes,
 			currentUser.MFARecoveryUsed,
@@ -917,7 +925,7 @@ func (h *Handler) CreateLongLivedToken(c *gin.Context) {
 		return
 	}
 
-	timestamp := time.Now().Unix()
+	timestamp := time.Now().UTC().Unix()
 	hashInput := fmt.Sprintf("%s:%d:%x", currentUser.Username, timestamp, randomBytes)
 	hash := sha256.Sum256([]byte(hashInput))
 	token := hex.EncodeToString(hash[:])
@@ -1391,8 +1399,8 @@ func (h *Handler) createChildUser(c *gin.Context) {
 		CircleID:  currentUser.CircleID,
 		Role:      "member", // Child users are members, not admins
 		IsActive:  true,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
+		CreatedAt: time.Now().UTC(),
+		UpdatedAt: time.Now().UTC(),
 	}); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to add child user to circle"})
 		return
@@ -1543,10 +1551,68 @@ func (h *Handler) getChildUsers(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"res": response})
 }
 
-func Routes(router *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware, limiter *limiter.Limiter) {
+// RefreshRequest represents a refresh token request
+type RefreshRequest struct {
+	RefreshToken string `json:"refreshToken"`
+}
+
+// logout handles user logout by clearing cookies and revoking refresh tokens
+func (h *Handler) logout(c *gin.Context) {
+	logger := logging.FromContext(c)
+
+	// Try to get refresh token from cookie first (httpOnly), fallback to body
+	refreshToken, err := c.Cookie("refresh_token")
+	if err != nil {
+		// Fallback to JSON body for backward compatibility
+		var req RefreshRequest
+		if err := c.ShouldBindJSON(&req); err != nil {
+			// No token provided, but logout should still succeed
+			refreshToken = ""
+		} else {
+			refreshToken = req.RefreshToken
+		}
+	}
+
+	// Revoke the refresh token if we have one
+	if refreshToken != "" {
+		// Hash the refresh token before looking it up (tokens are stored hashed)
+		tokenHash := hashToken(refreshToken)
+
+		// Get the session by token hash
+		session, err := h.userRepo.GetUserSessionByTokenHash(c.Request.Context(), tokenHash)
+		if err != nil {
+			logger.Infow("Refresh token session not found during logout", "note", "Token may already be expired or invalid")
+			// Don't return error - logout should always succeed from client perspective
+		} else {
+			// Revoke the session
+			if err := h.userRepo.RevokeSession(c.Request.Context(), session.ID); err != nil {
+				logger.Errorw("Failed to revoke session during logout", "error", err)
+				// Don't return error - logout should always succeed from client perspective
+			}
+		}
+	}
+
+	// Clear the httpOnly cookie by setting it with negative max age
+	c.SetCookie("refresh_token", "", 0, "/", "", true, true)
+
+	// Also clear any access token cookie if it exists
+	c.SetCookie("access_token", "", 0, "/", "", true, true)
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Logged out successfully",
+	})
+}
+
+// hashToken creates a SHA-256 hash of the token for database lookup
+func hashToken(token string) string {
+	hash := sha256.Sum256([]byte(token))
+	return hex.EncodeToString(hash[:])
+}
+
+func Routes(router *gin.Engine, h *Handler, jwtAuth *jwt.GinJWTMiddleware, limiter *limiter.Limiter, cfg *config.Config) {
 
 	userRoutes := router.Group("api/v1/users")
-	userRoutes.Use(auth.MiddlewareFunc(), utils.RateLimitMiddleware(limiter))
+	userRoutes.Use(jwtAuth.MiddlewareFunc(), utils.RateLimitMiddleware(limiter))
 	{
 		userRoutes.GET("/", h.GetAllUsers())
 		userRoutes.GET("/profile", h.GetUserProfile)
@@ -1559,6 +1625,7 @@ func Routes(router *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware, limiter 
 		userRoutes.PUT("change_password", h.updateUserPasswordLoggedInOnly)
 		userRoutes.POST("profile_photo", h.updateProfilePhoto)
 		userRoutes.GET("storage", h.getStorageUsage)
+		userRoutes.POST("/logout", h.logout) // Logout endpoint to clear cookies and expire refresh tokens
 
 		// MFA endpoints
 		userRoutes.GET("/mfa/status", h.getMFAStatus)
@@ -1578,15 +1645,27 @@ func Routes(router *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware, limiter 
 		userRoutes.DELETE("/subaccounts/:id", h.deleteChildUser)
 	}
 
+	// Create new auth handler for enhanced token management
+	authHandler := auth.NewAuthHandler(h.tokenService, h.userRepo, jwtAuth, h.mfaService)
+
 	authRoutes := router.Group("api/v1/auth")
 	authRoutes.Use(utils.RateLimitMiddleware(limiter))
 	{
 		authRoutes.POST("/:provider/callback", h.thirdPartyAuthCallback)
 		authRoutes.POST("/", h.signUp)
-		authRoutes.POST("login", auth.LoginHandler)
-		authRoutes.GET("refresh", auth.RefreshHandler)
+		authRoutes.POST("login", authHandler.EnhancedLoginHandler)  // Enhanced login with refresh tokens
+		authRoutes.POST("login/legacy", jwtAuth.LoginHandler)       // Legacy login for backward compatibility
+		authRoutes.POST("refresh", authHandler.RefreshTokenHandler) // Changed from GET to POST
+		authRoutes.POST("logout", authHandler.LogoutHandler)        // New logout endpoint
 		authRoutes.POST("reset", h.resetPassword)
 		authRoutes.POST("password", h.updateUserPassword)
 		authRoutes.POST("mfa/verify", h.verifyMFA) // Add MFA verification endpoint
+	}
+
+	// Protected auth routes (require JWT)
+	protectedAuthRoutes := router.Group("api/v1/auth")
+	protectedAuthRoutes.Use(jwtAuth.MiddlewareFunc(), utils.RateLimitMiddleware(limiter))
+	{
+		protectedAuthRoutes.POST("revoke-all", authHandler.RevokeAllHandler) // New revoke all endpoint
 	}
 }

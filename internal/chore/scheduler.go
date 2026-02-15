@@ -410,5 +410,5 @@ func RemoveAssigneeAndReassign(chore *chModel.Chore, userID int) {
 		userID := chore.Assignees[rand.Intn(len(chore.Assignees))].UserID
 		chore.AssignedTo = &userID
 	}
-	chore.UpdatedAt = time.Now()
+	chore.UpdatedAt = time.Now().UTC()
 }

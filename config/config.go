@@ -3,6 +3,7 @@ package config
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -100,8 +101,8 @@ type DatabaseConfig struct {
 
 type JwtConfig struct {
 	Secret      string        `mapstructure:"secret" yaml:"secret"`
-	SessionTime time.Duration `mapstructure:"session_time" yaml:"session_time"`
-	MaxRefresh  time.Duration `mapstructure:"max_refresh" yaml:"max_refresh"`
+	SessionTime time.Duration `mapstructure:"session_time" yaml:"session_time" default:"24h"` // 24 hours
+	MaxRefresh  time.Duration `mapstructure:"max_refresh" yaml:"max_refresh" default:"1440h"` // 60 days
 }
 
 type ServerConfig struct {
@@ -237,8 +238,8 @@ func NewConfig() *Config {
 		},
 		Jwt: JwtConfig{
 			Secret:      secureSecret,
-			SessionTime: 7 * 24 * time.Hour,
-			MaxRefresh:  7 * 24 * time.Hour,
+			SessionTime: 24 * time.Hour,
+			MaxRefresh:  60 * 24 * time.Hour,
 		},
 		RealTimeConfig: RealTimeConfig{
 			Enabled:               true,
@@ -268,6 +269,7 @@ func NewConfig() *Config {
 
 	return config
 }
+
 func configEnvironmentOverrides(Config *Config) {
 	if os.Getenv("DONETICK_TELEGRAM_TOKEN") != "" {
 		Config.Telegram.Token = os.Getenv("DONETICK_TELEGRAM_TOKEN")
@@ -291,8 +293,10 @@ func configEnvironmentOverrides(Config *Config) {
 	}
 }
 func LoadConfig() *Config {
-	// set the config name based on the environment:
+	// https://github.com/spf13/viper/issues/1895#issuecomment-3316091229
+	viper.SetOptions(viper.ExperimentalBindStruct())
 
+	// set the config name based on the environment:
 	if os.Getenv("DT_ENV") == "local" {
 		viper.SetConfigName("local")
 	} else if os.Getenv("DT_ENV") == "prod" {
@@ -303,7 +307,7 @@ func LoadConfig() *Config {
 		viper.SetConfigName("local")
 	}
 	// get logger and log the current environment:
-	fmt.Printf("--ConfigLoad config for environment: %s ", os.Getenv("DT_ENV"))
+	fmt.Printf("--ConfigLoad config for environment: %s\n", os.Getenv("DT_ENV"))
 	viper.SetEnvPrefix("DT")
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 
@@ -313,7 +317,13 @@ func LoadConfig() *Config {
 	err := viper.ReadInConfig()
 	// print a useful error:
 	if err != nil {
-		panic(err)
+		var configNotFoundError viper.ConfigFileNotFoundError
+		if errors.As(err, &configNotFoundError) {
+			fmt.Printf("Config file not found, using defaults and environment variables")
+		} else {
+			fmt.Printf("Error reading config file: %v", err)
+			panic(err)
+		}
 	}
 	// Override with environment variables if set:
 	viper.AutomaticEnv()
@@ -339,6 +349,13 @@ func LoadConfig() *Config {
 	config.Info.Version = Version
 	config.Info.Commit = Commit
 	config.Info.BuildDate = BuildDate
+
+	// set the timezone to UTC if not set:
+	if os.Getenv("TZ") == "" {
+		os.Setenv("TZ", "UTC")
+	}
+	time.Local, _ = time.LoadLocation(os.Getenv("TZ"))
+
 	return &config
 
 	// return LocalConfig()

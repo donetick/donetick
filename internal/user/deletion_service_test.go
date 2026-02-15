@@ -71,7 +71,7 @@ func TestDeleteUserAccount_SimpleUser(t *testing.T) {
 	service := NewMockDeletionService(db, mockStor)
 
 	// Insert test user using GORM model
-	now := time.Now()
+	now := time.Now().UTC()
 	user := uModel.User{
 		ID:          1,
 		Username:    "testuser",
@@ -149,7 +149,7 @@ func TestDeleteUserAccount_CircleOwner(t *testing.T) {
 
 	service := NewMockDeletionService(db, mockStor)
 
-	now := time.Now()
+	now := time.Now().UTC()
 
 	// Insert test users using GORM models
 	owner := uModel.User{
@@ -265,7 +265,7 @@ func TestDeleteUserAccount_WithChores(t *testing.T) {
 
 	service := NewMockDeletionService(db, mockStor)
 
-	now := time.Now()
+	now := time.Now().UTC()
 
 	// Insert test user using GORM model
 	user := uModel.User{

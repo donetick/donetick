@@ -198,7 +198,7 @@ func (h *PollingHandler) setSSEHeaders(c *gin.Context) {
 
 	// CORS headers for cross-origin requests from frontend
 	origin := c.GetHeader("Origin")
-	if origin == "http://localhost:5173" || origin == "http://localhost:3000" {
+	if origin == "http://localhost:5173" || origin == "http://localhost:3000" || origin == "http://localhost" || origin == "https://localhost" {
 		c.Header("Access-Control-Allow-Origin", origin)
 	} else {
 		// Fallback for other development origins
@@ -361,7 +361,7 @@ func (h *PollingHandler) checkRateLimit(userID int, clientIP string) bool {
 func (h *PollingHandler) updateConnectionTime(userID int, clientIP string) {
 	h.sseMutex.Lock()
 	key := fmt.Sprintf("%d:%s", userID, clientIP)
-	h.sseConnections[key] = time.Now()
+	h.sseConnections[key] = time.Now().UTC()
 	h.sseMutex.Unlock()
 }
 
@@ -370,7 +370,7 @@ func (h *PollingHandler) cleanupStaleConnections() {
 	h.sseMutex.Lock()
 	defer h.sseMutex.Unlock()
 
-	cutoff := time.Now().Add(-h.config.RealTimeConfig.StaleThreshold)
+	cutoff := time.Now().UTC().Add(-h.config.RealTimeConfig.StaleThreshold)
 	for key, lastTime := range h.sseConnections {
 		if lastTime.Before(cutoff) {
 			delete(h.sseConnections, key)

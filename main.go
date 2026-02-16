@@ -343,5 +343,10 @@ func newServer(lc fx.Lifecycle, cfg *config.Config, db *gorm.DB, notifier *notif
 		},
 	})
 
+	//Simple health-check endpoint
+	r.GET("/health", func(c *gin.Context) {
+		c.Status(http.StatusOK) // 200 - OK if server started
+	})
+
 	return r
 }

@@ -28,10 +28,10 @@ func NewRateLimiter(maxTokens int, refillInterval time.Duration) *RateLimiter {
 		cleanupTick: time.NewTicker(5 * time.Minute), // Cleanup old connections every 5 minutes
 		done:        make(chan struct{}),
 	}
-	
+
 	// Start cleanup goroutine
 	go rl.cleanup()
-	
+
 	return rl
 }
 
@@ -39,36 +39,36 @@ func NewRateLimiter(maxTokens int, refillInterval time.Duration) *RateLimiter {
 func (rl *RateLimiter) Allow(connectionID string, maxTokens int, refillRate time.Duration) bool {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
-	
+
 	conn, exists := rl.connections[connectionID]
 	if !exists {
 		conn = &ConnectionRateLimit{
 			tokens:     maxTokens,
 			maxTokens:  maxTokens,
-			lastRefill: time.Now(),
+			lastRefill: time.Now().UTC(),
 		}
 		rl.connections[connectionID] = conn
 	}
-	
+
 	conn.mu.Lock()
 	defer conn.mu.Unlock()
-	
+
 	// Refill tokens based on elapsed time
-	now := time.Now()
+	now := time.Now().UTC()
 	elapsed := now.Sub(conn.lastRefill)
 	tokensToAdd := int(elapsed / refillRate)
-	
+
 	if tokensToAdd > 0 {
 		conn.tokens = min(conn.maxTokens, conn.tokens+tokensToAdd)
 		conn.lastRefill = now
 	}
-	
+
 	// Check if we have tokens available
 	if conn.tokens > 0 {
 		conn.tokens--
 		return true
 	}
-	
+
 	return false
 }
 
@@ -93,8 +93,8 @@ func (rl *RateLimiter) cleanup() {
 			return
 		case <-rl.cleanupTick.C:
 			rl.mu.Lock()
-			cutoff := time.Now().Add(-10 * time.Minute) // Remove connections inactive for 10+ minutes
-			
+			cutoff := time.Now().UTC().Add(-10 * time.Minute) // Remove connections inactive for 10+ minutes
+
 			for id, conn := range rl.connections {
 				conn.mu.Lock()
 				if conn.lastRefill.Before(cutoff) {

@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"donetick.com/core/config"
+	"donetick.com/core/internal/mfa"
 	uModel "donetick.com/core/internal/user/model"
 	uRepo "donetick.com/core/internal/user/repo"
 	"donetick.com/core/logging"
@@ -19,15 +19,16 @@ type AuthHandler struct {
 	tokenService *TokenService
 	userRepo     *uRepo.UserRepository
 	jwtAuth      *jwt.GinJWTMiddleware
+	mfaService   *mfa.MFAService
 }
 
 // NewAuthHandler creates a new auth handler
-func NewAuthHandler(userRepo *uRepo.UserRepository, jwtAuth *jwt.GinJWTMiddleware, cfg *config.Config) *AuthHandler {
-	tokenService := NewTokenService(userRepo, jwtAuth, cfg)
+func NewAuthHandler(tokenService *TokenService, userRepo *uRepo.UserRepository, jwtAuth *jwt.GinJWTMiddleware, mfaService *mfa.MFAService) *AuthHandler {
 	return &AuthHandler{
 		tokenService: tokenService,
 		userRepo:     userRepo,
 		jwtAuth:      jwtAuth,
+		mfaService:   mfaService,
 	}
 }
 
@@ -132,6 +133,7 @@ func (h *AuthHandler) RevokeAllHandler(c *gin.Context) {
 
 // EnhancedLoginHandler provides enhanced login with refresh tokens
 func (h *AuthHandler) EnhancedLoginHandler(c *gin.Context) {
+	logger := logging.FromContext(c)
 	var loginReq struct {
 		Username string `form:"username" json:"username" binding:"required"`
 		Password string `form:"password" json:"password" binding:"required"`
@@ -153,10 +155,42 @@ func (h *AuthHandler) EnhancedLoginHandler(c *gin.Context) {
 		return
 	}
 
+	// Check if user has MFA enabled
+	if userDetails.MFAEnabled {
+		sessionToken, err := h.mfaService.GenerateSessionToken()
+		if err != nil {
+			logger.Errorw("Failed to generate MFA session token", "error", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Authentication failed"})
+			return
+		}
+
+		mfaSession := &uModel.MFASession{
+			SessionToken: sessionToken,
+			UserID:       userDetails.ID,
+			AuthMethod:   "password",
+			Verified:     false,
+			CreatedAt:    time.Now().UTC(),
+			ExpiresAt:    time.Now().UTC().Add(10 * time.Minute),
+			UserData:     userDetails.Username,
+		}
+
+		if err := h.userRepo.CreateMFASession(c, mfaSession); err != nil {
+			logger.Errorw("Failed to create MFA session", "error", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Authentication failed"})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"mfaRequired":  true,
+			"sessionToken": sessionToken,
+		})
+		return
+	}
+
 	// Generate both access and refresh tokens
 	tokenResponse, err := h.tokenService.GenerateTokens(c.Request.Context(), userDetails)
 	if err != nil {
-		logging.FromContext(c).Errorw("Failed to generate tokens", "error", err)
+		logger.Errorw("Failed to generate tokens", "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to generate tokens",
 		})
@@ -178,24 +212,7 @@ func (h *AuthHandler) authenticateUser(c *gin.Context, username, password string
 		return nil, fmt.Errorf("invalid password")
 	}
 
-	// Handle MFA if enabled (simplified for now)
-	if user.MFAEnabled {
-		return nil, fmt.Errorf("MFA verification required")
-	}
-
-	return &uModel.UserDetails{
-		User: uModel.User{
-			ID:        user.ID,
-			Username:  user.Username,
-			Password:  "",
-			Image:     user.Image,
-			CreatedAt: user.CreatedAt,
-			UpdatedAt: user.UpdatedAt,
-			Disabled:  user.Disabled,
-			CircleID:  user.CircleID,
-		},
-		WebhookURL: user.WebhookURL,
-	}, nil
+	return user, nil
 }
 
 // Enhanced login response that uses token service

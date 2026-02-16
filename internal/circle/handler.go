@@ -190,7 +190,7 @@ func handleUserLeavingCircle(h *Handler, c *gin.Context, leavingUser *uModel.Use
 
 		if ch.CreatedBy == leavingUser.ID && (ch.AssignedTo == nil || *ch.AssignedTo != leavingUser.ID) {
 			ch.AssignedTo = &leavingUser.ID
-			ch.UpdatedAt = time.Now()
+			ch.UpdatedAt = time.Now().UTC()
 			ch.UpdatedBy = leavingUser.ID
 			ch.CircleID = orginalCircleID
 		} else if ch.CreatedBy != leavingUser.ID && (ch.AssignedTo != nil && *ch.AssignedTo == leavingUser.ID) {

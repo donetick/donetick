@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	auth "donetick.com/core/internal/auth"
-	"donetick.com/core/internal/mfa"
 	uModel "donetick.com/core/internal/user/model"
 	"donetick.com/core/logging"
 	"github.com/gin-gonic/gin"
@@ -25,10 +24,8 @@ func (h *Handler) setupMFA(c *gin.Context) {
 		return
 	}
 
-	mfaService := mfa.NewMFAService("Donetick")
-
 	// Generate TOTP secret
-	key, err := mfaService.GenerateSecret(currentUser.Email)
+	key, err := h.mfaService.GenerateSecret(currentUser.Email)
 	if err != nil {
 		logger.Errorw("Failed to generate MFA secret", "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate MFA secret"})
@@ -36,7 +33,7 @@ func (h *Handler) setupMFA(c *gin.Context) {
 	}
 
 	// Generate backup codes
-	backupCodes, err := mfaService.GenerateBackupCodes(8)
+	backupCodes, err := h.mfaService.GenerateBackupCodes(8)
 	if err != nil {
 		logger.Errorw("Failed to generate backup codes", "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate backup codes"})
@@ -79,10 +76,8 @@ func (h *Handler) confirmMFA(c *gin.Context) {
 		return
 	}
 
-	mfaService := mfa.NewMFAService("Donetick")
-
 	// Verify the TOTP code
-	if !mfaService.VerifyTOTP(req.Secret, req.Code) {
+	if !h.mfaService.VerifyTOTP(req.Secret, req.Code) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid verification code"})
 		return
 	}
@@ -118,10 +113,8 @@ func (h *Handler) disableMFA(c *gin.Context) {
 		return
 	}
 
-	mfaService := mfa.NewMFAService("Donetick")
-
 	// Verify the code before disabling
-	valid, newUsedCodes, err := mfaService.IsCodeValid(
+	valid, newUsedCodes, err := h.mfaService.IsCodeValid(
 		currentUser.MFASecret,
 		currentUser.MFABackupCodes,
 		currentUser.MFARecoveryUsed,
@@ -181,10 +174,8 @@ func (h *Handler) verifyMFA(c *gin.Context) {
 		return
 	}
 
-	mfaService := mfa.NewMFAService("Donetick")
-
 	// Verify the MFA code
-	valid, newUsedCodes, err := mfaService.IsCodeValid(
+	valid, newUsedCodes, err := h.mfaService.IsCodeValid(
 		user.MFASecret,
 		user.MFABackupCodes,
 		user.MFARecoveryUsed,
@@ -217,23 +208,18 @@ func (h *Handler) verifyMFA(c *gin.Context) {
 		return
 	}
 
-	// Generate JWT token
-	c.Set("user_account", user)
-	h.jwtAuth.Authenticator(c)
-	tokenString, expire, err := h.jwtAuth.TokenGenerator(user)
-	if err != nil {
-		logger.Errorw("Unable to Generate a Token", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to Generate a Token"})
-		return
-	}
-
 	// Clean up MFA session
 	h.userRepo.DeleteMFASession(c, req.SessionToken)
 
-	c.JSON(http.StatusOK, gin.H{
-		"token":  tokenString,
-		"expire": expire,
-	})
+	// Generate tokens including refresh token
+	tokenResponse, err := h.tokenService.GenerateTokens(c.Request.Context(), user)
+	if err != nil {
+		logger.Errorw("Unable to generate tokens", "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to Generate a Token"})
+		return
+	}
+	c.SetCookie("refresh_token", tokenResponse.RefreshToken, int(h.tokenService.RefreshTokenExpiry().Seconds()), "/", "", true, true)
+	c.JSON(http.StatusOK, tokenResponse)
 }
 
 // getMFAStatus returns the current MFA status for the user
@@ -270,16 +256,14 @@ func (h *Handler) regenerateBackupCodes(c *gin.Context) {
 		return
 	}
 
-	mfaService := mfa.NewMFAService("Donetick")
-
 	// Verify the current TOTP code
-	if !mfaService.VerifyTOTP(currentUser.MFASecret, req.Code) {
+	if !h.mfaService.VerifyTOTP(currentUser.MFASecret, req.Code) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid verification code"})
 		return
 	}
 
 	// Generate new backup codes
-	newBackupCodes, err := mfaService.GenerateBackupCodes(8)
+	newBackupCodes, err := h.mfaService.GenerateBackupCodes(8)
 	if err != nil {
 		logger.Errorw("Failed to generate backup codes", "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate backup codes"})

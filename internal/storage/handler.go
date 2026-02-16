@@ -94,7 +94,7 @@ func (h *Handler) AssetHandler(c *gin.Context) {
 	// Set headers
 	// c.Header("Content-Type", contentType)
 	c.Header("Cache-Control", "public, max-age=604800, immutable")
-	c.Header("Expires", time.Now().Add(7*24*time.Hour).UTC().Format(http.TimeFormat))
+	c.Header("Expires", time.Now().UTC().Add(7*24*time.Hour).Format(http.TimeFormat))
 	c.Status(http.StatusOK)
 
 	// Serve content

@@ -80,8 +80,8 @@ func (r *DeviceRepository) RegisterDeviceToken(c context.Context, deviceToken *u
 
 		// Set token properties
 		deviceToken.IsActive = true
-		deviceToken.LastActiveAt = time.Now()
-		deviceToken.CreatedAt = time.Now()
+		deviceToken.LastActiveAt = time.Now().UTC()
+		deviceToken.CreatedAt = time.Now().UTC()
 
 		// Create the new token
 		if err := tx.Create(deviceToken).Error; err != nil {
@@ -169,7 +169,7 @@ func (r *DeviceRepository) GetActiveDeviceTokens(c context.Context, userID int) 
 func (r *DeviceRepository) UpdateDeviceTokenActivity(c context.Context, userID int, deviceID string) error {
 	return r.db.WithContext(c).Model(&uModel.UserDeviceToken{}).
 		Where("user_id = ? AND device_id = ? AND is_active = ?", userID, deviceID, true).
-		Update("last_active_at", time.Now()).Error
+		Update("last_active_at", time.Now().UTC()).Error
 }
 
 // GetActiveDeviceCount returns the count of active devices for a user
@@ -185,7 +185,7 @@ func (r *DeviceRepository) GetActiveDeviceCount(c context.Context, userID int) (
 func (r *DeviceRepository) CleanupInactiveTokens(c context.Context, inactiveDays int) error {
 	log := logging.FromContext(c)
 
-	cutoffDate := time.Now().AddDate(0, 0, -inactiveDays)
+	cutoffDate := time.Now().UTC().AddDate(0, 0, -inactiveDays)
 
 	result := r.db.WithContext(c).
 		Where("last_active_at < ? OR (last_active_at IS NULL AND created_at < ?)", cutoffDate, cutoffDate).

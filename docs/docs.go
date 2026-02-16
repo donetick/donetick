@@ -2453,22 +2453,7 @@ const docTemplate = `{
                             "additionalProperties": {
                                 "type": "array",
                                 "items": {
-                                    "allOf": [
-                                        {
-                                            "$ref": "#/definitions/circle.Circle"
-                                        },
-                                        {
-                                            "type": "object",
-                                            "properties": {
-                                                "res": {
-                                                    "type": "array",
-                                                    "items": {
-                                                        "$ref": "#/definitions/circle.Circle"
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    ]
+                                    "$ref": "#/definitions/circle.Circle"
                                 }
                             }
                         }
@@ -2478,19 +2463,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "error": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     },
@@ -2499,19 +2472,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "error": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     }
@@ -2554,19 +2515,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "res": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     },
@@ -2575,19 +2524,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "error": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     },
@@ -2596,19 +2533,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "error": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     },
@@ -2617,19 +2542,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "error": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     },
@@ -2638,19 +2551,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "error": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     }
@@ -2693,19 +2594,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "res": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     },
@@ -2714,19 +2603,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "error": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     },
@@ -2735,19 +2612,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "error": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     },
@@ -2756,19 +2621,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "error": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     }
@@ -2804,22 +2657,7 @@ const docTemplate = `{
                             "additionalProperties": {
                                 "type": "array",
                                 "items": {
-                                    "allOf": [
-                                        {
-                                            "$ref": "#/definitions/circle.UserCircleDetail"
-                                        },
-                                        {
-                                            "type": "object",
-                                            "properties": {
-                                                "res": {
-                                                    "type": "array",
-                                                    "items": {
-                                                        "$ref": "#/definitions/circle.UserCircleDetail"
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    ]
+                                    "$ref": "#/definitions/circle.UserCircleDetail"
                                 }
                             }
                         }
@@ -2829,19 +2667,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "error": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     },
@@ -2850,19 +2676,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "error": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     }
@@ -2898,22 +2712,7 @@ const docTemplate = `{
                             "additionalProperties": {
                                 "type": "array",
                                 "items": {
-                                    "allOf": [
-                                        {
-                                            "$ref": "#/definitions/circle.UserCircleDetail"
-                                        },
-                                        {
-                                            "type": "object",
-                                            "properties": {
-                                                "res": {
-                                                    "type": "array",
-                                                    "items": {
-                                                        "$ref": "#/definitions/circle.UserCircleDetail"
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    ]
+                                    "$ref": "#/definitions/circle.UserCircleDetail"
                                 }
                             }
                         }
@@ -2923,19 +2722,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "error": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     },
@@ -2944,19 +2731,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "error": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     },
@@ -2965,19 +2740,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "error": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     }
@@ -3020,19 +2783,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "res": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     },
@@ -3041,19 +2792,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "error": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     },
@@ -3062,19 +2801,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "error": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     },
@@ -3083,19 +2810,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "error": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     },
@@ -3104,19 +2819,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "error": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     }
@@ -3169,19 +2872,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "res": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     },
@@ -3190,19 +2881,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "error": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     },
@@ -3211,19 +2890,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "error": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     },
@@ -3232,19 +2899,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "error": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     },
@@ -3253,19 +2908,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "error": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     }
@@ -3315,19 +2958,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "res": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     },
@@ -3336,19 +2967,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "error": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     },
@@ -3357,19 +2976,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "error": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     },
@@ -3378,19 +2985,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "error": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     },
@@ -3399,19 +2994,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "error": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     }
@@ -3471,19 +3054,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "res": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     },
@@ -3492,19 +3063,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "error": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     },
@@ -3513,19 +3072,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "error": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     },
@@ -3534,19 +3081,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "error": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     },
@@ -3555,19 +3090,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "error": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     }

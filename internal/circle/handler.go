@@ -52,9 +52,9 @@ func NewHandler(cr *cRepo.CircleRepository, ur *uRepo.UserRepository, c *chRepo.
 //	@Produce		json
 //	@Security		JWTKeyAuth
 //	@Security		APIKeyAuth
-//	@Success		200	{object}	map[string][]cModel.UserCircleDetail{res=[]cModel.UserCircleDetail}	"res: array of circle members"
-//	@Failure		401	{object}	map[string]string{error=string}										"error: Authentication failed"
-//	@Failure		500	{object}	map[string]string{error=string}										"error: Error getting circle members"
+//	@Success		200	{object}	map[string][]cModel.UserCircleDetail	"res: array of circle members"
+//	@Failure		401	{object}	map[string]string										"error: Authentication failed"
+//	@Failure		500	{object}	map[string]string										"error: Error getting circle members"
 //	@Router			/circles/members [get]
 func (h *Handler) GetCircleMembers(c *gin.Context) {
 	// Get the circle ID from the JWT
@@ -93,11 +93,11 @@ func (h *Handler) GetCircleMembers(c *gin.Context) {
 //	@Security		JWTKeyAuth
 //	@Security		APIKeyAuth
 //	@Param			invite_code	query		string							true	"Invite code"
-//	@Success		200			{object}	map[string]string{res=string}	"res: User Requested to join circle successfully"
-//	@Failure		400			{object}	map[string]string{error=string}	"error: Invalid request"
-//	@Failure		401			{object}	map[string]string{error=string}	"error: Authentication failed"
-//	@Failure		409			{object}	map[string]string{error=string}	"error: You are already a member of this circle"
-//	@Failure		500			{object}	map[string]string{error=string}	"error: Error adding user to circle"
+//	@Success		200			{object}	map[string]string	"res: User Requested to join circle successfully"
+//	@Failure		400			{object}	map[string]string	"error: Invalid request"
+//	@Failure		401			{object}	map[string]string	"error: Authentication failed"
+//	@Failure		409			{object}	map[string]string	"error: You are already a member of this circle"
+//	@Failure		500			{object}	map[string]string	"error: Error adding user to circle"
 //	@Router			/circles/join [post]
 func (h *Handler) JoinCircle(c *gin.Context) {
 	// Get the circle ID from the JWT
@@ -159,10 +159,10 @@ func (h *Handler) JoinCircle(c *gin.Context) {
 //	@Security		JWTKeyAuth
 //	@Security		APIKeyAuth
 //	@Param			circle_id	query		int								true	"Circle ID"
-//	@Success		200			{object}	map[string]string{res=string}	"res: User left circle successfully"
-//	@Failure		400			{object}	map[string]string{error=string}	"error: Invalid request"
-//	@Failure		401			{object}	map[string]string{error=string}	"error: Authentication failed"
-//	@Failure		500			{object}	map[string]string{error=string}	"error: Error leaving circle"
+//	@Success		200			{object}	map[string]string	"res: User left circle successfully"
+//	@Failure		400			{object}	map[string]string	"error: Invalid request"
+//	@Failure		401			{object}	map[string]string	"error: Authentication failed"
+//	@Failure		500			{object}	map[string]string	"error: Error leaving circle"
 //	@Router			/circles/leave [delete]
 func (h *Handler) LeaveCircle(c *gin.Context) {
 	log := logging.FromContext(c)
@@ -260,11 +260,11 @@ func handleUserLeavingCircle(h *Handler, c *gin.Context, leavingUser *uModel.Use
 //	@Security		APIKeyAuth
 //	@Param			id			path		int								true	"Circle ID"
 //	@Param			member_id	query		int								true	"Member ID to delete"
-//	@Success		200			{object}	map[string]string{res=string}	"res: User deleted from circle successfully"
-//	@Failure		400			{object}	map[string]string{error=string}	"error: Invalid request"
-//	@Failure		401			{object}	map[string]string{error=string}	"error: Authentication failed"
-//	@Failure		403			{object}	map[string]string{error=string}	"error: You are not an admin of this circle"
-//	@Failure		500			{object}	map[string]string{error=string}	"error: Error deleting circle member"
+//	@Success		200			{object}	map[string]string	"res: User deleted from circle successfully"
+//	@Failure		400			{object}	map[string]string	"error: Invalid request"
+//	@Failure		401			{object}	map[string]string	"error: Authentication failed"
+//	@Failure		403			{object}	map[string]string	"error: You are not an admin of this circle"
+//	@Failure		500			{object}	map[string]string	"error: Error deleting circle member"
 //	@Router			/circles/{id}/members/delete [delete]
 func (h *Handler) DeleteCircleMember(c *gin.Context) {
 	log := logging.FromContext(c)
@@ -344,9 +344,9 @@ func (h *Handler) DeleteCircleMember(c *gin.Context) {
 //	@Produce		json
 //	@Security		JWTKeyAuth
 //	@Security		APIKeyAuth
-//	@Success		200	{object}	map[string][]cModel.Circle{res=[]cModel.Circle}	"res: array of circles"
-//	@Failure		401	{object}	map[string]string{error=string}					"error: Authentication failed"
-//	@Failure		500	{object}	map[string]string{error=string}					"error: Error getting user circles"
+//	@Success		200	{object}	map[string][]cModel.Circle	"res: array of circles"
+//	@Failure		401	{object}	map[string]string					"error: Authentication failed"
+//	@Failure		500	{object}	map[string]string					"error: Error getting user circles"
 //	@Router			/circles [get]
 func (h *Handler) GetUserCircles(c *gin.Context) {
 	log := logging.FromContext(c)
@@ -381,10 +381,10 @@ func (h *Handler) GetUserCircles(c *gin.Context) {
 //	@Produce		json
 //	@Security		JWTKeyAuth
 //	@Security		APIKeyAuth
-//	@Success		200	{object}	map[string][]cModel.UserCircleDetail{res=[]cModel.UserCircleDetail}	"res: array of pending members"
-//	@Failure		401	{object}	map[string]string{error=string}										"error: Authentication failed"
-//	@Failure		403	{object}	map[string]string{error=string}										"error: You are not an admin of this circle"
-//	@Failure		500	{object}	map[string]string{error=string}										"error: Error getting pending circle members"
+//	@Success		200	{object}	map[string][]cModel.UserCircleDetail	"res: array of pending members"
+//	@Failure		401	{object}	map[string]string										"error: Authentication failed"
+//	@Failure		403	{object}	map[string]string										"error: You are not an admin of this circle"
+//	@Failure		500	{object}	map[string]string										"error: Error getting pending circle members"
 //	@Router			/circles/members/requests [get]
 func (h *Handler) GetPendingCircleMembers(c *gin.Context) {
 	log := logging.FromContext(c)
@@ -444,11 +444,11 @@ func (h *Handler) GetPendingCircleMembers(c *gin.Context) {
 //	@Security		JWTKeyAuth
 //	@Security		APIKeyAuth
 //	@Param			requestId	query		int								true	"Request ID"
-//	@Success		200			{object}	map[string]string{res=string}	"res: Join request accepted successfully"
-//	@Failure		400			{object}	map[string]string{error=string}	"error: Invalid request / Circle is full"
-//	@Failure		401			{object}	map[string]string{error=string}	"error: Authentication failed"
-//	@Failure		403			{object}	map[string]string{error=string}	"error: You are not an admin of this circle"
-//	@Failure		500			{object}	map[string]string{error=string}	"error: Error accepting join request"
+//	@Success		200			{object}	map[string]string	"res: Join request accepted successfully"
+//	@Failure		400			{object}	map[string]string	"error: Invalid request / Circle is full"
+//	@Failure		401			{object}	map[string]string	"error: Authentication failed"
+//	@Failure		403			{object}	map[string]string	"error: You are not an admin of this circle"
+//	@Failure		500			{object}	map[string]string	"error: Error accepting join request"
 //	@Router			/circles/members/requests/accept [put]
 func (h *Handler) AcceptJoinRequest(c *gin.Context) {
 	log := logging.FromContext(c)
@@ -569,11 +569,11 @@ func (h *Handler) AcceptJoinRequest(c *gin.Context) {
 //	@Security		APIKeyAuth
 //	@Param			id		path		int								true	"Circle ID"
 //	@Param			points	body		object{points=int,userId=int}	true	"Points redemption request"
-//	@Success		200		{object}	map[string]string{res=string}	"res: Points redeemed successfully"
-//	@Failure		400		{object}	map[string]string{error=string}	"error: Invalid request / User does not have enough points / User is not a member of this circle"
-//	@Failure		401		{object}	map[string]string{error=string}	"error: Authentication failed"
-//	@Failure		403		{object}	map[string]string{error=string}	"error: You are not an admin of this circle"
-//	@Failure		500		{object}	map[string]string{error=string}	"error: Error redeeming points"
+//	@Success		200		{object}	map[string]string	"res: Points redeemed successfully"
+//	@Failure		400		{object}	map[string]string	"error: Invalid request / User does not have enough points / User is not a member of this circle"
+//	@Failure		401		{object}	map[string]string	"error: Authentication failed"
+//	@Failure		403		{object}	map[string]string	"error: You are not an admin of this circle"
+//	@Failure		500		{object}	map[string]string	"error: Error redeeming points"
 //	@Router			/circles/{id}/members/points/redeem [post]
 func (h *Handler) RedeemPoints(c *gin.Context) {
 	type RedeemPointsRequest struct {
@@ -691,11 +691,11 @@ func (h *Handler) RedeemPoints(c *gin.Context) {
 //	@Security		JWTKeyAuth
 //	@Security		APIKeyAuth
 //	@Param			role	body		object{memberId=int,role=cModel.Role}	true	"Role change request"
-//	@Success		200		{object}	map[string]string{res=string}			"res: Member role changed successfully"
-//	@Failure		400		{object}	map[string]string{error=string}			"error: Invalid request / Invalid role / User is not a member of this circle"
-//	@Failure		401		{object}	map[string]string{error=string}			"error: Authentication failed"
-//	@Failure		403		{object}	map[string]string{error=string}			"error: You are not an admin of this circle"
-//	@Failure		500		{object}	map[string]string{error=string}			"error: Error changing member role"
+//	@Success		200		{object}	map[string]string			"res: Member role changed successfully"
+//	@Failure		400		{object}	map[string]string			"error: Invalid request / Invalid role / User is not a member of this circle"
+//	@Failure		401		{object}	map[string]string			"error: Authentication failed"
+//	@Failure		403		{object}	map[string]string			"error: You are not an admin of this circle"
+//	@Failure		500		{object}	map[string]string			"error: Error changing member role"
 //	@Router			/circles/members/role [put]
 func (h *Handler) ChangeMemberRole(c *gin.Context) {
 	log := logging.FromContext(c)

@@ -2442,22 +2442,7 @@
                             "additionalProperties": {
                                 "type": "array",
                                 "items": {
-                                    "allOf": [
-                                        {
-                                            "$ref": "#/definitions/circle.Circle"
-                                        },
-                                        {
-                                            "type": "object",
-                                            "properties": {
-                                                "res": {
-                                                    "type": "array",
-                                                    "items": {
-                                                        "$ref": "#/definitions/circle.Circle"
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    ]
+                                    "$ref": "#/definitions/circle.Circle"
                                 }
                             }
                         }
@@ -2467,19 +2452,7 @@
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "error": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     },
@@ -2488,19 +2461,7 @@
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "error": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     }
@@ -2543,19 +2504,7 @@
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "res": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     },
@@ -2564,19 +2513,7 @@
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "error": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     },
@@ -2585,19 +2522,7 @@
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "error": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     },
@@ -2606,19 +2531,7 @@
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "error": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     },
@@ -2627,19 +2540,7 @@
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "error": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     }
@@ -2682,19 +2583,7 @@
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "res": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     },
@@ -2703,19 +2592,7 @@
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "error": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     },
@@ -2724,19 +2601,7 @@
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "error": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     },
@@ -2745,19 +2610,7 @@
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "error": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     }
@@ -2793,22 +2646,7 @@
                             "additionalProperties": {
                                 "type": "array",
                                 "items": {
-                                    "allOf": [
-                                        {
-                                            "$ref": "#/definitions/circle.UserCircleDetail"
-                                        },
-                                        {
-                                            "type": "object",
-                                            "properties": {
-                                                "res": {
-                                                    "type": "array",
-                                                    "items": {
-                                                        "$ref": "#/definitions/circle.UserCircleDetail"
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    ]
+                                    "$ref": "#/definitions/circle.UserCircleDetail"
                                 }
                             }
                         }
@@ -2818,19 +2656,7 @@
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "error": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     },
@@ -2839,19 +2665,7 @@
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "error": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     }
@@ -2887,22 +2701,7 @@
                             "additionalProperties": {
                                 "type": "array",
                                 "items": {
-                                    "allOf": [
-                                        {
-                                            "$ref": "#/definitions/circle.UserCircleDetail"
-                                        },
-                                        {
-                                            "type": "object",
-                                            "properties": {
-                                                "res": {
-                                                    "type": "array",
-                                                    "items": {
-                                                        "$ref": "#/definitions/circle.UserCircleDetail"
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    ]
+                                    "$ref": "#/definitions/circle.UserCircleDetail"
                                 }
                             }
                         }
@@ -2912,19 +2711,7 @@
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "error": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     },
@@ -2933,19 +2720,7 @@
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "error": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     },
@@ -2954,19 +2729,7 @@
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "error": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     }
@@ -3009,19 +2772,7 @@
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "res": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     },
@@ -3030,19 +2781,7 @@
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "error": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     },
@@ -3051,19 +2790,7 @@
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "error": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     },
@@ -3072,19 +2799,7 @@
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "error": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     },
@@ -3093,19 +2808,7 @@
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "error": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     }
@@ -3158,19 +2861,7 @@
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "res": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     },
@@ -3179,19 +2870,7 @@
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "error": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     },
@@ -3200,19 +2879,7 @@
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "error": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     },
@@ -3221,19 +2888,7 @@
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "error": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     },
@@ -3242,19 +2897,7 @@
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "error": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     }
@@ -3304,19 +2947,7 @@
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "res": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     },
@@ -3325,19 +2956,7 @@
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "error": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     },
@@ -3346,19 +2965,7 @@
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "error": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     },
@@ -3367,19 +2974,7 @@
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "error": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     },
@@ -3388,19 +2983,7 @@
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "error": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     }
@@ -3460,19 +3043,7 @@
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "res": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     },
@@ -3481,19 +3052,7 @@
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "error": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     },
@@ -3502,19 +3061,7 @@
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "error": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     },
@@ -3523,19 +3070,7 @@
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "error": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     },
@@ -3544,19 +3079,7 @@
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "allOf": [
-                                    {
-                                        "type": "string"
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "error": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                ]
+                                "type": "string"
                             }
                         }
                     }

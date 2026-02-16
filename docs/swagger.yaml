@@ -2212,37 +2212,20 @@ paths:
           schema:
             additionalProperties:
               items:
-                allOf:
-                - $ref: '#/definitions/circle.Circle'
-                - properties:
-                    res:
-                      items:
-                        $ref: '#/definitions/circle.Circle'
-                      type: array
-                  type: object
+                $ref: '#/definitions/circle.Circle'
               type: array
             type: object
         "401":
           description: 'error: Authentication failed'
           schema:
             additionalProperties:
-              allOf:
-              - type: string
-              - properties:
-                  error:
-                    type: string
-                type: object
+              type: string
             type: object
         "500":
           description: 'error: Error getting user circles'
           schema:
             additionalProperties:
-              allOf:
-              - type: string
-              - properties:
-                  error:
-                    type: string
-                type: object
+              type: string
             type: object
       security:
       - JWTKeyAuth: []
@@ -2273,56 +2256,31 @@ paths:
           description: 'res: User deleted from circle successfully'
           schema:
             additionalProperties:
-              allOf:
-              - type: string
-              - properties:
-                  res:
-                    type: string
-                type: object
+              type: string
             type: object
         "400":
           description: 'error: Invalid request'
           schema:
             additionalProperties:
-              allOf:
-              - type: string
-              - properties:
-                  error:
-                    type: string
-                type: object
+              type: string
             type: object
         "401":
           description: 'error: Authentication failed'
           schema:
             additionalProperties:
-              allOf:
-              - type: string
-              - properties:
-                  error:
-                    type: string
-                type: object
+              type: string
             type: object
         "403":
           description: 'error: You are not an admin of this circle'
           schema:
             additionalProperties:
-              allOf:
-              - type: string
-              - properties:
-                  error:
-                    type: string
-                type: object
+              type: string
             type: object
         "500":
           description: 'error: Error deleting circle member'
           schema:
             additionalProperties:
-              allOf:
-              - type: string
-              - properties:
-                  error:
-                    type: string
-                type: object
+              type: string
             type: object
       security:
       - JWTKeyAuth: []
@@ -2359,57 +2317,32 @@ paths:
           description: 'res: Points redeemed successfully'
           schema:
             additionalProperties:
-              allOf:
-              - type: string
-              - properties:
-                  res:
-                    type: string
-                type: object
+              type: string
             type: object
         "400":
           description: 'error: Invalid request / User does not have enough points
             / User is not a member of this circle'
           schema:
             additionalProperties:
-              allOf:
-              - type: string
-              - properties:
-                  error:
-                    type: string
-                type: object
+              type: string
             type: object
         "401":
           description: 'error: Authentication failed'
           schema:
             additionalProperties:
-              allOf:
-              - type: string
-              - properties:
-                  error:
-                    type: string
-                type: object
+              type: string
             type: object
         "403":
           description: 'error: You are not an admin of this circle'
           schema:
             additionalProperties:
-              allOf:
-              - type: string
-              - properties:
-                  error:
-                    type: string
-                type: object
+              type: string
             type: object
         "500":
           description: 'error: Error redeeming points'
           schema:
             additionalProperties:
-              allOf:
-              - type: string
-              - properties:
-                  error:
-                    type: string
-                type: object
+              type: string
             type: object
       security:
       - JWTKeyAuth: []
@@ -2435,56 +2368,31 @@ paths:
           description: 'res: User Requested to join circle successfully'
           schema:
             additionalProperties:
-              allOf:
-              - type: string
-              - properties:
-                  res:
-                    type: string
-                type: object
+              type: string
             type: object
         "400":
           description: 'error: Invalid request'
           schema:
             additionalProperties:
-              allOf:
-              - type: string
-              - properties:
-                  error:
-                    type: string
-                type: object
+              type: string
             type: object
         "401":
           description: 'error: Authentication failed'
           schema:
             additionalProperties:
-              allOf:
-              - type: string
-              - properties:
-                  error:
-                    type: string
-                type: object
+              type: string
             type: object
         "409":
           description: 'error: You are already a member of this circle'
           schema:
             additionalProperties:
-              allOf:
-              - type: string
-              - properties:
-                  error:
-                    type: string
-                type: object
+              type: string
             type: object
         "500":
           description: 'error: Error adding user to circle'
           schema:
             additionalProperties:
-              allOf:
-              - type: string
-              - properties:
-                  error:
-                    type: string
-                type: object
+              type: string
             type: object
       security:
       - JWTKeyAuth: []
@@ -2511,45 +2419,25 @@ paths:
           description: 'res: User left circle successfully'
           schema:
             additionalProperties:
-              allOf:
-              - type: string
-              - properties:
-                  res:
-                    type: string
-                type: object
+              type: string
             type: object
         "400":
           description: 'error: Invalid request'
           schema:
             additionalProperties:
-              allOf:
-              - type: string
-              - properties:
-                  error:
-                    type: string
-                type: object
+              type: string
             type: object
         "401":
           description: 'error: Authentication failed'
           schema:
             additionalProperties:
-              allOf:
-              - type: string
-              - properties:
-                  error:
-                    type: string
-                type: object
+              type: string
             type: object
         "500":
           description: 'error: Error leaving circle'
           schema:
             additionalProperties:
-              allOf:
-              - type: string
-              - properties:
-                  error:
-                    type: string
-                type: object
+              type: string
             type: object
       security:
       - JWTKeyAuth: []
@@ -2570,37 +2458,20 @@ paths:
           schema:
             additionalProperties:
               items:
-                allOf:
-                - $ref: '#/definitions/circle.UserCircleDetail'
-                - properties:
-                    res:
-                      items:
-                        $ref: '#/definitions/circle.UserCircleDetail'
-                      type: array
-                  type: object
+                $ref: '#/definitions/circle.UserCircleDetail'
               type: array
             type: object
         "401":
           description: 'error: Authentication failed'
           schema:
             additionalProperties:
-              allOf:
-              - type: string
-              - properties:
-                  error:
-                    type: string
-                type: object
+              type: string
             type: object
         "500":
           description: 'error: Error getting circle members'
           schema:
             additionalProperties:
-              allOf:
-              - type: string
-              - properties:
-                  error:
-                    type: string
-                type: object
+              type: string
             type: object
       security:
       - JWTKeyAuth: []
@@ -2621,48 +2492,26 @@ paths:
           schema:
             additionalProperties:
               items:
-                allOf:
-                - $ref: '#/definitions/circle.UserCircleDetail'
-                - properties:
-                    res:
-                      items:
-                        $ref: '#/definitions/circle.UserCircleDetail'
-                      type: array
-                  type: object
+                $ref: '#/definitions/circle.UserCircleDetail'
               type: array
             type: object
         "401":
           description: 'error: Authentication failed'
           schema:
             additionalProperties:
-              allOf:
-              - type: string
-              - properties:
-                  error:
-                    type: string
-                type: object
+              type: string
             type: object
         "403":
           description: 'error: You are not an admin of this circle'
           schema:
             additionalProperties:
-              allOf:
-              - type: string
-              - properties:
-                  error:
-                    type: string
-                type: object
+              type: string
             type: object
         "500":
           description: 'error: Error getting pending circle members'
           schema:
             additionalProperties:
-              allOf:
-              - type: string
-              - properties:
-                  error:
-                    type: string
-                type: object
+              type: string
             type: object
       security:
       - JWTKeyAuth: []
@@ -2688,56 +2537,31 @@ paths:
           description: 'res: Join request accepted successfully'
           schema:
             additionalProperties:
-              allOf:
-              - type: string
-              - properties:
-                  res:
-                    type: string
-                type: object
+              type: string
             type: object
         "400":
           description: 'error: Invalid request / Circle is full'
           schema:
             additionalProperties:
-              allOf:
-              - type: string
-              - properties:
-                  error:
-                    type: string
-                type: object
+              type: string
             type: object
         "401":
           description: 'error: Authentication failed'
           schema:
             additionalProperties:
-              allOf:
-              - type: string
-              - properties:
-                  error:
-                    type: string
-                type: object
+              type: string
             type: object
         "403":
           description: 'error: You are not an admin of this circle'
           schema:
             additionalProperties:
-              allOf:
-              - type: string
-              - properties:
-                  error:
-                    type: string
-                type: object
+              type: string
             type: object
         "500":
           description: 'error: Error accepting join request'
           schema:
             additionalProperties:
-              allOf:
-              - type: string
-              - properties:
-                  error:
-                    type: string
-                type: object
+              type: string
             type: object
       security:
       - JWTKeyAuth: []
@@ -2769,57 +2593,32 @@ paths:
           description: 'res: Member role changed successfully'
           schema:
             additionalProperties:
-              allOf:
-              - type: string
-              - properties:
-                  res:
-                    type: string
-                type: object
+              type: string
             type: object
         "400":
           description: 'error: Invalid request / Invalid role / User is not a member
             of this circle'
           schema:
             additionalProperties:
-              allOf:
-              - type: string
-              - properties:
-                  error:
-                    type: string
-                type: object
+              type: string
             type: object
         "401":
           description: 'error: Authentication failed'
           schema:
             additionalProperties:
-              allOf:
-              - type: string
-              - properties:
-                  error:
-                    type: string
-                type: object
+              type: string
             type: object
         "403":
           description: 'error: You are not an admin of this circle'
           schema:
             additionalProperties:
-              allOf:
-              - type: string
-              - properties:
-                  error:
-                    type: string
-                type: object
+              type: string
             type: object
         "500":
           description: 'error: Error changing member role'
           schema:
             additionalProperties:
-              allOf:
-              - type: string
-              - properties:
-                  error:
-                    type: string
-                type: object
+              type: string
             type: object
       security:
       - JWTKeyAuth: []

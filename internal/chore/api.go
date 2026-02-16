@@ -82,7 +82,7 @@ func (h *API) CreateChore(c *gin.Context) {
 			}
 			// Set time to now UTC
 			now := time.Now().UTC()
-			parsedDate = time.Date(parsedDateSimple.Year(), parsedDateSimple.Month(), parsedDateSimple.Day(), now.Hour(), now.Minute(), now.Second(), 0, time.UTC)
+			parsedDate = time.Date(parsedDateSimple.Year(), parsedDateSimple.Month(), parsedDateSimple.Day(), now.Hour(), now.Minute(), now.Second(), 0, time.UTC) //TODO: This is forcibly parsed as UTC.
 			err = nil
 		}
 		if err != nil {
@@ -209,7 +209,7 @@ func (h *API) UpdateChore(c *gin.Context) {
 			}
 			// Set time to now UTC
 			now := time.Now().UTC()
-			parsedDate = time.Date(parsedDateSimple.Year(), parsedDateSimple.Month(), parsedDateSimple.Day(), now.Hour(), now.Minute(), now.Second(), 0, time.UTC)
+			parsedDate = time.Date(parsedDateSimple.Year(), parsedDateSimple.Month(), parsedDateSimple.Day(), now.Hour(), now.Minute(), now.Second(), 0, time.UTC) //TODO: This is forcibly parsed as UTC.
 			err = nil
 		}
 		if err != nil {
@@ -313,7 +313,7 @@ func (h *API) CompleteChore(c *gin.Context) {
 			})
 			return
 		}
-		nextDueDate, err = scheduleAdaptiveNextDueDate(chore, completedDate, history)
+		nextDueDate, err = scheduleAdaptiveNextDueDate(chore, completedDate, history) //TODO: There is no .UTC() here while there is in the next one
 		if err != nil {
 			log.Debugw("chore.api.CompleteChore failed to schedule adaptive next due date", "error", err)
 
@@ -324,7 +324,7 @@ func (h *API) CompleteChore(c *gin.Context) {
 		}
 
 	} else {
-		nextDueDate, err = scheduleNextDueDate(c, chore, completedDate.UTC())
+		nextDueDate, err = scheduleNextDueDate(c, chore, completedDate.UTC()) //TODO: here is the .UTC()
 		if err != nil {
 			log.Debugw("chore.api.CompleteChore failed to schedule next due date", "error", err)
 			c.JSON(500, gin.H{

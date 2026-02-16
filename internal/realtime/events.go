@@ -170,7 +170,7 @@ func NewSubtaskUpdatedEvent(choreID, subtaskID int, completedAt *time.Time, user
 	return NewEvent(EventTypeSubtaskUpdated, circleID, &SubtaskEventData{
 		ChoreID:     choreID,
 		SubtaskID:   subtaskID,
-		CompletedAt: completedAt,
+		CompletedAt: completedAt, //TODO: We are not converting this to UTC.
 		User:        user,
 	})
 }
@@ -180,7 +180,7 @@ func NewSubtaskCompletedEvent(choreID, subtaskID int, completedAt *time.Time, us
 	return NewEvent(EventTypeSubtaskCompleted, circleID, &SubtaskEventData{
 		ChoreID:     choreID,
 		SubtaskID:   subtaskID,
-		CompletedAt: completedAt,
+		CompletedAt: completedAt, //TODO: We are not converting this to UTC.
 		User:        user,
 	})
 }

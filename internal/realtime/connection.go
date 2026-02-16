@@ -44,7 +44,7 @@ func NewConnection(id string, circleID, userID int, user *uModel.User, conn *web
 func (c *Connection) IsStale(threshold time.Duration) bool {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	return time.Since(c.LastActivity) > threshold
+	return time.Since(c.LastActivity) > threshold //TODO: We are not converting this to UTC.
 }
 
 // IsClosed returns true if the connection is closed

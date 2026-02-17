@@ -194,6 +194,11 @@ func (s *TokenService) RevokeAllUserTokens(ctx context.Context, userID int) erro
 	return s.userRepo.RevokeAllUserSessions(ctx, userID)
 }
 
+// RefreshTokenExpiry returns the configured refresh token expiry duration
+func (s *TokenService) RefreshTokenExpiry() time.Duration {
+	return s.refreshTokenExpiry
+}
+
 // generateRefreshToken creates a cryptographically secure random token
 func (s *TokenService) generateRefreshToken() (string, error) {
 	bytes := make([]byte, 32) // 256-bit token

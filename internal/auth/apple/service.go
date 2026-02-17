@@ -99,7 +99,7 @@ func (s *AppleService) ValidateIDToken(ctx context.Context, idToken string) (*Ap
 	}
 
 	// Validate expiration
-	if claims.ExpiresAt == nil || claims.ExpiresAt.Before(time.Now()) {
+	if claims.ExpiresAt == nil || claims.ExpiresAt.Before(time.Now().UTC()) {
 		return nil, fmt.Errorf("token expired")
 	}
 
@@ -169,7 +169,7 @@ func (s *AppleService) fetchApplePublicKeys(ctx context.Context) error {
 		s.keys[key.Kid] = publicKey
 	}
 
-	s.keysFetched = time.Now()
+	s.keysFetched = time.Now().UTC()
 	return nil
 }
 

@@ -190,7 +190,7 @@ func handleUserLeavingCircle(h *Handler, c *gin.Context, leavingUser *uModel.Use
 
 		if ch.CreatedBy == leavingUser.ID && (ch.AssignedTo == nil || *ch.AssignedTo != leavingUser.ID) {
 			ch.AssignedTo = &leavingUser.ID
-			ch.UpdatedAt = time.Now()
+			ch.UpdatedAt = time.Now().UTC()
 			ch.UpdatedBy = leavingUser.ID
 			ch.CircleID = orginalCircleID
 		} else if ch.CreatedBy != leavingUser.ID && (ch.AssignedTo != nil && *ch.AssignedTo == leavingUser.ID) {
@@ -455,8 +455,8 @@ func (h *Handler) AcceptJoinRequest(c *gin.Context) {
 }
 func (h *Handler) RedeemPoints(c *gin.Context) {
 	type RedeemPointsRequest struct {
-		Points int `json:"points" binding:"required"`
-		UserID int `json:"userId" binding:"required"`
+		Points int `json:"points"`
+		UserID int `json:"userId"`
 	}
 
 	log := logging.FromContext(c)
@@ -470,7 +470,7 @@ func (h *Handler) RedeemPoints(c *gin.Context) {
 	// parse body:
 	var redeemReq RedeemPointsRequest
 
-	if err := c.ShouldBindJSON(&redeemReq); err != nil {
+	if err := c.ShouldBind(&redeemReq); err != nil {
 		c.JSON(400, gin.H{
 			"error": "Invalid request",
 		})

@@ -12,7 +12,6 @@ import (
 	"time"
 
 	auth "donetick.com/core/internal/auth"
-	authMiddleware "donetick.com/core/internal/auth"
 	chModel "donetick.com/core/internal/chore/model"
 	chRepo "donetick.com/core/internal/chore/repo"
 	circle "donetick.com/core/internal/circle/model"
@@ -3833,11 +3832,11 @@ func getActionName(status chModel.ChoreHistoryStatus) string {
 	}
 }
 
-func Routes(router *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware) {
+func Routes(router *gin.Engine, h *Handler, ginJWTMiddleware *jwt.GinJWTMiddleware) {
 
 	choresRoutes := router.Group("api/v1/chores")
-	choresRoutes.Use(authMiddleware.MultiAuthMiddleware(auth, h.uRepo))
-	choresRoutes.Use(authMiddleware.ImpersonationMiddleware(h.uRepo, h.circleRepo))
+	choresRoutes.Use(auth.MultiAuthMiddleware(ginJWTMiddleware, h.uRepo))
+	choresRoutes.Use(auth.ImpersonationMiddleware(h.uRepo, h.circleRepo))
 	{
 		choresRoutes.GET("/", h.getChores)
 		choresRoutes.GET("/archived", h.getArchivedChores)

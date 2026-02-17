@@ -26,13 +26,15 @@ type FCMNotificationPayload struct {
 	Data     map[string]string `json:"data,omitempty"`
 }
 
-func NewFCMNotifier(config *config.Config) (*FCMNotifier, error) {
+func NewFCMNotifier(config *config.Config, c context.Context) (*FCMNotifier, error) {
+	log := logging.FromContext(c)
 	if config == nil {
 		return nil, nil // Return nil when config is nil - allows app to start without FCM
 	}
 
 	// Check if FCM is configured - if not, return nil to allow app to start without FCM
 	if config.FCM.ProjectID == "" {
+		log.Info("FCM notifier is not configured.")
 		return nil, nil
 	}
 

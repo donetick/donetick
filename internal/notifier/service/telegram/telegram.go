@@ -18,15 +18,21 @@ type TelegramNotifier struct {
 	bot *tgbotapi.BotAPI
 }
 
-func NewTelegramNotifier(config *config.Config) *TelegramNotifier {
-	bot, err := tgbotapi.NewBotAPI(config.Telegram.Token)
-	if err != nil {
-		fmt.Println("Error creating bot: ", err)
-		return nil
-	}
+func NewTelegramNotifier(config *config.Config, c context.Context) *TelegramNotifier {
+	log := logging.FromContext(c)
+	if config.Telegram.Token != "" {
+		bot, err := tgbotapi.NewBotAPI(config.Telegram.Token)
+		if err != nil {
+			fmt.Println("Error creating bot: ", err)
+			return nil
+		}
 
-	return &TelegramNotifier{
-		bot: bot,
+		return &TelegramNotifier{
+			bot: bot,
+		}
+	} else {
+		log.Info("No telegram token found!")
+		return nil
 	}
 }
 

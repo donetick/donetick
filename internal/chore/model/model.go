@@ -280,12 +280,14 @@ func (c *Chore) CanEdit(userID int, circleUsers []*cModel.UserCircleDetail, upda
 			break
 		}
 	}
+
+	cooldown := time.Second * 30
 	if updatedAt != nil {
 		// if the chore was updated after the user fetched it for editing, then do not allow editing
 		if c.UpdatedAt.After(*updatedAt) {
 			// this means the chore was modified by someone
 			choreCanModified = false
-		} else if updatedAt.After(time.Now()) {
+    } else if updatedAt.After(time.Now().UTC().Add(cooldown)) {
 			// if the updatedAt is in the future, then do not allow editing
 			choreCanModified = false
 			return errors.New("updatedAt is in the future and cannot be used to edit the chore")
@@ -425,12 +427,14 @@ func (f *FrequencyMetadata) Scan(value interface{}) error {
 		return nil
 	}
 
-	bytes, ok := value.([]byte)
-	if !ok {
-		return errors.New("type assertion to []byte failed")
+	switch v := value.(type) {
+	case []byte:
+		return json.Unmarshal(v, f)
+	case string:
+		return json.Unmarshal([]byte(v), f)
+	default:
+		return errors.New("type assertion to []byte or string failed")
 	}
-
-	return json.Unmarshal(bytes, f)
 }
 
 type TimeSession struct {

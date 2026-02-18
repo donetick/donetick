@@ -37,7 +37,7 @@ func NewWebSocketHandler(
 // HandleWebSocket handles WebSocket upgrade and connection management
 func (h *WebSocketHandler) HandleWebSocket(c *gin.Context) {
 	h.logger = logging.FromContext(c.Request.Context())
-	
+
 	// Check if WebSocket is enabled
 	if !h.config.RealTimeConfig.Enabled || !h.config.RealTimeConfig.WebSocketEnabled {
 		c.JSON(http.StatusServiceUnavailable, gin.H{
@@ -46,7 +46,7 @@ func (h *WebSocketHandler) HandleWebSocket(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	// Get authenticated user and circle ID from middleware
 	userInterface, exists := c.Get("user")
 	if !exists {
@@ -56,7 +56,7 @@ func (h *WebSocketHandler) HandleWebSocket(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	circleIDInterface, exists := c.Get("circleId")
 	if !exists {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -65,26 +65,26 @@ func (h *WebSocketHandler) HandleWebSocket(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	user := userInterface.(*uModel.User)
 	circleID := circleIDInterface.(int)
-	
+
 	// Upgrade HTTP connection to WebSocket
 	conn, err := WebSocketUpgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
-		h.logger.Errorw("Failed to upgrade WebSocket connection", 
+		h.logger.Errorw("Failed to upgrade WebSocket connection",
 			"error", err,
 			"userId", user.ID,
 			"circleId", circleID)
 		return
 	}
-	
+
 	// Generate unique connection ID
 	connectionID := h.generateConnectionID()
-	
+
 	// Create connection object
 	wsConn := NewConnection(connectionID, circleID, user.ID, user, conn, h.logger)
-	
+
 	// Add connection to the real-time service
 	if err := h.realTimeService.AddConnection(wsConn); err != nil {
 		h.logger.Errorw("Failed to add connection to service",
@@ -92,25 +92,25 @@ func (h *WebSocketHandler) HandleWebSocket(c *gin.Context) {
 			"connectionId", connectionID,
 			"userId", user.ID,
 			"circleId", circleID)
-		
+
 		conn.WriteJSON(NewErrorEvent(circleID, "CONNECTION_FAILED", err.Error()))
 		conn.Close()
 		return
 	}
-	
+
 	h.logger.Infow("WebSocket connection established",
 		"connectionId", connectionID,
 		"userId", user.ID,
 		"username", user.Username,
 		"circleId", circleID)
-	
+
 	// Send connection established event
 	establishedEvent := NewConnectionEstablishedEvent(connectionID, circleID, user.ID)
 	wsConn.SendEvent(establishedEvent)
-	
+
 	// Get connection pool for this circle
 	pool := h.realTimeService.GetConnectionPool(circleID)
-	
+
 	// Start read and write pumps in separate goroutines
 	go wsConn.StartWritePump()
 	go wsConn.StartReadPump(pool) // This will block until connection closes
@@ -126,12 +126,12 @@ func (h *WebSocketHandler) generateConnectionID() string {
 // HandleHealthCheck provides health check endpoint for the real-time service
 func (h *WebSocketHandler) HandleHealthCheck(c *gin.Context) {
 	stats := h.realTimeService.GetStats()
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"status": "healthy",
 		"service": gin.H{
-			"enabled":    h.config.RealTimeConfig.Enabled,
-			"websocket":  h.config.RealTimeConfig.WebSocketEnabled,
+			"enabled":   h.config.RealTimeConfig.Enabled,
+			"websocket": h.config.RealTimeConfig.WebSocketEnabled,
 		},
 		"stats": gin.H{
 			"activeConnections": stats.ActiveConnections,
@@ -152,7 +152,7 @@ func (h *WebSocketHandler) HandleConnectionStats(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	// Parse circle ID
 	var circleID int
 	if _, err := fmt.Sscanf(circleIDStr, "%d", &circleID); err != nil {
@@ -162,7 +162,7 @@ func (h *WebSocketHandler) HandleConnectionStats(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	// Get authenticated user from middleware
 	userInterface, exists := c.Get("user")
 	if !exists {
@@ -172,9 +172,9 @@ func (h *WebSocketHandler) HandleConnectionStats(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	user := userInterface.(*uModel.User)
-	
+
 	// Verify user has access to this circle
 	if user.CircleID != circleID {
 		c.JSON(http.StatusForbidden, gin.H{
@@ -183,11 +183,11 @@ func (h *WebSocketHandler) HandleConnectionStats(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	// Get connection pool stats
 	pool := h.realTimeService.GetConnectionPool(circleID)
 	poolStats := pool.GetStats()
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"circleId": circleID,
 		"connections": gin.H{

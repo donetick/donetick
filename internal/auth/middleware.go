@@ -103,7 +103,7 @@ func NewAuthMiddleware(cfg *config.Config, userRepo *uRepo.UserRepository, mfaSe
 						Verified:     false,
 						CreatedAt:    time.Now().UTC(),
 						ExpiresAt:    time.Now().UTC().Add(10 * time.Minute), // 10-minute expiry
-						UserData:     user.Username,                    // Store username for later verification
+						UserData:     user.Username,                          // Store username for later verification
 					}
 
 					if err := userRepo.CreateMFASession(c.Request.Context(), mfaSession); err != nil {

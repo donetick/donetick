@@ -108,15 +108,15 @@ type MFASession struct {
 
 // UserSession represents refresh tokens for JWT authentication with rotation
 type UserSession struct {
-	ID        string     `json:"id" gorm:"primaryKey;type:varchar(36)"`                                               // UUID primary key
-	UserID    int        `json:"userId" gorm:"column:user_id;not null;index"`                                         // User ID foreign key
-	TokenHash string     `json:"-" gorm:"column:token_hash;type:varchar(255);unique;not null;index"`                  // Hashed refresh token
-	FamilyID  string     `json:"-" gorm:"column:family_id;type:varchar(36);not null;index"`                          // Token family for rotation tracking
-	CreatedAt time.Time  `json:"createdAt" gorm:"column:created_at;not null"`                                         // Creation timestamp
-	ExpiresAt time.Time  `json:"expiresAt" gorm:"column:expires_at;not null;index"`                                   // Expiration timestamp
-	UsedAt    *time.Time `json:"-" gorm:"column:used_at"`                                                             // When token was used (for reuse detection)
-	RevokedAt *time.Time `json:"-" gorm:"column:revoked_at"`                                                          // When token was revoked
-	User      User       `json:"-" gorm:"foreignKey:UserID;references:ID;constraint:OnDelete:CASCADE"`                // User relationship
+	ID        string     `json:"id" gorm:"primaryKey;type:varchar(36)"`                                // UUID primary key
+	UserID    int        `json:"userId" gorm:"column:user_id;not null;index"`                          // User ID foreign key
+	TokenHash string     `json:"-" gorm:"column:token_hash;type:varchar(255);unique;not null;index"`   // Hashed refresh token
+	FamilyID  string     `json:"-" gorm:"column:family_id;type:varchar(36);not null;index"`            // Token family for rotation tracking
+	CreatedAt time.Time  `json:"createdAt" gorm:"column:created_at;not null"`                          // Creation timestamp
+	ExpiresAt time.Time  `json:"expiresAt" gorm:"column:expires_at;not null;index"`                    // Expiration timestamp
+	UsedAt    *time.Time `json:"-" gorm:"column:used_at"`                                              // When token was used (for reuse detection)
+	RevokedAt *time.Time `json:"-" gorm:"column:revoked_at"`                                           // When token was revoked
+	User      User       `json:"-" gorm:"foreignKey:UserID;references:ID;constraint:OnDelete:CASCADE"` // User relationship
 }
 
 // MFASetupResponse represents the response when setting up MFA

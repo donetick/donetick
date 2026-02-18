@@ -8,12 +8,23 @@ on:
 
 jobs:
   lint:
+    name: 🔍 Lint
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
 
     - name: Check time.Now().UTC() usage
       run: bash scripts/check-time-utc.sh
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.22'
+
+    - name: golangci-lint
+      uses: golangci/golangci-lint-action@v6
+      with:
+        version: v1.64.8
 
   test:
     name: 🔬 Test
@@ -47,19 +58,3 @@ jobs:
         echo "::set-output name=version::$VERSION"
     - name: Build
       run: go build -ldflags "-X donetick.com/core/config.Version=${{ steps.get_version.outputs.version }} -X donetick.com/core/config.Commit=$(git rev-parse HEAD) -X donetick.com/core/config.Date=$(date +%Y-%m-%d)" -v ./...
-
-  lint:
-    name: 🔍 Lint
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Set up Go
-      uses: actions/setup-go@v4
-      with:
-        go-version: '1.22'
-
-    - name: golangci-lint
-      uses: golangci/golangci-lint-action@v6
-      with:
-        version: v1.64.8

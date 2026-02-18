@@ -25,11 +25,11 @@ type TokenService struct {
 
 // TokenResponse represents the response containing both access and refresh tokens
 type TokenResponse struct {
-	AccessToken         string    `json:"access_token"`
-	RefreshToken        string    `json:"refresh_token"`
-	AccessTokenExpiry   time.Time `json:"access_token_expiry"`
-	RefreshTokenExpiry  time.Time `json:"refresh_token_expiry"`
-	TokenType           string    `json:"token_type"`
+	AccessToken        string    `json:"access_token"`
+	RefreshToken       string    `json:"refresh_token"`
+	AccessTokenExpiry  time.Time `json:"access_token_expiry"`
+	RefreshTokenExpiry time.Time `json:"refresh_token_expiry"`
+	TokenType          string    `json:"token_type"`
 
 	// Legacy fields for backward compatibility
 	Token  string    `json:"token"`  // Same as access_token

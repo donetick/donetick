@@ -199,14 +199,14 @@ func (p *ConnectionPool) Close() {
 // GetStats returns current pool statistics
 func (p *ConnectionPool) GetStats() ConnectionPoolStats {
 	p.mu.RLock()
-	
+
 	// Calculate queue size by summing all connection Send channel lengths
 	var queueSize int64
 	for _, conn := range p.connections {
 		queueSize += int64(len(conn.Send))
 	}
 	p.mu.RUnlock()
-	
+
 	p.stats.mu.RLock()
 	stats := ConnectionPoolStats{
 		ActiveConnections: p.stats.ActiveConnections,
@@ -214,7 +214,7 @@ func (p *ConnectionPool) GetStats() ConnectionPoolStats {
 		QueueSize:         queueSize,
 	}
 	p.stats.mu.RUnlock()
-	
+
 	return stats
 }
 

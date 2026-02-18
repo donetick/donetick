@@ -196,6 +196,25 @@ services:
 
 Contributions are welcome! If you want to work on something that is not listed as an issue, please open a [Discussion](https://github.com/donetick/donetick/discussions) first to ensure it aligns with our goals and to avoid any unnecessary effort!
 
+## Code Formatting and Linting
+
+We use `golangci-lint` for linting and formatting. CI enforces lint checks on all pull requests.
+
+To run lint checks locally, install the pinned version:
+```
+go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.64.8
+```
+
+Run lint checks:
+```
+golangci-lint run
+```
+
+Apply safe fixes:
+```
+golangci-lint run --fix
+```
+
 ---
 
 ## License

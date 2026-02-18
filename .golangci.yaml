@@ -61,7 +61,6 @@ issues:
         - goconst
         - gocritic
         - gocyclo
-        - gosimple
         - govet
         - ineffassign
         - staticcheck

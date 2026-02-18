@@ -210,7 +210,7 @@ func main() {
 			resource.Routes,
 			// backup.Routes,
 
-			realtime.Routes, //(router, rts, authMiddleware, pollingHandler)
+			realtime.Routes, // (router, rts, authMiddleware, pollingHandler)
 
 			func(r *gin.Engine) {},
 		),
@@ -219,7 +219,7 @@ func main() {
 	docs.SwaggerInfo.Title = "Donetick Swagger API"
 	docs.SwaggerInfo.Description = "Donetick swagger documentation."
 	docs.SwaggerInfo.Version = "1.0"
-	docs.SwaggerInfo.Host = "localhost" + ":" + strconv.Itoa(cfg.Server.Port) //TODO include public addr. and proper localhost.
+	docs.SwaggerInfo.Host = "localhost" + ":" + strconv.Itoa(cfg.Server.Port) // TODO include public addr. and proper localhost.
 	docs.SwaggerInfo.BasePath = "/api/v1"
 	docs.SwaggerInfo.Schemes = []string{"http"}
 

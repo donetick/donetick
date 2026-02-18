@@ -169,8 +169,6 @@ func NewAuthMiddleware(cfg *config.Config, userRepo *uRepo.UserRepository, mfaSe
 				"message": message,
 			})
 			c.Abort()
-			return
-
 		},
 		LoginResponse: func(c *gin.Context, code int, token string, expire time.Time) {
 			// Check if MFA is required

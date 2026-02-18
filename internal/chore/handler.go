@@ -1752,7 +1752,7 @@ func (h *Handler) completeChore(c *gin.Context) {
 	}
 
 	var additionalNotes *string
-	_ = c.ShouldBind(&req)
+	_ = c.ShouldBindJSON(&req)
 
 	if req.Note != "" {
 		additionalNotes = &req.Note

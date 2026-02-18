@@ -444,7 +444,7 @@ func (r *ChoreRepository) UpdateChoreHistory(c context.Context, history *chModel
 }
 
 func (r *ChoreRepository) UpdateLatestChoreHistory(c context.Context, choreID int, updates map[string]interface{}) error {
-	//get the latest chore history for the given chore ID
+	// get the latest chore history for the given chore ID
 	var latestHistory chModel.ChoreHistory
 	if err := r.db.WithContext(c).Where("chore_id = ?", choreID).Order("created_at desc").First(&latestHistory).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {

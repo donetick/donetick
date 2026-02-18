@@ -27,11 +27,11 @@ func (m MigrateFrequencyMetadataV2AndNotificationMetadataV2Migration20250406) is
 	log := logging.FromContext(ctx)
 
 	// if columns `frequency_meta_v2` or `notification_meta_v2` do not exist in the `chores` table, then this migration is not applicable.
-	if db.Migrator().HasColumn("chores", "frequency_meta_v2") == false || db.Migrator().HasColumn("chores", "notification_meta_v2") == false {
+	if !db.Migrator().HasColumn("chores", "frequency_meta_v2") || !db.Migrator().HasColumn("chores", "notification_meta_v2") {
 		log.Infof("Skipping migration %s as required columns do not exist in the chores table", m.ID())
 		return false
 	}
-	if db.Migrator().HasColumn("chores", "frequency_meta") == false && db.Migrator().HasColumn("chores", "notification_meta") == false {
+	if !db.Migrator().HasColumn("chores", "frequency_meta") && !db.Migrator().HasColumn("chores", "notification_meta") {
 		// if both `frequency_meta` and `notification_meta` do not exist, then this migration is not applicable.
 		//  as mostly already applied before and column clean up happened
 		log.Infof("Skipping migration %s as no legacy columns found in the chores table", m.ID())

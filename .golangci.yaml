@@ -51,10 +51,6 @@ issues:
         - misspell
       text: "`cancelled` is a misspelling of `canceled`"
 
-    - linters:
-        - misspell
-      text: "`marshalling` is a misspelling of `marshaling`"
-
     # TODO: Fix the rule violations and remove the exclusions
     - linters:
         - errcheck

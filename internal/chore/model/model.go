@@ -287,7 +287,7 @@ func (c *Chore) CanEdit(userID int, circleUsers []*cModel.UserCircleDetail, upda
 		if c.UpdatedAt.After(*updatedAt) {
 			// this means the chore was modified by someone
 			choreCanModified = false
-    } else if updatedAt.After(time.Now().UTC().Add(cooldown)) {
+		} else if updatedAt.After(time.Now().UTC().Add(cooldown)) {
 			// if the updatedAt is in the future, then do not allow editing
 			choreCanModified = false
 			return errors.New("updatedAt is in the future and cannot be used to edit the chore")

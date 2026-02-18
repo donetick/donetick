@@ -137,13 +137,14 @@ func (r *ChoreRepository) SetChorePendingApproval(c context.Context, chore *chMo
 			First(&existingHistory).Error
 
 		var ch *chModel.ChoreHistory
-		if err == nil {
+		switch {
+		case err == nil:
 			// Update existing history record to mark as pending approval
 			existingHistory.PerformedAt = completedDate
 			existingHistory.Note = note
 			existingHistory.Status = chModel.ChoreHistoryStatusPendingApproval
 			ch = &existingHistory
-		} else if errors.Is(err, gorm.ErrRecordNotFound) {
+		case errors.Is(err, gorm.ErrRecordNotFound):
 			// Create a new chore history record
 			ch = &chModel.ChoreHistory{
 				ChoreID:     chore.ID,
@@ -154,7 +155,7 @@ func (r *ChoreRepository) SetChorePendingApproval(c context.Context, chore *chMo
 				Note:        note,
 				Status:      chModel.ChoreHistoryStatusPendingApproval,
 			}
-		} else {
+		default:
 			return err
 		}
 
@@ -281,13 +282,14 @@ func (r *ChoreRepository) CompleteChore(c context.Context, chore *chModel.Chore,
 			First(&existingHistory).Error
 
 		var ch *chModel.ChoreHistory
-		if err == nil {
+		switch {
+		case err == nil:
 			// Update existing history record
 			existingHistory.PerformedAt = completedDate
 			existingHistory.Note = note
 			existingHistory.Status = chModel.ChoreHistoryStatusCompleted
 			ch = &existingHistory
-		} else if errors.Is(err, gorm.ErrRecordNotFound) {
+		case errors.Is(err, gorm.ErrRecordNotFound):
 			// Create a new chore history record
 			ch = &chModel.ChoreHistory{
 				ChoreID:     chore.ID,
@@ -298,7 +300,7 @@ func (r *ChoreRepository) CompleteChore(c context.Context, chore *chModel.Chore,
 				Note:        note,
 				Status:      chModel.ChoreHistoryStatusCompleted,
 			}
-		} else {
+		default:
 			return err
 		}
 
@@ -356,13 +358,14 @@ func (r *ChoreRepository) SkipChore(c context.Context, chore *chModel.Chore, use
 		var ch *chModel.ChoreHistory
 		skippedAt := time.Now().UTC()
 
-		if err == nil && existingHistory.PerformedAt != nil {
+		switch {
+		case err == nil && existingHistory.PerformedAt != nil:
 			// Update existing history record
 			existingHistory.PerformedAt = &skippedAt
 			existingHistory.Note = nil
 			existingHistory.Status = chModel.ChoreHistoryStatusSkipped
 			ch = &existingHistory
-		} else if errors.Is(err, gorm.ErrRecordNotFound) {
+		case errors.Is(err, gorm.ErrRecordNotFound):
 			// Create a new chore history record for the skipped chore
 			ch = &chModel.ChoreHistory{
 				ChoreID:     chore.ID,
@@ -373,7 +376,7 @@ func (r *ChoreRepository) SkipChore(c context.Context, chore *chModel.Chore, use
 				Note:        nil,
 				Status:      chModel.ChoreHistoryStatusSkipped,
 			}
-		} else {
+		default:
 			return err
 		}
 

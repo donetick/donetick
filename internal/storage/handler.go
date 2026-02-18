@@ -150,15 +150,16 @@ func (h *Handler) ChoreUploadHandler(c *gin.Context) {
 		mediaRecord,
 		currentUser,
 	); err != nil {
-		if err == errorx.ErrNotEnoughSpace {
+		switch {
+		case err == errorx.ErrNotEnoughSpace:
 			log.Error("user has no enough space", "error", err)
 			c.JSON(http.StatusInsufficientStorage, gin.H{"error": "no enough space"})
 			return
-		} else if err == errorx.ErrNotAPlusMember {
+		case err == errorx.ErrNotAPlusMember:
 			log.Error("user is not a plus member", "error", err)
 			c.JSON(http.StatusForbidden, gin.H{"error": "user is not a plus member"})
 			return
-		} else {
+		default:
 			log.Error("failed to save file record to db", "error", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save file record"})
 		}

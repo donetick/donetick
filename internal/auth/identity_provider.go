@@ -60,14 +60,16 @@ func (i *IdentityProvider) ExchangeToken(ctx context.Context, code string, redir
 	token, err := conf.Exchange(ctx, code)
 	if err != nil {
 		// Enhanced error handling for OAuth2 errors
-		if strings.Contains(err.Error(), "invalid_grant") {
+		switch {
+		case strings.Contains(err.Error(), "invalid_grant"):
 			return "", errors.New("oauth2: invalid_grant - The authorization code is invalid, expired, revoked, or does not match the redirect URI")
-		} else if strings.Contains(err.Error(), "invalid_client") {
+		case strings.Contains(err.Error(), "invalid_client"):
 			return "", errors.New("oauth2: invalid_client - Client authentication failed")
-		} else if strings.Contains(err.Error(), "invalid_request") {
+		case strings.Contains(err.Error(), "invalid_request"):
 			return "", errors.New("oauth2: invalid_request - The request is missing a required parameter or is otherwise malformed")
+		default:
+			return "", err
 		}
-		return "", err
 	}
 
 	accessToken, ok := token.AccessToken, token.Valid()

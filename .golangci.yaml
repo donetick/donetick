@@ -55,7 +55,6 @@ issues:
     - linters:
         - errcheck
         - goconst
-        - gocritic
         - gocyclo
         - govet
         - ineffassign

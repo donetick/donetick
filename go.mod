@@ -19,6 +19,7 @@ require (
 	github.com/gregdel/pushover v1.3.1
 	github.com/mcuadros/go-defaults v1.2.0
 	github.com/pquerna/otp v1.5.0
+	github.com/quasilyte/go-ruleguard/dsl v0.3.23
 	github.com/rubenv/sql-migrate v1.7.0
 	github.com/spf13/viper v1.21.0
 	github.com/stretchr/testify v1.11.1

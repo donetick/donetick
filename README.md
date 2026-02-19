@@ -198,11 +198,12 @@ Contributions are welcome! If you want to work on something that is not listed a
 
 ## Code Formatting and Linting
 
-We use `golangci-lint` for linting and formatting. CI enforces lint checks on all pull requests.
+We use `golangci-lint` and `ruleguard` for linting and formatting. CI enforces lint checks on all pull requests.
 
 To run lint checks locally, install the pinned version:
 ```
 go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.64.8
+go install github.com/quasilyte/go-ruleguard/cmd/ruleguard@v0.4.5
 ```
 
 Run lint checks:

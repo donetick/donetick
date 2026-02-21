@@ -3050,7 +3050,7 @@ func (h *Handler) rejectChore(c *gin.Context) {
 		Note string `json:"note"`
 	}
 	var req RejectChoreReq
-	_ = c.ShouldBind(&req)
+	_ = c.ShouldBindJSON(&req)
 
 	// Get the chore
 	chore, err := h.choreRepo.GetChore(c, id, currentUser.ID)

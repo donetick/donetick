@@ -91,7 +91,8 @@ Donetick is an open-source, user-friendly app designed to help you organize task
    ```bash
    docker run -v /path/to/host/data:/donetick-data -p 2021:2021 \
      -e DT_ENV=selfhosted \
-     -e DT_SQLITE_PATH=/donetick-data/donetick.db -e TZ=Etc/UTC \  
+     -e DT_SQLITE_PATH=/donetick-data/donetick.db \
+     -e TZ=Etc/UTC \  
      --health-cmd "wget --no-verbose --tries=1 --spider http://localhost:2021/api/v1/health || exit 1" \
      --health-start-period 1m \
      --health-timeout 5s \
@@ -205,6 +206,25 @@ services:
 ## Contributing
 
 Contributions are welcome! If you want to work on something that is not listed as an issue, please open a [Discussion](https://github.com/donetick/donetick/discussions) first to ensure it aligns with our goals and to avoid any unnecessary effort!
+
+## Code Formatting and Linting
+
+We use `golangci-lint` for linting and formatting. CI enforces lint checks on all pull requests.
+
+To run lint checks locally, install the pinned version:
+```
+go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.64.8
+```
+
+Run lint checks:
+```
+golangci-lint run
+```
+
+Apply safe fixes:
+```
+golangci-lint run --fix
+```
 
 ---
 

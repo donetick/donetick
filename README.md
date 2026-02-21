@@ -219,7 +219,7 @@ golangci-lint run --fix
 
 ## License
 
-This project is licensed under the **AGPLv3**. See the [LICENSE](LICENSE) file for more details.
+This project is licensed under the **AGPLv3**. See the [LICENSE](LICENSE.md) file for more details.
 
 ---
 

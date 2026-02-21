@@ -470,7 +470,7 @@ func (h *Handler) RedeemPoints(c *gin.Context) {
 	// parse body:
 	var redeemReq RedeemPointsRequest
 
-	if err := c.ShouldBind(&redeemReq); err != nil {
+	if err := c.ShouldBindJSON(&redeemReq); err != nil {
 		c.JSON(400, gin.H{
 			"error": "Invalid request",
 		})

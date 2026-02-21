@@ -270,26 +270,26 @@ func NewConfig() *Config {
 	return config
 }
 
-func configEnvironmentOverrides(Config *Config) {
+func configEnvironmentOverrides(config *Config) {
 	if os.Getenv("DONETICK_TELEGRAM_TOKEN") != "" {
-		Config.Telegram.Token = os.Getenv("DONETICK_TELEGRAM_TOKEN")
+		config.Telegram.Token = os.Getenv("DONETICK_TELEGRAM_TOKEN")
 	}
 	if os.Getenv("DONETICK_PUSHOVER_TOKEN") != "" {
-		Config.Pushover.Token = os.Getenv("DONETICK_PUSHOVER_TOKEN")
+		config.Pushover.Token = os.Getenv("DONETICK_PUSHOVER_TOKEN")
 	}
 	if os.Getenv("DONETICK_DISABLE_SIGNUP") == "true" {
-		Config.IsUserCreationDisabled = true
+		config.IsUserCreationDisabled = true
 	}
 
 	// Logging environment overrides
 	if os.Getenv("DONETICK_LOG_LEVEL") != "" {
-		Config.Logging.Level = os.Getenv("DONETICK_LOG_LEVEL")
+		config.Logging.Level = os.Getenv("DONETICK_LOG_LEVEL")
 	}
 	if os.Getenv("DONETICK_LOG_ENCODING") != "" {
-		Config.Logging.Encoding = os.Getenv("DONETICK_LOG_ENCODING")
+		config.Logging.Encoding = os.Getenv("DONETICK_LOG_ENCODING")
 	}
 	if os.Getenv("DONETICK_LOG_DEVELOPMENT") == "true" {
-		Config.Logging.Development = true
+		config.Logging.Development = true
 	}
 }
 func LoadConfig() *Config {
@@ -297,13 +297,14 @@ func LoadConfig() *Config {
 	viper.SetOptions(viper.ExperimentalBindStruct())
 
 	// set the config name based on the environment:
-	if os.Getenv("DT_ENV") == "local" {
+	switch env := os.Getenv("DT_ENV"); env {
+	case "local":
 		viper.SetConfigName("local")
-	} else if os.Getenv("DT_ENV") == "prod" {
+	case "prod":
 		viper.SetConfigName("prod")
-	} else if os.Getenv("DT_ENV") == "selfhosted" {
+	case "selfhosted":
 		viper.SetConfigName("selfhosted")
-	} else {
+	default:
 		viper.SetConfigName("local")
 	}
 	// get logger and log the current environment:

@@ -23,6 +23,14 @@ linters:
     - gocritic
 
 linters-settings:
+
+  gocritic:
+    enabled-checks:
+      - ruleguard
+    settings:
+      ruleguard:
+        rules: rules.go
+
   gofmt:
     simplify: true
 
@@ -46,3 +54,19 @@ issues:
     - linters:
         - dupl
       text: ".*duplicate of.*"
+
+    - linters:
+        - misspell
+      text: "`cancelled` is a misspelling of `canceled`"
+
+    # TODO: Fix the rule violations and remove the exclusions
+    - linters:
+        - errcheck
+        - goconst
+        - gocyclo
+        - govet
+        - ineffassign
+        - staticcheck
+        - unconvert
+        - unused
+      text: ".*"

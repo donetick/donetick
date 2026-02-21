@@ -44,8 +44,10 @@ func (r *LabelRepository) GetLabelsByIDs(ctx context.Context, ids []int) ([]*lMo
 }
 
 func (r *LabelRepository) isLabelsAssignableByUser(ctx context.Context, userID int, circleID int, toBeAdded []int, toBeRemoved []int) bool {
-	// combine both toBeAdded and toBeRemoved:
-	labelIDs := append(toBeAdded, toBeRemoved...)
+	// combine toBeAdded and toBeRemoved into a new slice
+	labelIDs := []int(nil)
+	labelIDs = append(labelIDs, toBeAdded...)
+	labelIDs = append(labelIDs, toBeRemoved...)
 
 	log := logging.FromContext(ctx)
 	var count int64

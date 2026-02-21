@@ -5,8 +5,14 @@ on:
     branches: [ "main" ]
   push:
     branches: [ "main" ]
+
+env:
+  GOLANG_VERSION: '1.22'
+  GOLANGCI_LINT_VERSION: 'v1.64.8'
+
 jobs:
-  lint:
+  check:
+    name: 📃 Check
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -14,7 +20,21 @@ jobs:
     - name: Check time.Now().UTC() usage
       run: bash scripts/check-time-utc.sh
 
-  test:
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ env.GOLANG_VERSION }}
+
+    - name: Install dependencies
+      run: go mod download
+
+    - name: Verify go.mod and go.sum
+      run: |
+        go mod tidy
+        git diff --exit-code
+
+  lint:
+    name: 🔍 Lint
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -22,21 +42,37 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v4
       with:
-        go-version: '1.22'
+        go-version: ${{ env.GOLANG_VERSION }}
+
+    - name: golangci-lint
+      uses: golangci/golangci-lint-action@v6
+      with:
+        version: ${{ env.GOLANGCI_LINT_VERSION }}
+
+  test:
+    name: 🔬 Test
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ env.GOLANG_VERSION }}
 
     - name: Run tests
       run: go test ./...
 
   build:
+    name: 🏗 Build
     runs-on: ubuntu-latest
-    needs: test
     steps:
     - uses: actions/checkout@v4
 
     - name: Set up Go
       uses: actions/setup-go@v4
       with:
-        go-version: '1.22'
+        go-version: ${{ env.GOLANG_VERSION }}
 
     - name: Get Version from Git Tag (or commit if no tag)
       id: get_version

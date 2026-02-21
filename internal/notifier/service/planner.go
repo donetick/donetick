@@ -64,14 +64,14 @@ func (n *NotificationPlanner) GenerateNotifications(c context.Context, chore *ch
 }
 
 func getEventTypeFromTemplate(template *chModel.NotificationTemplate) EventType {
-	if template == nil {
+	switch {
+	case template == nil:
 		return EventTypeUnknown
-	}
-	if template.Value < 0 {
+	case template.Value < 0:
 		return EventTypePreDue
-	} else if template.Value == 0 {
+	case template.Value == 0:
 		return EventTypeDue
-	} else {
+	default:
 		return EventTypeOverdue
 	}
 }

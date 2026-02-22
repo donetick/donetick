@@ -431,8 +431,13 @@ func APIs(cfg *config.Config, api *API, r *gin.Engine, auth *jwt.GinJWTMiddlewar
 		utils.TimeoutMiddleware(cfg.Server.WriteTimeout),
 		utils.RateLimitMiddleware(limiter),
 		authMiddleware.APITokenMiddleware(userRepo),
-		authMiddleware.RequirePlusMemberMiddleware(),
 	)
+	if cfg.IsDoneTickDotCom {
+		tasksPlusAPI.Use(
+			authMiddleware.RequirePlusMemberMiddleware(),
+		)
+	}
+
 	{
 		tasksPlusAPI.POST("/:id/complete", api.CompleteChore)
 		tasksPlusAPI.PUT("/:id", api.UpdateChore)
@@ -443,8 +448,12 @@ func APIs(cfg *config.Config, api *API, r *gin.Engine, auth *jwt.GinJWTMiddlewar
 		utils.TimeoutMiddleware(cfg.Server.WriteTimeout),
 		utils.RateLimitMiddleware(limiter),
 		authMiddleware.APITokenMiddleware(userRepo),
-		authMiddleware.RequirePlusMemberMiddleware(),
 	)
+	if cfg.IsDoneTickDotCom {
+		circleAPI.Use(
+			authMiddleware.RequirePlusMemberMiddleware(),
+		)
+	}
 	{
 		circleAPI.GET("/members", api.GetCircleMembers)
 	}

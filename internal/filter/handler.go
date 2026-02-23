@@ -6,21 +6,34 @@ import (
 	auth "donetick.com/core/internal/auth"
 	fModel "donetick.com/core/internal/filter/model"
 	fRepo "donetick.com/core/internal/filter/repo"
+	uRepo "donetick.com/core/internal/user/repo"
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
 )
 
 type Handler struct {
 	fRepo *fRepo.FilterRepository
+	uRepo *uRepo.UserRepository
 }
 
-func NewHandler(fRepo *fRepo.FilterRepository) *Handler {
+func NewHandler(fRepo *fRepo.FilterRepository, uRepo *uRepo.UserRepository) *Handler {
 	return &Handler{
 		fRepo: fRepo,
+		uRepo: uRepo,
 	}
 }
 
-// getFilters gets all filters for the current user's circle
+// getFilters godoc
+//
+//	@Summary		Get all filters
+//	@Description	Gets all filters for the current user's circle
+//	@Tags			filters
+//	@Accept			json
+//	@Produce		json
+//	@Security		JWTKeyAuth && APIKeyAuth
+//	@Success		200	{array}		model.Filter		"array of filters"
+//	@Failure		500	{object}	map[string]string	"error: Error getting current user | Error getting filters"
+//	@Router			/filters [get]
 func (h *Handler) getFilters(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
@@ -41,7 +54,20 @@ func (h *Handler) getFilters(c *gin.Context) {
 	c.JSON(200, filters)
 }
 
-// getFilterByID gets a specific filter by ID
+// getFilterByID godoc
+//
+//	@Summary		Get filter by ID
+//	@Description	Gets a specific filter by ID
+//	@Tags			filters
+//	@Accept			json
+//	@Produce		json
+//	@Security		JWTKeyAuth && APIKeyAuth
+//	@Param			id	path		int					true	"Filter ID"
+//	@Success		200	{object}	model.Filter		"filter object"
+//	@Failure		400	{object}	map[string]string	"error: Filter ID is required | Invalid filter ID"
+//	@Failure		404	{object}	map[string]string	"error: Filter not found"
+//	@Failure		500	{object}	map[string]string	"error: Error getting current user"
+//	@Router			/filters/{id} [get]
 func (h *Handler) getFilterByID(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
@@ -78,7 +104,19 @@ func (h *Handler) getFilterByID(c *gin.Context) {
 	c.JSON(200, filter)
 }
 
-// createFilter creates a new filter
+// createFilter godoc
+//
+//	@Summary		Create a new filter
+//	@Description	Creates a new filter for the current user's circle
+//	@Tags			filters
+//	@Accept			json
+//	@Produce		json
+//	@Security		JWTKeyAuth && APIKeyAuth
+//	@Param			filter	body		model.FilterReq			true	"Filter creation request"
+//	@Success		200		{object}	map[string]model.Filter	"res: created filter object"
+//	@Failure		400		{object}	map[string]string		"error: Error binding filter data | Filter name already exists"
+//	@Failure		500		{object}	map[string]string		"error: Error getting current user | Error checking filter name | Error creating filter"
+//	@Router			/filters [post]
 func (h *Handler) createFilter(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
@@ -141,7 +179,20 @@ func (h *Handler) createFilter(c *gin.Context) {
 	})
 }
 
-// updateFilter updates an existing filter
+// updateFilter godoc
+//
+//	@Summary		Update a filter
+//	@Description	Updates an existing filter by ID
+//	@Tags			filters
+//	@Accept			json
+//	@Produce		json
+//	@Security		JWTKeyAuth && APIKeyAuth
+//	@Param			id		path		int						true	"Filter ID"
+//	@Param			filter	body		model.FilterReq			true	"Filter update request"
+//	@Success		200		{object}	map[string]model.Filter	"res: updated filter object"
+//	@Failure		400		{object}	map[string]string		"error: Filter ID is required | Invalid filter ID | Error binding filter data | Filter name already exists"
+//	@Failure		500		{object}	map[string]string		"error: Error getting current user | Error checking filter name | Error getting updated filter | internal error"
+//	@Router			/filters/{id} [put]
 func (h *Handler) updateFilter(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
@@ -227,7 +278,19 @@ func (h *Handler) updateFilter(c *gin.Context) {
 	})
 }
 
-// deleteFilter deletes a filter
+// deleteFilter godoc
+//
+//	@Summary		Delete a filter
+//	@Description	Deletes a filter by ID
+//	@Tags			filters
+//	@Accept			json
+//	@Produce		json
+//	@Security		JWTKeyAuth && APIKeyAuth
+//	@Param			id	path		int					true	"Filter ID"
+//	@Success		200	{object}	map[string]string	"res: Filter deleted successfully"
+//	@Failure		400	{object}	map[string]string	"error: Filter ID is required | Invalid filter ID"
+//	@Failure		500	{object}	map[string]string	"error: Error getting current user | internal error"
+//	@Router			/filters/{id} [delete]
 func (h *Handler) deleteFilter(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
@@ -265,7 +328,19 @@ func (h *Handler) deleteFilter(c *gin.Context) {
 	})
 }
 
-// toggleFilterPin toggles the pin status of a filter
+// toggleFilterPin godoc
+//
+//	@Summary		Toggle filter pin status
+//	@Description	Toggles the pin status of a filter by ID
+//	@Tags			filters
+//	@Accept			json
+//	@Produce		json
+//	@Security		JWTKeyAuth && APIKeyAuth
+//	@Param			id	path		int						true	"Filter ID"
+//	@Success		200	{object}	map[string]interface{}	"res: {isPinned: bool}"
+//	@Failure		400	{object}	map[string]string		"error: Filter ID is required | Invalid filter ID"
+//	@Failure		500	{object}	map[string]string		"error: Error getting current user | internal error"
+//	@Router			/filters/{id}/toggle-pin [post]
 func (h *Handler) toggleFilterPin(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
@@ -306,7 +381,17 @@ func (h *Handler) toggleFilterPin(c *gin.Context) {
 	})
 }
 
-// getPinnedFilters gets all pinned filters
+// getPinnedFilters godoc
+//
+//	@Summary		Get pinned filters
+//	@Description	Gets all pinned filters for the current user's circle
+//	@Tags			filters
+//	@Accept			json
+//	@Produce		json
+//	@Security		JWTKeyAuth && APIKeyAuth
+//	@Success		200	{array}		model.Filter		"array of pinned filters"
+//	@Failure		500	{object}	map[string]string	"error: Error getting current user | Error getting pinned filters"
+//	@Router			/filters/pinned [get]
 func (h *Handler) getPinnedFilters(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
@@ -327,7 +412,17 @@ func (h *Handler) getPinnedFilters(c *gin.Context) {
 	c.JSON(200, filters)
 }
 
-// getFiltersByUsage gets filters sorted by usage
+// getFiltersByUsage godoc
+//
+//	@Summary		Get filters by usage
+//	@Description	Gets filters sorted by usage for the current user's circle
+//	@Tags			filters
+//	@Accept			json
+//	@Produce		json
+//	@Security		JWTKeyAuth && APIKeyAuth
+//	@Success		200	{array}		model.Filter		"array of filters sorted by usage"
+//	@Failure		500	{object}	map[string]string	"error: Error getting current user | Error getting filters by usage"
+//	@Router			/filters/by-usage [get]
 func (h *Handler) getFiltersByUsage(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
@@ -349,9 +444,9 @@ func (h *Handler) getFiltersByUsage(c *gin.Context) {
 }
 
 // Routes sets up the filter routes
-func Routes(r *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware) {
+func Routes(r *gin.Engine, h *Handler, ginJWTMiddleware *jwt.GinJWTMiddleware) {
 	filterRoutes := r.Group("api/v1/filters")
-	filterRoutes.Use(auth.MiddlewareFunc())
+	filterRoutes.Use(auth.MultiAuthMiddleware(ginJWTMiddleware, h.uRepo))
 	{
 		filterRoutes.GET("", h.getFilters)
 		filterRoutes.GET("/pinned", h.getPinnedFilters)

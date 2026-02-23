@@ -23,7 +23,7 @@ func NewHandler(pRepo *pRepo.ProjectRepository) *Handler {
 func (h *Handler) getProjects(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
-		c.JSON(500, gin.H{
+		c.JSON(401, gin.H{
 			"error": "Error getting current user",
 		})
 		return
@@ -37,13 +37,15 @@ func (h *Handler) getProjects(c *gin.Context) {
 		return
 	}
 
-	c.JSON(200, projects)
+	c.JSON(200, gin.H{
+		"res": projects,
+	})
 }
 
 func (h *Handler) createProject(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
-		c.JSON(500, gin.H{
+		c.JSON(401, gin.H{
 			"error": "Error getting current user",
 		})
 		return
@@ -81,21 +83,13 @@ func (h *Handler) createProject(c *gin.Context) {
 func (h *Handler) updateProject(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
-		c.JSON(500, gin.H{
+		c.JSON(401, gin.H{
 			"error": "Error getting current user",
 		})
 		return
 	}
 
-	projectIDRaw := c.Param("id")
-	if projectIDRaw == "" {
-		c.JSON(400, gin.H{
-			"error": "Project ID is required",
-		})
-		return
-	}
-
-	projectID, err := strconv.Atoi(projectIDRaw)
+	projectID, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		c.JSON(400, gin.H{
 			"error": "Invalid project ID",
@@ -143,21 +137,13 @@ func (h *Handler) updateProject(c *gin.Context) {
 func (h *Handler) deleteProject(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
-		c.JSON(500, gin.H{
+		c.JSON(401, gin.H{
 			"error": "Error getting current user",
 		})
 		return
 	}
 
-	projectIDRaw := c.Param("id")
-	if projectIDRaw == "" {
-		c.JSON(400, gin.H{
-			"error": "Project ID is required",
-		})
-		return
-	}
-
-	projectID, err := strconv.Atoi(projectIDRaw)
+	projectID, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		c.JSON(400, gin.H{
 			"error": "Invalid project ID",

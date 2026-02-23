@@ -36,13 +36,14 @@ type ThingRequest struct {
 }
 
 func NewHandler(cr *chRepo.ChoreRepository, circleRepo *cRepo.CircleRepository,
-	np *nps.NotificationPlanner, nRepo *nRepo.NotificationRepository, tRepo *tRepo.ThingRepository, eventsProducer *events.EventsProducer) *Handler {
+	np *nps.NotificationPlanner, nRepo *nRepo.NotificationRepository, tRepo *tRepo.ThingRepository, uRepo *uRepo.UserRepository, eventsProducer *events.EventsProducer) *Handler {
 	return &Handler{
 		choreRepo:      cr,
 		circleRepo:     circleRepo,
 		nPlanner:       np,
 		nRepo:          nRepo,
 		tRepo:          tRepo,
+		uRepo:          uRepo,
 		eventsProducer: eventsProducer,
 	}
 }

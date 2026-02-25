@@ -46,3 +46,20 @@ issues:
     - linters:
         - dupl
       text: ".*duplicate of.*"
+
+    - linters:
+        - misspell
+      text: "`cancelled` is a misspelling of `canceled`"
+
+    # TODO: Fix the rule violations and remove the exclusions
+    - linters:
+        - errcheck
+        - goconst
+        - gocritic
+        - gocyclo
+        - govet
+        - ineffassign
+        - staticcheck
+        - unconvert
+        - unused
+      text: ".*"

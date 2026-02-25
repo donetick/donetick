@@ -10,7 +10,7 @@ import (
 
 func TestScheduleAdaptiveNextDueDate_WithNilPerformedAt(t *testing.T) {
 	now := time.Now().UTC()
-	
+
 	tests := []struct {
 		name          string
 		chore         *chModel.Chore
@@ -89,14 +89,14 @@ func TestScheduleAdaptiveNextDueDate_WithNilPerformedAt(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := scheduleAdaptiveNextDueDate(tt.chore, tt.completedDate, tt.history)
-			
+
 			if tt.wantErr {
 				assert.Error(t, err)
 				return
 			}
-			
+
 			assert.NoError(t, err)
-			
+
 			if tt.wantNil {
 				assert.Nil(t, got)
 			} else {
@@ -109,19 +109,19 @@ func TestScheduleAdaptiveNextDueDate_WithNilPerformedAt(t *testing.T) {
 // Test that the fix doesn't break normal adaptive scheduling
 func TestScheduleAdaptiveNextDueDate_NormalCase(t *testing.T) {
 	now := time.Now().UTC()
-	
+
 	chore := &chModel.Chore{
 		FrequencyType: chModel.FrequencyTypeAdaptive,
 	}
-	
+
 	history := []*chModel.ChoreHistory{
 		{PerformedAt: timePtr(now.Add(-24 * time.Hour))},
 		{PerformedAt: timePtr(now.Add(-48 * time.Hour))},
 		{PerformedAt: timePtr(now.Add(-72 * time.Hour))},
 	}
-	
+
 	got, err := scheduleAdaptiveNextDueDate(chore, now, history)
-	
+
 	assert.NoError(t, err)
 	assert.NotNil(t, got)
 	// The next due date should be approximately 24 hours from now

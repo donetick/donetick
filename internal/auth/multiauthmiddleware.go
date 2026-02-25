@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"errors"
 	"net/http"
 
 	uRepo "donetick.com/core/internal/user/repo"
@@ -28,22 +29,25 @@ func NewMultiAuthMiddleware(jwtMiddleware *jwt.GinJWTMiddleware, userRepo *uRepo
 func (h *MultiAuthMiddleware) MiddlewareFunc() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		logger := logging.FromContext(c)
-		authenticated := false
 
 		// Authenticate using API key first, it's just's a header check. if fails, try JWT next
-		if authenticateAPIKey(c, h.userRepo) {
+		var authenticated, err = authenticateAPIKey(c, h.userRepo)
+		if authenticated {
 			c.Next()
 			return
 		}
-		// now we do the normal flow of JWT and check header, cookie, etc.
-		if authenticateJWT(c, h.jwtMiddleware) {
-			c.Next()
-			return
+
+		if err.Error() == "API token is invalid." {
+			authenticated, err = authenticateJWT(c, h.jwtMiddleware)
+			if authenticated {
+				c.Next()
+				return
+			}
 		}
 
 		// If neither succeeded, return unauthorized
 		if !authenticated {
-			logger.Error("Authentication failed: neither JWT nor API key provided/valid")
+			logger.Error("Authentication failed:", err)
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"error": "Authentication required. Provide either a valid JWT token or API key.",
 			})
@@ -56,15 +60,16 @@ func (h *MultiAuthMiddleware) MiddlewareFunc() gin.HandlerFunc {
 }
 
 // authenticateJWT attempts JWT authentication and returns true if successful
-func authenticateJWT(c *gin.Context, jwtMiddleware *jwt.GinJWTMiddleware) bool {
+func authenticateJWT(c *gin.Context, jwtMiddleware *jwt.GinJWTMiddleware) (bool, error) {
+
 	token, err := jwtMiddleware.ParseToken(c)
 	if err != nil || !token.Valid {
-		return false
+		return false, errors.New("JWT is invalid.")
 	}
 
 	claims, err := jwtMiddleware.GetClaimsFromJWT(c)
 	if err != nil {
-		return false
+		return false, errors.New("Unable to get claims from JWT.")
 	}
 
 	c.Set(jwtPayloadKey, claims)
@@ -75,31 +80,27 @@ func authenticateJWT(c *gin.Context, jwtMiddleware *jwt.GinJWTMiddleware) bool {
 		c.Set(jwtMiddleware.IdentityKey, identity)
 	}
 
-	return jwtMiddleware.Authorizator(identity, c)
+	return jwtMiddleware.Authorizator(identity, c), nil
 }
 
 // authenticateAPIKey attempts API key authentication and returns true if successful
-func authenticateAPIKey(c *gin.Context, userRepo *uRepo.UserRepository) bool {
-	logger := logging.FromContext(c)
-
+func authenticateAPIKey(c *gin.Context, userRepo *uRepo.UserRepository) (bool, error) {
 	apiToken := c.GetHeader(apiKeyHeader)
 
 	if apiToken == "" {
-		return false
+		return false, errors.New("API token is invalid.")
 	}
 
 	user, err := userRepo.GetUserByToken(c, apiToken)
 	if err != nil {
-		logger.Debugw("API token validation failed", "error", err)
-		return false
+		return false, errors.New("Unable to find user associated to API token.")
 	}
 
 	if user.Disabled {
-		logger.Debugw("User account is disabled", "userID", user.ID)
-		return false
+		return false, errors.New("User account is disabled")
 	}
 
 	// Set the user in context
 	c.Set(identityKey, user)
-	return true
+	return true, nil
 }

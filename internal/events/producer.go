@@ -126,7 +126,7 @@ func (p *EventsProducer) ChoreCompleted(ctx context.Context, webhookURL *string,
 	event := Event{
 		Type:      EventTypeTaskCompleted,
 		URL:       *webhookURL,
-		Timestamp: time.Now(),
+		Timestamp: time.Now().UTC(),
 		Data: ChoreData{Chore: chore,
 			Username:    performer.Username,
 			DisplayName: performer.DisplayName,
@@ -144,7 +144,7 @@ func (p *EventsProducer) ChoreSkipped(ctx context.Context, webhookURL *string, c
 	event := Event{
 		Type:      EventTypeTaskSkipped,
 		URL:       *webhookURL,
-		Timestamp: time.Now(),
+		Timestamp: time.Now().UTC(),
 		Data: ChoreData{Chore: chore,
 			Username:    performer.Username,
 			DisplayName: performer.DisplayName,
@@ -160,7 +160,7 @@ func (p *EventsProducer) NotificationEvent(ctx context.Context, url string, even
 	p.publishEvent(Event{
 		URL:       url,
 		Type:      EventTypeTaskReminder,
-		Timestamp: time.Now(),
+		Timestamp: time.Now().UTC(),
 		Data:      event,
 	})
 }
@@ -173,7 +173,7 @@ func (p *EventsProducer) ThingsUpdated(ctx context.Context, url *string, data in
 	p.publishEvent(Event{
 		URL:       *url,
 		Type:      EventTypeThingChanged,
-		Timestamp: time.Now(),
+		Timestamp: time.Now().UTC(),
 		Data:      data,
 	})
 }
@@ -186,7 +186,7 @@ func (p *EventsProducer) SubtaskUpdated(ctx context.Context, url *string, data i
 	p.publishEvent(Event{
 		URL:       *url,
 		Type:      EventTypeSubTaskCompleted,
-		Timestamp: time.Now(),
+		Timestamp: time.Now().UTC(),
 		Data:      data,
 	})
 }

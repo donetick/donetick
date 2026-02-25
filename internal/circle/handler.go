@@ -190,7 +190,7 @@ func handleUserLeavingCircle(h *Handler, c *gin.Context, leavingUser *uModel.Use
 
 		if ch.CreatedBy == leavingUser.ID && (ch.AssignedTo == nil || *ch.AssignedTo != leavingUser.ID) {
 			ch.AssignedTo = &leavingUser.ID
-			ch.UpdatedAt = time.Now()
+			ch.UpdatedAt = time.Now().UTC()
 			ch.UpdatedBy = leavingUser.ID
 			ch.CircleID = orginalCircleID
 		} else if ch.CreatedBy != leavingUser.ID && (ch.AssignedTo != nil && *ch.AssignedTo == leavingUser.ID) {
@@ -572,7 +572,7 @@ func (h *Handler) ChangeMemberRole(c *gin.Context) {
 		Role     cModel.Role `json:"role"`
 	}
 	var req changeRoleRequest
-	if err := c.ShouldBind(&req); err != nil {
+	if err := c.ShouldBindJSON(&req); err != nil {
 		log.Error("Error changing member role:", err)
 		c.JSON(400, gin.H{
 			"error": "Invalid request",

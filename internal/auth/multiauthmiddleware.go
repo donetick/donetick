@@ -12,19 +12,31 @@ import (
 const apiKeyHeader = "secretkey"
 const jwtPayloadKey = "JWT_PAYLOAD"
 
+type MultiAuthMiddleware struct {
+	jwtMiddleware *jwt.GinJWTMiddleware
+	userRepo      *uRepo.UserRepository
+}
+
+func NewMultiAuthMiddleware(jwtMiddleware *jwt.GinJWTMiddleware, userRepo *uRepo.UserRepository) *MultiAuthMiddleware {
+	return &MultiAuthMiddleware{
+		jwtMiddleware: jwtMiddleware,
+		userRepo:      userRepo,
+	}
+}
+
 // MultiAuthMiddleware tries JWT first, then API key authentication
-func MultiAuthMiddleware(jwtMiddleware *jwt.GinJWTMiddleware, userRepo *uRepo.UserRepository) gin.HandlerFunc {
+func (h *MultiAuthMiddleware) MiddlewareFunc() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		logger := logging.FromContext(c)
 		authenticated := false
 
 		// Authenticate using API key first, it's just's a header check. if fails, try JWT next
-		if authenticateAPIKey(c, userRepo) {
+		if authenticateAPIKey(c, h.userRepo) {
 			c.Next()
 			return
 		}
 		// now we do the normal flow of JWT and check header, cookie, etc.
-		if authenticateJWT(c, jwtMiddleware) {
+		if authenticateJWT(c, h.jwtMiddleware) {
 			c.Next()
 			return
 		}

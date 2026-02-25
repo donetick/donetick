@@ -87,6 +87,7 @@ func main() {
 		// fx.Provide(config.NewConfig),
 		fx.Provide(auth.NewAuthMiddleware),
 		fx.Provide(auth.APITokenMiddleware),
+		fx.Provide(auth.NewMultiAuthMiddleware),
 		fx.Provide(auth.NewIdentityProvider),
 		fx.Provide(resource.NewHandler),
 

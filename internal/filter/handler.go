@@ -6,20 +6,16 @@ import (
 	auth "donetick.com/core/internal/auth"
 	fModel "donetick.com/core/internal/filter/model"
 	fRepo "donetick.com/core/internal/filter/repo"
-	uRepo "donetick.com/core/internal/user/repo"
-	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
 )
 
 type Handler struct {
 	fRepo *fRepo.FilterRepository
-	uRepo *uRepo.UserRepository
 }
 
-func NewHandler(fRepo *fRepo.FilterRepository, uRepo *uRepo.UserRepository) *Handler {
+func NewHandler(fRepo *fRepo.FilterRepository) *Handler {
 	return &Handler{
 		fRepo: fRepo,
-		uRepo: uRepo,
 	}
 }
 
@@ -444,9 +440,9 @@ func (h *Handler) getFiltersByUsage(c *gin.Context) {
 }
 
 // Routes sets up the filter routes
-func Routes(r *gin.Engine, h *Handler, ginJWTMiddleware *jwt.GinJWTMiddleware) {
+func Routes(r *gin.Engine, h *Handler, multiAuthMiddleware *auth.MultiAuthMiddleware) {
 	filterRoutes := r.Group("api/v1/filters")
-	filterRoutes.Use(auth.MultiAuthMiddleware(ginJWTMiddleware, h.uRepo))
+	filterRoutes.Use(multiAuthMiddleware.MiddlewareFunc())
 	{
 		filterRoutes.GET("", h.getFilters)
 		filterRoutes.GET("/pinned", h.getPinnedFilters)

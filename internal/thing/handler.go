@@ -12,9 +12,7 @@ import (
 	nps "donetick.com/core/internal/notifier/service"
 	tModel "donetick.com/core/internal/thing/model"
 	tRepo "donetick.com/core/internal/thing/repo"
-	uRepo "donetick.com/core/internal/user/repo"
 	"donetick.com/core/logging"
-	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
 )
 
@@ -24,7 +22,6 @@ type Handler struct {
 	nPlanner       *nps.NotificationPlanner
 	nRepo          *nRepo.NotificationRepository
 	tRepo          *tRepo.ThingRepository
-	uRepo          *uRepo.UserRepository
 	eventsProducer *events.EventsProducer
 }
 
@@ -36,14 +33,13 @@ type ThingRequest struct {
 }
 
 func NewHandler(cr *chRepo.ChoreRepository, circleRepo *cRepo.CircleRepository,
-	np *nps.NotificationPlanner, nRepo *nRepo.NotificationRepository, tRepo *tRepo.ThingRepository, uRepo *uRepo.UserRepository, eventsProducer *events.EventsProducer) *Handler {
+	np *nps.NotificationPlanner, nRepo *nRepo.NotificationRepository, tRepo *tRepo.ThingRepository, eventsProducer *events.EventsProducer) *Handler {
 	return &Handler{
 		choreRepo:      cr,
 		circleRepo:     circleRepo,
 		nPlanner:       np,
 		nRepo:          nRepo,
 		tRepo:          tRepo,
-		uRepo:          uRepo,
 		eventsProducer: eventsProducer,
 	}
 }
@@ -384,9 +380,9 @@ func (h *Handler) DeleteThing(c *gin.Context) {
 	c.JSON(200, gin.H{})
 }
 
-func Routes(r *gin.Engine, h *Handler, ginJWTMiddleware *jwt.GinJWTMiddleware) {
+func Routes(r *gin.Engine, h *Handler, multiAuthMiddleware *auth.MultiAuthMiddleware) {
 	thingRoutes := r.Group("api/v1/things")
-	thingRoutes.Use(auth.MultiAuthMiddleware(ginJWTMiddleware, h.uRepo))
+	thingRoutes.Use(multiAuthMiddleware.MiddlewareFunc())
 	{
 		thingRoutes.POST("", h.CreateThing)
 		thingRoutes.PUT("/:id/state", h.UpdateThingState)

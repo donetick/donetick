@@ -34,7 +34,6 @@ import (
 	uRepo "donetick.com/core/internal/user/repo"
 	"donetick.com/core/internal/utils"
 	"donetick.com/core/logging"
-	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
@@ -3862,10 +3861,10 @@ func getActionName(status chModel.ChoreHistoryStatus) string {
 	}
 }
 
-func Routes(router *gin.Engine, h *Handler, ginJWTMiddleware *jwt.GinJWTMiddleware) {
+func Routes(router *gin.Engine, h *Handler, multiAuthMiddleware *auth.MultiAuthMiddleware) {
 
 	choresRoutes := router.Group("api/v1/chores")
-	choresRoutes.Use(auth.MultiAuthMiddleware(ginJWTMiddleware, h.uRepo))
+	choresRoutes.Use(multiAuthMiddleware.MiddlewareFunc())
 	choresRoutes.Use(auth.ImpersonationMiddleware(h.uRepo, h.circleRepo))
 	{
 		choresRoutes.GET("/", h.getChores)

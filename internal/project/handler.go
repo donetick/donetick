@@ -3,22 +3,19 @@ package project
 import (
 	"strconv"
 
-	auth "donetick.com/core/internal/auth"
+	"donetick.com/core/internal/auth"
 	pModel "donetick.com/core/internal/project/model"
 	pRepo "donetick.com/core/internal/project/repo"
-	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
 )
 
 type Handler struct {
 	pRepo *pRepo.ProjectRepository
-	uRepo           *uRepo.UserRepository
 }
 
-func NewHandler(pRepo *pRepo.ProjectRepository, uRepo *uRepo.UserRepository) *Handler {
+func NewHandler(pRepo *pRepo.ProjectRepository) *Handler {
 	return &Handler{
 		pRepo: pRepo,
-		uRepo: uRepo,
 	}
 }
 
@@ -219,9 +216,9 @@ func (h *Handler) deleteProject(c *gin.Context) {
 	})
 }
 
-func Routes(r *gin.Engine, h *Handler, ginJWTMiddleware *jwt.GinJWTMiddleware) {
+func Routes(r *gin.Engine, h *Handler, multiAuthMiddleware *auth.MultiAuthMiddleware) {
 	projectRoutes := r.Group("api/v1/projects")
-	projectRoutes.Use(auth.MultiAuthMiddleware(ginJWTMiddleware,h.uRepo)))
+	projectRoutes.Use(multiAuthMiddleware.MiddlewareFunc())
 	{
 		projectRoutes.GET("", h.getProjects)
 		projectRoutes.POST("", h.createProject)

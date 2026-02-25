@@ -31,6 +31,7 @@ server:
     - "http://localhost:5173"
     - "http://localhost:7926"
   serve_frontend: false
+  serve_swagger: false
 logging:
   level: "debug"
   encoding: "console"

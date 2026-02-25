@@ -114,6 +114,7 @@ type ServerConfig struct {
 	WebhookTimeout   time.Duration `mapstructure:"webhook_timeout" yaml:"webhook_timeout"`
 	CorsAllowOrigins []string      `mapstructure:"cors_allow_origins" yaml:"cors_allow_origins"`
 	ServeFrontend    bool          `mapstructure:"serve_frontend" yaml:"serve_frontend"`
+	ServeSwagger     bool          `mapstructure:"serve_swagger" yaml:"serve_swagger"`
 }
 
 type SchedulerConfig struct {

@@ -1,0 +1,2640 @@
+definitions:
+  circle.Circle:
+    properties:
+      created_at:
+        description: Created at
+        type: string
+      created_by:
+        description: Created by
+        type: integer
+      disabled:
+        description: Disabled
+        type: boolean
+      expiredAt:
+        description: read one column
+        type: string
+      id:
+        description: Unique identifier
+        type: integer
+      invite_code:
+        description: Invite code
+        type: string
+      name:
+        description: Full name
+        type: string
+      subscriptionStatus:
+        description: read one column
+        type: string
+      updated_at:
+        description: Updated at
+        type: string
+      webhook_url:
+        description: Webhook URL
+        type: string
+    type: object
+  circle.Role:
+    enum:
+    - admin
+    - member
+    - manager
+    type: string
+    x-enum-varnames:
+    - RoleAdmin
+    - RoleMember
+    - RoleManager
+  circle.UserCircleDetail:
+    properties:
+      circleId:
+        description: Circle ID
+        type: integer
+      createdAt:
+        description: Created at
+        type: string
+      displayName:
+        type: string
+      id:
+        description: Unique identifier
+        type: integer
+      image:
+        description: Image
+        type: string
+      isActive:
+        type: boolean
+      points:
+        description: Points
+        type: integer
+      pointsRedeemed:
+        description: Points Redeemed
+        type: integer
+      role:
+        allOf:
+        - $ref: '#/definitions/circle.UserRole'
+        description: Role
+      updatedAt:
+        description: Updated at
+        type: string
+      userId:
+        description: User ID
+        type: integer
+      username:
+        type: string
+    type: object
+  circle.UserRole:
+    enum:
+    - admin
+    - member
+    - manager
+    type: string
+    x-enum-varnames:
+    - UserRoleAdmin
+    - UserRoleMember
+    - UserRoleManager
+  model.AssignmentStrategy:
+    enum:
+    - random
+    - least_assigned
+    - least_completed
+    - keep_last_assigned
+    - random_except_last_assigned
+    - round_robin
+    - no_assignee
+    type: string
+    x-enum-varnames:
+    - AssignmentStrategyRandom
+    - AssignmentStrategyLeastAssigned
+    - AssignmentStrategyLeastCompleted
+    - AssignmentStrategyKeepLastAssigned
+    - AssignmentStrategyRandomExceptLastAssigned
+    - AssignmentStrategyRoundRobin
+    - AssignmentStrategyNoAssignee
+  model.Chore:
+    properties:
+      assignStrategy:
+        allOf:
+        - $ref: '#/definitions/model.AssignmentStrategy'
+        description: How the chore is assigned
+      assignedTo:
+        description: Who the chore is assigned to
+        type: integer
+      assignees:
+        description: Assignees of the chore
+        items:
+          $ref: '#/definitions/model.ChoreAssignees'
+        type: array
+      circleId:
+        description: The circle this chore is in
+        type: integer
+      completionWindow:
+        description: Number seconds before the chore is due that it can be completed
+        type: integer
+      createdAt:
+        description: When the chore was created
+        type: string
+      createdBy:
+        description: Who created the chore
+        type: integer
+      deadlineOffset:
+        description: Seconds after NextDueDate when chore deadline is reached
+        type: integer
+      description:
+        description: Description of the chore
+        type: string
+      frequency:
+        description: Number of days, weeks, months, or years between chores
+        type: integer
+      frequencyMetadata:
+        allOf:
+        - $ref: '#/definitions/model.FrequencyMetadata'
+        description: Additional frequency information for v2 (if used)
+      frequencyType:
+        allOf:
+        - $ref: '#/definitions/model.FrequencyType'
+        description: '"daily", "weekly", "monthly", "yearly", "adaptive",or "custom"'
+      id:
+        type: integer
+      isActive:
+        description: Whether the chore is active
+        type: boolean
+      isPrivate:
+        description: Whether the chore is private
+        type: boolean
+      isRolling:
+        description: Whether the chore is rolling
+        type: boolean
+      labels:
+        description: Labels for the chore
+        type: string
+      labelsV2:
+        description: Labels for the chore
+        items:
+          $ref: '#/definitions/model.Label'
+        type: array
+      name:
+        description: Chore description
+        type: string
+      nextDueDate:
+        description: When the chore is due
+        type: string
+      notification:
+        description: Whether the chore has notification
+        type: boolean
+      notificationMetadata:
+        allOf:
+        - $ref: '#/definitions/model.NotificationMetadata'
+        description: Additional notification information
+      points:
+        description: Points for completing the chore
+        type: integer
+      priority:
+        type: integer
+      project:
+        allOf:
+        - $ref: '#/definitions/model.Project'
+        description: Project relationship
+      projectId:
+        description: The project this chore belongs to
+        type: integer
+      requireApproval:
+        description: Whether chore completion requires admin approval
+        type: boolean
+      status:
+        $ref: '#/definitions/model.Status'
+      subTasks:
+        description: Subtasks for the chore
+        items:
+          $ref: '#/definitions/model.SubTask'
+        type: array
+      thingChore:
+        allOf:
+        - $ref: '#/definitions/model.ThingChore'
+        description: ThingChore relationship
+      updatedAt:
+        description: When the chore was last updated
+        type: string
+      updatedBy:
+        description: Who last updated the chore
+        type: integer
+    type: object
+  model.ChoreAssignees:
+    properties:
+      userId:
+        description: The user this assignee is for
+        type: integer
+    type: object
+  model.ChoreHistory:
+    properties:
+      assignedTo:
+        description: Who the chore was assigned to
+        type: integer
+      choreId:
+        description: The chore this history is for
+        type: integer
+      completedBy:
+        description: Who completed the chore
+        type: integer
+      createdAt:
+        description: When the record was created
+        type: string
+      dueDate:
+        description: When the chore was due
+        type: string
+      duration:
+        description: Duration in seconds calculated from query (read-only, no DB column)
+        type: integer
+      id:
+        description: Unique identifier
+        type: integer
+      notes:
+        description: Notes about the chore
+        type: string
+      performedAt:
+        description: When the chore was performed (completed or skipped)
+        type: string
+      points:
+        description: Points for completing the chore
+        type: integer
+      status:
+        allOf:
+        - $ref: '#/definitions/model.ChoreHistoryStatus'
+        description: Status of the chore (1=completed, 2=skipped)
+      updatedAt:
+        description: When the record was last updated
+        type: string
+    type: object
+  model.ChoreHistoryStatus:
+    enum:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    format: int32
+    type: integer
+    x-enum-varnames:
+    - ChoreHistoryStatusStarted
+    - ChoreHistoryStatusCompleted
+    - ChoreHistoryStatusSkipped
+    - ChoreHistoryStatusPendingApproval
+    - ChoreHistoryStatusRejected
+    - ChoreHistoryStatusMissed
+  model.ChoreReq:
+    properties:
+      assignStrategy:
+        $ref: '#/definitions/model.AssignmentStrategy'
+      assignedTo:
+        type: integer
+      assignees:
+        items:
+          $ref: '#/definitions/model.ChoreAssignees'
+        type: array
+      completionWindow:
+        type: integer
+      deadlineOffset:
+        type: integer
+      description:
+        type: string
+      dueDate:
+        type: string
+      frequency:
+        type: integer
+      frequencyMetadata:
+        $ref: '#/definitions/model.FrequencyMetadata'
+      frequencyType:
+        $ref: '#/definitions/model.FrequencyType'
+      id:
+        type: integer
+      isActive:
+        type: boolean
+      isPrivate:
+        type: boolean
+      isRolling:
+        type: boolean
+      labels:
+        items:
+          type: string
+        type: array
+      labelsV2:
+        items:
+          $ref: '#/definitions/model.LabelReq'
+        type: array
+      name:
+        type: string
+      notification:
+        type: boolean
+      notificationMetadata:
+        $ref: '#/definitions/model.NotificationMetadata'
+      points:
+        type: integer
+      priority:
+        type: integer
+      projectId:
+        type: integer
+      requireApproval:
+        type: boolean
+      subTasks:
+        items:
+          $ref: '#/definitions/model.SubTask'
+        type: array
+      thingTrigger:
+        $ref: '#/definitions/model.ThingTrigger'
+      updatedAt:
+        description: For internal use only when syncing a chore updated offline
+        type: string
+    required:
+    - assignStrategy
+    - frequencyType
+    - name
+    type: object
+  model.FrequencyMetadata:
+    properties:
+      days:
+        items:
+          type: string
+        type: array
+      months:
+        items:
+          type: string
+        type: array
+      occurrences:
+        description: e.g. ["1","3","last"] for 1st, 3rd, and last occurrence of the
+          day
+        items:
+          type: integer
+        type: array
+      time:
+        type: string
+      timezone:
+        type: string
+      unit:
+        type: string
+      weekNumbers:
+        description: 'DEPRECATED: use Occurrences instead'
+        items:
+          type: integer
+        type: array
+      weekPattern:
+        $ref: '#/definitions/model.Weekpattern'
+    type: object
+  model.FrequencyType:
+    enum:
+    - once
+    - daily
+    - weekly
+    - monthly
+    - yearly
+    - adaptive
+    - interval
+    - days_of_the_week
+    - day_of_the_month
+    - trigger
+    - no_repeat
+    type: string
+    x-enum-varnames:
+    - FrequencyTypeOnce
+    - FrequencyTypeDaily
+    - FrequencyTypeWeekly
+    - FrequencyTypeMonthly
+    - FrequencyTypeYearly
+    - FrequencyTypeAdaptive
+    - FrequencyTypeInterval
+    - FrequencyTypeDayOfTheWeek
+    - FrequencyTypeDayOfTheMonth
+    - FrequencyTypeTrigger
+    - FrequencyTypeNoRepeat
+  model.Label:
+    properties:
+      color:
+        type: string
+      created_by:
+        type: integer
+      id:
+        type: integer
+      name:
+        type: string
+    type: object
+  model.LabelReq:
+    properties:
+      id:
+        type: integer
+    required:
+    - id
+    type: object
+  model.NotificationMetadata:
+    properties:
+      circleGroup:
+        type: boolean
+      circleGroupID:
+        type: integer
+      completion:
+        type: boolean
+      dueDate:
+        type: boolean
+      nagging:
+        type: boolean
+      predue:
+        type: boolean
+      templates:
+        description: Template for notification
+        items:
+          $ref: '#/definitions/model.NotificationTemplate'
+        maxItems: 5
+        type: array
+    type: object
+  model.NotificationTemplate:
+    properties:
+      unit:
+        $ref: '#/definitions/model.NotificationTemplateUnit'
+      value:
+        type: integer
+    type: object
+  model.NotificationTemplateUnit:
+    enum:
+    - m
+    - h
+    - d
+    type: string
+    x-enum-varnames:
+    - NotificationTemplateUnitMinute
+    - NotificationTemplateUnitHour
+    - NotificationTemplateUnitDay
+  model.PauseLogEntry:
+    properties:
+      duration:
+        type: integer
+      end:
+        type: string
+      start:
+        type: string
+      updatedBy:
+        type: integer
+    type: object
+  model.Project:
+    properties:
+      circleId:
+        type: integer
+      color:
+        type: string
+      created_by:
+        type: integer
+      createdAt:
+        type: string
+      description:
+        type: string
+      icon:
+        type: string
+      id:
+        type: integer
+      isDefault:
+        type: boolean
+      name:
+        type: string
+      updatedAt:
+        type: string
+    type: object
+  model.Status:
+    enum:
+    - 0
+    - 1
+    - 2
+    - 3
+    format: int32
+    type: integer
+    x-enum-varnames:
+    - ChoreStatusNoStatus
+    - ChoreStatusInProgress
+    - ChoreStatusPaused
+    - ChoreStatusPendingApproval
+  model.SubTask:
+    properties:
+      completedAt:
+        type: string
+      completedBy:
+        type: integer
+      id:
+        type: integer
+      name:
+        type: string
+      orderId:
+        type: integer
+      parentId:
+        type: integer
+    type: object
+  model.ThingChore:
+    properties:
+      choreId:
+        type: integer
+      condition:
+        type: string
+      thingId:
+        type: integer
+      triggerState:
+        type: string
+    type: object
+  model.ThingTrigger:
+    properties:
+      condition:
+        type: string
+      thingID:
+        type: integer
+      triggerState:
+        type: string
+    required:
+    - thingID
+    - triggerState
+    type: object
+  model.TimeSession:
+    properties:
+      choreHistoryId:
+        description: The chore history this session is for
+        type: integer
+      choreId:
+        type: integer
+      duration:
+        type: integer
+      endTime:
+        type: string
+      id:
+        type: integer
+      pauseLog:
+        description: Track pause/resume times
+        items:
+          $ref: '#/definitions/model.PauseLogEntry'
+        type: array
+      startTime:
+        type: string
+      status:
+        $ref: '#/definitions/model.TimeSessionStatus'
+      updatedAt:
+        description: When the session was last updated
+        type: string
+      updatedBy:
+        description: Who last updated the session
+        type: integer
+    type: object
+  model.TimeSessionStatus:
+    enum:
+    - 0
+    - 1
+    - 2
+    format: int32
+    type: integer
+    x-enum-varnames:
+    - TimeSessionStatusActive
+    - TimeSessionStatusPaused
+    - TimeSessionStatusCompleted
+  model.Weekpattern:
+    enum:
+    - every_week
+    - week_of_month
+    - week_of_quarter
+    type: string
+    x-enum-comments:
+      WeekPatternWeekOfMonth: e.g. ["1","3","last"] for 1st, 3rd, and last occurrence
+        of the day in the month
+      WeekPatternWeekOfQuarter: e.g. ["1","2","3"] for 1st, 2nd, and 3rd occurrence
+        of the day in the quarter
+    x-enum-descriptions:
+    - ""
+    - e.g. ["1","3","last"] for 1st, 3rd, and last occurrence of the day in the month
+    - e.g. ["1","2","3"] for 1st, 2nd, and 3rd occurrence of the day in the quarter
+    x-enum-varnames:
+    - WeekpatternEveryWeek
+    - WeekPatternWeekOfMonth
+    - WeekPatternWeekOfQuarter
+info:
+  contact: {}
+paths:
+  /chores:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves all chores for the current user's circle with optional
+        archived chores
+      parameters:
+      - description: Include archived chores
+        in: query
+        name: includeArchived
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'res: array of chores'
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/model.Chore'
+              type: array
+            type: object
+        "401":
+          description: 'error: Authentication failed'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to retrieve chores'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - APIKeyAuth: []
+        JWTKeyAuth: []
+      summary: Get all chores
+      tags:
+      - chores
+    post:
+      consumes:
+      - application/json
+      description: Creates a new chore with assignees, labels, and optional configurations
+      parameters:
+      - description: Chore creation request
+        in: body
+        name: chore
+        required: true
+        schema:
+          $ref: '#/definitions/model.ChoreReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'res: created chore ID'
+          schema:
+            additionalProperties:
+              type: integer
+            type: object
+        "400":
+          description: 'error: Invalid request format | Assignee not found in circle
+            | Invalid date'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: Authentication failed'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to create chore | Error adding labels | Error
+            adding chore assignees'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - APIKeyAuth: []
+        JWTKeyAuth: []
+      summary: Create a new chore
+      tags:
+      - chores
+    put:
+      consumes:
+      - application/json
+      description: Updates chore details including assignees, labels, subtasks, and
+        metadata
+      parameters:
+      - description: Chore update request
+        in: body
+        name: chore
+        required: true
+        schema:
+          $ref: '#/definitions/model.ChoreReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'message: Chore added successfully'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 'error: Invalid request format | Invalid date | Assignee not
+            found in circle | Assigned to not found in assignees'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: Authentication failed'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 'error: You cannot edit this chore'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to retrieve chore | Error adding chore | Error
+            adding subtasks'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - APIKeyAuth: []
+        JWTKeyAuth: []
+      summary: Edit an existing chore
+      tags:
+      - chores
+  /chores/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Deletes a chore and associated notifications (owner only)
+      parameters:
+      - description: Chore ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'message: Chore deleted successfully'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 'error: Invalid ID'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: Authentication failed'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 'error: You are not allowed to delete this chore'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to retrieve chore | Failed to delete chore'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - APIKeyAuth: []
+        JWTKeyAuth: []
+      summary: Delete a chore
+      tags:
+      - chores
+    get:
+      consumes:
+      - application/json
+      description: Retrieves detailed information about a specific chore by ID
+      parameters:
+      - description: Chore ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'res: chore object'
+          schema:
+            additionalProperties:
+              $ref: '#/definitions/model.Chore'
+            type: object
+        "400":
+          description: 'error: Invalid chore ID'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: Authentication failed'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 'error: You are not allowed to view this chore'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to retrieve chore'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - APIKeyAuth: []
+        JWTKeyAuth: []
+      summary: Get a specific chore
+      tags:
+      - chores
+  /chores/{id}/approve:
+    post:
+      consumes:
+      - application/json
+      description: Approves a pending chore completion (admin/manager only)
+      parameters:
+      - description: Chore ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'res: updated chore'
+          schema:
+            additionalProperties:
+              $ref: '#/definitions/model.Chore'
+            type: object
+        "400":
+          description: 'error: Invalid ID | Chore is not pending approval'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: Authentication failed'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 'error: Only admins can approve chores'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to retrieve chore | Error approving chore'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - APIKeyAuth: []
+        JWTKeyAuth: []
+      summary: Approve a chore completion
+      tags:
+      - chores
+  /chores/{id}/archive:
+    put:
+      consumes:
+      - application/json
+      description: Archives a chore, hiding it from the main list
+      parameters:
+      - description: Chore ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'message: Chore archived successfully'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 'error: Invalid ID'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: Authentication failed'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Error archiving chore'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - APIKeyAuth: []
+        JWTKeyAuth: []
+      summary: Archive a chore
+      tags:
+      - chores
+  /chores/{id}/assignee:
+    put:
+      consumes:
+      - application/json
+      description: Updates the currently assigned user for a chore
+      parameters:
+      - description: Chore ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Assignee update request
+        in: body
+        name: assignee
+        required: true
+        schema:
+          properties:
+            assignee:
+              type: integer
+            updatedAt:
+              type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'res: updated chore'
+          schema:
+            additionalProperties:
+              $ref: '#/definitions/model.Chore'
+            type: object
+        "400":
+          description: 'error: Invalid ID | Invalid request | Assignee not found in
+            assignees'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: Authentication failed'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 'error: You cannot edit this chore'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to retrieve chore | Error updating assignee'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - APIKeyAuth: []
+        JWTKeyAuth: []
+      summary: Update chore assignee
+      tags:
+      - chores
+  /chores/{id}/details:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves comprehensive details about a chore including metadata
+      parameters:
+      - description: Chore ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'res: detailed chore information'
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 'error: Invalid ID'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: Authentication failed'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to fetch chore details'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - APIKeyAuth: []
+        JWTKeyAuth: []
+      summary: Get chore details
+      tags:
+      - chores
+  /chores/{id}/do:
+    post:
+      consumes:
+      - application/json
+      description: Marks a chore as completed and schedules the next occurrence (supports
+        impersonation)
+      parameters:
+      - description: Chore ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Completion date in RFC3339 format (defaults to now)
+        in: query
+        name: completedDate
+        type: string
+      - description: Completion details
+        in: body
+        name: completion
+        schema:
+          properties:
+            completedBy:
+              type: integer
+            note:
+              type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'res: updated chore'
+          schema:
+            additionalProperties:
+              $ref: '#/definitions/model.Chore'
+            type: object
+        "400":
+          description: 'error: Invalid ID | Invalid date | User is not assigned to
+            chore | Chore is out of completion window'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: Authentication failed'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 'error: You are not allowed to complete this action'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to retrieve chore | Error completing chore'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - APIKeyAuth: []
+        JWTKeyAuth: []
+      summary: Complete a chore
+      tags:
+      - chores
+  /chores/{id}/dueDate:
+    put:
+      consumes:
+      - application/json
+      description: Updates the next due date for a chore (can be set to null)
+      parameters:
+      - description: Chore ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Due date update request
+        in: body
+        name: dueDate
+        required: true
+        schema:
+          properties:
+            dueDate:
+              type: string
+            updatedAt:
+              type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'res: updated chore'
+          schema:
+            additionalProperties:
+              $ref: '#/definitions/model.Chore'
+            type: object
+        "400":
+          description: 'error: Invalid ID | Invalid request | Invalid date'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: Authentication failed'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 'error: You cannot edit this chore'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to retrieve chore | Error updating due date'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - APIKeyAuth: []
+        JWTKeyAuth: []
+      summary: Update chore due date
+      tags:
+      - chores
+  /chores/{id}/history:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves the completion history for a specific chore
+      parameters:
+      - description: Chore ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'res: array of chore history entries'
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/model.ChoreHistory'
+              type: array
+            type: object
+        "400":
+          description: 'error: Invalid ID'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to fetch chore history'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - APIKeyAuth: []
+        JWTKeyAuth: []
+      summary: Get chore history
+      tags:
+      - chores
+  /chores/{id}/history/{history_id}:
+    delete:
+      consumes:
+      - application/json
+      description: Deletes a specific chore history entry (creator only)
+      parameters:
+      - description: Chore ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: History ID
+        in: path
+        name: history_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'message: History deleted successfully'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 'error: Invalid Chore ID | Invalid History ID'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: Authentication failed'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 'error: You are not allowed to delete this history'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to fetch chore history entry | Error deleting
+            history'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - APIKeyAuth: []
+        JWTKeyAuth: []
+      summary: Delete chore history entry
+      tags:
+      - chores
+    put:
+      consumes:
+      - application/json
+      description: Updates a specific chore history entry (performed date, due date,
+        notes)
+      parameters:
+      - description: Chore ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: History ID
+        in: path
+        name: history_id
+        required: true
+        type: integer
+      - description: History modification request
+        in: body
+        name: history
+        required: true
+        schema:
+          properties:
+            dueDate:
+              type: string
+            notes:
+              type: string
+            performedAt:
+              type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'res: updated history entry'
+          schema:
+            additionalProperties:
+              $ref: '#/definitions/model.ChoreHistory'
+            type: object
+        "400":
+          description: 'error: Invalid Chore ID | Invalid History ID | Invalid request'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: Authentication failed'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 'error: You are not allowed to modify this history'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to fetch chore history entry | Error updating
+            history'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - APIKeyAuth: []
+        JWTKeyAuth: []
+      summary: Modify chore history entry
+      tags:
+      - chores
+  /chores/{id}/nudge:
+    post:
+      consumes:
+      - application/json
+      description: Sends a reminder notification to chore assignee(s)
+      parameters:
+      - description: Chore ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Nudge request
+        in: body
+        name: nudge
+        required: true
+        schema:
+          properties:
+            all_assignees:
+              type: boolean
+            message:
+              type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'message: Nudge sent status'
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 'error: Invalid chore ID | Invalid request payload | Chore
+            has no assignees | Cannot nudge yourself'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: Authentication failed'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: 'error: Chore not found'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - APIKeyAuth: []
+        JWTKeyAuth: []
+      summary: Send a nudge notification
+      tags:
+      - chores
+  /chores/{id}/pause:
+    put:
+      consumes:
+      - application/json
+      description: Pauses an active chore timer session (supports impersonation)
+      parameters:
+      - description: Chore ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'res: {duration, status, timerUpdatedAt}'
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 'error: Invalid ID | No active time session found for this
+            chore'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: Authentication failed'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 'error: You are not allowed to pause this chore'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to retrieve chore | Error getting active time
+            session'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - APIKeyAuth: []
+        JWTKeyAuth: []
+      summary: Pause a chore timer
+      tags:
+      - chores
+  /chores/{id}/priority:
+    put:
+      consumes:
+      - application/json
+      description: Updates the priority level of a chore (0-4)
+      parameters:
+      - description: Chore ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Priority value (0-4)
+        in: body
+        name: priority
+        required: true
+        schema:
+          properties:
+            priority:
+              type: integer
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'message: Priority updated successfully'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 'error: Invalid ID | Invalid request'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: Authentication failed'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 'error: You are not allowed to edit this chore'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to retrieve chore | Error updating priority'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - APIKeyAuth: []
+        JWTKeyAuth: []
+      summary: Update chore priority
+      tags:
+      - chores
+  /chores/{id}/reject:
+    post:
+      consumes:
+      - application/json
+      description: Rejects a pending chore completion and returns it to no status
+        (admin/manager only)
+      parameters:
+      - description: Chore ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Rejection details
+        in: body
+        name: rejection
+        schema:
+          properties:
+            note:
+              type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'res: updated chore, message: Chore rejected successfully'
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 'error: Invalid ID | Chore is not pending approval'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: Authentication failed'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 'error: Only admins can reject chores'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to retrieve chore | Error rejecting chore'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - APIKeyAuth: []
+        JWTKeyAuth: []
+      summary: Reject a chore completion
+      tags:
+      - chores
+  /chores/{id}/skip:
+    post:
+      consumes:
+      - application/json
+      description: Skips the current chore iteration and schedules the next due date
+        (supports impersonation)
+      parameters:
+      - description: Chore ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'res: updated chore'
+          schema:
+            additionalProperties:
+              $ref: '#/definitions/model.Chore'
+            type: object
+        "400":
+          description: 'error: Invalid ID'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: Authentication failed'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to retrieve chore | Error scheduling next due
+            date | Error completing chore'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - APIKeyAuth: []
+        JWTKeyAuth: []
+      summary: Skip a chore
+      tags:
+      - chores
+  /chores/{id}/start:
+    put:
+      consumes:
+      - application/json
+      description: Starts or resumes a chore timer session (supports impersonation)
+      parameters:
+      - description: Chore ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'res: {timerUpdatedAt, status, duration}'
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 'error: Invalid ID | Chore is not in a state that can be started'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: Authentication failed'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 'error: You are not allowed to start this chore'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to retrieve chore | Error creating time session'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - APIKeyAuth: []
+        JWTKeyAuth: []
+      summary: Start a chore timer
+      tags:
+      - chores
+  /chores/{id}/status:
+    put:
+      consumes:
+      - application/json
+      description: Updates the status of a chore (e.g., no status, in progress, paused)
+      parameters:
+      - description: Chore ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Status update request
+        in: body
+        name: status
+        required: true
+        schema:
+          properties:
+            status:
+              type: string
+            updatedAt:
+              type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'message: Chore status updated successfully'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 'error: Invalid ID | Invalid request'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: Authentication failed'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 'error: You cannot update the status of this chore'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to retrieve chore | Error updating chore status'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - APIKeyAuth: []
+        JWTKeyAuth: []
+      summary: Update chore status
+      tags:
+      - chores
+  /chores/{id}/subtask:
+    put:
+      consumes:
+      - application/json
+      description: Marks a subtask as completed or uncompleted (supports impersonation)
+      parameters:
+      - description: Chore ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Subtask completion request
+        in: body
+        name: subtask
+        required: true
+        schema:
+          properties:
+            choreId:
+              type: integer
+            completedAt:
+              type: string
+            id:
+              type: integer
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Empty success response
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 'error: Invalid Chore ID | Invalid request | User is not assigned
+            to chore'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: Authentication failed'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to retrieve chore | Error getting subtask'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - APIKeyAuth: []
+        JWTKeyAuth: []
+      summary: Update subtask completion status
+      tags:
+      - chores
+  /chores/{id}/timer:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves all time tracking sessions for a chore
+      parameters:
+      - description: Chore ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Filter by specific history ID
+        in: query
+        name: choreHistoryId
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'res: array of time sessions'
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/model.TimeSession'
+              type: array
+            type: object
+        "400":
+          description: 'error: Invalid ID | Invalid choreHistoryId parameter'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: Authentication failed'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 'error: You are not allowed to view time sessions for this
+            chore'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: 'error: No time session found'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to retrieve chore | Error getting chore time
+            session'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - APIKeyAuth: []
+        JWTKeyAuth: []
+      summary: Get chore time sessions
+      tags:
+      - chores
+    put:
+      consumes:
+      - application/json
+      description: Manually updates the timer duration for a chore
+      parameters:
+      - description: Chore ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Timer update request
+        in: body
+        name: timer
+        required: true
+        schema:
+          properties:
+            duration:
+              type: integer
+            updatedAt:
+              type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'message: Chore timer updated successfully'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 'error: Invalid ID | Invalid request'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: Authentication failed'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 'error: You cannot update the timer of this chore'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to retrieve chore | Error updating chore timer'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - APIKeyAuth: []
+        JWTKeyAuth: []
+      summary: Update chore timer duration
+      tags:
+      - chores
+  /chores/{id}/timer/{session_id}:
+    delete:
+      consumes:
+      - application/json
+      description: Deletes a specific time tracking session
+      parameters:
+      - description: Chore ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Session ID
+        in: path
+        name: session_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'message: Time session deleted successfully'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 'error: Invalid chore ID | Invalid session ID | Time session
+            does not belong to the specified chore'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: Authentication failed'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 'error: You are not allowed to delete time sessions for this
+            chore'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to retrieve chore | Error getting time session
+            | Error deleting time session'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - APIKeyAuth: []
+        JWTKeyAuth: []
+      summary: Delete a time session
+      tags:
+      - chores
+    put:
+      consumes:
+      - application/json
+      description: Updates start time, end time, or pause log for a time session
+      parameters:
+      - description: Chore ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Session ID
+        in: path
+        name: session_id
+        required: true
+        type: integer
+      - description: Time session update request
+        in: body
+        name: session
+        required: true
+        schema:
+          properties:
+            endTime:
+              type: string
+            pauseLog:
+              type: array
+            startTime:
+              type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'res: updated time session'
+          schema:
+            additionalProperties:
+              $ref: '#/definitions/model.TimeSession'
+            type: object
+        "400":
+          description: 'error: Invalid chore ID | Invalid session ID | Invalid request
+            body | Time session does not belong to the specified chore'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: Authentication failed'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 'error: You are not allowed to modify time sessions for this
+            chore'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to retrieve chore | Error getting time session
+            | Error updating time session'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - APIKeyAuth: []
+        JWTKeyAuth: []
+      summary: Update a time session
+      tags:
+      - chores
+  /chores/{id}/timer/reset:
+    put:
+      consumes:
+      - application/json
+      description: Resets the chore timer to zero and starts a new session
+      parameters:
+      - description: Chore ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'res: {timerUpdatedAt, status, duration}'
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 'error: Invalid ID | No active time session found for this
+            chore'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: Authentication failed'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 'error: You are not allowed to reset timer for this chore'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to retrieve chore | Error updating time session'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - APIKeyAuth: []
+        JWTKeyAuth: []
+      summary: Reset chore timer
+      tags:
+      - chores
+  /chores/{id}/unarchive:
+    put:
+      consumes:
+      - application/json
+      description: Restores an archived chore to the main list
+      parameters:
+      - description: Chore ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'message: Chore unarchived successfully'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 'error: Invalid ID'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: Authentication failed'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Error unarchiving chore'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - APIKeyAuth: []
+        JWTKeyAuth: []
+      summary: Unarchive a chore
+      tags:
+      - chores
+  /chores/archived:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves all archived chores for the current user's circle
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'res: array of archived chores'
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/model.Chore'
+              type: array
+            type: object
+        "401":
+          description: 'error: Authentication failed'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to retrieve archived chores'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - APIKeyAuth: []
+        JWTKeyAuth: []
+      summary: Get archived chores
+      tags:
+      - chores
+  /chores/history:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves completion history for all chores for the current user
+      parameters:
+      - description: 'Number of days to retrieve history (default: 7)'
+        in: query
+        name: limit
+        type: integer
+      - description: Include other circle members' history
+        in: query
+        name: members
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'res: array of chore history entries'
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/model.ChoreHistory'
+              type: array
+            type: object
+        "400":
+          description: 'error: Invalid duration'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: Authentication failed'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to fetch user''s chore history'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - APIKeyAuth: []
+        JWTKeyAuth: []
+      summary: Get chores history for user
+      tags:
+      - chores
+  /circles:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves all circles the current user belongs to
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'res: array of circles'
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/circle.Circle'
+              type: array
+            type: object
+        "401":
+          description: 'error: Authentication failed'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Error getting user circles'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      - APIKeyAuth: []
+      summary: Get user circles
+      tags:
+      - circles
+  /circles/{id}/members/delete:
+    delete:
+      consumes:
+      - application/json
+      description: Removes a member from a circle (admin only)
+      parameters:
+      - description: Circle ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Member ID to delete
+        in: query
+        name: member_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'res: User deleted from circle successfully'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 'error: Invalid request'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: Authentication failed'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 'error: You are not an admin of this circle'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Error deleting circle member'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      - APIKeyAuth: []
+      summary: Delete a circle member
+      tags:
+      - circles
+  /circles/{id}/members/points/redeem:
+    post:
+      consumes:
+      - application/json
+      description: Redeems points for a circle member (admin only)
+      parameters:
+      - description: Circle ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Points redemption request
+        in: body
+        name: points
+        required: true
+        schema:
+          properties:
+            points:
+              type: integer
+            userId:
+              type: integer
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'res: Points redeemed successfully'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 'error: Invalid request / User does not have enough points
+            / User is not a member of this circle'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: Authentication failed'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 'error: You are not an admin of this circle'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Error redeeming points'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      - APIKeyAuth: []
+      summary: Redeem member points
+      tags:
+      - circles
+  /circles/join:
+    post:
+      consumes:
+      - application/json
+      description: Requests to join a circle using an invite code
+      parameters:
+      - description: Invite code
+        in: query
+        name: invite_code
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'res: User Requested to join circle successfully'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 'error: Invalid request'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: Authentication failed'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: 'error: You are already a member of this circle'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Error adding user to circle'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      - APIKeyAuth: []
+      summary: Request to join a circle
+      tags:
+      - circles
+  /circles/leave:
+    delete:
+      consumes:
+      - application/json
+      description: Removes the current user from a circle and restores their original
+        circle
+      parameters:
+      - description: Circle ID
+        in: query
+        name: circle_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'res: User left circle successfully'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 'error: Invalid request'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: Authentication failed'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Error leaving circle'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      - APIKeyAuth: []
+      summary: Leave a circle
+      tags:
+      - circles
+  /circles/members:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves all members of the current user's circle
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'res: array of circle members'
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/circle.UserCircleDetail'
+              type: array
+            type: object
+        "401":
+          description: 'error: Authentication failed'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Error getting circle members'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      - APIKeyAuth: []
+      summary: Get circle members
+      tags:
+      - circles
+  /circles/members/requests:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves pending circle join requests (admin only)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'res: array of pending members'
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/circle.UserCircleDetail'
+              type: array
+            type: object
+        "401":
+          description: 'error: Authentication failed'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 'error: You are not an admin of this circle'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Error getting pending circle members'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      - APIKeyAuth: []
+      summary: Get pending join requests
+      tags:
+      - circles
+  /circles/members/requests/accept:
+    put:
+      consumes:
+      - application/json
+      description: Accepts a pending circle join request (admin only)
+      parameters:
+      - description: Request ID
+        in: query
+        name: requestId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'res: Join request accepted successfully'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 'error: Invalid request / Circle is full'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: Authentication failed'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 'error: You are not an admin of this circle'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Error accepting join request'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      - APIKeyAuth: []
+      summary: Accept a join request
+      tags:
+      - circles
+  /circles/members/role:
+    put:
+      consumes:
+      - application/json
+      description: Changes the role of a circle member (admin only)
+      parameters:
+      - description: Role change request
+        in: body
+        name: role
+        required: true
+        schema:
+          properties:
+            memberId:
+              type: integer
+            role:
+              $ref: '#/definitions/circle.Role'
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'res: Member role changed successfully'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 'error: Invalid request / Invalid role / User is not a member
+            of this circle'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: Authentication failed'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 'error: You are not an admin of this circle'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Error changing member role'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      - APIKeyAuth: []
+      summary: Change member role
+      tags:
+      - circles
+securityDefinitions:
+  APIKeyAuth:
+    description: donetick issued apikey
+    in: header
+    name: secretkey
+    type: apiKey
+  JWTKeyAuth:
+    description: Type "Bearer" followed by a space and JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

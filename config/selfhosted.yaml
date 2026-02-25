@@ -33,6 +33,7 @@ server:
     - "capacitor://localhost"
     
   serve_frontend: true
+  serve_swagger: false
 logging:
   level: "info"
   encoding: "json"

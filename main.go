@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
@@ -54,8 +53,6 @@ import (
 	"donetick.com/core/migrations"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	swaggerFiles "github.com/swaggo/files"
-	ginSwagger "github.com/swaggo/gin-swagger"
 	"go.uber.org/fx"
 	"gorm.io/gorm"
 
@@ -90,6 +87,7 @@ func main() {
 		// fx.Provide(config.NewConfig),
 		fx.Provide(auth.NewAuthMiddleware),
 		fx.Provide(auth.APITokenMiddleware),
+		fx.Provide(auth.NewMultiAuthMiddleware),
 		fx.Provide(auth.NewIdentityProvider),
 		fx.Provide(resource.NewHandler),
 
@@ -170,7 +168,11 @@ func main() {
 		fx.Provide(payment.NewWebhook),
 		fx.Provide(chore.NewAPI),
 
+		// Frontend
 		fx.Provide(frontend.NewHandler),
+
+		// Docs
+		fx.Provide(docs.NewHandler),
 
 		// storage :
 		// is storage local or remote?
@@ -207,6 +209,7 @@ func main() {
 
 			storage.Routes,
 			frontend.Routes,
+			docs.Routes,
 			resource.Routes,
 			// backup.Routes,
 
@@ -215,13 +218,6 @@ func main() {
 			func(r *gin.Engine) {},
 		),
 	)
-
-	docs.SwaggerInfo.Title = "Donetick Swagger API"
-	docs.SwaggerInfo.Description = "Donetick swagger documentation."
-	docs.SwaggerInfo.Version = "1.0"
-	docs.SwaggerInfo.Host = "localhost" + ":" + strconv.Itoa(cfg.Server.Port) // TODO include public addr. and proper localhost.
-	docs.SwaggerInfo.BasePath = "/api/v1"
-	docs.SwaggerInfo.Schemes = []string{"http"}
 
 	if err := app.Err(); err != nil {
 		log.Fatal(err)
@@ -242,11 +238,6 @@ func newServer(lc fx.Lifecycle, cfg *config.Config, db *gorm.DB, notifier *notif
 	// log when http request is made:
 
 	r := gin.New()
-
-	// Enable Swagger only for local development
-	if cfg.Name == "local" {
-		r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
-	}
 
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.Server.Port),

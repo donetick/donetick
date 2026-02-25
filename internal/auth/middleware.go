@@ -187,6 +187,6 @@ func NewAuthMiddleware(cfg *config.Config, userRepo *uRepo.UserRepository, mfaSe
 			})
 		},
 		TokenHeadName: "Bearer",
-		TimeFunc:      time.Now,
+		TimeFunc:      time.Now, //TODO: We can overwrite the time here with time.Now.UTC
 	})
 }

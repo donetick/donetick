@@ -12,7 +12,6 @@ import (
 	"time"
 
 	auth "donetick.com/core/internal/auth"
-	authMiddleware "donetick.com/core/internal/auth"
 	chModel "donetick.com/core/internal/chore/model"
 	chRepo "donetick.com/core/internal/chore/repo"
 	circle "donetick.com/core/internal/circle/model"
@@ -1819,7 +1818,7 @@ func (h *Handler) completeChore(c *gin.Context) {
 			})
 			return
 		}
-		nextDueDate, err = scheduleAdaptiveNextDueDate(chore, completedDate, history)
+		nextDueDate, err = scheduleAdaptiveNextDueDate(chore, completedDate, history) //TODO Here the duedate does not use UTC()
 		if err != nil {
 			logging.FromContext(c).Error("Failed to schedule next due date", "error", err)
 			c.JSON(500, gin.H{
@@ -1829,7 +1828,7 @@ func (h *Handler) completeChore(c *gin.Context) {
 		}
 
 	} else {
-		nextDueDate, err = scheduleNextDueDate(c, chore, completedDate.UTC())
+		nextDueDate, err = scheduleNextDueDate(c, chore, completedDate.UTC()) //TODO: Here the duedate uses UTC()
 		if err != nil {
 			logging.FromContext(c).Error("Failed to schedule next due date", "error", err)
 			c.JSON(500, gin.H{
@@ -2471,7 +2470,7 @@ func (h *Handler) UpdateSubtaskCompletedAt(c *gin.Context) {
 	if req.CompletedAt != nil {
 		completedAt = req.CompletedAt
 	}
-	err = h.stRepo.UpdateSubTaskStatus(c, effectiveUser.ID, req.ID, completedAt)
+	err = h.stRepo.UpdateSubTaskStatus(c, effectiveUser.ID, req.ID, completedAt) //TODO: This does not use UTC()
 	if err != nil {
 		c.JSON(500, gin.H{
 			"error": "Error getting subtask",
@@ -2950,7 +2949,7 @@ func (h *Handler) approveChore(c *gin.Context) {
 			})
 			return
 		}
-		nextDueDate, err = scheduleAdaptiveNextDueDate(chore, completedDate, allHistory)
+		nextDueDate, err = scheduleAdaptiveNextDueDate(chore, completedDate, allHistory) //TODO: There is no .UTC() here while there is in the next one
 		if err != nil {
 			c.JSON(500, gin.H{
 				"error": "Error scheduling next due date",
@@ -2958,7 +2957,7 @@ func (h *Handler) approveChore(c *gin.Context) {
 			return
 		}
 	} else {
-		nextDueDate, err = scheduleNextDueDate(c, chore, completedDate.UTC())
+		nextDueDate, err = scheduleNextDueDate(c, chore, completedDate.UTC()) //TODO: There is .UTC() here
 		if err != nil {
 			c.JSON(500, gin.H{
 				"error": "Error scheduling next due date",
@@ -3741,7 +3740,7 @@ func (h *Handler) undoChore(c *gin.Context) {
 				// Use the assignee from the action being undone as the original assignee
 				previousAssignedTo = lastAction.AssignedTo
 			}
-			previousDueDate = lastAction.DueDate
+			previousDueDate = lastAction.DueDate //TODO: Do we need UTC here?
 		} else {
 			// Use the state from before this action
 			previousAssignedTo = previousHistory.AssignedTo
@@ -3833,11 +3832,11 @@ func getActionName(status chModel.ChoreHistoryStatus) string {
 	}
 }
 
-func Routes(router *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware) {
+func Routes(router *gin.Engine, h *Handler, ginJWTMiddleware *jwt.GinJWTMiddleware) {
 
 	choresRoutes := router.Group("api/v1/chores")
-	choresRoutes.Use(authMiddleware.MultiAuthMiddleware(auth, h.uRepo))
-	choresRoutes.Use(authMiddleware.ImpersonationMiddleware(h.uRepo, h.circleRepo))
+	choresRoutes.Use(auth.MultiAuthMiddleware(ginJWTMiddleware, h.uRepo))
+	choresRoutes.Use(auth.ImpersonationMiddleware(h.uRepo, h.circleRepo))
 	{
 		choresRoutes.GET("/", h.getChores)
 		choresRoutes.GET("/archived", h.getArchivedChores)

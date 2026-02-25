@@ -140,7 +140,7 @@ func (r *ChoreRepository) SetChorePendingApproval(c context.Context, chore *chMo
 		switch {
 		case err == nil:
 			// Update existing history record to mark as pending approval
-			existingHistory.PerformedAt = completedDate
+			existingHistory.PerformedAt = completedDate //TODO: We are not converting this to UTC.
 			existingHistory.Note = note
 			existingHistory.Status = chModel.ChoreHistoryStatusPendingApproval
 			ch = &existingHistory
@@ -188,7 +188,7 @@ func (r *ChoreRepository) SetChorePendingApproval(c context.Context, chore *chMo
 func (r *ChoreRepository) ApproveChore(c context.Context, chore *chModel.Chore, adminUserID int, dueDate *time.Time, nextAssignedTo *int, applyPoints bool) error {
 	err := r.db.WithContext(c).Transaction(func(tx *gorm.DB) error {
 		choreUpdates := map[string]interface{}{}
-		choreUpdates["next_due_date"] = dueDate
+		choreUpdates["next_due_date"] = dueDate //TODO: We are not converting this to UTC.
 		choreUpdates["status"] = chModel.ChoreStatusNoStatus
 
 		if dueDate != nil {
@@ -265,7 +265,7 @@ func (r *ChoreRepository) CompleteChore(c context.Context, chore *chModel.Chore,
 	err := r.db.WithContext(c).Transaction(func(tx *gorm.DB) error {
 
 		choreUpdates := map[string]interface{}{}
-		choreUpdates["next_due_date"] = dueDate
+		choreUpdates["next_due_date"] = dueDate //TODO: We are not converting this to UTC.
 		choreUpdates["status"] = chModel.ChoreStatusNoStatus
 
 		if dueDate != nil {
@@ -285,7 +285,7 @@ func (r *ChoreRepository) CompleteChore(c context.Context, chore *chModel.Chore,
 		switch {
 		case err == nil:
 			// Update existing history record
-			existingHistory.PerformedAt = completedDate
+			existingHistory.PerformedAt = completedDate //TODO: We are not converting this to UTC.
 			existingHistory.Note = note
 			existingHistory.Status = chModel.ChoreHistoryStatusCompleted
 			ch = &existingHistory
@@ -339,7 +339,7 @@ func (r *ChoreRepository) CompleteChore(c context.Context, chore *chModel.Chore,
 func (r *ChoreRepository) SkipChore(c context.Context, chore *chModel.Chore, userID int, dueDate *time.Time, nextAssignedTo *int) error {
 	err := r.db.WithContext(c).Transaction(func(tx *gorm.DB) error {
 		choreUpdates := map[string]interface{}{}
-		choreUpdates["next_due_date"] = dueDate
+		choreUpdates["next_due_date"] = dueDate //TODO: We are not converting this to UTC.
 		choreUpdates["status"] = chModel.ChoreStatusNoStatus
 
 		if dueDate != nil {
@@ -509,9 +509,9 @@ func (r *ChoreRepository) RemoveChoreAssigneeByCircleID(c context.Context, userI
 func (r *ChoreRepository) GetOverdueChoresForNotification(c context.Context, overdueFor time.Duration, everyDuration time.Duration, untilDuration time.Duration) ([]*chModel.Chore, error) {
 	var chores []*chModel.Chore
 	now := time.Now().UTC()
-	overdueTime := now.Add(-overdueFor)
-	everyTime := now.Add(-everyDuration)
-	untilTime := now.Add(-untilDuration)
+	overdueTime := now.Add(-overdueFor)  //TODO: We are not converting this to UTC.
+	everyTime := now.Add(-everyDuration) //TODO: We are not converting this to UTC.
+	untilTime := now.Add(-untilDuration) //TODO: We are not converting this to UTC.
 
 	query := r.db.Debug().WithContext(c).
 		Table("chores").
@@ -530,7 +530,7 @@ func (r *ChoreRepository) GetOverdueChoresForNotification(c context.Context, ove
 }
 
 // a predue notfication is a notification send before the due date in 6 hours, 3 hours :
-func (r *ChoreRepository) GetPreDueChoresForNotification(c context.Context, preDueDuration time.Duration, everyDuration time.Duration) ([]*chModel.Chore, error) {
+func (r *ChoreRepository) GetPreDueChoresForNotification(c context.Context, preDueDuration time.Duration, everyDuration time.Duration) ([]*chModel.Chore, error) { //TODO we dont use the preDueDuration
 	var chores []*chModel.Chore
 	query := r.db.WithContext(c).Table("chores").Select("chores.*, MAX(n.created_at) as max_notification_created_at").Joins("left join notifications n on n.chore_id = chores.id and n.scheduled_for = chores.next_due_date and n.type = 3")
 	if err := query.Where("chores.is_active = ? and chores.notification = ? and chores.next_due_date > ? and chores.next_due_date < ?", true, true, time.Now().UTC(), time.Now().UTC().Add(everyDuration*2)).Where(readJSONBooleanField(r.dbType, "chores.notification_meta", "predue")).Having("MAX(n.created_at) is null or MAX(n.created_at) < ?", time.Now().UTC().Add(everyDuration)).Group("chores.id").Find(&chores).Error; err != nil {
@@ -548,14 +548,14 @@ func readJSONBooleanField(dbType string, columnName string, fieldName string) st
 
 func (r *ChoreRepository) SetDueDate(c context.Context, choreID int, dueDate time.Time) error {
 	return r.db.WithContext(c).Model(&chModel.Chore{}).Where("id = ?", choreID).Updates(map[string]interface{}{
-		"next_due_date": dueDate,
+		"next_due_date": dueDate, //TODO: We are not converting this to UTC.
 		"is_active":     true,
 	}).Error
 }
 
 func (r *ChoreRepository) SetDueDateIfNotExisted(c context.Context, choreID int, dueDate time.Time) error {
 	return r.db.WithContext(c).Model(&chModel.Chore{}).Where("id = ? and next_due_date is null", choreID).Updates(map[string]interface{}{
-		"next_due_date": dueDate,
+		"next_due_date": dueDate, //TODO: We are not converting this to UTC.
 		"is_active":     true,
 	}).Error
 }
@@ -850,7 +850,7 @@ func (r *ChoreRepository) UndoChoreAction(c context.Context, choreID int, histor
 
 		// Restore previous due date
 		if previousDueDate != nil {
-			choreUpdates["next_due_date"] = *previousDueDate
+			choreUpdates["next_due_date"] = *previousDueDate //TODO: We are not converting this to UTC.
 			choreUpdates["is_active"] = true
 		} else {
 			choreUpdates["next_due_date"] = nil

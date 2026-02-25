@@ -115,7 +115,7 @@ func generateNotificationsFromTemplate(chore *chModel.Chore, assignedUser *cMode
 	notifications := make([]*nModel.Notification, 0)
 
 	for _, template := range chore.NotificationMetadataV2.Templates {
-		scheduledTime, err := calculateScheduledTime(*chore.NextDueDate, template)
+		scheduledTime, err := calculateScheduledTime(*chore.NextDueDate, template) //TODO: We are not converting this to UTC.
 		if err != nil {
 			// Log error and fallback to due date
 			scheduledTime = *chore.NextDueDate

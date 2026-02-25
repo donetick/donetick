@@ -17,7 +17,7 @@ type StorageRepository struct {
 }
 
 func NewStorageRepository(db *gorm.DB, config *config.Config) *StorageRepository {
-	return &StorageRepository{db: db, maxUserStorage: config.Storage.MaxUserStorage}
+	return &StorageRepository{db: db, maxUserStorage: *config.Storage.MaxUserStorage}
 }
 
 func (r *StorageRepository) AddMediaRecord(ctx context.Context, media *st.StorageFile, user *uModel.UserDetails) error {

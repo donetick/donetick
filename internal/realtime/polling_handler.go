@@ -345,7 +345,7 @@ func (h *PollingHandler) validateSSERequest(c *gin.Context, user *uModel.User) e
 func (h *PollingHandler) checkRateLimit(userID int, clientIP string) bool {
 	h.sseMutex.RLock()
 	key := fmt.Sprintf("%d:%s", userID, clientIP)
-	lastConnTime, exists := h.sseConnections[key]
+	lastConnTime, exists := h.sseConnections[key] //TODO: Maybe we need to factor in UTC here as well?
 	h.sseMutex.RUnlock()
 
 	if exists {

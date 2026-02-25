@@ -239,7 +239,7 @@ func (c *Chore) GetDeadline() *time.Time {
 	if c.DeadlineOffset == nil || c.NextDueDate == nil {
 		return nil
 	}
-	deadline := c.NextDueDate.Add(time.Duration(*c.DeadlineOffset) * time.Second)
+	deadline := c.NextDueDate.Add(time.Duration(*c.DeadlineOffset) * time.Second) //TODO: We might need UTC here too.
 	return &deadline
 }
 
@@ -284,7 +284,7 @@ func (c *Chore) CanEdit(userID int, circleUsers []*cModel.UserCircleDetail, upda
 	cooldown := time.Second * 30
 	if updatedAt != nil {
 		// if the chore was updated after the user fetched it for editing, then do not allow editing
-		if c.UpdatedAt.After(*updatedAt) {
+		if c.UpdatedAt.After(*updatedAt) { //TODO: is the stored UTC? should we convert both to UTC?
 			// this means the chore was modified by someone
 			choreCanModified = false
 		} else if updatedAt.After(time.Now().UTC().Add(cooldown)) {
@@ -493,7 +493,7 @@ func (p *PauseLogEntries) Scan(value interface{}) error {
 func (t *TimeSession) Start(userID int) {
 	timeNow := time.Now().UTC()
 	t.Status = TimeSessionStatusActive
-	if t.StartTime.IsZero() {
+	if t.StartTime.IsZero() { //TODO: Missing UTC() conversion
 		t.StartTime = timeNow
 	}
 

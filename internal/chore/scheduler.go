@@ -85,7 +85,7 @@ func scheduleNextDueDate(ctx context.Context, chore *chModel.Chore, completedDat
 
 		// Default to every_week if no pattern specified
 		if weekPattern == nil || *weekPattern == "" || *weekPattern == "every_week" {
-			// Get timezone for calculations - prefer chore timezone, fallback to UTC
+			// Get timezone for calculations - prefer chore timezone, fallback to UTC //TODO: we supposed to support UTC, here is mixing in timezones
 			var loc *time.Location
 			var err error
 			if chore.FrequencyMetadataV2.Timezone != "" {
@@ -242,7 +242,7 @@ func findNextDueDateForOccurrencePattern(baseDate time.Time, days []*string, occ
 	maxSearchDays := 730
 
 	for i := 0; i < maxSearchDays; i++ {
-		dayName := strings.ToLower(currentDate.Weekday().String())
+		dayName := strings.ToLower(currentDate.Weekday().String()) //TODO: We should evaluate these days in UTC as well (+- timezones can mess up estimation)
 
 		// Check if this day matches one of our target days
 		if dayMap[dayName] {
@@ -272,7 +272,7 @@ func findNextDueDateForOccurrencePattern(baseDate time.Time, days []*string, occ
 // getNthOccurrenceInMonth returns which occurrence this is within the month (1-based)
 func getNthOccurrenceInMonth(date time.Time, weekday time.Weekday) int {
 	// Start from the first day of the month
-	firstOfMonth := time.Date(date.Year(), date.Month(), 1, 0, 0, 0, 0, date.Location())
+	firstOfMonth := time.Date(date.Year(), date.Month(), 1, 0, 0, 0, 0, date.Location()) //TODO: mixing location with UTC!
 
 	// Count occurrences of this weekday up to the given date
 	occurrence := 0
@@ -310,7 +310,7 @@ func getNthOccurrenceInQuarter(date time.Time, weekday time.Weekday) int {
 		quarterStartMonth = 10 // Q4: Oct-Dec
 	}
 
-	firstOfQuarter := time.Date(year, time.Month(quarterStartMonth), 1, 0, 0, 0, 0, date.Location())
+	firstOfQuarter := time.Date(year, time.Month(quarterStartMonth), 1, 0, 0, 0, 0, date.Location()) //TODO: mixing location with UTC!
 
 	// Count occurrences of this weekday up to the given date
 	occurrence := 0

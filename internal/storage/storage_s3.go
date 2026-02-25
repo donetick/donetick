@@ -8,6 +8,7 @@ import (
 	"io"
 
 	"donetick.com/core/config"
+	"donetick.com/core/logging"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -25,24 +26,32 @@ const (
 	VALID_FOR = 1000 * 365 * 24 * 60 * 60 // 1000 years
 )
 
-func NewS3Storage(config *config.Config) (*S3Storage, error) {
-	sess, err := session.NewSession(&aws.Config{
-		Region:   aws.String(config.Storage.Region),
-		Endpoint: aws.String(config.Storage.Endpoint),
-		Credentials: credentials.NewStaticCredentials(
-			config.Storage.AccessKey,
-			config.Storage.SecretKey,
-			"",
-		),
-	})
-	if err != nil {
-		return nil, err
+func NewS3Storage(config *config.Config, c context.Context) (*S3Storage, error) {
+	log := logging.FromContext(c)
+	if config.Storage.StorageType != "aws" && config.Storage.Region != "" && config.Storage.MaxUserStorage != nil {
+		sess, err := session.NewSession(&aws.Config{
+			Region:   aws.String(config.Storage.Region),
+			Endpoint: aws.String(config.Storage.Endpoint),
+			Credentials: credentials.NewStaticCredentials(
+				config.Storage.AccessKey,
+				config.Storage.SecretKey,
+				"",
+			),
+		})
+		if err != nil {
+			return nil, err
+		}
+		return &S3Storage{
+			Bucket:   config.Storage.BucketName,
+			BasePath: config.Storage.BasePath,
+			Client:   s3.New(sess),
+		}, nil
+	} else {
+		log.Info("AWS S3 is not set up.")
+		return nil, nil
+
 	}
-	return &S3Storage{
-		Bucket:   config.Storage.BucketName,
-		BasePath: config.Storage.BasePath,
-		Client:   s3.New(sess),
-	}, nil
+
 }
 func (s *S3Storage) Save(ctx context.Context, path string, file io.Reader) error {
 	key := fmt.Sprintf("%s/%s", s.BasePath, path)

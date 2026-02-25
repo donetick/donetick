@@ -35,14 +35,21 @@ type Handler struct {
 }
 
 // NewHandler creates a new Handler
-func NewHandler(storage *S3Storage, choreRepo *chRepo.ChoreRepository, circleRepo *cRepo.CircleRepository,
-	repo *storageRepo.StorageRepository, signer *URLSignerS3, cfg *config.Config) *Handler {
-	return &Handler{storage: storage, circleRepo: circleRepo,
-		choreRepo:   choreRepo,
-		storageRepo: repo,
-		signer:      signer,
-		maxFileSize: cfg.Storage.MaxFileSize,
+func NewHandler(storage *S3Storage, choreRepo *chRepo.ChoreRepository, circleRepo *cRepo.CircleRepository, //TODO: do not return in the DI if S3Storage is not present.
+	repo *storageRepo.StorageRepository, signer *URLSignerS3, cfg *config.Config, c context.Context) *Handler {
+	log := logging.FromContext(c)
+	if storage != nil && signer != nil {
+		return &Handler{storage: storage, circleRepo: circleRepo,
+			choreRepo:   choreRepo,
+			storageRepo: repo,
+			signer:      signer,
+			maxFileSize: cfg.Storage.MaxFileSize,
+		}
+	} else {
+		log.Info("S3 based handler is not set up.")
+		return nil
 	}
+
 }
 
 // AssetHandler serves signed asset URLs from local storage

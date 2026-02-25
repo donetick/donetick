@@ -27,11 +27,11 @@ const (
 
 func NewS3Storage(config *config.Config) (*S3Storage, error) {
 	sess, err := session.NewSession(&aws.Config{
-		Region:   aws.String(config.Storage.Region),
-		Endpoint: aws.String(config.Storage.Endpoint),
+		Region:   aws.String(config.Storage.AWS.Region),
+		Endpoint: aws.String(config.Storage.AWS.Endpoint),
 		Credentials: credentials.NewStaticCredentials(
-			config.Storage.AccessKey,
-			config.Storage.SecretKey,
+			config.Storage.AWS.AccessKey,
+			config.Storage.AWS.SecretKey,
 			"",
 		),
 	})
@@ -39,8 +39,8 @@ func NewS3Storage(config *config.Config) (*S3Storage, error) {
 		return nil, err
 	}
 	return &S3Storage{
-		Bucket:   config.Storage.BucketName,
-		BasePath: config.Storage.BasePath,
+		Bucket:   config.Storage.AWS.BucketName,
+		BasePath: config.Storage.AWS.BasePath,
 		Client:   s3.New(sess),
 	}, nil
 }

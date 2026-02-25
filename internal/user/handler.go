@@ -42,9 +42,9 @@ type Handler struct {
 	isDonetickDotCom       bool
 	IsUserCreationDisabled bool
 	DonetickCloudConfig    config.DonetickCloudConfig
-	storage                *storage.S3Storage
+	storage                storage.Storage
 	storageRepo            *storageRepo.StorageRepository
-	signer                 *storage.URLSignerS3
+	signer                 storage.URLSigner
 	deletionService        *DeletionService
 	appleService           *apple.AppleService
 	mfaService             *mfa.MFAService
@@ -52,13 +52,19 @@ type Handler struct {
 	plusMaxSubaccounts     int
 }
 
-func NewHandler(ur *uRepo.UserRepository, cr *cRepo.CircleRepository,
-	jwtAuth *jwt.GinJWTMiddleware, tokenService *auth.TokenService,
+func NewHandler(ur *uRepo.UserRepository,
+	cr *cRepo.CircleRepository,
+	jwtAuth *jwt.GinJWTMiddleware,
 	email *email.EmailSender,
-	idp *auth.IdentityProvider, storage *storage.S3Storage,
-	signer *storage.URLSignerS3, storageRepo *storageRepo.StorageRepository,
+	idp *auth.IdentityProvider,
+	storage storage.Storage,
+	signer storage.URLSigner,
+	storageRepo *storageRepo.StorageRepository,
+	tokenService *auth.TokenService,
 	appleService *apple.AppleService,
-	deletionService *DeletionService, mfaService *mfa.MFAService, config *config.Config) *Handler {
+	deletionService *DeletionService,
+	mfaService *mfa.MFAService,
+	config *config.Config) *Handler {
 	return &Handler{
 		userRepo:               ur,
 		circleRepo:             cr,

@@ -94,6 +94,11 @@ func main() {
 		fx.Provide(resource.NewHandler),
 
 		// fx.Provide(NewBot),
+		fx.Provide(storage.NewStorage),
+		fx.Provide(storage.NewURLSigner),
+		fx.Provide(storage.NewHandler),
+		fx.Provide(storageRepo.NewStorageRepository),
+
 		fx.Provide(database.NewDatabase),
 		fx.Provide(chRepo.NewChoreRepository),
 		fx.Provide(chore.NewHandler),
@@ -176,11 +181,13 @@ func main() {
 		// is storage local or remote?
 		// fx.Provide(storage.NewLocalStorage),
 		// fx.Provide(storage.NewURLSignerLocal),
-		fx.Provide(storage.NewS3Storage),
-		fx.Provide(storage.NewURLSignerS3),
+		// fx.Provide(storage.NewS3Storage),
+		// fx.Provide(storage.NewURLSignerS3),
+		// fx.Provide(storage.NewStorage),
+		// fx.Provide(storage.NewURLSigner),
 
-		fx.Provide(storage.NewHandler),
-		fx.Provide(storageRepo.NewStorageRepository),
+		// fx.Provide(storage.NewHandler),
+		// fx.Provide(storageRepo.NewStorageRepository),
 
 		// backup service
 		// fx.Provide(backup.NewService),

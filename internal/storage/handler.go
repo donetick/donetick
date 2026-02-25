@@ -27,7 +27,7 @@ import (
 // Handler handles file storage-related routes
 type Handler struct {
 	storage     Storage
-	signer      *URLSignerS3
+	signer      URLSigner
 	storageRepo *storageRepo.StorageRepository
 	choreRepo   *chRepo.ChoreRepository
 	circleRepo  *cRepo.CircleRepository
@@ -35,8 +35,8 @@ type Handler struct {
 }
 
 // NewHandler creates a new Handler
-func NewHandler(storage *S3Storage, choreRepo *chRepo.ChoreRepository, circleRepo *cRepo.CircleRepository,
-	repo *storageRepo.StorageRepository, signer *URLSignerS3, cfg *config.Config) *Handler {
+func NewHandler(storage Storage, choreRepo *chRepo.ChoreRepository, circleRepo *cRepo.CircleRepository,
+	repo *storageRepo.StorageRepository, signer URLSigner, cfg *config.Config) *Handler {
 	return &Handler{storage: storage, circleRepo: circleRepo,
 		choreRepo:   choreRepo,
 		storageRepo: repo,
@@ -93,7 +93,7 @@ func (h *Handler) AssetHandler(c *gin.Context) {
 
 	// Set headers
 	// c.Header("Content-Type", contentType)
-	c.Header("Cache-Control", "public, max-age=604800, immutable")
+	c.Header("Cache-Control", "private, max-age=604800, immutable")
 	c.Header("Expires", time.Now().UTC().Add(7*24*time.Hour).Format(http.TimeFormat))
 	c.Status(http.StatusOK)
 

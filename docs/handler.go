@@ -26,7 +26,7 @@ func Routes(router *gin.Engine, h *Handler) {
 	SwaggerInfo.Title = "Donetick Swagger API"
 	SwaggerInfo.Description = "Donetick swagger documentation."
 	SwaggerInfo.Version = "1.0"
-	SwaggerInfo.Host = "localhost" + ":" + strconv.Itoa(h.ServerPort) //TODO include public addr. and proper localhost.
+	SwaggerInfo.Host = "localhost" + ":" + strconv.Itoa(h.ServerPort) // TODO include public addr. and proper localhost.
 	SwaggerInfo.BasePath = "/api/v1"
 	SwaggerInfo.Schemes = []string{"http"}
 

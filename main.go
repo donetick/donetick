@@ -168,10 +168,10 @@ func main() {
 		fx.Provide(payment.NewWebhook),
 		fx.Provide(chore.NewAPI),
 
-		//Frontend
+		// Frontend
 		fx.Provide(frontend.NewHandler),
 
-		//Docs
+		// Docs
 		fx.Provide(docs.NewHandler),
 
 		// storage :

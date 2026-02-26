@@ -166,11 +166,12 @@ type FCMConfig struct {
 	ProjectID       string `json:"project_id" mapstructure:"project_id"`
 }
 type EmailConfig struct {
-	Email   string `mapstructure:"email"`
-	Key     string `mapstructure:"key"`
-	Host    string `mapstructure:"host"`
-	Port    int    `mapstructure:"port"`
-	AppHost string `mapstructure:"appHost"`
+	Email    string `mapstructure:"email"`
+	Username string `mapstructure:"username"`
+	Key      string `mapstructure:"key"`
+	Host     string `mapstructure:"host"`
+	Port     int    `mapstructure:"port"`
+	AppHost  string `mapstructure:"appHost"`
 }
 
 type OAuth2Config struct {

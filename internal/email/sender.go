@@ -11,30 +11,47 @@ import (
 )
 
 type EmailSender struct {
-	client  *gomail.Dialer
-	appHost string
+	client    *gomail.Dialer
+	appHost   string
+	fromEmail string
 }
 
 func NewEmailSender(conf *config.Config) *EmailSender {
+	var client *gomail.Dialer
 
-	client := gomail.NewDialer(conf.EmailConfig.Host, conf.EmailConfig.Port, conf.EmailConfig.Email, conf.EmailConfig.Key)
+	// Use username if provided, otherwise fall back to email for backwards compatibility
+	var emailIdentifier string
+
+	if conf.EmailConfig.Username != "" {
+		emailIdentifier = conf.EmailConfig.Username
+	} else if conf.EmailConfig.Email != "" {
+		emailIdentifier = conf.EmailConfig.Email
+	} else {
+		return nil
+	}
+
+	client = gomail.NewDialer(
+		conf.EmailConfig.Host,
+		conf.EmailConfig.Port,
+		emailIdentifier,
+		conf.EmailConfig.Key)
 
 	// format conf.EmailConfig.Host and port :
 
 	// auth := smtp.PlainAuth("", conf.EmailConfig.Email, conf.EmailConfig.Password, host)
 	return &EmailSender{
-
-		client:  client,
-		appHost: conf.EmailConfig.AppHost,
+		client:    client,
+		appHost:   conf.EmailConfig.AppHost,
+		fromEmail: conf.EmailConfig.Email,
 	}
 }
 
 func (es *EmailSender) SendVerificationEmail(to, code string) error {
 	// msg := []byte(fmt.Sprintf("To: %s\r\nSubject: %s\r\n\r\n%s\r\n", to, subject, body))
 	msg := gomail.NewMessage()
-	msg.SetHeader("From", es.client.Username)
+	msg.SetHeader("From", es.fromEmail)
 	msg.SetHeader("To", to)
-	msg.SetHeader("Subject", "Welcome to Donetick! Verifiy you email")
+	msg.SetHeader("Subject", "Welcome to Donetick! Verify your email")
 	// text/html for a html email
 	htmlBody := `
 	<!--
@@ -259,7 +276,7 @@ func (es *EmailSender) SendVerificationEmail(to, code string) error {
 
 func (es *EmailSender) SendResetPasswordEmail(c context.Context, to, code string) error {
 	msg := gomail.NewMessage()
-	msg.SetHeader("From", es.client.Username)
+	msg.SetHeader("From", es.fromEmail)
 	msg.SetHeader("To", to)
 	msg.SetHeader("Subject", "Donetick! Password Reset")
 	htmlBody := `

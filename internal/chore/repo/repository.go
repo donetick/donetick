@@ -268,9 +268,14 @@ func (r *ChoreRepository) CompleteChore(c context.Context, chore *chModel.Chore,
 		choreUpdates["next_due_date"] = dueDate
 		choreUpdates["status"] = chModel.ChoreStatusNoStatus
 
-		if dueDate != nil {
+		switch {
+		case dueDate != nil:
 			choreUpdates["assigned_to"] = nextAssignedTo
-		} else {
+		case chore.FrequencyType == "trigger":
+			// In case of trigger frequency type we need to still set the next assigned but need the task archived.
+			choreUpdates["assigned_to"] = nextAssignedTo
+			choreUpdates["is_active"] = false
+		default:
 			// one time task
 			choreUpdates["is_active"] = false
 		}

@@ -24,7 +24,7 @@ const (
 type EventType string
 
 const (
-	EventTypeUnknown EventType = ""
+	EventTypeUnknown      EventType = ""
 	EventTypeTaskCreated  EventType = "task.created"
 	EventTypeTaskReminder EventType = "task.reminder"
 	// EventTypeTaskUpdated    EventType = "task.updated"

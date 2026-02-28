@@ -24,8 +24,8 @@ const (
 type EventType string
 
 const (
-	EventTypeUnknown EventType = ""
-	// EventTypeTaskCreated    EventType = "task.created"
+	EventTypeUnknown      EventType = ""
+	EventTypeTaskCreated  EventType = "task.created"
 	EventTypeTaskReminder EventType = "task.reminder"
 	// EventTypeTaskUpdated    EventType = "task.updated"
 	EventTypeTaskCompleted    EventType = "task.completed"
@@ -115,6 +115,25 @@ func (p *EventsProducer) processEvent(event Event) {
 		p.logger.Errorw("Webhook request failed", "status", resp.StatusCode)
 		return
 	}
+}
+
+func (p *EventsProducer) ChoreCreated(ctx context.Context, webhookURL *string, chore *chModel.Chore, creator *uModel.User) {
+	if webhookURL == nil {
+		p.logger.Debug("No subscribers for circle, skipping webhook")
+		return
+	}
+
+	event := Event{
+		Type:      EventTypeTaskCreated,
+		URL:       *webhookURL,
+		Timestamp: time.Now().UTC(),
+		Data: ChoreData{
+			Chore:       chore,
+			Username:    creator.Username,
+			DisplayName: creator.DisplayName,
+		},
+	}
+	p.publishEvent(event)
 }
 
 func (p *EventsProducer) ChoreCompleted(ctx context.Context, webhookURL *string, chore *chModel.Chore, performer *uModel.User) {

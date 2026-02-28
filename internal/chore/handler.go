@@ -383,6 +383,8 @@ func (h *Handler) createChore(c *gin.Context) {
 		h.nPlanner.GenerateNotifications(c, createdChore)
 	}()
 
+	h.eventProducer.ChoreCreated(c, currentUser.WebhookURL, createdChore, &currentUser.User)
+
 	// Broadcast real-time chore creation event
 	if h.realTimeService != nil {
 		broadcaster := h.realTimeService.GetEventBroadcaster()

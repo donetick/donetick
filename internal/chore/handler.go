@@ -3392,8 +3392,10 @@ func checkNextAssignee(chore *chModel.Chore, choresHistory []*chModel.ChoreHisto
 			assigneeChores[performer.UserID] = 0
 		}
 		for _, history := range history {
-			// calculate the number of chores completed by each assignee
-			assigneeChores[history.CompletedBy]++
+			// only count completions by users who are current assignees
+			if _, ok := assigneesMap[history.CompletedBy]; ok {
+				assigneeChores[history.CompletedBy]++
+			}
 		}
 
 		// max Int value

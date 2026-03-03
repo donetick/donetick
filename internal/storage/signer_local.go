@@ -22,10 +22,10 @@ func NewURLSignerLocal(config *config.Config) *URLSignerLocal {
 
 // sign method without expiration:
 func (s *URLSignerLocal) Sign(rawPath string) (string, error) {
-	sig := s.sign(s.BasePath + rawPath)
+	sig := s.sign(s.BasePath + "/" + rawPath)
 	values := url.Values{}
 	values.Set("sig", sig)
-	return fmt.Sprintf("%s%s%s?%s", s.PublicHost, s.BasePath, rawPath, values.Encode()), nil
+	return fmt.Sprintf("%s%s/%s?%s", s.PublicHost, s.BasePath, rawPath, values.Encode()), nil
 }
 
 func (s *URLSignerLocal) sign(path string) string {
@@ -35,6 +35,6 @@ func (s *URLSignerLocal) sign(path string) string {
 }
 
 func (s *URLSignerLocal) IsValid(rawPath string, providedSig string) bool {
-	expectedSig := s.sign(s.BasePath + rawPath)
+	expectedSig := s.sign(s.BasePath + "/" + rawPath)
 	return hmac.Equal([]byte(expectedSig), []byte(providedSig))
 }

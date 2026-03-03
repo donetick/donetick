@@ -41,14 +41,16 @@ func TestSigntureIsValid(t *testing.T) {
 		Jwt: config.JwtConfig{
 			Secret: "secret",
 		},
+		Storage: config.StorageConfig{
+			BasePath: "/api/v1/somepath"},
 	})
-	url1, _ := signer.Sign("/same")
+	url1, _ := signer.Sign("same")
 	parsed, err := url.Parse(url1)
 	if err != nil {
 		t.Error("Failed to parse signed URL")
 	}
 	sig := parsed.Query().Get("sig")
-	if !signer.IsValid(parsed.Path, sig) {
+	if !signer.IsValid("same", sig) {
 		t.Error("Signature is not valid")
 	}
 }
@@ -70,8 +72,8 @@ func TestSignReturnsValidURL(t *testing.T) {
 		t.Error("Failed to parse signed URL")
 	}
 	sig := parsed.Query().Get("sig")
-	if !signer.IsValid(parsed.Path, sig) {
-		t.Errorf("Signature is not valid: want valid signature for path %q, got invalid", parsed.Path)
+	if !signer.IsValid("chore/1/3f67e1d0-4a88-48ea-a815-21533f0a823a.png", sig) {
+		t.Errorf("Signature is not valid: want valid signature for path %q, got invalid", parsed)
 
 	}
 

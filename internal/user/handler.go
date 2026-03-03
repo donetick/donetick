@@ -792,7 +792,7 @@ func (h *Handler) updateUserPassword(c *gin.Context) {
 	}
 	// read password from body:
 	type RequestBody struct {
-		Password string `json:"password" binding:"required,min=8,max=32"`
+		Password string `json:"password" binding:"required,min=8,max=64"`
 	}
 	var body RequestBody
 	if err := c.ShouldBindJSON(&body); err != nil {
@@ -1031,7 +1031,7 @@ func (h *Handler) updateUserPasswordLoggedInOnly(c *gin.Context) {
 	}
 	logger := logging.FromContext(c)
 	type RequestBody struct {
-		Password string `json:"password" binding:"required,min=8,max=32"`
+		Password string `json:"password" binding:"required,min=8,max=64"`
 	}
 	var body RequestBody
 	if err := c.ShouldBindJSON(&body); err != nil {
@@ -1286,13 +1286,13 @@ func (h *Handler) deleteAccount(c *gin.Context) {
 type CreateChildUserRequest struct {
 	ChildName   string `json:"childName" binding:"required,min=2,max=20"`
 	DisplayName string `json:"displayName"`
-	Password    string `json:"password" binding:"required,min=8,max=45"`
+	Password    string `json:"password" binding:"required,min=8,max=64"`
 }
 
 // UpdateChildPasswordRequest represents the request to update a child user's password
 type UpdateChildPasswordRequest struct {
 	ChildUserID int    `json:"childUserId" binding:"required"`
-	Password    string `json:"password" binding:"required,min=8,max=45"`
+	Password    string `json:"password" binding:"required,min=8,max=64"`
 }
 
 // ChildUserResponse represents the response for child user operations

@@ -129,11 +129,11 @@ func (a *StripeDB) GetSubscriptionByAccountID(ctx context.Context, userID int) (
 	return &subscription, nil
 }
 
-func (a *StripeDB) GetSession(ctx context.Context, SessionID string) (*pModel.StripeSession, error) {
+func (a *StripeDB) GetSession(ctx context.Context, sessionID string) (*pModel.StripeSession, error) {
 	logger := logging.FromContext(ctx)
 
 	var session pModel.StripeSession
-	if err := a.db.WithContext(ctx).Where("session_id = ?", SessionID).First(&session).Error; err != nil {
+	if err := a.db.WithContext(ctx).Where("session_id = ?", sessionID).First(&session).Error; err != nil {
 		logger.Error("session.db.Get failed to get", "err", err)
 		return nil, err
 	}

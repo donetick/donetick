@@ -15,7 +15,7 @@ database:
   password: "secret"
   name: "secret"
 jwt:
-  secret: "change_this_to_a_secure_random_string_32_characters_long"
+  secret: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
   session_time: 168h # 7 days
   max_refresh: 1440h # 60 days 
 server:
@@ -44,12 +44,12 @@ scheduler_jobs:
 storage:
   mode: "local" # "aws" or "local"
   public_host: "http://localhost:2021"
+  base_path: "/api/v1/assets"
   max_user_storage: 1000000000
   max_file_size: 10000000
   # aws:
   #   bucket_name: 
   #   region: 
-  #   base_path:
   #   access_key: 
   #   secret_key: 
   #   endpoint:

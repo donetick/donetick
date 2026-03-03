@@ -56,6 +56,7 @@ type Info struct {
 type StorageConfig struct {
 	Mode           string      `mapstructure:"mode" yaml:"mode"`
 	PublicHost     string      `mapstructure:"public_host" yaml:"public_host"`
+	BasePath       string      `mapstructure:"base_path" yaml:"base_path"`
 	MaxUserStorage int         `mapstructure:"max_user_storage" yaml:"max_user_storage"`
 	MaxFileSize    int64       `mapstructure:"max_file_size" yaml:"max_file_size"`
 	AWS            *AWSStorage `mapstructure:"aws" yaml:"aws"`
@@ -66,7 +67,6 @@ type AWSStorage struct {
 	// CloudStorage:
 	BucketName string `mapstructure:"bucket_name" yaml:"bucket_name"`
 	Region     string `mapstructure:"region" yaml:"region"`
-	BasePath   string `mapstructure:"base_path" yaml:"base_path"`
 	AccessKey  string `mapstructure:"access_key" yaml:"access_key"`
 	SecretKey  string `mapstructure:"secret_key" yaml:"secret_key"`
 	Endpoint   string `mapstructure:"endpoint" yaml:"endpoint"`

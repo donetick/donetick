@@ -40,7 +40,7 @@ func NewS3Storage(config *config.Config) (*S3Storage, error) {
 	}
 	return &S3Storage{
 		Bucket:   config.Storage.AWS.BucketName,
-		BasePath: config.Storage.AWS.BasePath,
+		BasePath: config.Storage.BasePath,
 		Client:   s3.New(sess),
 	}, nil
 }

@@ -58,7 +58,6 @@ storage:
   # aws:
   #   bucket_name: 
   #   region: 
-  #   base_path:
   #   access_key: 
   #   secret_key: 
   #   endpoint:

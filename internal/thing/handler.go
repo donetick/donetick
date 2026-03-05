@@ -1,6 +1,7 @@
 package thing
 
 import (
+	"net/http"
 	"strconv"
 	"time"
 
@@ -49,13 +50,13 @@ func (h *Handler) CreateThing(c *gin.Context) {
 	log := logging.FromContext(c)
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
-		c.JSON(401, gin.H{"error": "Unauthorized"})
+		c.JSON(http.StatusForbidden, gin.H{"error": "Unauthorized"})
 		return
 	}
 
 	var req ThingRequest
 	if err := c.BindJSON(&req); err != nil {
-		c.JSON(400, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 	thing := &tModel.Thing{
@@ -65,56 +66,54 @@ func (h *Handler) CreateThing(c *gin.Context) {
 		State:  req.State,
 	}
 	if !isValidThingState(thing) {
-		c.JSON(400, gin.H{"error": "Invalid state"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid state"})
 		return
 	}
 	log.Debug("Creating thing", thing)
 	if err := h.tRepo.UpsertThing(c, thing); err != nil {
-		c.JSON(500, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(201, gin.H{
-		"res": thing,
-	})
+	c.JSON(http.StatusCreated, thing)
 }
 
 func (h *Handler) UpdateThingState(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
-		c.JSON(401, gin.H{"error": "Unauthorized"})
+		c.JSON(http.StatusForbidden, gin.H{"error": "Unauthorized"})
 		return
 	}
 
 	thingIDRaw := c.Param("id")
 	thingID, err := strconv.Atoi(thingIDRaw)
 	if err != nil {
-		c.JSON(400, gin.H{"error": "Invalid thing id"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid thing id"})
 		return
 	}
 
 	val := c.Query("value")
 	if val == "" {
-		c.JSON(400, gin.H{"error": "state or increment query param is required"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "state or increment query param is required"})
 		return
 	}
 	thing, err := h.tRepo.GetThingByID(c, thingID)
 	old_state := thing.State
 	if thing.UserID != currentUser.ID {
-		c.JSON(403, gin.H{"error": "Forbidden"})
+		c.JSON(http.StatusForbidden, gin.H{"error": "Forbidden"})
 		return
 	}
 	if err != nil {
-		c.JSON(500, gin.H{"error": "Unable to find thing"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to find thing"})
 		return
 	}
 	thing.State = val
 	if !isValidThingState(thing) {
-		c.JSON(400, gin.H{"error": "Invalid state"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid state"})
 		return
 	}
 
 	if err := h.tRepo.UpdateThingState(c, thing); err != nil {
-		c.JSON(500, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -130,15 +129,13 @@ func (h *Handler) UpdateThingState(c *gin.Context) {
 		"to_state":   val,
 	})
 
-	c.JSON(200, gin.H{
-		"res": thing,
-	})
+	c.JSON(http.StatusOK, thing)
 }
 
 func EvaluateTriggerAndScheduleDueDate(h *Handler, c *gin.Context, thing *tModel.Thing) bool {
 	thingChores, err := h.tRepo.GetThingChoresByThingId(c, thing.ID)
 	if err != nil {
-		c.JSON(500, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return true
 	}
 	for _, tc := range thingChores {
@@ -146,7 +143,7 @@ func EvaluateTriggerAndScheduleDueDate(h *Handler, c *gin.Context, thing *tModel
 		if triggered {
 			err := h.choreRepo.SetDueDateIfNotExisted(c, tc.ChoreID, time.Now().UTC())
 			if err != nil {
-				c.JSON(500, gin.H{"error": err.Error()})
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				return true
 			}
 		}
@@ -157,24 +154,24 @@ func EvaluateTriggerAndScheduleDueDate(h *Handler, c *gin.Context, thing *tModel
 func (h *Handler) UpdateThing(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
-		c.JSON(401, gin.H{"error": "Unauthorized"})
+		c.JSON(http.StatusForbidden, gin.H{"error": "Unauthorized"})
 		return
 	}
 
 	var req ThingRequest
 	if err := c.BindJSON(&req); err != nil {
-		c.JSON(400, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	thing, err := h.tRepo.GetThingByID(c, req.ID)
 
 	if err != nil {
-		c.JSON(500, gin.H{"error": "Unable to find thing"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to find thing"})
 		return
 	}
 	if thing.UserID != currentUser.ID {
-		c.JSON(403, gin.H{"error": "Forbidden"})
+		c.JSON(http.StatusForbidden, gin.H{"error": "Forbidden"})
 		return
 	}
 	thing.Name = req.Name
@@ -182,115 +179,109 @@ func (h *Handler) UpdateThing(c *gin.Context) {
 	if req.State != "" {
 		thing.State = req.State
 		if !isValidThingState(thing) {
-			c.JSON(400, gin.H{"error": "Invalid state"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid state"})
 			return
 		}
 	}
 
 	if err := h.tRepo.UpsertThing(c, thing); err != nil {
-		c.JSON(500, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(200, gin.H{
-		"res": thing,
-	})
+	c.JSON(http.StatusOK, thing)
 }
 
 func (h *Handler) GetAllThings(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
-		c.JSON(401, gin.H{"error": "Unauthorized"})
+		c.JSON(http.StatusForbidden, gin.H{"error": "Unauthorized"})
 		return
 	}
 
 	things, err := h.tRepo.GetUserThings(c, currentUser.ID)
 	if err != nil {
-		c.JSON(500, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(200, gin.H{
-		"res": things,
-	})
+	c.JSON(http.StatusOK, things)
 }
 
 func (h *Handler) GetThingHistory(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
-		c.JSON(401, gin.H{"error": "Unauthorized"})
+		c.JSON(http.StatusForbidden, gin.H{"error": "Unauthorized"})
 		return
 	}
 
 	thingIDRaw := c.Param("id")
 	thingID, err := strconv.Atoi(thingIDRaw)
 	if err != nil {
-		c.JSON(400, gin.H{"error": "Invalid thing id"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid thing id"})
 		return
 	}
 
 	thing, err := h.tRepo.GetThingByID(c, thingID)
 	if err != nil {
-		c.JSON(500, gin.H{"error": "Unable to find thing"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to find thing"})
 		return
 	}
 	if thing.UserID != currentUser.ID {
-		c.JSON(403, gin.H{"error": "Forbidden"})
+		c.JSON(http.StatusForbidden, gin.H{"error": "Forbidden"})
 		return
 	}
 	offsetRaw := c.Query("offset")
 	offset, err := strconv.Atoi(offsetRaw)
 	if err != nil {
-		c.JSON(400, gin.H{"error": "Invalid offset"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid offset"})
 		return
 	}
 
 	history, err := h.tRepo.GetThingHistoryWithOffset(c, thingID, offset)
 	if err != nil {
-		c.JSON(500, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(200, gin.H{
-		"res": history,
-	})
+	c.JSON(http.StatusOK, history)
 }
 
 func (h *Handler) DeleteThing(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
-		c.JSON(401, gin.H{"error": "Unauthorized"})
+		c.JSON(http.StatusForbidden, gin.H{"error": "Unauthorized"})
 		return
 	}
 
 	thingIDRaw := c.Param("id")
 	thingID, err := strconv.Atoi(thingIDRaw)
 	if err != nil {
-		c.JSON(400, gin.H{"error": "Invalid thing id"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid thing id"})
 		return
 	}
 
 	thing, err := h.tRepo.GetThingByID(c, thingID)
 	if err != nil {
-		c.JSON(500, gin.H{"error": "Unable to find thing"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to find thing"})
 		return
 	}
 	if thing.UserID != currentUser.ID {
-		c.JSON(403, gin.H{"error": "Forbidden"})
+		c.JSON(http.StatusForbidden, gin.H{"error": "Forbidden"})
 		return
 	}
 	//  confirm there are no chores associated with the thing:
 	thingChores, err := h.tRepo.GetThingChoresByThingId(c, thing.ID)
 	if err != nil {
-		c.JSON(500, gin.H{"error": "Unable to find tasks linked to this thing"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to find tasks linked to this thing"})
 		return
 	}
 	if len(thingChores) > 0 {
-		c.JSON(405, gin.H{"error": "Unable to delete thing with associated tasks"})
+		c.JSON(http.StatusMethodNotAllowed, gin.H{"error": "Unable to delete thing with associated tasks"})
 		return
 	}
 	if err := h.tRepo.DeleteThing(c, thingID); err != nil {
-		c.JSON(500, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(200, gin.H{})
+	c.JSON(http.StatusOK, gin.H{})
 }
 func Routes(r *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware) {
 

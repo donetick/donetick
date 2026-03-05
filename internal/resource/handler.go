@@ -1,6 +1,8 @@
 package resource
 
 import (
+	"net/http"
+
 	"donetick.com/core/config"
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
@@ -30,7 +32,7 @@ func NewHandler(cfg *config.Config) *Handler {
 }
 
 func (h *Handler) getResource(c *gin.Context) {
-	c.JSON(200, &Resource{
+	c.JSON(http.StatusOK, &Resource{
 		Idp: identityProvider{
 			Auth_url:  h.config.OAuth2Config.AuthURL,
 			Client_ID: h.config.OAuth2Config.ClientID,

@@ -2,6 +2,7 @@ package circle
 
 import (
 	"log"
+	"net/http"
 
 	"strconv"
 	"time"
@@ -49,7 +50,7 @@ func (h *Handler) GetCircleMembers(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
 		log.Error("Error getting current user")
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error getting current user",
 		})
 		return
@@ -59,15 +60,13 @@ func (h *Handler) GetCircleMembers(c *gin.Context) {
 	members, err := h.circleRepo.GetCircleUsers(c, currentUser.CircleID)
 	if err != nil {
 		log.Error("Error getting circle members:", err)
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error getting circle members",
 		})
 		return
 	}
 
-	c.JSON(200, gin.H{
-		"res": members,
-	})
+	c.JSON(http.StatusOK, members)
 }
 
 func (h *Handler) JoinCircle(c *gin.Context) {
@@ -77,7 +76,7 @@ func (h *Handler) JoinCircle(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 
 	if !ok {
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error getting current user",
 		})
 		return
@@ -85,7 +84,7 @@ func (h *Handler) JoinCircle(c *gin.Context) {
 
 	requestedCircleID := c.Query("invite_code")
 	if requestedCircleID == "" {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Invalid request",
 		})
 		return
@@ -94,7 +93,7 @@ func (h *Handler) JoinCircle(c *gin.Context) {
 	circle, err := h.circleRepo.GetCircleByInviteCode(c, requestedCircleID)
 
 	if circle.ID == currentUser.CircleID {
-		c.JSON(409, gin.H{
+		c.JSON(http.StatusConflict, gin.H{
 			"error": "You are already a member of this circle",
 		})
 		return
@@ -109,15 +108,13 @@ func (h *Handler) JoinCircle(c *gin.Context) {
 
 	if err != nil {
 		log.Error("Error adding user to circle:", err)
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error adding user to circle",
 		})
 		return
 	}
 
-	c.JSON(200, gin.H{
-		"res": "User Requested to join circle successfully",
-	})
+	c.JSON(http.StatusOK, "User Requested to join circle successfully")
 }
 
 func (h *Handler) LeaveCircle(c *gin.Context) {
@@ -125,7 +122,7 @@ func (h *Handler) LeaveCircle(c *gin.Context) {
 	log.Debug("handler.go: LeaveCircle")
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error getting current user",
 		})
 		return
@@ -133,7 +130,7 @@ func (h *Handler) LeaveCircle(c *gin.Context) {
 	rawCircleID := c.Query("circle_id")
 	circleID, err := strconv.Atoi(rawCircleID)
 	if err != nil {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Invalid request",
 		})
 		return
@@ -142,7 +139,7 @@ func (h *Handler) LeaveCircle(c *gin.Context) {
 	orginalCircleID, err := h.circleRepo.GetUserOriginalCircle(c, currentUser.ID)
 	if err != nil {
 		log.Error("Error getting user original circle:", err)
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error getting user original circle",
 		})
 		return
@@ -152,7 +149,7 @@ func (h *Handler) LeaveCircle(c *gin.Context) {
 	// bulk update chores:
 	if err := handleUserLeavingCircle(h, c, &currentUser.User, orginalCircleID); err != nil {
 		log.Error("Error handling user leaving circle:", err)
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error handling user leaving circle",
 		})
 		return
@@ -163,7 +160,7 @@ func (h *Handler) LeaveCircle(c *gin.Context) {
 	err = h.circleRepo.LeaveCircleByUserID(c, circleID, currentUser.ID)
 	if err != nil {
 		log.Error("Error leaving circle:", err)
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error leaving circle",
 		})
 		return
@@ -171,14 +168,12 @@ func (h *Handler) LeaveCircle(c *gin.Context) {
 
 	if err := h.userRepo.UpdateUserCircle(c, currentUser.ID, orginalCircleID); err != nil {
 		log.Error("Error updating user circle:", err)
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error updating user circle",
 		})
 		return
 	}
-	c.JSON(200, gin.H{
-		"res": "User left circle successfully",
-	})
+	c.JSON(http.StatusOK, "User left circle successfully")
 }
 
 func handleUserLeavingCircle(h *Handler, c *gin.Context, leavingUser *uModel.User, orginalCircleID int) error {
@@ -210,7 +205,7 @@ func (h *Handler) DeleteCircleMember(c *gin.Context) {
 	log.Debug("handler.go: DeleteCircleMember")
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error getting current user",
 		})
 		return
@@ -218,7 +213,7 @@ func (h *Handler) DeleteCircleMember(c *gin.Context) {
 	rawCircleID := c.Param("id")
 	circleID, err := strconv.Atoi(rawCircleID)
 	if err != nil {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Invalid request",
 		})
 		return
@@ -226,7 +221,7 @@ func (h *Handler) DeleteCircleMember(c *gin.Context) {
 	rawMemeberIDToDeleted := c.Query("member_id")
 	memberIDToDeleted, err := strconv.Atoi(rawMemeberIDToDeleted)
 	if err != nil {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Invalid request",
 		})
 		return
@@ -234,7 +229,7 @@ func (h *Handler) DeleteCircleMember(c *gin.Context) {
 	admins, err := h.circleRepo.GetCircleAdmins(c, circleID)
 	if err != nil {
 		log.Error("Error getting circle admins:", err)
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error getting circle admins",
 		})
 		return
@@ -247,7 +242,7 @@ func (h *Handler) DeleteCircleMember(c *gin.Context) {
 		}
 	}
 	if !isAdmin {
-		c.JSON(403, gin.H{
+		c.JSON(http.StatusForbidden, gin.H{
 			"error": "You are not an admin of this circle",
 		})
 		return
@@ -255,7 +250,7 @@ func (h *Handler) DeleteCircleMember(c *gin.Context) {
 	orginalCircleID, err := h.circleRepo.GetUserOriginalCircle(c, memberIDToDeleted)
 	if handleUserLeavingCircle(h, c, &uModel.User{ID: memberIDToDeleted, CircleID: circleID}, orginalCircleID) != nil {
 		log.Error("Error handling user leaving circle:", err)
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error handling user leaving circle",
 		})
 		return
@@ -264,21 +259,19 @@ func (h *Handler) DeleteCircleMember(c *gin.Context) {
 	err = h.circleRepo.DeleteMemberByID(c, circleID, memberIDToDeleted)
 	if err != nil {
 		log.Error("Error deleting circle member:", err)
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error deleting circle member",
 		})
 		return
 	}
-	c.JSON(200, gin.H{
-		"res": "User deleted from circle successfully",
-	})
+	c.JSON(http.StatusOK, "User deleted from circle successfully")
 }
 
 func (h *Handler) GetUserCircles(c *gin.Context) {
 	log := logging.FromContext(c)
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error getting current user",
 		})
 		return
@@ -287,22 +280,20 @@ func (h *Handler) GetUserCircles(c *gin.Context) {
 	circles, err := h.circleRepo.GetUserCircles(c, currentUser.ID)
 	if err != nil {
 		log.Error("Error getting user circles:", err)
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error getting user circles",
 		})
 		return
 	}
 
-	c.JSON(200, gin.H{
-		"res": circles,
-	})
+	c.JSON(http.StatusOK, circles)
 }
 
 func (h *Handler) GetPendingCircleMembers(c *gin.Context) {
 	log := logging.FromContext(c)
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error getting current user",
 		})
 		return
@@ -311,7 +302,7 @@ func (h *Handler) GetPendingCircleMembers(c *gin.Context) {
 	currentMemebers, err := h.circleRepo.GetCircleUsers(c, currentUser.CircleID)
 	if err != nil {
 		log.Error("Error getting circle members:", err)
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error getting circle members",
 		})
 		return
@@ -326,7 +317,7 @@ func (h *Handler) GetPendingCircleMembers(c *gin.Context) {
 		}
 	}
 	if !isAdmin {
-		c.JSON(403, gin.H{
+		c.JSON(http.StatusForbidden, gin.H{
 			"error": "You are not an admin of this circle",
 		})
 		return
@@ -335,22 +326,20 @@ func (h *Handler) GetPendingCircleMembers(c *gin.Context) {
 	members, err := h.circleRepo.GetPendingJoinRequests(c, currentUser.CircleID)
 	if err != nil {
 		log.Error("Error getting pending circle members:", err)
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error getting pending circle members",
 		})
 		return
 	}
 
-	c.JSON(200, gin.H{
-		"res": members,
-	})
+	c.JSON(http.StatusOK, members)
 }
 
 func (h *Handler) AcceptJoinRequest(c *gin.Context) {
 	log := logging.FromContext(c)
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error getting current user",
 		})
 		return
@@ -359,7 +348,7 @@ func (h *Handler) AcceptJoinRequest(c *gin.Context) {
 	rawRequestID := c.Query("requestId")
 	requestID, err := strconv.Atoi(rawRequestID)
 	if err != nil {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Invalid request",
 		})
 		return
@@ -375,7 +364,7 @@ func (h *Handler) AcceptJoinRequest(c *gin.Context) {
 	}
 	if err != nil {
 		log.Error("Error getting circle members:", err)
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error getting circle members",
 		})
 		return
@@ -387,7 +376,7 @@ func (h *Handler) AcceptJoinRequest(c *gin.Context) {
 		}
 		if len(activeMembers) >= maxMembers {
 			log.Error("Circle is full")
-			c.JSON(400, gin.H{
+			c.JSON(http.StatusBadRequest, gin.H{
 				"error": "Circle is full, you can only have " + strconv.Itoa(maxMembers) + " members in a circle",
 			})
 			return
@@ -402,7 +391,7 @@ func (h *Handler) AcceptJoinRequest(c *gin.Context) {
 		}
 	}
 	if !isAdmin {
-		c.JSON(403, gin.H{
+		c.JSON(http.StatusForbidden, gin.H{
 			"error": "You are not an admin of this circle",
 		})
 		return
@@ -410,7 +399,7 @@ func (h *Handler) AcceptJoinRequest(c *gin.Context) {
 	pendingRequests, err := h.circleRepo.GetPendingJoinRequests(c, currentUser.CircleID)
 	if err != nil {
 		log.Error("Error getting pending circle members:", err)
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error getting pending circle members",
 		})
 		return
@@ -425,7 +414,7 @@ func (h *Handler) AcceptJoinRequest(c *gin.Context) {
 		}
 	}
 	if !isActiveRequest {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Invalid request",
 		})
 		return
@@ -434,7 +423,7 @@ func (h *Handler) AcceptJoinRequest(c *gin.Context) {
 	err = h.circleRepo.AcceptJoinRequest(c, currentUser.CircleID, requestID)
 	if err != nil {
 		log.Error("Error accepting join request:", err)
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error accepting join request",
 		})
 		return
@@ -442,15 +431,13 @@ func (h *Handler) AcceptJoinRequest(c *gin.Context) {
 
 	if err := h.userRepo.UpdateUserCircle(c, requestedCircle.UserID, currentUser.CircleID); err != nil {
 		log.Error("Error updating user circle:", err)
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error updating user circle",
 		})
 		return
 	}
 
-	c.JSON(200, gin.H{
-		"res": "Join request accepted successfully",
-	})
+	c.JSON(http.StatusOK, "Join request accepted successfully")
 
 }
 func (h *Handler) RedeemPoints(c *gin.Context) {
@@ -462,7 +449,7 @@ func (h *Handler) RedeemPoints(c *gin.Context) {
 	log := logging.FromContext(c)
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error getting current user",
 		})
 		return
@@ -471,7 +458,7 @@ func (h *Handler) RedeemPoints(c *gin.Context) {
 	var redeemReq RedeemPointsRequest
 
 	if err := c.ShouldBindJSON(&redeemReq); err != nil {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Invalid request",
 		})
 		return
@@ -479,7 +466,7 @@ func (h *Handler) RedeemPoints(c *gin.Context) {
 	}
 
 	if redeemReq.Points <= 0 {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Invalid request",
 		})
 		return
@@ -489,14 +476,14 @@ func (h *Handler) RedeemPoints(c *gin.Context) {
 	circleID, err := strconv.Atoi(circleIdRaw)
 	if err != nil {
 		log.Error("Error redeeming points: invalid circle id")
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Invalid request: invalid circle id",
 		})
 		return
 	}
 	if circleID != currentUser.CircleID {
 		log.Error("You are not a member of this circle")
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "You are not a member of this circle",
 		})
 		return
@@ -504,7 +491,7 @@ func (h *Handler) RedeemPoints(c *gin.Context) {
 	members, err := h.circleRepo.GetCircleUsers(c, currentUser.CircleID)
 	if err != nil {
 		log.Error("Error getting circle admins:", err)
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error getting circle admins",
 		})
 		return
@@ -525,21 +512,21 @@ func (h *Handler) RedeemPoints(c *gin.Context) {
 
 	if !isAdmin {
 		log.Error("Error redeeming points: user is not an admin of this circle")
-		c.JSON(403, gin.H{
+		c.JSON(http.StatusForbidden, gin.H{
 			"error": "You are not an admin of this circle",
 		})
 		return
 	}
 	if !isValidMember {
 		log.Error("Error redeeming points: user is not a member of this circle")
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "User is not a member of this circle",
 		})
 		return
 	}
 	if member.Points-redeemReq.Points < 0 {
 		log.Error("Error redeeming points: user does not have enough points")
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "User does not have enough points",
 		})
 		return
@@ -548,21 +535,19 @@ func (h *Handler) RedeemPoints(c *gin.Context) {
 	err = h.circleRepo.RedeemPoints(c, currentUser.CircleID, redeemReq.UserID, redeemReq.Points, currentUser.ID)
 	if err != nil {
 		log.Error("Error redeeming points:", err)
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error redeeming points",
 		})
 		return
 	}
 
-	c.JSON(200, gin.H{
-		"res": "Points redeemed successfully",
-	})
+	c.JSON(http.StatusOK, "Points redeemed successfully")
 }
 func (h *Handler) ChangeMemberRole(c *gin.Context) {
 	log := logging.FromContext(c)
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error getting current user",
 		})
 		return
@@ -574,7 +559,7 @@ func (h *Handler) ChangeMemberRole(c *gin.Context) {
 	var req changeRoleRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		log.Error("Error changing member role:", err)
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Invalid request",
 		})
 		return
@@ -582,7 +567,7 @@ func (h *Handler) ChangeMemberRole(c *gin.Context) {
 
 	if !cModel.IsValidRole(req.Role) {
 		log.Error("Error changing member role: invalid role")
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Invalid role",
 		})
 		return
@@ -591,7 +576,7 @@ func (h *Handler) ChangeMemberRole(c *gin.Context) {
 	users, err := h.circleRepo.GetCircleUsers(c, currentUser.CircleID)
 	if err != nil {
 		log.Error("Error getting circle admins:", err)
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error getting circle admins",
 		})
 		return
@@ -611,13 +596,13 @@ func (h *Handler) ChangeMemberRole(c *gin.Context) {
 		}
 	}
 	if !isAdmin {
-		c.JSON(403, gin.H{
+		c.JSON(http.StatusForbidden, gin.H{
 			"error": "You are not an admin of this circle",
 		})
 		return
 	}
 	if !memberFound {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "User is not a member of this circle",
 		})
 		return
@@ -626,15 +611,13 @@ func (h *Handler) ChangeMemberRole(c *gin.Context) {
 	err = h.circleRepo.ChangeUserRole(c, currentUser.CircleID, req.MemberID, req.Role)
 	if err != nil {
 		log.Error("Error changing member role:", err)
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error changing member role",
 		})
 		return
 	}
 
-	c.JSON(200, gin.H{
-		"res": "Member role changed successfully",
-	})
+	c.JSON(http.StatusOK, "Member role changed successfully")
 
 }
 

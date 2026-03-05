@@ -1,6 +1,7 @@
 package label
 
 import (
+	"net/http"
 	"strconv"
 
 	auth "donetick.com/core/internal/auth"
@@ -34,7 +35,7 @@ func (h *Handler) getLabels(c *gin.Context) {
 	// get current user:
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error getting current user",
 		})
 		return
@@ -42,12 +43,12 @@ func (h *Handler) getLabels(c *gin.Context) {
 
 	labels, err := h.lRepo.GetUserLabels(c, currentUser.ID, currentUser.CircleID)
 	if err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error getting labels",
 		})
 		return
 	}
-	c.JSON(200,
+	c.JSON(http.StatusOK,
 		labels,
 	)
 }
@@ -56,7 +57,7 @@ func (h *Handler) createLabel(c *gin.Context) {
 	// get current user:
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error getting current user",
 		})
 		return
@@ -64,7 +65,7 @@ func (h *Handler) createLabel(c *gin.Context) {
 
 	var req LabelReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Error binding label",
 		})
 		return
@@ -77,21 +78,19 @@ func (h *Handler) createLabel(c *gin.Context) {
 		CircleID:  &currentUser.CircleID,
 	}
 	if err := h.lRepo.CreateLabels(c, []*lModel.Label{label}); err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error creating label",
 		})
 		return
 	}
 
-	c.JSON(200, gin.H{
-		"res": label,
-	})
+	c.JSON(http.StatusOK, label)
 }
 
 func (h *Handler) updateLabel(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error getting current user",
 		})
 		return
@@ -99,7 +98,7 @@ func (h *Handler) updateLabel(c *gin.Context) {
 
 	var req UpdateLabelReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Error binding label",
 		})
 		return
@@ -112,15 +111,13 @@ func (h *Handler) updateLabel(c *gin.Context) {
 		CircleID: &currentUser.CircleID,
 	}
 	if err := h.lRepo.UpdateLabel(c, currentUser.ID, label); err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error updating label",
 		})
 		return
 	}
 
-	c.JSON(200, gin.H{
-		"res": label,
-	})
+	c.JSON(http.StatusOK, label)
 }
 
 func (h *Handler) deleteLabel(c *gin.Context) {
@@ -128,7 +125,7 @@ func (h *Handler) deleteLabel(c *gin.Context) {
 	// read label id from path:
 
 	if !ok {
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error getting current user",
 		})
 		return
@@ -136,7 +133,7 @@ func (h *Handler) deleteLabel(c *gin.Context) {
 
 	labelIDRaw := c.Param("id")
 	if labelIDRaw == "" {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Label ID is required",
 		})
 		return
@@ -144,7 +141,7 @@ func (h *Handler) deleteLabel(c *gin.Context) {
 
 	labelID, err := strconv.Atoi(labelIDRaw)
 	if err != nil {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Invalid label ID",
 		})
 		return
@@ -152,15 +149,13 @@ func (h *Handler) deleteLabel(c *gin.Context) {
 
 	// unassociate label from all chores:
 	if err := h.lRepo.DeassignLabelFromAllChoreAndDelete(c, currentUser.ID, labelID); err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error unassociating label from chores",
 		})
 		return
 	}
 
-	c.JSON(200, gin.H{
-		"res": "Label deleted",
-	})
+	c.JSON(http.StatusOK, "Label deleted")
 
 }
 

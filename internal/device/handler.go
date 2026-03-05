@@ -152,9 +152,7 @@ func (h *Handler) GetDeviceTokens(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"res": tokens,
-	})
+	c.JSON(http.StatusOK, tokens)
 }
 
 // UpdateDeviceActivity updates the last active timestamp for a device

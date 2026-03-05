@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"net/http"
 	"strconv"
 
 	cModel "donetick.com/core/internal/circle/model"
@@ -40,7 +41,7 @@ func ImpersonationMiddleware(userRepo *uRepo.UserRepository, circleRepo *cRepo.C
 		impersonateUserID, err := strconv.Atoi(impersonateUserIDStr)
 		if err != nil {
 			logger.Error("Invalid impersonate user ID", "impersonateUserID", impersonateUserIDStr, "error", err)
-			c.JSON(400, gin.H{"error": "Invalid impersonate user ID"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid impersonate user ID"})
 			c.Abort()
 			return
 		}
@@ -49,7 +50,7 @@ func ImpersonationMiddleware(userRepo *uRepo.UserRepository, circleRepo *cRepo.C
 		circleUsers, err := circleRepo.GetCircleUsers(c, currentUser.CircleID)
 		if err != nil {
 			logger.Error("Failed to get circle users", "error", err, "circleID", currentUser.CircleID)
-			c.JSON(500, gin.H{"error": "Failed to validate permissions"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to validate permissions"})
 			c.Abort()
 			return
 		}
@@ -71,7 +72,7 @@ func ImpersonationMiddleware(userRepo *uRepo.UserRepository, circleRepo *cRepo.C
 		if currentUserRole != cModel.UserRoleAdmin && currentUserRole != cModel.UserRoleManager {
 			logger.Warn("User attempted impersonation without permission",
 				"userID", currentUser.ID, "role", currentUserRole, "impersonateUserID", impersonateUserID)
-			c.JSON(403, gin.H{"error": "Insufficient permissions for impersonation"})
+			c.JSON(http.StatusForbidden, gin.H{"error": "Insufficient permissions for impersonation"})
 			c.Abort()
 			return
 		}
@@ -80,7 +81,7 @@ func ImpersonationMiddleware(userRepo *uRepo.UserRepository, circleRepo *cRepo.C
 		if !impersonateUserInCircle {
 			logger.Warn("User attempted to impersonate user outside circle",
 				"userID", currentUser.ID, "impersonateUserID", impersonateUserID, "circleID", currentUser.CircleID)
-			c.JSON(403, gin.H{"error": "Cannot impersonate user outside your circle"})
+			c.JSON(http.StatusForbidden, gin.H{"error": "Cannot impersonate user outside your circle"})
 			c.Abort()
 			return
 		}
@@ -89,7 +90,7 @@ func ImpersonationMiddleware(userRepo *uRepo.UserRepository, circleRepo *cRepo.C
 		impersonatedUser, err := userRepo.GetUserByID(c, impersonateUserID)
 		if err != nil {
 			logger.Error("Failed to get impersonated user details", "error", err, "impersonateUserID", impersonateUserID)
-			c.JSON(500, gin.H{"error": "Failed to get impersonated user details"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get impersonated user details"})
 			c.Abort()
 			return
 		}

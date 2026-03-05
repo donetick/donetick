@@ -1,6 +1,7 @@
 package project
 
 import (
+	"net/http"
 	"strconv"
 
 	auth "donetick.com/core/internal/auth"
@@ -23,7 +24,7 @@ func NewHandler(pRepo *pRepo.ProjectRepository) *Handler {
 func (h *Handler) getProjects(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error getting current user",
 		})
 		return
@@ -31,19 +32,19 @@ func (h *Handler) getProjects(c *gin.Context) {
 
 	projects, err := h.pRepo.GetCircleProjects(c, currentUser.CircleID)
 	if err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error getting projects",
 		})
 		return
 	}
 
-	c.JSON(200, projects)
+	c.JSON(http.StatusOK, projects)
 }
 
 func (h *Handler) createProject(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error getting current user",
 		})
 		return
@@ -51,7 +52,7 @@ func (h *Handler) createProject(c *gin.Context) {
 
 	var req pModel.ProjectReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Error binding project data",
 		})
 		return
@@ -67,21 +68,19 @@ func (h *Handler) createProject(c *gin.Context) {
 	}
 
 	if err := h.pRepo.CreateProject(c, project); err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error creating project",
 		})
 		return
 	}
 
-	c.JSON(200, gin.H{
-		"res": project,
-	})
+	c.JSON(http.StatusOK, project)
 }
 
 func (h *Handler) updateProject(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error getting current user",
 		})
 		return
@@ -89,7 +88,7 @@ func (h *Handler) updateProject(c *gin.Context) {
 
 	projectIDRaw := c.Param("id")
 	if projectIDRaw == "" {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Project ID is required",
 		})
 		return
@@ -97,7 +96,7 @@ func (h *Handler) updateProject(c *gin.Context) {
 
 	projectID, err := strconv.Atoi(projectIDRaw)
 	if err != nil {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Invalid project ID",
 		})
 		return
@@ -105,7 +104,7 @@ func (h *Handler) updateProject(c *gin.Context) {
 
 	var req pModel.ProjectReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Error binding project data",
 		})
 		return
@@ -120,7 +119,7 @@ func (h *Handler) updateProject(c *gin.Context) {
 	}
 
 	if err := h.pRepo.UpdateProject(c, project, currentUser.ID, currentUser.CircleID); err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),
 		})
 		return
@@ -129,21 +128,19 @@ func (h *Handler) updateProject(c *gin.Context) {
 	// Get updated project to return
 	updatedProject, err := h.pRepo.GetProjectByID(c, projectID, currentUser.CircleID)
 	if err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error getting updated project",
 		})
 		return
 	}
 
-	c.JSON(200, gin.H{
-		"res": updatedProject,
-	})
+	c.JSON(http.StatusOK, updatedProject)
 }
 
 func (h *Handler) deleteProject(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error getting current user",
 		})
 		return
@@ -151,7 +148,7 @@ func (h *Handler) deleteProject(c *gin.Context) {
 
 	projectIDRaw := c.Param("id")
 	if projectIDRaw == "" {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Project ID is required",
 		})
 		return
@@ -159,22 +156,20 @@ func (h *Handler) deleteProject(c *gin.Context) {
 
 	projectID, err := strconv.Atoi(projectIDRaw)
 	if err != nil {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Invalid project ID",
 		})
 		return
 	}
 
 	if err := h.pRepo.DeleteProject(c, projectID, currentUser.ID, currentUser.CircleID); err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),
 		})
 		return
 	}
 
-	c.JSON(200, gin.H{
-		"res": "Project deleted successfully",
-	})
+	c.JSON(http.StatusOK, "Project deleted successfully")
 }
 
 func Routes(r *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware) {

@@ -1,6 +1,7 @@
 package filter
 
 import (
+	"net/http"
 	"strconv"
 
 	auth "donetick.com/core/internal/auth"
@@ -24,7 +25,7 @@ func NewHandler(fRepo *fRepo.FilterRepository) *Handler {
 func (h *Handler) getFilters(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error getting current user",
 		})
 		return
@@ -32,20 +33,20 @@ func (h *Handler) getFilters(c *gin.Context) {
 
 	filters, err := h.fRepo.GetCircleFilters(c, currentUser.CircleID)
 	if err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error getting filters",
 		})
 		return
 	}
 
-	c.JSON(200, filters)
+	c.JSON(http.StatusOK, filters)
 }
 
 // getFilterByID gets a specific filter by ID
 func (h *Handler) getFilterByID(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error getting current user",
 		})
 		return
@@ -53,7 +54,7 @@ func (h *Handler) getFilterByID(c *gin.Context) {
 
 	filterIDRaw := c.Param("id")
 	if filterIDRaw == "" {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Filter ID is required",
 		})
 		return
@@ -61,7 +62,7 @@ func (h *Handler) getFilterByID(c *gin.Context) {
 
 	filterID, err := strconv.Atoi(filterIDRaw)
 	if err != nil {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Invalid filter ID",
 		})
 		return
@@ -69,20 +70,20 @@ func (h *Handler) getFilterByID(c *gin.Context) {
 
 	filter, err := h.fRepo.GetFilterByID(c, filterID, currentUser.CircleID)
 	if err != nil {
-		c.JSON(404, gin.H{
+		c.JSON(http.StatusNotFound, gin.H{
 			"error": "Filter not found",
 		})
 		return
 	}
 
-	c.JSON(200, filter)
+	c.JSON(http.StatusOK, filter)
 }
 
 // createFilter creates a new filter
 func (h *Handler) createFilter(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error getting current user",
 		})
 		return
@@ -90,7 +91,7 @@ func (h *Handler) createFilter(c *gin.Context) {
 
 	var req fModel.FilterReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Error binding filter data",
 		})
 		return
@@ -99,13 +100,13 @@ func (h *Handler) createFilter(c *gin.Context) {
 	// Check if filter name already exists
 	exists, err := h.fRepo.FilterNameExists(c, req.Name, currentUser.CircleID, nil)
 	if err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error checking filter name",
 		})
 		return
 	}
 	if exists {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Filter name already exists",
 		})
 		return
@@ -130,22 +131,20 @@ func (h *Handler) createFilter(c *gin.Context) {
 	}
 
 	if err := h.fRepo.CreateFilter(c, filter); err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error creating filter",
 		})
 		return
 	}
 
-	c.JSON(200, gin.H{
-		"res": filter,
-	})
+	c.JSON(http.StatusOK, filter)
 }
 
 // updateFilter updates an existing filter
 func (h *Handler) updateFilter(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error getting current user",
 		})
 		return
@@ -153,7 +152,7 @@ func (h *Handler) updateFilter(c *gin.Context) {
 
 	filterIDRaw := c.Param("id")
 	if filterIDRaw == "" {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Filter ID is required",
 		})
 		return
@@ -161,7 +160,7 @@ func (h *Handler) updateFilter(c *gin.Context) {
 
 	filterID, err := strconv.Atoi(filterIDRaw)
 	if err != nil {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Invalid filter ID",
 		})
 		return
@@ -169,7 +168,7 @@ func (h *Handler) updateFilter(c *gin.Context) {
 
 	var req fModel.FilterReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Error binding filter data",
 		})
 		return
@@ -178,13 +177,13 @@ func (h *Handler) updateFilter(c *gin.Context) {
 	// Check if filter name already exists (excluding current filter)
 	exists, err := h.fRepo.FilterNameExists(c, req.Name, currentUser.CircleID, &filterID)
 	if err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error checking filter name",
 		})
 		return
 	}
 	if exists {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Filter name already exists",
 		})
 		return
@@ -207,7 +206,7 @@ func (h *Handler) updateFilter(c *gin.Context) {
 	}
 
 	if err := h.fRepo.UpdateFilter(c, filter, currentUser.ID, currentUser.CircleID); err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),
 		})
 		return
@@ -216,22 +215,20 @@ func (h *Handler) updateFilter(c *gin.Context) {
 	// Get updated filter to return
 	updatedFilter, err := h.fRepo.GetFilterByID(c, filterID, currentUser.CircleID)
 	if err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error getting updated filter",
 		})
 		return
 	}
 
-	c.JSON(200, gin.H{
-		"res": updatedFilter,
-	})
+	c.JSON(http.StatusOK, updatedFilter)
 }
 
 // deleteFilter deletes a filter
 func (h *Handler) deleteFilter(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error getting current user",
 		})
 		return
@@ -239,7 +236,7 @@ func (h *Handler) deleteFilter(c *gin.Context) {
 
 	filterIDRaw := c.Param("id")
 	if filterIDRaw == "" {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Filter ID is required",
 		})
 		return
@@ -247,29 +244,27 @@ func (h *Handler) deleteFilter(c *gin.Context) {
 
 	filterID, err := strconv.Atoi(filterIDRaw)
 	if err != nil {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Invalid filter ID",
 		})
 		return
 	}
 
 	if err := h.fRepo.DeleteFilter(c, filterID, currentUser.ID, currentUser.CircleID); err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),
 		})
 		return
 	}
 
-	c.JSON(200, gin.H{
-		"res": "Filter deleted successfully",
-	})
+	c.JSON(http.StatusOK, "Filter deleted successfully")
 }
 
 // toggleFilterPin toggles the pin status of a filter
 func (h *Handler) toggleFilterPin(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error getting current user",
 		})
 		return
@@ -277,7 +272,7 @@ func (h *Handler) toggleFilterPin(c *gin.Context) {
 
 	filterIDRaw := c.Param("id")
 	if filterIDRaw == "" {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Filter ID is required",
 		})
 		return
@@ -285,7 +280,7 @@ func (h *Handler) toggleFilterPin(c *gin.Context) {
 
 	filterID, err := strconv.Atoi(filterIDRaw)
 	if err != nil {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Invalid filter ID",
 		})
 		return
@@ -293,24 +288,23 @@ func (h *Handler) toggleFilterPin(c *gin.Context) {
 
 	isPinned, err := h.fRepo.ToggleFilterPin(c, filterID, currentUser.ID, currentUser.CircleID)
 	if err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),
 		})
 		return
 	}
 
-	c.JSON(200, gin.H{
-		"res": gin.H{
-			"isPinned": isPinned,
-		},
-	})
+	c.JSON(http.StatusOK, gin.H{
+		"isPinned": isPinned,
+	},
+	)
 }
 
 // getPinnedFilters gets all pinned filters
 func (h *Handler) getPinnedFilters(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error getting current user",
 		})
 		return
@@ -318,20 +312,20 @@ func (h *Handler) getPinnedFilters(c *gin.Context) {
 
 	filters, err := h.fRepo.GetPinnedFilters(c, currentUser.CircleID)
 	if err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error getting pinned filters",
 		})
 		return
 	}
 
-	c.JSON(200, filters)
+	c.JSON(http.StatusOK, filters)
 }
 
 // getFiltersByUsage gets filters sorted by usage
 func (h *Handler) getFiltersByUsage(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error getting current user",
 		})
 		return
@@ -339,13 +333,13 @@ func (h *Handler) getFiltersByUsage(c *gin.Context) {
 
 	filters, err := h.fRepo.GetFiltersByUsage(c, currentUser.CircleID)
 	if err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error getting filters by usage",
 		})
 		return
 	}
 
-	c.JSON(200, filters)
+	c.JSON(http.StatusOK, filters)
 }
 
 // Routes sets up the filter routes

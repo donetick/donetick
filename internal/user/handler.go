@@ -84,7 +84,7 @@ func (h *Handler) GetAllUsers() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		currentUser, ok := auth.CurrentUser(c)
 		if !ok {
-			c.JSON(500, gin.H{
+			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": "Error getting current user",
 			})
 			return
@@ -92,21 +92,19 @@ func (h *Handler) GetAllUsers() gin.HandlerFunc {
 
 		users, err := h.userRepo.GetAllUsers(c, currentUser.CircleID)
 		if err != nil {
-			c.JSON(500, gin.H{
+			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": "Error getting users",
 			})
 			return
 		}
 
-		c.JSON(200, gin.H{
-			"res": users,
-		})
+		c.JSON(http.StatusOK, users)
 	}
 }
 
 func (h *Handler) signUp(c *gin.Context) {
 	if h.IsUserCreationDisabled {
-		c.JSON(403, gin.H{
+		c.JSON(http.StatusForbidden, gin.H{
 			"error": "User creation is disabled",
 		})
 		return
@@ -120,7 +118,7 @@ func (h *Handler) signUp(c *gin.Context) {
 	}
 	var signupReq SignUpReq
 	if err := c.BindJSON(&signupReq); err != nil {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Invalid request",
 		})
 		return
@@ -131,7 +129,7 @@ func (h *Handler) signUp(c *gin.Context) {
 
 	// Validate username format
 	if !utils.IsValidUsername(signupReq.Username) {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Username can only contain lowercase letters (a-z), numbers (0-9), dots (.), and hyphens (-)",
 		})
 		return
@@ -142,7 +140,7 @@ func (h *Handler) signUp(c *gin.Context) {
 	signupReq.DisplayName = html.EscapeString(signupReq.DisplayName)
 
 	if err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error encoding password",
 		})
 		return
@@ -156,7 +154,7 @@ func (h *Handler) signUp(c *gin.Context) {
 		CreatedAt:   time.Now().UTC(),
 		UpdatedAt:   time.Now().UTC(),
 	}); err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error creating user, email already exists or username is taken",
 		})
 		return
@@ -171,7 +169,7 @@ func (h *Handler) signUp(c *gin.Context) {
 	})
 
 	if err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error creating circle",
 		})
 		return
@@ -185,33 +183,31 @@ func (h *Handler) signUp(c *gin.Context) {
 		CreatedAt: time.Now().UTC(),
 		UpdatedAt: time.Now().UTC(),
 	}); err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error adding user to circle",
 		})
 		return
 	}
 	insertedUser.CircleID = userCircle.ID
 	if err := h.userRepo.UpdateUser(c, insertedUser); err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error updating user",
 		})
 		return
 	}
 
-	c.JSON(201, gin.H{})
+	c.JSON(http.StatusCreated, gin.H{})
 }
 
 func (h *Handler) GetUserProfile(c *gin.Context) {
 	user, ok := auth.CurrentUser(c)
 	if !ok {
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error getting user",
 		})
 		return
 	}
-	c.JSON(200, gin.H{
-		"res": user,
-	})
+	c.JSON(http.StatusOK, user)
 }
 
 func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
@@ -311,7 +307,7 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 			})
 
 			if err != nil {
-				c.JSON(500, gin.H{
+				c.JSON(http.StatusInternalServerError, gin.H{
 					"error": "Error creating circle",
 				})
 				return
@@ -325,14 +321,14 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 				CreatedAt: time.Now().UTC(),
 				UpdatedAt: time.Now().UTC(),
 			}); err != nil {
-				c.JSON(500, gin.H{
+				c.JSON(http.StatusInternalServerError, gin.H{
 					"error": "Error adding user to circle",
 				})
 				return
 			}
 			createdUser.CircleID = userCircle.ID
 			if err := h.userRepo.UpdateUser(c, createdUser); err != nil {
-				c.JSON(500, gin.H{
+				c.JSON(http.StatusInternalServerError, gin.H{
 					"error": "Error updating user",
 				})
 				return
@@ -478,7 +474,7 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 
 			if err != nil {
 				logger.Errorw("account.handler.thirdPartyAuthCallback (apple) failed to create circle", "err", err)
-				c.JSON(500, gin.H{
+				c.JSON(http.StatusInternalServerError, gin.H{
 					"error": "Error creating circle",
 				})
 				return
@@ -493,7 +489,7 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 				UpdatedAt: time.Now().UTC(),
 			}); err != nil {
 				logger.Errorw("account.handler.thirdPartyAuthCallback (apple) failed to add user to circle", "err", err)
-				c.JSON(500, gin.H{
+				c.JSON(http.StatusInternalServerError, gin.H{
 					"error": "Error adding user to circle",
 				})
 				return
@@ -502,7 +498,7 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 			createdUser.CircleID = userCircle.ID
 			if err := h.userRepo.UpdateUser(c, createdUser); err != nil {
 				logger.Errorw("account.handler.thirdPartyAuthCallback (apple) failed to update user", "err", err)
-				c.JSON(500, gin.H{
+				c.JSON(http.StatusInternalServerError, gin.H{
 					"error": "Error updating user",
 				})
 				return
@@ -637,7 +633,7 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 			})
 
 			if err != nil {
-				c.JSON(500, gin.H{
+				c.JSON(http.StatusInternalServerError, gin.H{
 					"error": "Error creating circle",
 				})
 				return
@@ -651,14 +647,14 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 				CreatedAt: time.Now().UTC(),
 				UpdatedAt: time.Now().UTC(),
 			}); err != nil {
-				c.JSON(500, gin.H{
+				c.JSON(http.StatusInternalServerError, gin.H{
 					"error": "Error adding user to circle",
 				})
 				return
 			}
 			createdUser.CircleID = userCircle.ID
 			if err := h.userRepo.UpdateUser(c, createdUser); err != nil {
-				c.JSON(500, gin.H{
+				c.JSON(http.StatusInternalServerError, gin.H{
 					"error": "Error updating user",
 				})
 				return
@@ -832,14 +828,14 @@ func (h *Handler) UpdateUserDetails(c *gin.Context) {
 	}
 	user, ok := auth.CurrentUser(c)
 	if !ok {
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error getting user",
 		})
 		return
 	}
 	var req UpdateUserReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Invalid request",
 		})
 		return
@@ -856,7 +852,7 @@ func (h *Handler) UpdateUserDetails(c *gin.Context) {
 	}
 	if req.Timezone != nil {
 		if !utils.IsValidTimezone(*req.Timezone) {
-			c.JSON(400, gin.H{
+			c.JSON(http.StatusBadRequest, gin.H{
 				"error": "Invalid timezone",
 			})
 			return
@@ -865,12 +861,12 @@ func (h *Handler) UpdateUserDetails(c *gin.Context) {
 	}
 
 	if err := h.userRepo.UpdateUser(c, &user.User); err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error updating user",
 		})
 		return
 	}
-	c.JSON(200, user)
+	c.JSON(http.StatusOK, user)
 }
 
 func (h *Handler) CreateLongLivedToken(c *gin.Context) {
@@ -959,7 +955,7 @@ func (h *Handler) GetAllUserToken(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"res": tokens})
+	c.JSON(http.StatusOK, tokens)
 
 }
 
@@ -1188,11 +1184,10 @@ func (h *Handler) getStorageUsage(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
-		"res": gin.H{
-			"used":  used,
-			"total": available,
-		},
-	})
+		"used":  used,
+		"total": available,
+	},
+	)
 
 }
 
@@ -1414,7 +1409,7 @@ func (h *Handler) createChildUser(c *gin.Context) {
 		CreatedAt:   createdUser.CreatedAt.Format(time.RFC3339),
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"res": response})
+	c.JSON(http.StatusCreated, response)
 }
 
 func (h *Handler) updateChildPassword(c *gin.Context) {
@@ -1548,7 +1543,7 @@ func (h *Handler) getChildUsers(c *gin.Context) {
 		})
 	}
 
-	c.JSON(http.StatusOK, gin.H{"res": response})
+	c.JSON(http.StatusOK, response)
 }
 
 // RefreshRequest represents a refresh token request

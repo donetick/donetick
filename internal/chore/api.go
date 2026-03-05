@@ -1,6 +1,7 @@
 package chore
 
 import (
+	"net/http"
 	"strconv"
 	"time"
 
@@ -47,10 +48,10 @@ func (h *API) GetAllChores(c *gin.Context) {
 	user := auth.MustCurrentUser(c)
 	chores, err := h.choreRepo.GetChores(c, user.CircleID, user.ID, false)
 	if err != nil {
-		c.JSON(500, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(200, chores)
+	c.JSON(http.StatusOK, chores)
 }
 
 func (h *API) CreateChore(c *gin.Context) {
@@ -60,13 +61,13 @@ func (h *API) CreateChore(c *gin.Context) {
 
 	if err := c.BindJSON(&choreRequest); err != nil {
 		log.Debugw("chore.api.CreateChore failed to bind JSON", "error", err)
-		c.JSON(400, gin.H{"error": "Invalid request body"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
 		return
 	}
 
 	// Validate required fields
 	if choreRequest.Name == "" {
-		c.JSON(400, gin.H{"error": "Chore name is required"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Chore name is required"})
 		return
 	}
 
@@ -77,7 +78,7 @@ func (h *API) CreateChore(c *gin.Context) {
 		if err != nil {
 			parsedDateSimple, errSimple := time.Parse("2006-01-02", choreRequest.DueDate)
 			if errSimple != nil {
-				c.JSON(400, gin.H{"error": "Invalid due date format. Use RFC3339 or YYYY-MM-DD"})
+				c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid due date format. Use RFC3339 or YYYY-MM-DD"})
 				return
 			}
 			// Set time to now UTC
@@ -86,7 +87,7 @@ func (h *API) CreateChore(c *gin.Context) {
 			err = nil
 		}
 		if err != nil {
-			c.JSON(400, gin.H{"error": "Invalid due date format. Use RFC3339 format"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid due date format. Use RFC3339 format"})
 			return
 		}
 		nextDueDate = &parsedDate
@@ -95,7 +96,7 @@ func (h *API) CreateChore(c *gin.Context) {
 	circleUsers, err := h.circleRepo.GetCircleUsers(c, user.CircleID)
 	if err != nil {
 		log.Errorw("chore.api.CreateChore failed to get circle users", "error", err)
-		c.JSON(500, gin.H{"error": "Failed to get circle members"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get circle members"})
 		return
 	}
 	createdBy := user.ID
@@ -111,7 +112,7 @@ func (h *API) CreateChore(c *gin.Context) {
 		}
 		if !found {
 			log.Errorw("chore.api.CreateChore specified user not found in circle", "userID", *choreRequest.CreatedBy)
-			c.JSON(400, gin.H{"error": "Specified user not found in circle"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Specified user not found in circle"})
 			return
 		}
 	}
@@ -134,7 +135,7 @@ func (h *API) CreateChore(c *gin.Context) {
 	id, err := h.choreRepo.CreateChore(c, chore)
 	if err != nil {
 		log.Errorw("chore.api.CreateChore failed to create chore", "error", err)
-		c.JSON(500, gin.H{"error": "Error creating chore"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error creating chore"})
 		return
 	}
 
@@ -142,11 +143,11 @@ func (h *API) CreateChore(c *gin.Context) {
 	createdChore, err := h.choreRepo.GetChore(c, id, user.ID)
 	if err != nil {
 		log.Errorw("chore.api.CreateChore failed to fetch created chore", "error", err)
-		c.JSON(500, gin.H{"error": "Error fetching created chore"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error fetching created chore"})
 		return
 	}
 
-	c.JSON(201, createdChore)
+	c.JSON(http.StatusCreated, createdChore)
 }
 
 func (h *API) UpdateChore(c *gin.Context) {
@@ -158,13 +159,13 @@ func (h *API) UpdateChore(c *gin.Context) {
 	choreID, err := strconv.Atoi(choreIDRaw)
 	if err != nil {
 		log.Debugw("chore.api.UpdateChore failed to parse chore ID", "error", err)
-		c.JSON(400, gin.H{"error": "Invalid chore ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid chore ID"})
 		return
 	}
 
 	if err := c.BindJSON(&choreRequest); err != nil {
 		log.Debugw("chore.api.UpdateChore failed to bind JSON", "error", err)
-		c.JSON(400, gin.H{"error": "Invalid request body"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
 		return
 	}
 
@@ -172,27 +173,27 @@ func (h *API) UpdateChore(c *gin.Context) {
 	existingChore, err := h.choreRepo.GetChore(c, choreID, user.ID)
 	if err != nil {
 		log.Errorw("chore.api.UpdateChore failed to get chore", "error", err)
-		c.JSON(404, gin.H{"error": "Chore not found"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "Chore not found"})
 		return
 	}
 	// get circle members:
 	circleUsers, err := h.circleRepo.GetCircleUsers(c, user.CircleID)
 	if err != nil {
 		log.Errorw("chore.api.UpdateChore failed to get circle users", "error", err)
-		c.JSON(500, gin.H{"error": "Failed to get circle members"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get circle members"})
 		return
 	}
 	// Check if user owns this chore
 	now := time.Now().UTC()
 	if err := existingChore.CanEdit(user.ID, circleUsers, &now); err != nil {
 		log.Debugw("chore.api.UpdateChore user does not own chore", "userID", user.ID, "choreCreatedBy", existingChore.CreatedBy)
-		c.JSON(403, gin.H{"error": "You can only update your own chores"})
+		c.JSON(http.StatusForbidden, gin.H{"error": "You can only update your own chores"})
 		return
 	}
 
 	// Validate required fields
 	if choreRequest.Name == "" {
-		c.JSON(400, gin.H{"error": "Chore name is required"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Chore name is required"})
 		return
 	}
 
@@ -204,7 +205,7 @@ func (h *API) UpdateChore(c *gin.Context) {
 		if err != nil {
 			parsedDateSimple, errSimple := time.Parse("2006-01-02", choreRequest.DueDate)
 			if errSimple != nil {
-				c.JSON(400, gin.H{"error": "Invalid due date format. Use RFC3339 or YYYY-MM-DD"})
+				c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid due date format. Use RFC3339 or YYYY-MM-DD"})
 				return
 			}
 			// Set time to now UTC
@@ -213,7 +214,7 @@ func (h *API) UpdateChore(c *gin.Context) {
 			err = nil
 		}
 		if err != nil {
-			c.JSON(400, gin.H{"error": "Invalid due date format. Use RFC3339 format"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid due date format. Use RFC3339 format"})
 			return
 		}
 		nextDueDate = &parsedDate
@@ -231,7 +232,7 @@ func (h *API) UpdateChore(c *gin.Context) {
 	err = h.choreRepo.UpdateChoreFields(c, choreID, updates)
 	if err != nil {
 		log.Errorw("chore.api.UpdateChore failed to update chore", "error", err)
-		c.JSON(500, gin.H{"error": "Error updating chore"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error updating chore"})
 		return
 	}
 
@@ -239,11 +240,11 @@ func (h *API) UpdateChore(c *gin.Context) {
 	updatedChore, err := h.choreRepo.GetChore(c, choreID, user.ID)
 	if err != nil {
 		log.Errorw("chore.api.UpdateChore failed to fetch updated chore", "error", err)
-		c.JSON(500, gin.H{"error": "Error fetching updated chore"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error fetching updated chore"})
 		return
 	}
 
-	c.JSON(200, updatedChore)
+	c.JSON(http.StatusOK, updatedChore)
 }
 
 func (h *API) CompleteChore(c *gin.Context) {
@@ -253,7 +254,7 @@ func (h *API) CompleteChore(c *gin.Context) {
 	choreID, err := strconv.Atoi(choreIDRaw)
 	if err != nil {
 		log.Debugw("chore.api.CompleteChore failed to parse chore ID", "error", err)
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Invalid ID",
 		})
 		return
@@ -270,7 +271,7 @@ func (h *API) CompleteChore(c *gin.Context) {
 	chore, err := h.choreRepo.GetChore(c, choreID, currentUser.ID)
 	if err != nil {
 		log.Errorw("chore.api.CompleteChore failed to get chore", "error", err)
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error getting chore",
 		})
 		return
@@ -280,14 +281,14 @@ func (h *API) CompleteChore(c *gin.Context) {
 	circleUsers, err := h.circleRepo.GetCircleUsers(c, currentUser.CircleID)
 	if err != nil {
 		log.Errorw("Failed to retrieve circle users", "error", err)
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to retrieve circle users",
 		})
 		return
 	}
 	if !chore.CanComplete(performer, circleUsers) {
 		log.Debugw("chore.api.CompleteChore user is not assigned to chore", "userID", performer, "choreID", choreID)
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "User is not assigned to chore",
 		})
 		return
@@ -297,7 +298,7 @@ func (h *API) CompleteChore(c *gin.Context) {
 	if chore.CompletionWindow != nil {
 		if completedDate.Before(chore.NextDueDate.Add(time.Hour * time.Duration(*chore.CompletionWindow))) {
 			log.Debugw("chore.api.CompleteChore chore is in completion window", "choreID", choreID, "completionWindow", chore.CompletionWindow)
-			c.JSON(400, gin.H{
+			c.JSON(http.StatusBadRequest, gin.H{
 				"error": "Chore is out of completion window",
 			})
 			return
@@ -308,7 +309,7 @@ func (h *API) CompleteChore(c *gin.Context) {
 	if chore.FrequencyType == "adaptive" {
 		history, err := h.choreRepo.GetChoreHistoryWithLimit(c, chore.ID, 5)
 		if err != nil {
-			c.JSON(500, gin.H{
+			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": "Error getting chore history",
 			})
 			return
@@ -317,7 +318,7 @@ func (h *API) CompleteChore(c *gin.Context) {
 		if err != nil {
 			log.Debugw("chore.api.CompleteChore failed to schedule adaptive next due date", "error", err)
 
-			c.JSON(500, gin.H{
+			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": "Error scheduling next due date",
 			})
 			return
@@ -327,7 +328,7 @@ func (h *API) CompleteChore(c *gin.Context) {
 		nextDueDate, err = scheduleNextDueDate(c, chore, completedDate.UTC())
 		if err != nil {
 			log.Debugw("chore.api.CompleteChore failed to schedule next due date", "error", err)
-			c.JSON(500, gin.H{
+			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": "Error scheduling next due date",
 			})
 			return
@@ -335,7 +336,7 @@ func (h *API) CompleteChore(c *gin.Context) {
 	}
 	choreHistory, err := h.choreRepo.GetChoreHistory(c, chore.ID)
 	if err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error getting chore history",
 		})
 		return
@@ -344,14 +345,14 @@ func (h *API) CompleteChore(c *gin.Context) {
 	nextAssignedTo, err := checkNextAssignee(chore, choreHistory, performer)
 	if err != nil {
 		log.Debugw("chore.api.CompleteChore failed to check next assignee", "error", err)
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error checking next assignee",
 		})
 		return
 	}
 
 	if err := h.choreRepo.CompleteChore(c, chore, nil, performer, nextDueDate, &completedDate, nextAssignedTo, true); err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error completing chore",
 		})
 		return
@@ -362,14 +363,14 @@ func (h *API) CompleteChore(c *gin.Context) {
 
 	updatedChore, err := h.choreRepo.GetChore(c, choreID, currentUser.ID)
 	if err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Error getting chore",
 		})
 		return
 	}
 	h.nPlanner.GenerateNotifications(c, updatedChore)
 	h.eventProducer.ChoreCompleted(c, currentUser.WebhookURL, chore, &currentUser.User)
-	c.JSON(200,
+	c.JSON(http.StatusOK,
 		updatedChore,
 	)
 }
@@ -378,37 +379,37 @@ func (h *API) GetCircleMembers(c *gin.Context) {
 	currentUser := auth.MustCurrentUser(c)
 	users, err := h.circleRepo.GetCircleUsers(c, currentUser.CircleID)
 	if err != nil {
-		c.JSON(500, gin.H{"error": "Failed to get circle members"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get circle members"})
 		return
 	}
 	if len(users) == 0 {
-		c.JSON(404, gin.H{"error": "No members found in the circle"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "No members found in the circle"})
 		return
 	}
-	c.JSON(200, users)
+	c.JSON(http.StatusOK, users)
 }
 func (h *API) DeleteChore(c *gin.Context) {
 	choreIDRaw := c.Param("id")
 	choreID, err := strconv.Atoi(choreIDRaw)
 	if err != nil {
-		c.JSON(400, gin.H{"error": "Invalid chore ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid chore ID"})
 		return
 	}
 	currentUser := auth.MustCurrentUser(c)
 	chore, err := h.choreRepo.GetChore(c, choreID, currentUser.ID)
 	if err != nil {
-		c.JSON(404, gin.H{"error": "Chore not found"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "Chore not found"})
 		return
 	}
 	if chore.CreatedBy != currentUser.ID {
-		c.JSON(403, gin.H{"error": "You can only delete your own chores"})
+		c.JSON(http.StatusForbidden, gin.H{"error": "You can only delete your own chores"})
 		return
 	}
 	if err := h.choreRepo.DeleteChore(c, choreID); err != nil {
-		c.JSON(500, gin.H{"error": "Failed to delete chore"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete chore"})
 		return
 	}
-	c.JSON(200, gin.H{"message": "Chore deleted successfully"})
+	c.JSON(http.StatusOK, gin.H{"message": "Chore deleted successfully"})
 }
 
 func APIs(cfg *config.Config, api *API, r *gin.Engine, auth *jwt.GinJWTMiddleware, limiter *limiter.Limiter, userRepo *uRepo.UserRepository) {

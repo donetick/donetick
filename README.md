@@ -152,6 +152,11 @@ services:
    ```bash
    npm run build-selfhosted
    ```
+5. If you want to work on the frontend you can run:
+   ```bash
+   npm start
+   ```
+
 
 ### Build the application
 
@@ -172,7 +177,8 @@ services:
    rm -rf ./frontend/dist
    cp -r ../donetick-frontend/dist ./frontend
    ```
-5. Run the app locally:
+5. Set a valid JWT secret in `config/selfhosted.yaml`. It must be a 32 characters long string.
+6. Run the app locally:
    ```bash
    go run .
    ```

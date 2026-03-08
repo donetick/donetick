@@ -28,18 +28,24 @@ FROM alpine:latest
 # Install necessary CA certificates
 RUN apk --no-cache add ca-certificates libc6-compat
 
-# Install timezone package
-RUN apk --no-cache add tzdata
+# Install timezone package and su-exec for stepping down from root
+RUN apk --no-cache add tzdata su-exec
 
 # Copy the binary and config folder from the builder stage
 COPY --from=builder /usr/src/app/donetick /donetick
 COPY --from=builder /usr/src/app/config /config
+COPY entrypoint.sh /entrypoint.sh
 
 # Set environment variables
 ENV DT_ENV="selfhosted"
 
+# Default PUID and PGID values (can be overridden at runtime). Use these to
+# ensure the files on the volumes have the permissions you need.
+ENV PUID=1000
+ENV PGID=1000
+
 # Expose the application port
 EXPOSE 2021
 
-# Command to run the application
+ENTRYPOINT ["/entrypoint.sh"]
 CMD ["/donetick"]

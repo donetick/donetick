@@ -76,9 +76,7 @@ Donetick is an open-source, user-friendly app designed to help you organize task
 
 ## Quick Start
 > [!NOTE]
-> Before running the application, ensure you have a valid `selfhosted.yaml` configuration file.
-> If you don't have one, create a `selfhosted.yaml` file based on the example provided [here](https://github.com/donetick/donetick/blob/main/config/selfhosted.yaml).
-> Place the `selfhosted.yaml` file in the `/config` directory within your application's root directory
+> On first startup with `DT_ENV=selfhosted`, Donetick automatically generates a `config/selfhosted.yaml` with secure defaults (including a random JWT secret). To customize settings, edit the generated file and restart the application. You can also override any setting via environment variables (e.g. `DT_JWT_SECRET`, `DT_DATABASE_TYPE`).
 
 
 
@@ -191,8 +189,7 @@ services:
    rm -rf ./frontend/dist
    cp -r ../donetick-frontend/dist ./frontend
    ```
-5. Set a valid JWT secret in `config/selfhosted.yaml`. It must be a 32 characters long string.
-6. Run the app locally:
+5. Run the app locally (a `config/selfhosted.yaml` with a secure JWT secret is generated automatically on first startup):
    ```bash
    go run .
    ```

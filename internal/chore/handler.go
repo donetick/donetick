@@ -971,10 +971,15 @@ func (h *Handler) updateAssignee(c *gin.Context) {
 		return
 	}
 
+	// Get updated chore and regenerate notifications
+	updatedChore, err := h.choreRepo.GetChore(c, id, currentUser.ID)
+	if err == nil {
+		h.nPlanner.GenerateNotifications(c, updatedChore)
+	}
+
 	// Broadcast real-time assignee update event
 	if h.realTimeService != nil {
-		updatedChore, err := h.choreRepo.GetChore(c, id, currentUser.ID)
-		if err == nil {
+		if updatedChore != nil {
 			broadcaster := h.realTimeService.GetEventBroadcaster()
 			changes := map[string]interface{}{
 				"assignedTo": assigneeReq.Assignee,
@@ -1435,6 +1440,7 @@ func (h *Handler) skipChore(c *gin.Context) {
 		})
 		return
 	}
+	h.nPlanner.GenerateNotifications(c, updatedChore)
 	h.eventProducer.ChoreSkipped(c, effectiveUser.WebhookURL, updatedChore, &effectiveUser.User)
 
 	// Broadcast real-time chore skip event
@@ -1549,10 +1555,15 @@ func (h *Handler) updateDueDate(c *gin.Context) {
 		return
 	}
 
+	// Get updated chore and regenerate notifications
+	updatedChore, err := h.choreRepo.GetChore(c, chore.ID, currentUser.ID)
+	if err == nil {
+		h.nPlanner.GenerateNotifications(c, updatedChore)
+	}
+
 	// Broadcast real-time due date update event
 	if h.realTimeService != nil {
-		updatedChore, err := h.choreRepo.GetChore(c, chore.ID, currentUser.ID)
-		if err == nil {
+		if updatedChore != nil {
 			broadcaster := h.realTimeService.GetEventBroadcaster()
 			changes := map[string]interface{}{
 				"nextDueDate": dueDate,
@@ -1609,6 +1620,9 @@ func (h *Handler) archiveChore(c *gin.Context) {
 		})
 		return
 	}
+
+	// Delete all notifications for the archived chore
+	h.nRepo.DeleteAllChoreNotifications(id)
 
 	// Broadcast real-time chore archive event
 	if h.realTimeService != nil {
@@ -1671,10 +1685,15 @@ func (h *Handler) UnarchiveChore(c *gin.Context) {
 		return
 	}
 
+	// Get updated chore and regenerate notifications
+	updatedChore, err := h.choreRepo.GetChore(c, id, currentUser.ID)
+	if err == nil {
+		h.nPlanner.GenerateNotifications(c, updatedChore)
+	}
+
 	// Broadcast real-time chore unarchive event
 	if h.realTimeService != nil {
-		updatedChore, err := h.choreRepo.GetChore(c, id, currentUser.ID)
-		if err == nil {
+		if updatedChore != nil {
 			broadcaster := h.realTimeService.GetEventBroadcaster()
 			changes := map[string]interface{}{
 				"archived":  false,

@@ -87,6 +87,7 @@ func main() {
 		// fx.Provide(config.NewConfig),
 		fx.Provide(auth.NewAuthMiddleware),
 		fx.Provide(auth.APITokenMiddleware),
+		fx.Provide(auth.NewMultiAuthMiddleware),
 		fx.Provide(auth.NewIdentityProvider),
 		fx.Provide(resource.NewHandler),
 
@@ -167,10 +168,10 @@ func main() {
 		fx.Provide(payment.NewWebhook),
 		fx.Provide(chore.NewAPI),
 
-		//Frontend
+		// Frontend
 		fx.Provide(frontend.NewHandler),
 
-		//Docs
+		// Docs
 		fx.Provide(docs.NewHandler),
 
 		// storage :

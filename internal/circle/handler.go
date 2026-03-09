@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"donetick.com/core/config"
-	auth "donetick.com/core/internal/auth"
+	"donetick.com/core/internal/auth"
 	"donetick.com/core/internal/chore"
 	chRepo "donetick.com/core/internal/chore/repo"
 	cModel "donetick.com/core/internal/circle/model"
@@ -16,7 +16,6 @@ import (
 	uModel "donetick.com/core/internal/user/model"
 	uRepo "donetick.com/core/internal/user/repo"
 	"donetick.com/core/logging"
-	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
 )
 
@@ -777,11 +776,11 @@ func (h *Handler) ChangeMemberRole(c *gin.Context) {
 
 }
 
-func Routes(router *gin.Engine, h *Handler, ginJWTMiddleware *jwt.GinJWTMiddleware) {
+func Routes(router *gin.Engine, h *Handler, multiAuthMiddleware *auth.MultiAuthMiddleware) {
 	log.Println("Registering circle routes")
 
 	circleRoutes := router.Group("api/v1/circles")
-	circleRoutes.Use(auth.MultiAuthMiddleware(ginJWTMiddleware, h.userRepo))
+	circleRoutes.Use(multiAuthMiddleware.MiddlewareFunc())
 	{
 		circleRoutes.GET("/members", h.GetCircleMembers)
 		circleRoutes.GET("/members/requests", h.GetPendingCircleMembers)

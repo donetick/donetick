@@ -88,7 +88,8 @@ func NewHandler(cr *chRepo.ChoreRepository, circleRepo *cRepo.CircleRepository, 
 //	@Tags			chores
 //	@Accept			json
 //	@Produce		json
-//	@Security		JWTKeyAuth && APIKeyAuth
+//	@Security		JWTKeyAuth
+//	@Security		APIKeyAuth
 //	@Param			includeArchived	query		boolean						false	"Include archived chores"
 //	@Success		200				{object}	map[string][]model.Chore	"res: array of chores"
 //	@Failure		401				{object}	map[string]string			"error: Authentication failed"

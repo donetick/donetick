@@ -25,7 +25,7 @@ func NewMultiAuthMiddleware(jwtMiddleware *jwt.GinJWTMiddleware, userRepo *uRepo
 	}
 }
 
-// MultiAuthMiddleware tries JWT first, then API key authentication
+// MultiAuthMiddleware tries API key authentication first, then JWT
 func (h *MultiAuthMiddleware) MiddlewareFunc() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		logger := logging.FromContext(c)

@@ -51,13 +51,13 @@ func NewHandler(cr *cRepo.CircleRepository, ur *uRepo.UserRepository, c *chRepo.
 //	@Produce		json
 //	@Security		JWTKeyAuth || APIKeyAuth
 //	@Success		200	{object}	map[string][]cModel.UserCircleDetail	"res: array of circle members"
-//	@Failure		401	{object}	map[string]string										"error: Authentication failed"
+//	@Failure		500	{object}	map[string]string										"error: Error getting current user"
 //	@Failure		500	{object}	map[string]string										"error: Error getting circle members"
 //	@Router			/circles/members [get]
 func (h *Handler) GetCircleMembers(c *gin.Context) {
 	// Get the circle ID from the JWT
 	log := logging.FromContext(c)
-	currentUser, ok := auth.CurrentUser(c)
+	currentUser, ok := auth.CurrentUser(c) // TODO we might want to change this from 500 to 401
 	if !ok {
 		log.Error("Error getting current user")
 		c.JSON(500, gin.H{

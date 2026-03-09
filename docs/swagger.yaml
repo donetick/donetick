@@ -346,6 +346,87 @@ definitions:
     - frequencyType
     - name
     type: object
+  model.Filter:
+    properties:
+      circleId:
+        type: integer
+      color:
+        type: string
+      conditions:
+        items:
+          $ref: '#/definitions/model.FilterCondition'
+        type: array
+      createdAt:
+        type: string
+      createdBy:
+        type: integer
+      description:
+        type: string
+      icon:
+        type: string
+      id:
+        type: integer
+      isPinned:
+        type: boolean
+      name:
+        type: string
+      operator:
+        $ref: '#/definitions/model.LogicalOperator'
+      updatedAt:
+        type: string
+    type: object
+  model.FilterCondition:
+    properties:
+      operator:
+        type: string
+      type:
+        enum:
+        - assignee
+        - createdBy
+        - priority
+        - status
+        - dueDate
+        - label
+        - project
+        - points
+        type: string
+      value: {}
+    required:
+    - type
+    - value
+    type: object
+  model.FilterReq:
+    properties:
+      color:
+        type: string
+      conditions:
+        items:
+          $ref: '#/definitions/model.FilterCondition'
+        maxItems: 20
+        minItems: 1
+        type: array
+      description:
+        maxLength: 500
+        type: string
+      icon:
+        maxLength: 50
+        type: string
+      isPinned:
+        type: boolean
+      name:
+        maxLength: 100
+        minLength: 1
+        type: string
+      operator:
+        allOf:
+        - $ref: '#/definitions/model.LogicalOperator'
+        enum:
+        - AND
+        - OR
+    required:
+    - conditions
+    - name
+    type: object
   model.FrequencyMetadata:
     properties:
       days:
@@ -420,6 +501,14 @@ definitions:
     required:
     - id
     type: object
+  model.LogicalOperator:
+    enum:
+    - AND
+    - OR
+    type: string
+    x-enum-varnames:
+    - LogicalOperatorAND
+    - LogicalOperatorOR
   model.NotificationMetadata:
     properties:
       circleGroup:
@@ -492,6 +581,19 @@ definitions:
       updatedAt:
         type: string
     type: object
+  model.ProjectReq:
+    properties:
+      color:
+        type: string
+      description:
+        type: string
+      icon:
+        type: string
+      name:
+        type: string
+    required:
+    - name
+    type: object
   model.Status:
     enum:
     - 0
@@ -518,6 +620,29 @@ definitions:
       orderId:
         type: integer
       parentId:
+        type: integer
+    type: object
+  model.Thing:
+    properties:
+      circleId:
+        type: integer
+      createdAt:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      state:
+        type: string
+      thingChores:
+        items:
+          $ref: '#/definitions/model.ThingChore'
+        type: array
+      type:
+        type: string
+      updatedAt:
+        type: string
+      userID:
         type: integer
     type: object
   model.ThingChore:
@@ -602,6 +727,20 @@ definitions:
     - WeekpatternEveryWeek
     - WeekPatternWeekOfMonth
     - WeekPatternWeekOfQuarter
+  thing.ThingRequest:
+    properties:
+      id:
+        type: integer
+      name:
+        type: string
+      state:
+        type: string
+      type:
+        type: string
+    required:
+    - name
+    - type
+    type: object
 info:
   contact: {}
 paths:
@@ -2228,8 +2367,8 @@ paths:
               type: string
             type: object
       security:
-      - JWTKeyAuth: []
       - APIKeyAuth: []
+        JWTKeyAuth: []
       summary: Get user circles
       tags:
       - circles
@@ -2283,8 +2422,8 @@ paths:
               type: string
             type: object
       security:
-      - JWTKeyAuth: []
       - APIKeyAuth: []
+        JWTKeyAuth: []
       summary: Delete a circle member
       tags:
       - circles
@@ -2345,8 +2484,8 @@ paths:
               type: string
             type: object
       security:
-      - JWTKeyAuth: []
       - APIKeyAuth: []
+        JWTKeyAuth: []
       summary: Redeem member points
       tags:
       - circles
@@ -2395,8 +2534,8 @@ paths:
               type: string
             type: object
       security:
-      - JWTKeyAuth: []
       - APIKeyAuth: []
+        JWTKeyAuth: []
       summary: Request to join a circle
       tags:
       - circles
@@ -2440,8 +2579,8 @@ paths:
               type: string
             type: object
       security:
-      - JWTKeyAuth: []
       - APIKeyAuth: []
+        JWTKeyAuth: []
       summary: Leave a circle
       tags:
       - circles
@@ -2461,12 +2600,6 @@ paths:
                 $ref: '#/definitions/circle.UserCircleDetail'
               type: array
             type: object
-        "401":
-          description: 'error: Authentication failed'
-          schema:
-            additionalProperties:
-              type: string
-            type: object
         "500":
           description: 'error: Error getting circle members'
           schema:
@@ -2474,8 +2607,8 @@ paths:
               type: string
             type: object
       security:
-      - JWTKeyAuth: []
       - APIKeyAuth: []
+        JWTKeyAuth: []
       summary: Get circle members
       tags:
       - circles
@@ -2514,8 +2647,8 @@ paths:
               type: string
             type: object
       security:
-      - JWTKeyAuth: []
       - APIKeyAuth: []
+        JWTKeyAuth: []
       summary: Get pending join requests
       tags:
       - circles
@@ -2564,8 +2697,8 @@ paths:
               type: string
             type: object
       security:
-      - JWTKeyAuth: []
       - APIKeyAuth: []
+        JWTKeyAuth: []
       summary: Accept a join request
       tags:
       - circles
@@ -2621,11 +2754,765 @@ paths:
               type: string
             type: object
       security:
-      - JWTKeyAuth: []
       - APIKeyAuth: []
+        JWTKeyAuth: []
       summary: Change member role
       tags:
       - circles
+  /filters:
+    get:
+      consumes:
+      - application/json
+      description: Gets all filters for the current user's circle
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: array of filters
+          schema:
+            items:
+              additionalProperties:
+                items:
+                  $ref: '#/definitions/model.Filter'
+                type: array
+              type: object
+            type: array
+        "500":
+          description: 'error: Error getting current user | Error getting filters'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - APIKeyAuth: []
+        JWTKeyAuth: []
+      summary: Get all filters
+      tags:
+      - filters
+    post:
+      consumes:
+      - application/json
+      description: Creates a new filter for the current user's circle
+      parameters:
+      - description: Filter creation request
+        in: body
+        name: filter
+        required: true
+        schema:
+          $ref: '#/definitions/model.FilterReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'res: created filter object'
+          schema:
+            additionalProperties:
+              $ref: '#/definitions/model.Filter'
+            type: object
+        "400":
+          description: 'error: Error binding filter data | Filter name already exists'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Error getting current user | Error checking filter
+            name | Error creating filter'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - APIKeyAuth: []
+        JWTKeyAuth: []
+      summary: Create a new filter
+      tags:
+      - filters
+  /filters/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Deletes a filter by ID
+      parameters:
+      - description: Filter ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'res: Filter deleted successfully'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 'error: Filter ID is required | Invalid filter ID'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Error getting current user | internal error'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - APIKeyAuth: []
+        JWTKeyAuth: []
+      summary: Delete a filter
+      tags:
+      - filters
+    get:
+      consumes:
+      - application/json
+      description: Gets a specific filter by ID
+      parameters:
+      - description: Filter ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: filter object
+          schema:
+            $ref: '#/definitions/model.Filter'
+        "400":
+          description: 'error: Filter ID is required | Invalid filter ID'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: 'error: Filter not found'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Error getting current user'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - APIKeyAuth: []
+        JWTKeyAuth: []
+      summary: Get filter by ID
+      tags:
+      - filters
+    put:
+      consumes:
+      - application/json
+      description: Updates an existing filter by ID
+      parameters:
+      - description: Filter ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Filter update request
+        in: body
+        name: filter
+        required: true
+        schema:
+          $ref: '#/definitions/model.FilterReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'res: updated filter object'
+          schema:
+            additionalProperties:
+              $ref: '#/definitions/model.Filter'
+            type: object
+        "400":
+          description: 'error: Filter ID is required | Invalid filter ID | Error binding
+            filter data | Filter name already exists'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Error getting current user | Error checking filter
+            name | Error getting updated filter | internal error'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - APIKeyAuth: []
+        JWTKeyAuth: []
+      summary: Update a filter
+      tags:
+      - filters
+  /filters/{id}/toggle-pin:
+    post:
+      consumes:
+      - application/json
+      description: Toggles the pin status of a filter by ID
+      parameters:
+      - description: Filter ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'res: {isPinned: bool}'
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 'error: Filter ID is required | Invalid filter ID'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Error getting current user | internal error'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - APIKeyAuth: []
+        JWTKeyAuth: []
+      summary: Toggle filter pin status
+      tags:
+      - filters
+  /filters/by-usage:
+    get:
+      consumes:
+      - application/json
+      description: Gets filters sorted by usage for the current user's circle
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: array of filters sorted by usage
+          schema:
+            items:
+              $ref: '#/definitions/model.Filter'
+            type: array
+        "500":
+          description: 'error: Error getting current user | Error getting filters
+            by usage'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - APIKeyAuth: []
+        JWTKeyAuth: []
+      summary: Get filters by usage
+      tags:
+      - filters
+  /filters/pinned:
+    get:
+      consumes:
+      - application/json
+      description: Gets all pinned filters for the current user's circle
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: array of pinned filters
+          schema:
+            items:
+              $ref: '#/definitions/model.Filter'
+            type: array
+        "500":
+          description: 'error: Error getting current user | Error getting pinned filters'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - APIKeyAuth: []
+        JWTKeyAuth: []
+      summary: Get pinned filters
+      tags:
+      - filters
+  /projects:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves all projects for the current user's circle
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: array of projects
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/model.Project'
+              type: array
+            type: object
+        "401":
+          description: 'error: Error getting current user'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Error getting projects'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - APIKeyAuth: []
+        JWTKeyAuth: []
+      summary: Get all projects
+      tags:
+      - projects
+    post:
+      consumes:
+      - application/json
+      description: Creates a new project for the current user's circle
+      parameters:
+      - description: Project creation request
+        in: body
+        name: project
+        required: true
+        schema:
+          $ref: '#/definitions/model.ProjectReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'res: created project object'
+          schema:
+            additionalProperties:
+              $ref: '#/definitions/model.Project'
+            type: object
+        "400":
+          description: 'error: Error binding project data'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: Error getting current user'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Error creating project'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - APIKeyAuth: []
+        JWTKeyAuth: []
+      summary: Create a new project
+      tags:
+      - projects
+  /projects/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Deletes a project by ID; restricted to the current user's circle
+      parameters:
+      - description: Project ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'res: Project deleted successfully'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 'error: Invalid project ID'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: Error getting current user'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Error deleting project'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - APIKeyAuth: []
+        JWTKeyAuth: []
+      summary: Delete a project
+      tags:
+      - projects
+    put:
+      consumes:
+      - application/json
+      description: Updates the name, description, color, and icon of an existing project
+        by ID
+      parameters:
+      - description: Project ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Project update request
+        in: body
+        name: project
+        required: true
+        schema:
+          $ref: '#/definitions/model.ProjectReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'res: updated project object'
+          schema:
+            additionalProperties:
+              $ref: '#/definitions/model.Project'
+            type: object
+        "400":
+          description: 'error: Invalid project ID | Error binding project data'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: Error getting current user'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Error updating project | Error getting updated project'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - APIKeyAuth: []
+        JWTKeyAuth: []
+      summary: Update a project
+      tags:
+      - projects
+  /things:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves all things belonging to the current user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'res: array of things'
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/model.Thing'
+              type: array
+            type: object
+        "401":
+          description: 'error: Unauthorized'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to retrieve things'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - APIKeyAuth: []
+        JWTKeyAuth: []
+      summary: Get all things
+      tags:
+      - things
+    post:
+      consumes:
+      - application/json
+      description: Creates a new thing for the current user with the given name, type,
+        and optional state
+      parameters:
+      - description: Thing creation request
+        in: body
+        name: thing
+        required: true
+        schema:
+          $ref: '#/definitions/thing.ThingRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: 'res: created thing object'
+          schema:
+            additionalProperties:
+              $ref: '#/definitions/model.Thing'
+            type: object
+        "400":
+          description: 'error: Invalid request | Invalid state'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: Unauthorized'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to create thing'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - APIKeyAuth: []
+        JWTKeyAuth: []
+      summary: Create a new thing
+      tags:
+      - things
+    put:
+      consumes:
+      - application/json
+      description: Updates the name, type, and optionally the state of an existing
+        thing
+      parameters:
+      - description: Thing update request
+        in: body
+        name: thing
+        required: true
+        schema:
+          $ref: '#/definitions/thing.ThingRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'res: updated thing object'
+          schema:
+            additionalProperties:
+              $ref: '#/definitions/model.Thing'
+            type: object
+        "400":
+          description: 'error: Invalid request | Invalid state'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: Unauthorized'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 'error: Forbidden'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Unable to find thing | Failed to update thing'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - APIKeyAuth: []
+        JWTKeyAuth: []
+      summary: Update a thing
+      tags:
+      - things
+  /things/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Deletes a thing by ID; fails if there are chores still associated
+        with it
+      parameters:
+      - description: Thing ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: empty response on success
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 'error: Invalid thing id'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: Unauthorized'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 'error: Forbidden'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "405":
+          description: 'error: Unable to delete thing with associated tasks'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Unable to find thing | Unable to find tasks linked
+            to this thing | Failed to delete thing'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - APIKeyAuth: []
+        JWTKeyAuth: []
+      summary: Delete a thing
+      tags:
+      - things
+  /things/{id}/history:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves the state change history for a specific thing with pagination
+        offset
+      parameters:
+      - description: Thing ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Pagination offset
+        in: query
+        name: offset
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'res: thing history entries'
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 'error: Invalid thing id | Invalid offset'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: Unauthorized'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 'error: Forbidden'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Unable to find thing | Failed to retrieve history'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - APIKeyAuth: []
+        JWTKeyAuth: []
+      summary: Get thing history
+      tags:
+      - things
+  /things/{id}/state:
+    put:
+      consumes:
+      - application/json
+      description: Updates the state of a thing by ID and triggers any associated
+        chore due dates
+      parameters:
+      - description: Thing ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: New state value
+        in: query
+        name: value
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'res: updated thing object'
+          schema:
+            additionalProperties:
+              $ref: '#/definitions/model.Thing'
+            type: object
+        "400":
+          description: 'error: Invalid thing id | state or increment query param is
+            required | Invalid state'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: Unauthorized'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 'error: Forbidden'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Unable to find thing | Failed to update state'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - APIKeyAuth: []
+        JWTKeyAuth: []
+      summary: Update thing state
+      tags:
+      - things
 securityDefinitions:
   APIKeyAuth:
     description: donetick issued apikey

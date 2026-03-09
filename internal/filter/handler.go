@@ -59,7 +59,7 @@ func (h *Handler) getFilters(c *gin.Context) {
 //	@Produce		json
 //	@Security		JWTKeyAuth || APIKeyAuth
 //	@Param			id	path		int					true	"Filter ID"
-//	@Success		200	{object}	model.Filter		"filter object"
+//	@Success		200	{object}	fModel.Filter		"filter object"
 //	@Failure		400	{object}	map[string]string	"error: Filter ID is required | Invalid filter ID"
 //	@Failure		404	{object}	map[string]string	"error: Filter not found"
 //	@Failure		500	{object}	map[string]string	"error: Error getting current user"
@@ -108,7 +108,7 @@ func (h *Handler) getFilterByID(c *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Security		JWTKeyAuth || APIKeyAuth
-//	@Param			filter	body		model.FilterReq			true	"Filter creation request"
+//	@Param			filter	body		fModel.FilterReq			true	"Filter creation request"
 //	@Success		200		{object}	map[string]model.Filter	"res: created filter object"
 //	@Failure		400		{object}	map[string]string		"error: Error binding filter data | Filter name already exists"
 //	@Failure		500		{object}	map[string]string		"error: Error getting current user | Error checking filter name | Error creating filter"
@@ -184,7 +184,7 @@ func (h *Handler) createFilter(c *gin.Context) {
 //	@Produce		json
 //	@Security		JWTKeyAuth || APIKeyAuth
 //	@Param			id		path		int						true	"Filter ID"
-//	@Param			filter	body		model.FilterReq			true	"Filter update request"
+//	@Param			filter	body		fModel.FilterReq			true	"Filter update request"
 //	@Success		200		{object}	map[string]model.Filter	"res: updated filter object"
 //	@Failure		400		{object}	map[string]string		"error: Filter ID is required | Invalid filter ID | Error binding filter data | Filter name already exists"
 //	@Failure		500		{object}	map[string]string		"error: Error getting current user | Error checking filter name | Error getting updated filter | internal error"
@@ -385,7 +385,7 @@ func (h *Handler) toggleFilterPin(c *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Security		JWTKeyAuth || APIKeyAuth
-//	@Success		200	{array}		model.Filter		"array of pinned filters"
+//	@Success		200	{array}		fModel.Filter		"array of pinned filters"
 //	@Failure		500	{object}	map[string]string	"error: Error getting current user | Error getting pinned filters"
 //	@Router			/filters/pinned [get]
 func (h *Handler) getPinnedFilters(c *gin.Context) {
@@ -416,7 +416,7 @@ func (h *Handler) getPinnedFilters(c *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Security		JWTKeyAuth || APIKeyAuth
-//	@Success		200	{array}		model.Filter		"array of filters sorted by usage"
+//	@Success		200	{array}		fModel.Filter		"array of filters sorted by usage"
 //	@Failure		500	{object}	map[string]string	"error: Error getting current user | Error getting filters by usage"
 //	@Router			/filters/by-usage [get]
 func (h *Handler) getFiltersByUsage(c *gin.Context) {

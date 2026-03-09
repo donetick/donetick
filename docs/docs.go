@@ -2428,10 +2428,8 @@ const docTemplate = `{
             "get": {
                 "security": [
                     {
+                        "APIKeyAuth": [],
                         "JWTKeyAuth": []
-                    },
-                    {
-                        "APIKeyAuth": []
                     }
                 ],
                 "description": "Retrieves all circles the current user belongs to",
@@ -2483,10 +2481,8 @@ const docTemplate = `{
             "post": {
                 "security": [
                     {
+                        "APIKeyAuth": [],
                         "JWTKeyAuth": []
-                    },
-                    {
-                        "APIKeyAuth": []
                     }
                 ],
                 "description": "Requests to join a circle using an invite code",
@@ -2562,10 +2558,8 @@ const docTemplate = `{
             "delete": {
                 "security": [
                     {
+                        "APIKeyAuth": [],
                         "JWTKeyAuth": []
-                    },
-                    {
-                        "APIKeyAuth": []
                     }
                 ],
                 "description": "Removes the current user from a circle and restores their original circle",
@@ -2632,10 +2626,8 @@ const docTemplate = `{
             "get": {
                 "security": [
                     {
+                        "APIKeyAuth": [],
                         "JWTKeyAuth": []
-                    },
-                    {
-                        "APIKeyAuth": []
                     }
                 ],
                 "description": "Retrieves all members of the current user's circle",
@@ -2662,15 +2654,6 @@ const docTemplate = `{
                             }
                         }
                     },
-                    "401": {
-                        "description": "error: Authentication failed",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
                     "500": {
                         "description": "error: Error getting circle members",
                         "schema": {
@@ -2687,10 +2670,8 @@ const docTemplate = `{
             "get": {
                 "security": [
                     {
+                        "APIKeyAuth": [],
                         "JWTKeyAuth": []
-                    },
-                    {
-                        "APIKeyAuth": []
                     }
                 ],
                 "description": "Retrieves pending circle join requests (admin only)",
@@ -2751,10 +2732,8 @@ const docTemplate = `{
             "put": {
                 "security": [
                     {
+                        "APIKeyAuth": [],
                         "JWTKeyAuth": []
-                    },
-                    {
-                        "APIKeyAuth": []
                     }
                 ],
                 "description": "Accepts a pending circle join request (admin only)",
@@ -2830,10 +2809,8 @@ const docTemplate = `{
             "put": {
                 "security": [
                     {
+                        "APIKeyAuth": [],
                         "JWTKeyAuth": []
-                    },
-                    {
-                        "APIKeyAuth": []
                     }
                 ],
                 "description": "Changes the role of a circle member (admin only)",
@@ -2919,10 +2896,8 @@ const docTemplate = `{
             "delete": {
                 "security": [
                     {
+                        "APIKeyAuth": [],
                         "JWTKeyAuth": []
-                    },
-                    {
-                        "APIKeyAuth": []
                     }
                 ],
                 "description": "Removes a member from a circle (admin only)",
@@ -3005,10 +2980,8 @@ const docTemplate = `{
             "post": {
                 "security": [
                     {
+                        "APIKeyAuth": [],
                         "JWTKeyAuth": []
-                    },
-                    {
-                        "APIKeyAuth": []
                     }
                 ],
                 "description": "Redeems points for a circle member (admin only)",
@@ -3087,6 +3060,1151 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "error: Error redeeming points",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/filters": {
+            "get": {
+                "security": [
+                    {
+                        "APIKeyAuth": [],
+                        "JWTKeyAuth": []
+                    }
+                ],
+                "description": "Gets all filters for the current user's circle",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "filters"
+                ],
+                "summary": "Get all filters",
+                "responses": {
+                    "200": {
+                        "description": "array of filters",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "additionalProperties": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/definitions/model.Filter"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Error getting current user | Error getting filters",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "APIKeyAuth": [],
+                        "JWTKeyAuth": []
+                    }
+                ],
+                "description": "Creates a new filter for the current user's circle",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "filters"
+                ],
+                "summary": "Create a new filter",
+                "parameters": [
+                    {
+                        "description": "Filter creation request",
+                        "name": "filter",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.FilterReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "res: created filter object",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "$ref": "#/definitions/model.Filter"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "error: Error binding filter data | Filter name already exists",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Error getting current user | Error checking filter name | Error creating filter",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/filters/by-usage": {
+            "get": {
+                "security": [
+                    {
+                        "APIKeyAuth": [],
+                        "JWTKeyAuth": []
+                    }
+                ],
+                "description": "Gets filters sorted by usage for the current user's circle",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "filters"
+                ],
+                "summary": "Get filters by usage",
+                "responses": {
+                    "200": {
+                        "description": "array of filters sorted by usage",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.Filter"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Error getting current user | Error getting filters by usage",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/filters/pinned": {
+            "get": {
+                "security": [
+                    {
+                        "APIKeyAuth": [],
+                        "JWTKeyAuth": []
+                    }
+                ],
+                "description": "Gets all pinned filters for the current user's circle",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "filters"
+                ],
+                "summary": "Get pinned filters",
+                "responses": {
+                    "200": {
+                        "description": "array of pinned filters",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.Filter"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Error getting current user | Error getting pinned filters",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/filters/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "APIKeyAuth": [],
+                        "JWTKeyAuth": []
+                    }
+                ],
+                "description": "Gets a specific filter by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "filters"
+                ],
+                "summary": "Get filter by ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Filter ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "filter object",
+                        "schema": {
+                            "$ref": "#/definitions/model.Filter"
+                        }
+                    },
+                    "400": {
+                        "description": "error: Filter ID is required | Invalid filter ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "error: Filter not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Error getting current user",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "APIKeyAuth": [],
+                        "JWTKeyAuth": []
+                    }
+                ],
+                "description": "Updates an existing filter by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "filters"
+                ],
+                "summary": "Update a filter",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Filter ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Filter update request",
+                        "name": "filter",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.FilterReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "res: updated filter object",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "$ref": "#/definitions/model.Filter"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "error: Filter ID is required | Invalid filter ID | Error binding filter data | Filter name already exists",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Error getting current user | Error checking filter name | Error getting updated filter | internal error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "APIKeyAuth": [],
+                        "JWTKeyAuth": []
+                    }
+                ],
+                "description": "Deletes a filter by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "filters"
+                ],
+                "summary": "Delete a filter",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Filter ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "res: Filter deleted successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "error: Filter ID is required | Invalid filter ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Error getting current user | internal error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/filters/{id}/toggle-pin": {
+            "post": {
+                "security": [
+                    {
+                        "APIKeyAuth": [],
+                        "JWTKeyAuth": []
+                    }
+                ],
+                "description": "Toggles the pin status of a filter by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "filters"
+                ],
+                "summary": "Toggle filter pin status",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Filter ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "res: {isPinned: bool}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "error: Filter ID is required | Invalid filter ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Error getting current user | internal error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/projects": {
+            "get": {
+                "security": [
+                    {
+                        "APIKeyAuth": [],
+                        "JWTKeyAuth": []
+                    }
+                ],
+                "description": "Retrieves all projects for the current user's circle",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "projects"
+                ],
+                "summary": "Get all projects",
+                "responses": {
+                    "200": {
+                        "description": "array of projects",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/definitions/model.Project"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "error: Error getting current user",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Error getting projects",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "APIKeyAuth": [],
+                        "JWTKeyAuth": []
+                    }
+                ],
+                "description": "Creates a new project for the current user's circle",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "projects"
+                ],
+                "summary": "Create a new project",
+                "parameters": [
+                    {
+                        "description": "Project creation request",
+                        "name": "project",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.ProjectReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "res: created project object",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "$ref": "#/definitions/model.Project"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "error: Error binding project data",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "error: Error getting current user",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Error creating project",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/projects/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "APIKeyAuth": [],
+                        "JWTKeyAuth": []
+                    }
+                ],
+                "description": "Updates the name, description, color, and icon of an existing project by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "projects"
+                ],
+                "summary": "Update a project",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Project ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Project update request",
+                        "name": "project",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.ProjectReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "res: updated project object",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "$ref": "#/definitions/model.Project"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "error: Invalid project ID | Error binding project data",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "error: Error getting current user",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Error updating project | Error getting updated project",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "APIKeyAuth": [],
+                        "JWTKeyAuth": []
+                    }
+                ],
+                "description": "Deletes a project by ID; restricted to the current user's circle",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "projects"
+                ],
+                "summary": "Delete a project",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Project ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "res: Project deleted successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "error: Invalid project ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "error: Error getting current user",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Error deleting project",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/things": {
+            "get": {
+                "security": [
+                    {
+                        "APIKeyAuth": [],
+                        "JWTKeyAuth": []
+                    }
+                ],
+                "description": "Retrieves all things belonging to the current user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "things"
+                ],
+                "summary": "Get all things",
+                "responses": {
+                    "200": {
+                        "description": "res: array of things",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/definitions/model.Thing"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "error: Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Failed to retrieve things",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "APIKeyAuth": [],
+                        "JWTKeyAuth": []
+                    }
+                ],
+                "description": "Updates the name, type, and optionally the state of an existing thing",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "things"
+                ],
+                "summary": "Update a thing",
+                "parameters": [
+                    {
+                        "description": "Thing update request",
+                        "name": "thing",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/thing.ThingRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "res: updated thing object",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "$ref": "#/definitions/model.Thing"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "error: Invalid request | Invalid state",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "error: Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "error: Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Unable to find thing | Failed to update thing",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "APIKeyAuth": [],
+                        "JWTKeyAuth": []
+                    }
+                ],
+                "description": "Creates a new thing for the current user with the given name, type, and optional state",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "things"
+                ],
+                "summary": "Create a new thing",
+                "parameters": [
+                    {
+                        "description": "Thing creation request",
+                        "name": "thing",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/thing.ThingRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "res: created thing object",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "$ref": "#/definitions/model.Thing"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "error: Invalid request | Invalid state",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "error: Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Failed to create thing",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/things/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "APIKeyAuth": [],
+                        "JWTKeyAuth": []
+                    }
+                ],
+                "description": "Deletes a thing by ID; fails if there are chores still associated with it",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "things"
+                ],
+                "summary": "Delete a thing",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Thing ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "empty response on success",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "error: Invalid thing id",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "error: Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "error: Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "405": {
+                        "description": "error: Unable to delete thing with associated tasks",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Unable to find thing | Unable to find tasks linked to this thing | Failed to delete thing",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/things/{id}/history": {
+            "get": {
+                "security": [
+                    {
+                        "APIKeyAuth": [],
+                        "JWTKeyAuth": []
+                    }
+                ],
+                "description": "Retrieves the state change history for a specific thing with pagination offset",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "things"
+                ],
+                "summary": "Get thing history",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Thing ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Pagination offset",
+                        "name": "offset",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "res: thing history entries",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "error: Invalid thing id | Invalid offset",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "error: Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "error: Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Unable to find thing | Failed to retrieve history",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/things/{id}/state": {
+            "put": {
+                "security": [
+                    {
+                        "APIKeyAuth": [],
+                        "JWTKeyAuth": []
+                    }
+                ],
+                "description": "Updates the state of a thing by ID and triggers any associated chore due dates",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "things"
+                ],
+                "summary": "Update thing state",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Thing ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "New state value",
+                        "name": "value",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "res: updated thing object",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "$ref": "#/definitions/model.Thing"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "error: Invalid thing id | state or increment query param is required | Invalid state",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "error: Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "error: Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Unable to find thing | Failed to update state",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -3595,6 +4713,123 @@ const docTemplate = `{
                 }
             }
         },
+        "model.Filter": {
+            "type": "object",
+            "properties": {
+                "circleId": {
+                    "type": "integer"
+                },
+                "color": {
+                    "type": "string"
+                },
+                "conditions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.FilterCondition"
+                    }
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "createdBy": {
+                    "type": "integer"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "icon": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "isPinned": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "operator": {
+                    "$ref": "#/definitions/model.LogicalOperator"
+                },
+                "updatedAt": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.FilterCondition": {
+            "type": "object",
+            "required": [
+                "type",
+                "value"
+            ],
+            "properties": {
+                "operator": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string",
+                    "enum": [
+                        "assignee",
+                        "createdBy",
+                        "priority",
+                        "status",
+                        "dueDate",
+                        "label",
+                        "project",
+                        "points"
+                    ]
+                },
+                "value": {}
+            }
+        },
+        "model.FilterReq": {
+            "type": "object",
+            "required": [
+                "conditions",
+                "name"
+            ],
+            "properties": {
+                "color": {
+                    "type": "string"
+                },
+                "conditions": {
+                    "type": "array",
+                    "maxItems": 20,
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/model.FilterCondition"
+                    }
+                },
+                "description": {
+                    "type": "string",
+                    "maxLength": 500
+                },
+                "icon": {
+                    "type": "string",
+                    "maxLength": 50
+                },
+                "isPinned": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 1
+                },
+                "operator": {
+                    "enum": [
+                        "AND",
+                        "OR"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.LogicalOperator"
+                        }
+                    ]
+                }
+            }
+        },
         "model.FrequencyMetadata": {
             "type": "object",
             "properties": {
@@ -3694,6 +4929,17 @@ const docTemplate = `{
                     "type": "integer"
                 }
             }
+        },
+        "model.LogicalOperator": {
+            "type": "string",
+            "enum": [
+                "AND",
+                "OR"
+            ],
+            "x-enum-varnames": [
+                "LogicalOperatorAND",
+                "LogicalOperatorOR"
+            ]
         },
         "model.NotificationMetadata": {
             "type": "object",
@@ -3802,6 +5048,26 @@ const docTemplate = `{
                 }
             }
         },
+        "model.ProjectReq": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "color": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "icon": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
         "model.Status": {
             "type": "integer",
             "format": "int32",
@@ -3837,6 +5103,41 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "parentId": {
+                    "type": "integer"
+                }
+            }
+        },
+        "model.Thing": {
+            "type": "object",
+            "properties": {
+                "circleId": {
+                    "type": "integer"
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "state": {
+                    "type": "string"
+                },
+                "thingChores": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.ThingChore"
+                    }
+                },
+                "type": {
+                    "type": "string"
+                },
+                "updatedAt": {
+                    "type": "string"
+                },
+                "userID": {
                     "type": "integer"
                 }
             }
@@ -3953,6 +5254,27 @@ const docTemplate = `{
                 "WeekPatternWeekOfMonth",
                 "WeekPatternWeekOfQuarter"
             ]
+        },
+        "thing.ThingRequest": {
+            "type": "object",
+            "required": [
+                "name",
+                "type"
+            ],
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "state": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
         }
     },
     "securityDefinitions": {

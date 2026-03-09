@@ -59,7 +59,7 @@ func (h *Handler) getProjects(c *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Security		JWTKeyAuth || APIKeyAuth
-//	@Param			project	body		model.ProjectReq			true	"Project creation request"
+//	@Param			project	body		pModel.ProjectReq			true	"Project creation request"
 //	@Success		200		{object}	map[string]model.Project	"res: created project object"
 //	@Failure		400		{object}	map[string]string			"error: Error binding project data"
 //	@Failure		401		{object}	map[string]string			"error: Error getting current user"
@@ -112,8 +112,8 @@ func (h *Handler) createProject(c *gin.Context) {
 //	@Produce		json
 //	@Security		JWTKeyAuth || APIKeyAuth
 //	@Param			id		path		int							true	"Project ID"
-//	@Param			project	body		model.ProjectReq			true	"Project update request"
-//	@Success		200		{object}	map[string]model.Project	"res: updated project object"
+//	@Param			project	body		pModel.ProjectReq			true	"Project update request"
+//	@Success		200		{object}	map[string]pModel.Project	"res: updated project object"
 //	@Failure		400		{object}	map[string]string			"error: Invalid project ID | Error binding project data"
 //	@Failure		401		{object}	map[string]string			"error: Error getting current user"
 //	@Failure		500		{object}	map[string]string			"error: Error updating project | Error getting updated project"

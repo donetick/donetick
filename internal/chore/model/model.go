@@ -79,6 +79,9 @@ type Chore struct {
 	DeadlineOffset         *int                  `json:"deadlineOffset,omitempty" gorm:"column:deadline_offset"`      // Seconds after NextDueDate when chore deadline is reached
 	ProjectID              *int                  `json:"projectId,omitempty" gorm:"column:project_id;index"`          // The project this chore belongs to
 	Project                *pModel.Project       `json:"project,omitempty" gorm:"foreignkey:ProjectID;references:ID"` // Project relationship
+	// Computed at read time, never stored
+	IsExpired      bool       `json:"isExpired" gorm:"-"`
+	NextOccurrence *time.Time `json:"nextOccurrence,omitempty" gorm:"-"`
 }
 
 type Status int8
@@ -233,6 +236,12 @@ type ChoreReq struct {
 	DeadlineOffset       *int                  `json:"deadlineOffset,omitempty"`
 	ProjectID            *int                  `json:"projectId,omitempty"`
 	UpdatedAt            *time.Time            `json:"updatedAt,omitempty"` // For internal use only when syncing a chore updated offline
+}
+
+func (c *Chore) IsRecurring() bool {
+	return c.FrequencyType != FrequencyTypeOnce &&
+		c.FrequencyType != FrequencyTypeNoRepeat &&
+		c.FrequencyType != FrequencyTypeTrigger
 }
 
 func (c *Chore) GetDeadline() *time.Time {

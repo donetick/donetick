@@ -83,6 +83,23 @@ func NewHandler(cr *chRepo.ChoreRepository, circleRepo *cRepo.CircleRepository, 
 	}
 }
 
+// enrichChoreDeadlineStatus computes and sets IsExpired and NextOccurrence on a chore
+// based on whether its deadline has passed. This is done at read time so that clients
+// always see the correct state even before the background expiry job has run.
+func enrichChoreDeadlineStatus(ctx context.Context, chore *chModel.Chore) {
+	deadline := chore.GetDeadline()
+	if deadline == nil || !deadline.Before(time.Now().UTC()) {
+		return
+	}
+	chore.IsExpired = true
+	if chore.IsRecurring() && chore.NextDueDate != nil {
+		next, err := scheduleNextDueDate(ctx, chore, *chore.NextDueDate)
+		if err == nil && next != nil {
+			chore.NextOccurrence = next
+		}
+	}
+}
+
 // GetChores godoc
 // @Summary Get all chores
 // @Description Retrieves all chores for the current user's circle with optional archived chores
@@ -118,6 +135,10 @@ func (h *Handler) getChores(c *gin.Context) {
 			"error": "Failed to retrieve chores",
 		})
 		return
+	}
+
+	for _, chore := range chores {
+		enrichChoreDeadlineStatus(c, chore)
 	}
 
 	c.JSON(200, gin.H{
@@ -216,6 +237,8 @@ func (h *Handler) getChore(c *gin.Context) {
 		})
 		return
 	}
+
+	enrichChoreDeadlineStatus(c, chore)
 
 	c.JSON(200, gin.H{
 		"res": chore,
@@ -323,6 +346,7 @@ func (h *Handler) createChore(c *gin.Context) {
 		RequireApproval:        choreReq.RequireApproval,
 		IsPrivate:              choreReq.IsPrivate,
 		ProjectID:              choreReq.ProjectID,
+		DeadlineOffset:         choreReq.DeadlineOffset,
 		// SubTasks removed to prevent duplicate creation - handled by UpdateSubtask call below
 		// it's need custom logic to handle subtask creation as we send negative ids sometimes when we creating parent child releationship
 		// when the subtask is not yet created
@@ -617,6 +641,7 @@ func (h *Handler) editChore(c *gin.Context) {
 		IsPrivate:              choreReq.IsPrivate,
 		ProjectID:              choreReq.ProjectID,
 		Status:                 oldChore.Status,
+		DeadlineOffset:         choreReq.DeadlineOffset,
 	}
 	if err := h.choreRepo.UpsertChore(c, updatedChore); err != nil {
 		c.JSON(500, gin.H{

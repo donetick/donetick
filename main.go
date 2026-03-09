@@ -169,6 +169,7 @@ func main() {
 		fx.Provide(payment.NewHandler),
 		fx.Provide(payment.NewWebhook),
 		fx.Provide(chore.NewAPI),
+		fx.Provide(chore.NewDeadlineExpiry),
 
 		fx.Provide(frontend.NewHandler),
 
@@ -231,7 +232,7 @@ func main() {
 
 }
 
-func newServer(lc fx.Lifecycle, cfg *config.Config, db *gorm.DB, notifier *notifier.Scheduler, eventProducer *events.EventsProducer, mfaCleanup *mfa.CleanupService, authCleanup *auth.CleanupService, rts *realtime.RealTimeService) *gin.Engine {
+func newServer(lc fx.Lifecycle, cfg *config.Config, db *gorm.DB, notifier *notifier.Scheduler, eventProducer *events.EventsProducer, mfaCleanup *mfa.CleanupService, authCleanup *auth.CleanupService, rts *realtime.RealTimeService, deadlineExpiry *chore.DeadlineExpiry) *gin.Engine {
 	// Set Gin mode based on logging configuration
 	if cfg.Logging.Development || strings.ToLower(cfg.Logging.Level) == "debug" {
 		gin.SetMode(gin.DebugMode)
@@ -298,6 +299,7 @@ func newServer(lc fx.Lifecycle, cfg *config.Config, db *gorm.DB, notifier *notif
 			eventProducer.Start(context.Background())
 			mfaCleanup.Start(context.Background())
 			authCleanup.Start(context.Background())
+			deadlineExpiry.Start(context.Background())
 
 			// Start real-time service
 			if err := rts.Start(ctx); err != nil {

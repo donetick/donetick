@@ -50,8 +50,9 @@ while IFS= read -r file; do
     grep -v 'time\.Now()\.Unix' | \
     grep -v '// utc-lint:ignore' || true)
   if [ -n "$MATCHES" ]; then
-    VIOLATIONS="${VIOLATIONS}${file}:
-${MATCHES}
+    # Format: file:line: content for better readability
+    FORMATTED=$(echo "$MATCHES" | sed "s/^\([0-9]*\):/$(echo "$file" | sed 's/\//\\\//g'):&/")
+    VIOLATIONS="${VIOLATIONS}${FORMATTED}
 "
   fi
 done <<< "$FILES"

@@ -575,6 +575,7 @@ func (r *ChoreRepository) GetChoreDetailByID(c context.Context, choreID int, cir
         chores.created_by,
 		chores.priority,
 		chores.completion_window,
+		chores.deadline_offset,
 		chores.status,
 		chores.is_active,
 		CAST(MAX(time_sessions.duration) AS INTEGER) as duration,
@@ -890,5 +891,59 @@ func (r *ChoreRepository) UndoChoreAction(c context.Context, choreID int, histor
 		}
 
 		return nil
+	})
+}
+
+func (r *ChoreRepository) GetExpiredChores(c context.Context) ([]*chModel.Chore, error) {
+	var chores []*chModel.Chore
+	now := time.Now().UTC()
+	// Pre-filter using the next_due_date index; exact deadline check is done in Go below.
+	if err := r.db.WithContext(c).
+		Preload("Assignees").
+		Where("is_active = ? AND deadline_offset IS NOT NULL AND next_due_date < ? AND status != ?",
+			true, now, chModel.ChoreStatusPendingApproval).
+		Find(&chores).Error; err != nil {
+		return nil, err
+	}
+	// Post-filter: only include chores whose deadline (next_due_date + deadline_offset) has passed.
+	expired := chores[:0]
+	for _, ch := range chores {
+		if dl := ch.GetDeadline(); dl != nil && dl.Before(now) {
+			expired = append(expired, ch)
+		}
+	}
+	return expired, nil
+}
+
+func (r *ChoreRepository) ExpireChore(c context.Context, chore *chModel.Chore, nextDueDate *time.Time) error {
+	return r.db.WithContext(c).Transaction(func(tx *gorm.DB) error {
+		missedAt := chore.GetDeadline()
+		if missedAt == nil {
+			now := time.Now().UTC()
+			missedAt = &now
+		}
+
+		choreUpdates := map[string]interface{}{
+			"status": chModel.ChoreStatusNoStatus,
+		}
+		if nextDueDate != nil {
+			choreUpdates["next_due_date"] = nextDueDate
+		} else {
+			choreUpdates["is_active"] = false
+		}
+
+		if err := tx.Model(&chModel.Chore{}).Where("id = ?", chore.ID).Updates(choreUpdates).Error; err != nil {
+			return err
+		}
+
+		ch := &chModel.ChoreHistory{
+			ChoreID:     chore.ID,
+			PerformedAt: missedAt,
+			CompletedBy: 0, // 0 = system-triggered expiry
+			AssignedTo:  chore.AssignedTo,
+			DueDate:     chore.NextDueDate,
+			Status:      chModel.ChoreHistoryStatusMissed,
+		}
+		return tx.Create(ch).Error
 	})
 }

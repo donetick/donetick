@@ -48,9 +48,7 @@ func (h *Handler) getProjects(c *gin.Context) {
 		return
 	}
 
-	c.JSON(200, gin.H{
-		"res": projects,
-	})
+	c.JSON(200, projects)
 }
 
 // createProject godoc

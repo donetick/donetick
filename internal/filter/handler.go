@@ -26,8 +26,9 @@ func NewHandler(fRepo *fRepo.FilterRepository) *Handler {
 //	@Tags			filters
 //	@Accept			json
 //	@Produce		json
-//	@Security		JWTKeyAuth && APIKeyAuth
-//	@Success		200	{array}		model.Filter		"array of filters"
+//	@Security		JWTKeyAuth
+//	@Security		APIKeyAuth
+//	@Success		200	{array}		fModel.Filter		"array of filters"
 //	@Failure		500	{object}	map[string]string	"error: Error getting current user | Error getting filters"
 //	@Router			/filters [get]
 func (h *Handler) getFilters(c *gin.Context) {

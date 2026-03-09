@@ -27,7 +27,7 @@ func NewHandler(pRepo *pRepo.ProjectRepository) *Handler {
 //	@Accept			json
 //	@Produce		json
 //	@Security		JWTKeyAuth || APIKeyAuth
-//	@Success		200	{object}	map[string][]pmodel.Project	"array of projects"
+//	@Success		200	{object}	map[string][]pModel.Project	"array of projects"
 //	@Failure		401	{object}	map[string]string			"error: Error getting current user"
 //	@Failure		500	{object}	map[string]string			"error: Error getting projects"
 //	@Router			/projects [get]

@@ -51,8 +51,7 @@ func NewHandler(cr *chRepo.ChoreRepository, circleRepo *cRepo.CircleRepository,
 //	@Tags			things
 //	@Accept			json
 //	@Produce		json
-//	@Security		JWTKeyAuth
-//	@Security		APIKeyAuth
+//	@Security		JWTKeyAuth || APIKeyAuth
 //	@Param			thing	body		ThingRequest			true	"Thing creation request"
 //	@Success		201		{object}	map[string]tModel.Thing	"res: created thing object"
 //	@Failure		400		{object}	map[string]string		"error: Invalid request | Invalid state"
@@ -99,7 +98,7 @@ func (h *Handler) CreateThing(c *gin.Context) {
 //	@Tags			things
 //	@Accept			json
 //	@Produce		json
-//	@Security		JWTKeyAuth && APIKeyAuth
+//	@Security		JWTKeyAuth || APIKeyAuth
 //	@Param			id		path		int					true	"Thing ID"
 //	@Param			value	query		string				true	"New state value"
 //	@Success		200		{object}	map[string]model.Thing	"res: updated thing object"
@@ -191,7 +190,7 @@ func EvaluateTriggerAndScheduleDueDate(h *Handler, c *gin.Context, thing *tModel
 //	@Tags			things
 //	@Accept			json
 //	@Produce		json
-//	@Security		JWTKeyAuth && APIKeyAuth
+//	@Security		JWTKeyAuth || APIKeyAuth
 //	@Param			thing	body		ThingRequest			true	"Thing update request"
 //	@Success		200		{object}	map[string]model.Thing	"res: updated thing object"
 //	@Failure		400		{object}	map[string]string		"error: Invalid request | Invalid state"
@@ -248,7 +247,7 @@ func (h *Handler) UpdateThing(c *gin.Context) {
 //	@Tags			things
 //	@Accept			json
 //	@Produce		json
-//	@Security		JWTKeyAuth && APIKeyAuth
+//	@Security		JWTKeyAuth || APIKeyAuth
 //	@Success		200	{object}	map[string][]model.Thing	"res: array of things"
 //	@Failure		401	{object}	map[string]string			"error: Unauthorized"
 //	@Failure		500	{object}	map[string]string			"error: Failed to retrieve things"
@@ -277,7 +276,7 @@ func (h *Handler) GetAllThings(c *gin.Context) {
 //	@Tags			things
 //	@Accept			json
 //	@Produce		json
-//	@Security		JWTKeyAuth && APIKeyAuth
+//	@Security		JWTKeyAuth || APIKeyAuth
 //	@Param			id		path		int						true	"Thing ID"
 //	@Param			offset	query		int						true	"Pagination offset"
 //	@Success		200		{object}	map[string]interface{}	"res: thing history entries"
@@ -333,7 +332,7 @@ func (h *Handler) GetThingHistory(c *gin.Context) {
 //	@Tags			things
 //	@Accept			json
 //	@Produce		json
-//	@Security		JWTKeyAuth && APIKeyAuth
+//	@Security		JWTKeyAuth || APIKeyAuth
 //	@Param			id	path		int					true	"Thing ID"
 //	@Success		200	{object}	map[string]interface{}	"empty response on success"
 //	@Failure		400	{object}	map[string]string		"error: Invalid thing id"

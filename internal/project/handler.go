@@ -58,7 +58,7 @@ func (h *Handler) getProjects(c *gin.Context) {
 //	@Tags			projects
 //	@Accept			json
 //	@Produce		json
-//	@Security		JWTKeyAuth && APIKeyAuth
+//	@Security		JWTKeyAuth || APIKeyAuth
 //	@Param			project	body		model.ProjectReq			true	"Project creation request"
 //	@Success		200		{object}	map[string]model.Project	"res: created project object"
 //	@Failure		400		{object}	map[string]string			"error: Error binding project data"
@@ -110,7 +110,7 @@ func (h *Handler) createProject(c *gin.Context) {
 //	@Tags			projects
 //	@Accept			json
 //	@Produce		json
-//	@Security		JWTKeyAuth && APIKeyAuth
+//	@Security		JWTKeyAuth || APIKeyAuth
 //	@Param			id		path		int							true	"Project ID"
 //	@Param			project	body		model.ProjectReq			true	"Project update request"
 //	@Success		200		{object}	map[string]model.Project	"res: updated project object"
@@ -178,7 +178,7 @@ func (h *Handler) updateProject(c *gin.Context) {
 //	@Tags			projects
 //	@Accept			json
 //	@Produce		json
-//	@Security		JWTKeyAuth && APIKeyAuth
+//	@Security		JWTKeyAuth || APIKeyAuth
 //	@Param			id	path		int					true	"Project ID"
 //	@Success		200	{object}	map[string]string	"res: Project deleted successfully"
 //	@Failure		400	{object}	map[string]string	"error: Invalid project ID"

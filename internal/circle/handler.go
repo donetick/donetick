@@ -49,8 +49,7 @@ func NewHandler(cr *cRepo.CircleRepository, ur *uRepo.UserRepository, c *chRepo.
 //	@Tags			circles
 //	@Accept			json
 //	@Produce		json
-//	@Security		JWTKeyAuth
-//	@Security		APIKeyAuth
+//	@Security		JWTKeyAuth || APIKeyAuth
 //	@Success		200	{object}	map[string][]cModel.UserCircleDetail	"res: array of circle members"
 //	@Failure		401	{object}	map[string]string										"error: Authentication failed"
 //	@Failure		500	{object}	map[string]string										"error: Error getting circle members"
@@ -89,8 +88,7 @@ func (h *Handler) GetCircleMembers(c *gin.Context) {
 //	@Tags			circles
 //	@Accept			json
 //	@Produce		json
-//	@Security		JWTKeyAuth
-//	@Security		APIKeyAuth
+//	@Security		JWTKeyAuth || APIKeyAuth
 //	@Param			invite_code	query		string							true	"Invite code"
 //	@Success		200			{object}	map[string]string	"res: User Requested to join circle successfully"
 //	@Failure		400			{object}	map[string]string	"error: Invalid request"
@@ -155,8 +153,7 @@ func (h *Handler) JoinCircle(c *gin.Context) {
 //	@Tags			circles
 //	@Accept			json
 //	@Produce		json
-//	@Security		JWTKeyAuth
-//	@Security		APIKeyAuth
+//	@Security		JWTKeyAuth || APIKeyAuth
 //	@Param			circle_id	query		int								true	"Circle ID"
 //	@Success		200			{object}	map[string]string	"res: User left circle successfully"
 //	@Failure		400			{object}	map[string]string	"error: Invalid request"
@@ -255,8 +252,7 @@ func handleUserLeavingCircle(h *Handler, c *gin.Context, leavingUser *uModel.Use
 //	@Tags			circles
 //	@Accept			json
 //	@Produce		json
-//	@Security		JWTKeyAuth
-//	@Security		APIKeyAuth
+//	@Security		JWTKeyAuth || APIKeyAuth
 //	@Param			id			path		int								true	"Circle ID"
 //	@Param			member_id	query		int								true	"Member ID to delete"
 //	@Success		200			{object}	map[string]string	"res: User deleted from circle successfully"
@@ -341,8 +337,7 @@ func (h *Handler) DeleteCircleMember(c *gin.Context) {
 //	@Tags			circles
 //	@Accept			json
 //	@Produce		json
-//	@Security		JWTKeyAuth
-//	@Security		APIKeyAuth
+//	@Security		JWTKeyAuth || APIKeyAuth
 //	@Success		200	{object}	map[string][]cModel.Circle	"res: array of circles"
 //	@Failure		401	{object}	map[string]string					"error: Authentication failed"
 //	@Failure		500	{object}	map[string]string					"error: Error getting user circles"
@@ -378,8 +373,7 @@ func (h *Handler) GetUserCircles(c *gin.Context) {
 //	@Tags			circles
 //	@Accept			json
 //	@Produce		json
-//	@Security		JWTKeyAuth
-//	@Security		APIKeyAuth
+//	@Security		JWTKeyAuth || APIKeyAuth
 //	@Success		200	{object}	map[string][]cModel.UserCircleDetail	"res: array of pending members"
 //	@Failure		401	{object}	map[string]string										"error: Authentication failed"
 //	@Failure		403	{object}	map[string]string										"error: You are not an admin of this circle"
@@ -440,8 +434,7 @@ func (h *Handler) GetPendingCircleMembers(c *gin.Context) {
 //	@Tags			circles
 //	@Accept			json
 //	@Produce		json
-//	@Security		JWTKeyAuth
-//	@Security		APIKeyAuth
+//	@Security		JWTKeyAuth || APIKeyAuth
 //	@Param			requestId	query		int								true	"Request ID"
 //	@Success		200			{object}	map[string]string	"res: Join request accepted successfully"
 //	@Failure		400			{object}	map[string]string	"error: Invalid request / Circle is full"
@@ -564,8 +557,7 @@ func (h *Handler) AcceptJoinRequest(c *gin.Context) {
 //	@Tags			circles
 //	@Accept			json
 //	@Produce		json
-//	@Security		JWTKeyAuth
-//	@Security		APIKeyAuth
+//	@Security		JWTKeyAuth || APIKeyAuth
 //	@Param			id		path		int								true	"Circle ID"
 //	@Param			points	body		object{points=int,userId=int}	true	"Points redemption request"
 //	@Success		200		{object}	map[string]string	"res: Points redeemed successfully"
@@ -687,8 +679,7 @@ func (h *Handler) RedeemPoints(c *gin.Context) {
 //	@Tags			circles
 //	@Accept			json
 //	@Produce		json
-//	@Security		JWTKeyAuth
-//	@Security		APIKeyAuth
+//	@Security		JWTKeyAuth || APIKeyAuth
 //	@Param			role	body		object{memberId=int,role=cModel.Role}	true	"Role change request"
 //	@Success		200		{object}	map[string]string			"res: Member role changed successfully"
 //	@Failure		400		{object}	map[string]string			"error: Invalid request / Invalid role / User is not a member of this circle"

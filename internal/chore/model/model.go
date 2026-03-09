@@ -280,12 +280,14 @@ func (c *Chore) CanEdit(userID int, circleUsers []*cModel.UserCircleDetail, upda
 			break
 		}
 	}
+
+	cooldown := time.Second * 30
 	if updatedAt != nil {
 		// if the chore was updated after the user fetched it for editing, then do not allow editing
 		if c.UpdatedAt.After(*updatedAt) {
 			// this means the chore was modified by someone
 			choreCanModified = false
-		} else if updatedAt.After(time.Now()) {
+		} else if updatedAt.After(time.Now().UTC().Add(cooldown)) {
 			// if the updatedAt is in the future, then do not allow editing
 			choreCanModified = false
 			return errors.New("updatedAt is in the future and cannot be used to edit the chore")
@@ -332,11 +334,9 @@ func (c *Chore) CanComplete(userID int, circleUsers []*cModel.UserCircleDetail) 
 					return true
 				}
 			}
-		} else {
+		} else if c.CreatedBy == userID {
 			// For private chores with no assignee, only creator can complete
-			if c.CreatedBy == userID {
-				return true
-			}
+			return true
 		}
 		return false
 	}
@@ -425,12 +425,14 @@ func (f *FrequencyMetadata) Scan(value interface{}) error {
 		return nil
 	}
 
-	bytes, ok := value.([]byte)
-	if !ok {
-		return errors.New("type assertion to []byte failed")
+	switch v := value.(type) {
+	case []byte:
+		return json.Unmarshal(v, f)
+	case string:
+		return json.Unmarshal([]byte(v), f)
+	default:
+		return errors.New("type assertion to []byte or string failed")
 	}
-
-	return json.Unmarshal(bytes, f)
 }
 
 type TimeSession struct {
@@ -488,7 +490,7 @@ func (p *PauseLogEntries) Scan(value interface{}) error {
 	}
 }
 
-func (t *TimeSession) Start(UserID int) {
+func (t *TimeSession) Start(userID int) {
 	timeNow := time.Now().UTC()
 	t.Status = TimeSessionStatusActive
 	if t.StartTime.IsZero() {
@@ -497,13 +499,13 @@ func (t *TimeSession) Start(UserID int) {
 
 	t.PauseLog = append(t.PauseLog, &PauseLogEntry{
 		StartTime: timeNow,
-		UpdateBy:  UserID,
+		UpdateBy:  userID,
 	})
-	t.UpdateBy = UserID
+	t.UpdateBy = userID
 	t.UpdateAt = timeNow
 }
 
-func (t *TimeSession) Pause(UserID int) {
+func (t *TimeSession) Pause(userID int) {
 	timeNow := time.Now().UTC()
 	duration := 0
 	if t.Status == TimeSessionStatusActive {
@@ -516,11 +518,11 @@ func (t *TimeSession) Pause(UserID int) {
 		t.PauseLog[len(t.PauseLog)-1].Duration = duration
 		t.Duration += duration
 	}
-	t.UpdateBy = UserID
+	t.UpdateBy = userID
 	t.UpdateAt = timeNow
 }
 
-func (t *TimeSession) Finish(UserID int) {
+func (t *TimeSession) Finish(userID int) {
 	timeNow := time.Now().UTC()
 	t.Status = TimeSessionStatusCompleted
 	if len(t.PauseLog) > 0 && t.PauseLog[len(t.PauseLog)-1].EndTime == nil {
@@ -531,6 +533,6 @@ func (t *TimeSession) Finish(UserID int) {
 		t.Duration += duration
 	}
 	t.EndTime = &timeNow
-	t.UpdateBy = UserID
+	t.UpdateBy = userID
 	t.UpdateAt = timeNow
 }

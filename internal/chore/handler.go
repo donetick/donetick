@@ -386,6 +386,8 @@ func (h *Handler) createChore(c *gin.Context) {
 		h.nPlanner.GenerateNotifications(c, createdChore)
 	}()
 
+	h.eventProducer.ChoreCreated(c, currentUser.WebhookURL, createdChore, &currentUser.User)
+
 	// Broadcast real-time chore creation event
 	if h.realTimeService != nil {
 		broadcaster := h.realTimeService.GetEventBroadcaster()
@@ -1766,7 +1768,7 @@ func (h *Handler) completeChore(c *gin.Context) {
 	}
 
 	var additionalNotes *string
-	_ = c.ShouldBind(&req)
+	_ = c.ShouldBindJSON(&req)
 
 	if req.Note != "" {
 		additionalNotes = &req.Note
@@ -3076,7 +3078,7 @@ func (h *Handler) rejectChore(c *gin.Context) {
 		Note string `json:"note"`
 	}
 	var req RejectChoreReq
-	_ = c.ShouldBind(&req)
+	_ = c.ShouldBindJSON(&req)
 
 	// Get the chore
 	chore, err := h.choreRepo.GetChore(c, id, currentUser.ID)
@@ -3420,8 +3422,10 @@ func checkNextAssignee(chore *chModel.Chore, choresHistory []*chModel.ChoreHisto
 			assigneeChores[performer.UserID] = 0
 		}
 		for _, history := range history {
-			// calculate the number of chores completed by each assignee
-			assigneeChores[history.CompletedBy]++
+			// only count completions by users who are current assignees
+			if _, ok := assigneesMap[history.CompletedBy]; ok {
+				assigneeChores[history.CompletedBy]++
+			}
 		}
 
 		// max Int value

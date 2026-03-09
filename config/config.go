@@ -107,8 +107,8 @@ type JwtConfig struct {
 
 type ServerConfig struct {
 	Port             int           `mapstructure:"port" yaml:"port"`
-	RatePeriod       time.Duration `mapstructure:"rate_period" yaml:"rate_period"`
-	RateLimit        int           `mapstructure:"rate_limit" yaml:"rate_limit"`
+	RatePeriod       time.Duration `mapstructure:"rate_period" yaml:"rate_period" default:"60s"`
+	RateLimit        int           `mapstructure:"rate_limit" yaml:"rate_limit" default:"300"`
 	ReadTimeout      time.Duration `mapstructure:"read_timeout" yaml:"read_timeout"`
 	WriteTimeout     time.Duration `mapstructure:"write_timeout" yaml:"write_timeout"`
 	WebhookTimeout   time.Duration `mapstructure:"webhook_timeout" yaml:"webhook_timeout"`
@@ -167,11 +167,12 @@ type FCMConfig struct {
 	ProjectID       string `json:"project_id" mapstructure:"project_id"`
 }
 type EmailConfig struct {
-	Email   string `mapstructure:"email"`
-	Key     string `mapstructure:"key"`
-	Host    string `mapstructure:"host"`
-	Port    int    `mapstructure:"port"`
-	AppHost string `mapstructure:"appHost"`
+	Email   	string `mapstructure:"email"`
+	User		string `mapstructure:"user"`
+	Key     	string `mapstructure:"key"`
+	Host    	string `mapstructure:"host"`
+	Port    	int    `mapstructure:"port"`
+	AppHost 	string `mapstructure:"appHost"`
 }
 
 type OAuth2Config struct {
@@ -271,26 +272,26 @@ func NewConfig() *Config {
 	return config
 }
 
-func configEnvironmentOverrides(Config *Config) {
+func configEnvironmentOverrides(config *Config) {
 	if os.Getenv("DONETICK_TELEGRAM_TOKEN") != "" {
-		Config.Telegram.Token = os.Getenv("DONETICK_TELEGRAM_TOKEN")
+		config.Telegram.Token = os.Getenv("DONETICK_TELEGRAM_TOKEN")
 	}
 	if os.Getenv("DONETICK_PUSHOVER_TOKEN") != "" {
-		Config.Pushover.Token = os.Getenv("DONETICK_PUSHOVER_TOKEN")
+		config.Pushover.Token = os.Getenv("DONETICK_PUSHOVER_TOKEN")
 	}
 	if os.Getenv("DONETICK_DISABLE_SIGNUP") == "true" {
-		Config.IsUserCreationDisabled = true
+		config.IsUserCreationDisabled = true
 	}
 
 	// Logging environment overrides
 	if os.Getenv("DONETICK_LOG_LEVEL") != "" {
-		Config.Logging.Level = os.Getenv("DONETICK_LOG_LEVEL")
+		config.Logging.Level = os.Getenv("DONETICK_LOG_LEVEL")
 	}
 	if os.Getenv("DONETICK_LOG_ENCODING") != "" {
-		Config.Logging.Encoding = os.Getenv("DONETICK_LOG_ENCODING")
+		config.Logging.Encoding = os.Getenv("DONETICK_LOG_ENCODING")
 	}
 	if os.Getenv("DONETICK_LOG_DEVELOPMENT") == "true" {
-		Config.Logging.Development = true
+		config.Logging.Development = true
 	}
 }
 func LoadConfig() *Config {
@@ -298,13 +299,14 @@ func LoadConfig() *Config {
 	viper.SetOptions(viper.ExperimentalBindStruct())
 
 	// set the config name based on the environment:
-	if os.Getenv("DT_ENV") == "local" {
+	switch env := os.Getenv("DT_ENV"); env {
+	case "local":
 		viper.SetConfigName("local")
-	} else if os.Getenv("DT_ENV") == "prod" {
+	case "prod":
 		viper.SetConfigName("prod")
-	} else if os.Getenv("DT_ENV") == "selfhosted" {
+	case "selfhosted":
 		viper.SetConfigName("selfhosted")
-	} else {
+	default:
 		viper.SetConfigName("local")
 	}
 	// get logger and log the current environment:

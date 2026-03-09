@@ -212,7 +212,7 @@ func main() {
 			resource.Routes,
 			// backup.Routes,
 
-			realtime.Routes, //(router, rts, authMiddleware, pollingHandler)
+			realtime.Routes, // (router, rts, authMiddleware, pollingHandler)
 
 			func(r *gin.Engine) {},
 		),
@@ -244,24 +244,19 @@ func newServer(lc fx.Lifecycle, cfg *config.Config, db *gorm.DB, notifier *notif
 		ReadTimeout:  cfg.Server.ReadTimeout,
 		WriteTimeout: cfg.Server.WriteTimeout,
 	}
-	config := cors.DefaultConfig()
 
-	// Use specific origins from config when credentials are needed
-	// Cannot use AllowAllOrigins with AllowCredentials
-	if len(cfg.Server.CorsAllowOrigins) > 0 {
-		config.AllowOrigins = cfg.Server.CorsAllowOrigins
-	} else {
-		// Fallback to localhost for development
-		config.AllowOrigins = []string{
-			"http://localhost:5173",
-			"http://localhost:7926",
-			"http://localhost:3000",
-		}
+	corsConfig := cors.DefaultConfig()
+	allowOrigins := make(map[string]bool)
+	for _, origin := range cfg.Server.CorsAllowOrigins {
+		allowOrigins[origin] = true
+	}
+	corsConfig.AllowOriginFunc = func(origin string) bool {
+		return allowOrigins[origin]
 	}
 
-	config.AllowCredentials = true
+	corsConfig.AllowCredentials = true
 	// Add all headers that browsers commonly send
-	config.AddAllowHeaders(
+	corsConfig.AddAllowHeaders(
 		"Authorization",
 		"secretkey",
 		"Cache-Control",
@@ -276,8 +271,8 @@ func newServer(lc fx.Lifecycle, cfg *config.Config, db *gorm.DB, notifier *notif
 		"refresh_token",
 	)
 	// Expose headers that the frontend might need
-	config.AddExposeHeaders("Content-Type")
-	r.Use(cors.New(config))
+	corsConfig.AddExposeHeaders("Content-Type")
+	r.Use(cors.New(corsConfig))
 
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
@@ -336,6 +331,11 @@ func newServer(lc fx.Lifecycle, cfg *config.Config, db *gorm.DB, notifier *notif
 			}
 			return nil
 		},
+	})
+
+	//Simple health-check endpoint
+	r.GET("/api/v1/health", func(c *gin.Context) {
+		c.Status(http.StatusOK) // 200 - OK if server started
 	})
 
 	return r

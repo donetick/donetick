@@ -169,8 +169,8 @@ func (h *AuthHandler) EnhancedLoginHandler(c *gin.Context) {
 			UserID:       userDetails.ID,
 			AuthMethod:   "password",
 			Verified:     false,
-			CreatedAt:    time.Now(),
-			ExpiresAt:    time.Now().Add(10 * time.Minute),
+			CreatedAt:    time.Now().UTC(),
+			ExpiresAt:    time.Now().UTC().Add(10 * time.Minute),
 			UserData:     userDetails.Username,
 		}
 

@@ -101,7 +101,7 @@ func scheduleNextDueDate(ctx context.Context, chore *chModel.Chore, completedDat
 
 			// Convert baseDate to the target timezone for weekday calculations
 			baseDateInTimezone := baseDate.In(loc)
-			
+
 			// Find the next valid day of the week in the target timezone
 			for i := 1; i <= 7; i++ {
 				nextDueDateInTimezone := baseDateInTimezone.AddDate(0, 0, i)
@@ -299,13 +299,14 @@ func getNthOccurrenceInQuarter(date time.Time, weekday time.Weekday) int {
 	month := int(date.Month())
 
 	var quarterStartMonth int
-	if month <= 3 {
+	switch {
+	case month <= 3:
 		quarterStartMonth = 1 // Q1: Jan-Mar
-	} else if month <= 6 {
+	case month <= 6:
 		quarterStartMonth = 4 // Q2: Apr-Jun
-	} else if month <= 9 {
+	case month <= 9:
 		quarterStartMonth = 7 // Q3: Jul-Sep
-	} else {
+	default:
 		quarterStartMonth = 10 // Q4: Oct-Dec
 	}
 
@@ -333,13 +334,14 @@ func isLastOccurrenceInQuarter(date time.Time, weekday time.Weekday) bool {
 	month := int(date.Month())
 	nextMonth := int(nextWeek.Month())
 
-	if month <= 3 && nextMonth > 3 {
+	switch {
+	case month <= 3 && nextMonth > 3:
 		return true
-	} else if month <= 6 && nextMonth > 6 {
+	case month <= 6 && nextMonth > 6:
 		return true
-	} else if month <= 9 && nextMonth > 9 {
+	case month <= 9 && nextMonth > 9:
 		return true
-	} else if month <= 12 && nextMonth > 12 {
+	case month <= 12 && nextMonth > 12:
 		return true
 	}
 
@@ -401,14 +403,15 @@ func RemoveAssigneeAndReassign(chore *chModel.Chore, userID int) {
 	}
 
 	// Handle no assignee strategy
-	if chore.AssignStrategy == chModel.AssignmentStrategyNoAssignee {
+	switch {
+	case chore.AssignStrategy == chModel.AssignmentStrategyNoAssignee:
 		chore.AssignedTo = nil // Set to nil to indicate no assignee
-	} else if len(chore.Assignees) == 0 {
+	case len(chore.Assignees) == 0:
 		createdBy := chore.CreatedBy
 		chore.AssignedTo = &createdBy
-	} else {
+	default:
 		userID := chore.Assignees[rand.Intn(len(chore.Assignees))].UserID
 		chore.AssignedTo = &userID
 	}
-	chore.UpdatedAt = time.Now()
+	chore.UpdatedAt = time.Now().UTC()
 }

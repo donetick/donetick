@@ -34,7 +34,7 @@ func NewConnection(id string, circleID, userID int, user *uModel.User, conn *web
 		User:         user,
 		Conn:         conn,
 		Send:         make(chan *Event, 256), // Buffered channel for events
-		LastActivity: time.Now(),
+		LastActivity: time.Now().UTC(),
 		closed:       false,
 		logger:       logger,
 	}
@@ -90,7 +90,7 @@ func (c *Connection) getConnectionType() string {
 func (c *Connection) UpdateActivity() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	c.LastActivity = time.Now()
+	c.LastActivity = time.Now().UTC()
 }
 
 // SendEvent sends an event to the connection
@@ -130,10 +130,10 @@ func (c *Connection) StartReadPump(pool *ConnectionPool) {
 	}()
 
 	// Set read deadline and pong handler for heartbeat
-	c.Conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+	c.Conn.SetReadDeadline(time.Now().UTC().Add(60 * time.Second))
 	c.Conn.SetPongHandler(func(string) error {
 		c.UpdateActivity()
-		c.Conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+		c.Conn.SetReadDeadline(time.Now().UTC().Add(60 * time.Second))
 		return nil
 	})
 
@@ -164,7 +164,7 @@ func (c *Connection) StartWritePump() {
 	for {
 		select {
 		case event, ok := <-c.Send:
-			c.Conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
+			c.Conn.SetWriteDeadline(time.Now().UTC().Add(10 * time.Second))
 			if !ok {
 				// Channel closed
 				c.Conn.WriteMessage(websocket.CloseMessage, []byte{})
@@ -184,7 +184,7 @@ func (c *Connection) StartWritePump() {
 			}
 
 		case <-ticker.C:
-			c.Conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
+			c.Conn.SetWriteDeadline(time.Now().UTC().Add(10 * time.Second))
 			if err := c.Conn.WriteMessage(websocket.PingMessage, nil); err != nil {
 				c.logger.Errorw("Failed to write ping", "error", err, "connectionId", c.ID)
 				return

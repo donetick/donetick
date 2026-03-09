@@ -79,12 +79,12 @@ func (h *Handler) AssetHandler(c *gin.Context) {
 	}
 	defer file.Close()
 
-	//Detect content type
+	// Detect content type
 	// buf := make([]byte, 512)
 	// n, _ := file.Read(buf)
 	// contentType := http.DetectContentType(buf[:n])
 
-	//Reset reader to stream full file
+	// Reset reader to stream full file
 
 	// if err != nil {
 	// 	c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to read file"})
@@ -94,7 +94,7 @@ func (h *Handler) AssetHandler(c *gin.Context) {
 	// Set headers
 	// c.Header("Content-Type", contentType)
 	c.Header("Cache-Control", "public, max-age=604800, immutable")
-	c.Header("Expires", time.Now().Add(7*24*time.Hour).UTC().Format(http.TimeFormat))
+	c.Header("Expires", time.Now().UTC().Add(7*24*time.Hour).Format(http.TimeFormat))
 	c.Status(http.StatusOK)
 
 	// Serve content
@@ -150,15 +150,16 @@ func (h *Handler) ChoreUploadHandler(c *gin.Context) {
 		mediaRecord,
 		currentUser,
 	); err != nil {
-		if err == errorx.ErrNotEnoughSpace {
+		switch {
+		case err == errorx.ErrNotEnoughSpace:
 			log.Error("user has no enough space", "error", err)
 			c.JSON(http.StatusInsufficientStorage, gin.H{"error": "no enough space"})
 			return
-		} else if err == errorx.ErrNotAPlusMember {
+		case err == errorx.ErrNotAPlusMember:
 			log.Error("user is not a plus member", "error", err)
 			c.JSON(http.StatusForbidden, gin.H{"error": "user is not a plus member"})
 			return
-		} else {
+		default:
 			log.Error("failed to save file record to db", "error", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save file record"})
 		}

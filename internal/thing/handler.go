@@ -51,9 +51,10 @@ func NewHandler(cr *chRepo.ChoreRepository, circleRepo *cRepo.CircleRepository,
 //	@Tags			things
 //	@Accept			json
 //	@Produce		json
-//	@Security		JWTKeyAuth && APIKeyAuth
+//	@Security		JWTKeyAuth
+//	@Security		APIKeyAuth
 //	@Param			thing	body		ThingRequest			true	"Thing creation request"
-//	@Success		201		{object}	map[string]model.Thing	"res: created thing object"
+//	@Success		201		{object}	map[string]tModel.Thing	"res: created thing object"
 //	@Failure		400		{object}	map[string]string		"error: Invalid request | Invalid state"
 //	@Failure		401		{object}	map[string]string		"error: Unauthorized"
 //	@Failure		500		{object}	map[string]string		"error: Failed to create thing"

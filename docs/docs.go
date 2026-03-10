@@ -19,8 +19,10 @@ const docTemplate = `{
             "get": {
                 "security": [
                     {
-                        "APIKeyAuth": [],
                         "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
                     }
                 ],
                 "description": "Retrieves all chores for the current user's circle with optional archived chores",
@@ -78,8 +80,10 @@ const docTemplate = `{
             "put": {
                 "security": [
                     {
-                        "APIKeyAuth": [],
                         "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
                     }
                 ],
                 "description": "Updates chore details including assignees, labels, subtasks, and metadata",
@@ -155,8 +159,10 @@ const docTemplate = `{
             "post": {
                 "security": [
                     {
-                        "APIKeyAuth": [],
                         "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
                     }
                 ],
                 "description": "Creates a new chore with assignees, labels, and optional configurations",
@@ -225,8 +231,10 @@ const docTemplate = `{
             "get": {
                 "security": [
                     {
-                        "APIKeyAuth": [],
                         "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
                     }
                 ],
                 "description": "Retrieves all archived chores for the current user's circle",
@@ -278,8 +286,10 @@ const docTemplate = `{
             "get": {
                 "security": [
                     {
-                        "APIKeyAuth": [],
                         "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
                     }
                 ],
                 "description": "Retrieves completion history for all chores for the current user",
@@ -354,8 +364,10 @@ const docTemplate = `{
             "get": {
                 "security": [
                     {
-                        "APIKeyAuth": [],
                         "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
                     }
                 ],
                 "description": "Retrieves detailed information about a specific chore by ID",
@@ -429,8 +441,10 @@ const docTemplate = `{
             "delete": {
                 "security": [
                     {
-                        "APIKeyAuth": [],
                         "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
                     }
                 ],
                 "description": "Deletes a chore and associated notifications (owner only)",
@@ -506,8 +520,10 @@ const docTemplate = `{
             "post": {
                 "security": [
                     {
-                        "APIKeyAuth": [],
                         "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
                     }
                 ],
                 "description": "Approves a pending chore completion (admin/manager only)",
@@ -583,8 +599,10 @@ const docTemplate = `{
             "put": {
                 "security": [
                     {
-                        "APIKeyAuth": [],
                         "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
                     }
                 ],
                 "description": "Archives a chore, hiding it from the main list",
@@ -651,8 +669,10 @@ const docTemplate = `{
             "put": {
                 "security": [
                     {
-                        "APIKeyAuth": [],
                         "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
                     }
                 ],
                 "description": "Updates the currently assigned user for a chore",
@@ -745,8 +765,10 @@ const docTemplate = `{
             "get": {
                 "security": [
                     {
-                        "APIKeyAuth": [],
                         "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
                     }
                 ],
                 "description": "Retrieves comprehensive details about a chore including metadata",
@@ -811,8 +833,10 @@ const docTemplate = `{
             "post": {
                 "security": [
                     {
-                        "APIKeyAuth": [],
                         "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
                     }
                 ],
                 "description": "Marks a chore as completed and schedules the next occurrence (supports impersonation)",
@@ -910,8 +934,10 @@ const docTemplate = `{
             "put": {
                 "security": [
                     {
-                        "APIKeyAuth": [],
                         "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
                     }
                 ],
                 "description": "Updates the next due date for a chore (can be set to null)",
@@ -1004,8 +1030,10 @@ const docTemplate = `{
             "get": {
                 "security": [
                     {
-                        "APIKeyAuth": [],
                         "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
                     }
                 ],
                 "description": "Retrieves the completion history for a specific chore",
@@ -1066,8 +1094,10 @@ const docTemplate = `{
             "put": {
                 "security": [
                     {
-                        "APIKeyAuth": [],
                         "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
                     }
                 ],
                 "description": "Updates a specific chore history entry (performed date, due date, notes)",
@@ -1168,8 +1198,10 @@ const docTemplate = `{
             "delete": {
                 "security": [
                     {
-                        "APIKeyAuth": [],
                         "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
                     }
                 ],
                 "description": "Deletes a specific chore history entry (creator only)",
@@ -1252,8 +1284,10 @@ const docTemplate = `{
             "post": {
                 "security": [
                     {
-                        "APIKeyAuth": [],
                         "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
                     }
                 ],
                 "description": "Sends a reminder notification to chore assignee(s)",
@@ -1335,8 +1369,10 @@ const docTemplate = `{
             "put": {
                 "security": [
                     {
-                        "APIKeyAuth": [],
                         "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
                     }
                 ],
                 "description": "Pauses an active chore timer session (supports impersonation)",
@@ -1410,8 +1446,10 @@ const docTemplate = `{
             "put": {
                 "security": [
                     {
-                        "APIKeyAuth": [],
                         "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
                     }
                 ],
                 "description": "Updates the priority level of a chore (0-4)",
@@ -1501,8 +1539,10 @@ const docTemplate = `{
             "post": {
                 "security": [
                     {
-                        "APIKeyAuth": [],
                         "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
                     }
                 ],
                 "description": "Rejects a pending chore completion and returns it to no status (admin/manager only)",
@@ -1589,8 +1629,10 @@ const docTemplate = `{
             "post": {
                 "security": [
                     {
-                        "APIKeyAuth": [],
                         "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
                     }
                 ],
                 "description": "Skips the current chore iteration and schedules the next due date (supports impersonation)",
@@ -1657,8 +1699,10 @@ const docTemplate = `{
             "put": {
                 "security": [
                     {
-                        "APIKeyAuth": [],
                         "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
                     }
                 ],
                 "description": "Starts or resumes a chore timer session (supports impersonation)",
@@ -1732,8 +1776,10 @@ const docTemplate = `{
             "put": {
                 "security": [
                     {
-                        "APIKeyAuth": [],
                         "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
                     }
                 ],
                 "description": "Updates the status of a chore (e.g., no status, in progress, paused)",
@@ -1826,8 +1872,10 @@ const docTemplate = `{
             "put": {
                 "security": [
                     {
-                        "APIKeyAuth": [],
                         "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
                     }
                 ],
                 "description": "Marks a subtask as completed or uncompleted (supports impersonation)",
@@ -1912,8 +1960,10 @@ const docTemplate = `{
             "get": {
                 "security": [
                     {
-                        "APIKeyAuth": [],
                         "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
                     }
                 ],
                 "description": "Retrieves all time tracking sessions for a chore",
@@ -2005,8 +2055,10 @@ const docTemplate = `{
             "put": {
                 "security": [
                     {
-                        "APIKeyAuth": [],
                         "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
                     }
                 ],
                 "description": "Manually updates the timer duration for a chore",
@@ -2099,8 +2151,10 @@ const docTemplate = `{
             "put": {
                 "security": [
                     {
-                        "APIKeyAuth": [],
                         "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
                     }
                 ],
                 "description": "Resets the chore timer to zero and starts a new session",
@@ -2174,8 +2228,10 @@ const docTemplate = `{
             "put": {
                 "security": [
                     {
-                        "APIKeyAuth": [],
                         "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
                     }
                 ],
                 "description": "Updates start time, end time, or pause log for a time session",
@@ -2276,8 +2332,10 @@ const docTemplate = `{
             "delete": {
                 "security": [
                     {
-                        "APIKeyAuth": [],
                         "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
                     }
                 ],
                 "description": "Deletes a specific time tracking session",
@@ -2360,8 +2418,10 @@ const docTemplate = `{
             "put": {
                 "security": [
                     {
-                        "APIKeyAuth": [],
                         "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
                     }
                 ],
                 "description": "Restores an archived chore to the main list",
@@ -2428,8 +2488,10 @@ const docTemplate = `{
             "get": {
                 "security": [
                     {
-                        "APIKeyAuth": [],
                         "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
                     }
                 ],
                 "description": "Retrieves all circles the current user belongs to",
@@ -2481,8 +2543,10 @@ const docTemplate = `{
             "post": {
                 "security": [
                     {
-                        "APIKeyAuth": [],
                         "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
                     }
                 ],
                 "description": "Requests to join a circle using an invite code",
@@ -2558,8 +2622,10 @@ const docTemplate = `{
             "delete": {
                 "security": [
                     {
-                        "APIKeyAuth": [],
                         "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
                     }
                 ],
                 "description": "Removes the current user from a circle and restores their original circle",
@@ -2626,8 +2692,10 @@ const docTemplate = `{
             "get": {
                 "security": [
                     {
-                        "APIKeyAuth": [],
                         "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
                     }
                 ],
                 "description": "Retrieves all members of the current user's circle",
@@ -2670,8 +2738,10 @@ const docTemplate = `{
             "get": {
                 "security": [
                     {
-                        "APIKeyAuth": [],
                         "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
                     }
                 ],
                 "description": "Retrieves pending circle join requests (admin only)",
@@ -2732,8 +2802,10 @@ const docTemplate = `{
             "put": {
                 "security": [
                     {
-                        "APIKeyAuth": [],
                         "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
                     }
                 ],
                 "description": "Accepts a pending circle join request (admin only)",
@@ -2809,8 +2881,10 @@ const docTemplate = `{
             "put": {
                 "security": [
                     {
-                        "APIKeyAuth": [],
                         "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
                     }
                 ],
                 "description": "Changes the role of a circle member (admin only)",
@@ -2896,8 +2970,10 @@ const docTemplate = `{
             "delete": {
                 "security": [
                     {
-                        "APIKeyAuth": [],
                         "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
                     }
                 ],
                 "description": "Removes a member from a circle (admin only)",
@@ -2980,8 +3056,10 @@ const docTemplate = `{
             "post": {
                 "security": [
                     {
-                        "APIKeyAuth": [],
                         "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
                     }
                 ],
                 "description": "Redeems points for a circle member (admin only)",
@@ -3074,8 +3152,10 @@ const docTemplate = `{
             "get": {
                 "security": [
                     {
-                        "APIKeyAuth": [],
                         "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
                     }
                 ],
                 "description": "Gets all filters for the current user's circle",
@@ -3119,8 +3199,10 @@ const docTemplate = `{
             "post": {
                 "security": [
                     {
-                        "APIKeyAuth": [],
                         "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
                     }
                 ],
                 "description": "Creates a new filter for the current user's circle",
@@ -3180,8 +3262,10 @@ const docTemplate = `{
             "get": {
                 "security": [
                     {
-                        "APIKeyAuth": [],
                         "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
                     }
                 ],
                 "description": "Gets filters sorted by usage for the current user's circle",
@@ -3221,8 +3305,10 @@ const docTemplate = `{
             "get": {
                 "security": [
                     {
-                        "APIKeyAuth": [],
                         "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
                     }
                 ],
                 "description": "Gets all pinned filters for the current user's circle",
@@ -3262,8 +3348,10 @@ const docTemplate = `{
             "get": {
                 "security": [
                     {
-                        "APIKeyAuth": [],
                         "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
                     }
                 ],
                 "description": "Gets a specific filter by ID",
@@ -3325,8 +3413,10 @@ const docTemplate = `{
             "put": {
                 "security": [
                     {
-                        "APIKeyAuth": [],
                         "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
                     }
                 ],
                 "description": "Updates an existing filter by ID",
@@ -3391,8 +3481,10 @@ const docTemplate = `{
             "delete": {
                 "security": [
                     {
-                        "APIKeyAuth": [],
                         "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
                     }
                 ],
                 "description": "Deletes a filter by ID",
@@ -3450,8 +3542,10 @@ const docTemplate = `{
             "post": {
                 "security": [
                     {
-                        "APIKeyAuth": [],
                         "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
                     }
                 ],
                 "description": "Toggles the pin status of a filter by ID",
@@ -3507,8 +3601,10 @@ const docTemplate = `{
             "get": {
                 "security": [
                     {
-                        "APIKeyAuth": [],
                         "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
                     }
                 ],
                 "description": "Retrieves all projects for the current user's circle",
@@ -3558,8 +3654,10 @@ const docTemplate = `{
             "post": {
                 "security": [
                     {
-                        "APIKeyAuth": [],
                         "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
                     }
                 ],
                 "description": "Creates a new project for the current user's circle",
@@ -3628,8 +3726,10 @@ const docTemplate = `{
             "put": {
                 "security": [
                     {
-                        "APIKeyAuth": [],
                         "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
                     }
                 ],
                 "description": "Updates the name, description, color, and icon of an existing project by ID",
@@ -3703,8 +3803,10 @@ const docTemplate = `{
             "delete": {
                 "security": [
                     {
-                        "APIKeyAuth": [],
                         "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
                     }
                 ],
                 "description": "Deletes a project by ID; restricted to the current user's circle",
@@ -3771,8 +3873,10 @@ const docTemplate = `{
             "get": {
                 "security": [
                     {
-                        "APIKeyAuth": [],
                         "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
                     }
                 ],
                 "description": "Retrieves all things belonging to the current user",
@@ -3822,8 +3926,10 @@ const docTemplate = `{
             "put": {
                 "security": [
                     {
-                        "APIKeyAuth": [],
                         "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
                     }
                 ],
                 "description": "Updates the name, type, and optionally the state of an existing thing",
@@ -3899,8 +4005,10 @@ const docTemplate = `{
             "post": {
                 "security": [
                     {
-                        "APIKeyAuth": [],
                         "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
                     }
                 ],
                 "description": "Creates a new thing for the current user with the given name, type, and optional state",
@@ -3969,8 +4077,10 @@ const docTemplate = `{
             "delete": {
                 "security": [
                     {
-                        "APIKeyAuth": [],
                         "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
                     }
                 ],
                 "description": "Deletes a thing by ID; fails if there are chores still associated with it",
@@ -4053,8 +4163,10 @@ const docTemplate = `{
             "get": {
                 "security": [
                     {
-                        "APIKeyAuth": [],
                         "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
                     }
                 ],
                 "description": "Retrieves the state change history for a specific thing with pagination offset",
@@ -4135,8 +4247,10 @@ const docTemplate = `{
             "put": {
                 "security": [
                     {
-                        "APIKeyAuth": [],
                         "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
                     }
                 ],
                 "description": "Updates the state of a thing by ID and triggers any associated chore due dates",

@@ -779,8 +779,8 @@ paths:
               type: string
             type: object
       security:
+      - JWTKeyAuth: []
       - APIKeyAuth: []
-        JWTKeyAuth: []
       summary: Get all chores
       tags:
       - chores
@@ -825,8 +825,8 @@ paths:
               type: string
             type: object
       security:
+      - JWTKeyAuth: []
       - APIKeyAuth: []
-        JWTKeyAuth: []
       summary: Create a new chore
       tags:
       - chores
@@ -878,8 +878,8 @@ paths:
               type: string
             type: object
       security:
+      - JWTKeyAuth: []
       - APIKeyAuth: []
-        JWTKeyAuth: []
       summary: Edit an existing chore
       tags:
       - chores
@@ -928,8 +928,8 @@ paths:
               type: string
             type: object
       security:
+      - JWTKeyAuth: []
       - APIKeyAuth: []
-        JWTKeyAuth: []
       summary: Delete a chore
       tags:
       - chores
@@ -977,8 +977,8 @@ paths:
               type: string
             type: object
       security:
+      - JWTKeyAuth: []
       - APIKeyAuth: []
-        JWTKeyAuth: []
       summary: Get a specific chore
       tags:
       - chores
@@ -1027,8 +1027,8 @@ paths:
               type: string
             type: object
       security:
+      - JWTKeyAuth: []
       - APIKeyAuth: []
-        JWTKeyAuth: []
       summary: Approve a chore completion
       tags:
       - chores
@@ -1071,8 +1071,8 @@ paths:
               type: string
             type: object
       security:
+      - JWTKeyAuth: []
       - APIKeyAuth: []
-        JWTKeyAuth: []
       summary: Archive a chore
       tags:
       - chores
@@ -1133,8 +1133,8 @@ paths:
               type: string
             type: object
       security:
+      - JWTKeyAuth: []
       - APIKeyAuth: []
-        JWTKeyAuth: []
       summary: Update chore assignee
       tags:
       - chores
@@ -1176,8 +1176,8 @@ paths:
               type: string
             type: object
       security:
+      - JWTKeyAuth: []
       - APIKeyAuth: []
-        JWTKeyAuth: []
       summary: Get chore details
       tags:
       - chores
@@ -1242,8 +1242,8 @@ paths:
               type: string
             type: object
       security:
+      - JWTKeyAuth: []
       - APIKeyAuth: []
-        JWTKeyAuth: []
       summary: Complete a chore
       tags:
       - chores
@@ -1303,8 +1303,8 @@ paths:
               type: string
             type: object
       security:
+      - JWTKeyAuth: []
       - APIKeyAuth: []
-        JWTKeyAuth: []
       summary: Update chore due date
       tags:
       - chores
@@ -1343,8 +1343,8 @@ paths:
               type: string
             type: object
       security:
+      - JWTKeyAuth: []
       - APIKeyAuth: []
-        JWTKeyAuth: []
       summary: Get chore history
       tags:
       - chores
@@ -1399,8 +1399,8 @@ paths:
               type: string
             type: object
       security:
+      - JWTKeyAuth: []
       - APIKeyAuth: []
-        JWTKeyAuth: []
       summary: Delete chore history entry
       tags:
       - chores
@@ -1468,8 +1468,8 @@ paths:
               type: string
             type: object
       security:
+      - JWTKeyAuth: []
       - APIKeyAuth: []
-        JWTKeyAuth: []
       summary: Modify chore history entry
       tags:
       - chores
@@ -1523,8 +1523,8 @@ paths:
               type: string
             type: object
       security:
+      - JWTKeyAuth: []
       - APIKeyAuth: []
-        JWTKeyAuth: []
       summary: Send a nudge notification
       tags:
       - chores
@@ -1574,8 +1574,8 @@ paths:
               type: string
             type: object
       security:
+      - JWTKeyAuth: []
       - APIKeyAuth: []
-        JWTKeyAuth: []
       summary: Pause a chore timer
       tags:
       - chores
@@ -1633,8 +1633,8 @@ paths:
               type: string
             type: object
       security:
+      - JWTKeyAuth: []
       - APIKeyAuth: []
-        JWTKeyAuth: []
       summary: Update chore priority
       tags:
       - chores
@@ -1691,8 +1691,8 @@ paths:
               type: string
             type: object
       security:
+      - JWTKeyAuth: []
       - APIKeyAuth: []
-        JWTKeyAuth: []
       summary: Reject a chore completion
       tags:
       - chores
@@ -1737,8 +1737,8 @@ paths:
               type: string
             type: object
       security:
+      - JWTKeyAuth: []
       - APIKeyAuth: []
-        JWTKeyAuth: []
       summary: Skip a chore
       tags:
       - chores
@@ -1786,8 +1786,8 @@ paths:
               type: string
             type: object
       security:
+      - JWTKeyAuth: []
       - APIKeyAuth: []
-        JWTKeyAuth: []
       summary: Start a chore timer
       tags:
       - chores
@@ -1847,8 +1847,8 @@ paths:
               type: string
             type: object
       security:
+      - JWTKeyAuth: []
       - APIKeyAuth: []
-        JWTKeyAuth: []
       summary: Update chore status
       tags:
       - chores
@@ -1904,8 +1904,8 @@ paths:
               type: string
             type: object
       security:
+      - JWTKeyAuth: []
       - APIKeyAuth: []
-        JWTKeyAuth: []
       summary: Update subtask completion status
       tags:
       - chores
@@ -1968,8 +1968,8 @@ paths:
               type: string
             type: object
       security:
+      - JWTKeyAuth: []
       - APIKeyAuth: []
-        JWTKeyAuth: []
       summary: Get chore time sessions
       tags:
       - chores
@@ -2028,8 +2028,8 @@ paths:
               type: string
             type: object
       security:
+      - JWTKeyAuth: []
       - APIKeyAuth: []
-        JWTKeyAuth: []
       summary: Update chore timer duration
       tags:
       - chores
@@ -2086,8 +2086,8 @@ paths:
               type: string
             type: object
       security:
+      - JWTKeyAuth: []
       - APIKeyAuth: []
-        JWTKeyAuth: []
       summary: Delete a time session
       tags:
       - chores
@@ -2156,8 +2156,8 @@ paths:
               type: string
             type: object
       security:
+      - JWTKeyAuth: []
       - APIKeyAuth: []
-        JWTKeyAuth: []
       summary: Update a time session
       tags:
       - chores
@@ -2206,8 +2206,8 @@ paths:
               type: string
             type: object
       security:
+      - JWTKeyAuth: []
       - APIKeyAuth: []
-        JWTKeyAuth: []
       summary: Reset chore timer
       tags:
       - chores
@@ -2250,8 +2250,8 @@ paths:
               type: string
             type: object
       security:
+      - JWTKeyAuth: []
       - APIKeyAuth: []
-        JWTKeyAuth: []
       summary: Unarchive a chore
       tags:
       - chores
@@ -2284,8 +2284,8 @@ paths:
               type: string
             type: object
       security:
+      - JWTKeyAuth: []
       - APIKeyAuth: []
-        JWTKeyAuth: []
       summary: Get archived chores
       tags:
       - chores
@@ -2333,8 +2333,8 @@ paths:
               type: string
             type: object
       security:
+      - JWTKeyAuth: []
       - APIKeyAuth: []
-        JWTKeyAuth: []
       summary: Get chores history for user
       tags:
       - chores
@@ -2367,8 +2367,8 @@ paths:
               type: string
             type: object
       security:
+      - JWTKeyAuth: []
       - APIKeyAuth: []
-        JWTKeyAuth: []
       summary: Get user circles
       tags:
       - circles
@@ -2422,8 +2422,8 @@ paths:
               type: string
             type: object
       security:
+      - JWTKeyAuth: []
       - APIKeyAuth: []
-        JWTKeyAuth: []
       summary: Delete a circle member
       tags:
       - circles
@@ -2484,8 +2484,8 @@ paths:
               type: string
             type: object
       security:
+      - JWTKeyAuth: []
       - APIKeyAuth: []
-        JWTKeyAuth: []
       summary: Redeem member points
       tags:
       - circles
@@ -2534,8 +2534,8 @@ paths:
               type: string
             type: object
       security:
+      - JWTKeyAuth: []
       - APIKeyAuth: []
-        JWTKeyAuth: []
       summary: Request to join a circle
       tags:
       - circles
@@ -2579,8 +2579,8 @@ paths:
               type: string
             type: object
       security:
+      - JWTKeyAuth: []
       - APIKeyAuth: []
-        JWTKeyAuth: []
       summary: Leave a circle
       tags:
       - circles
@@ -2607,8 +2607,8 @@ paths:
               type: string
             type: object
       security:
+      - JWTKeyAuth: []
       - APIKeyAuth: []
-        JWTKeyAuth: []
       summary: Get circle members
       tags:
       - circles
@@ -2647,8 +2647,8 @@ paths:
               type: string
             type: object
       security:
+      - JWTKeyAuth: []
       - APIKeyAuth: []
-        JWTKeyAuth: []
       summary: Get pending join requests
       tags:
       - circles
@@ -2697,8 +2697,8 @@ paths:
               type: string
             type: object
       security:
+      - JWTKeyAuth: []
       - APIKeyAuth: []
-        JWTKeyAuth: []
       summary: Accept a join request
       tags:
       - circles
@@ -2754,8 +2754,8 @@ paths:
               type: string
             type: object
       security:
+      - JWTKeyAuth: []
       - APIKeyAuth: []
-        JWTKeyAuth: []
       summary: Change member role
       tags:
       - circles
@@ -2784,8 +2784,8 @@ paths:
               type: string
             type: object
       security:
+      - JWTKeyAuth: []
       - APIKeyAuth: []
-        JWTKeyAuth: []
       summary: Get all filters
       tags:
       - filters
@@ -2823,8 +2823,8 @@ paths:
               type: string
             type: object
       security:
+      - JWTKeyAuth: []
       - APIKeyAuth: []
-        JWTKeyAuth: []
       summary: Create a new filter
       tags:
       - filters
@@ -2861,8 +2861,8 @@ paths:
               type: string
             type: object
       security:
+      - JWTKeyAuth: []
       - APIKeyAuth: []
-        JWTKeyAuth: []
       summary: Delete a filter
       tags:
       - filters
@@ -2902,8 +2902,8 @@ paths:
               type: string
             type: object
       security:
+      - JWTKeyAuth: []
       - APIKeyAuth: []
-        JWTKeyAuth: []
       summary: Get filter by ID
       tags:
       - filters
@@ -2947,8 +2947,8 @@ paths:
               type: string
             type: object
       security:
+      - JWTKeyAuth: []
       - APIKeyAuth: []
-        JWTKeyAuth: []
       summary: Update a filter
       tags:
       - filters
@@ -2984,8 +2984,8 @@ paths:
               type: string
             type: object
       security:
+      - JWTKeyAuth: []
       - APIKeyAuth: []
-        JWTKeyAuth: []
       summary: Toggle filter pin status
       tags:
       - filters
@@ -3011,8 +3011,8 @@ paths:
               type: string
             type: object
       security:
+      - JWTKeyAuth: []
       - APIKeyAuth: []
-        JWTKeyAuth: []
       summary: Get filters by usage
       tags:
       - filters
@@ -3037,8 +3037,8 @@ paths:
               type: string
             type: object
       security:
+      - JWTKeyAuth: []
       - APIKeyAuth: []
-        JWTKeyAuth: []
       summary: Get pinned filters
       tags:
       - filters
@@ -3071,8 +3071,8 @@ paths:
               type: string
             type: object
       security:
+      - JWTKeyAuth: []
       - APIKeyAuth: []
-        JWTKeyAuth: []
       summary: Get all projects
       tags:
       - projects
@@ -3115,8 +3115,8 @@ paths:
               type: string
             type: object
       security:
+      - JWTKeyAuth: []
       - APIKeyAuth: []
-        JWTKeyAuth: []
       summary: Create a new project
       tags:
       - projects
@@ -3159,8 +3159,8 @@ paths:
               type: string
             type: object
       security:
+      - JWTKeyAuth: []
       - APIKeyAuth: []
-        JWTKeyAuth: []
       summary: Delete a project
       tags:
       - projects
@@ -3209,8 +3209,8 @@ paths:
               type: string
             type: object
       security:
+      - JWTKeyAuth: []
       - APIKeyAuth: []
-        JWTKeyAuth: []
       summary: Update a project
       tags:
       - projects
@@ -3243,8 +3243,8 @@ paths:
               type: string
             type: object
       security:
+      - JWTKeyAuth: []
       - APIKeyAuth: []
-        JWTKeyAuth: []
       summary: Get all things
       tags:
       - things
@@ -3288,8 +3288,8 @@ paths:
               type: string
             type: object
       security:
+      - JWTKeyAuth: []
       - APIKeyAuth: []
-        JWTKeyAuth: []
       summary: Create a new thing
       tags:
       - things
@@ -3339,8 +3339,8 @@ paths:
               type: string
             type: object
       security:
+      - JWTKeyAuth: []
       - APIKeyAuth: []
-        JWTKeyAuth: []
       summary: Update a thing
       tags:
       - things
@@ -3396,8 +3396,8 @@ paths:
               type: string
             type: object
       security:
+      - JWTKeyAuth: []
       - APIKeyAuth: []
-        JWTKeyAuth: []
       summary: Delete a thing
       tags:
       - things
@@ -3451,8 +3451,8 @@ paths:
               type: string
             type: object
       security:
+      - JWTKeyAuth: []
       - APIKeyAuth: []
-        JWTKeyAuth: []
       summary: Get thing history
       tags:
       - things
@@ -3508,8 +3508,8 @@ paths:
               type: string
             type: object
       security:
+      - JWTKeyAuth: []
       - APIKeyAuth: []
-        JWTKeyAuth: []
       summary: Update thing state
       tags:
       - things

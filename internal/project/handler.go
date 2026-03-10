@@ -28,9 +28,9 @@ func NewHandler(pRepo *pRepo.ProjectRepository) *Handler {
 //	@Produce		json
 //	@Security		JWTKeyAuth
 //	@Security		APIKeyAuth
-//	@Success		200	{object}	{array}pModel.Project	"array of projects"
-//	@Failure		401	{object}	map[string]string			"error: Error getting current user"
-//	@Failure		500	{object}	map[string]string			"error: Error getting projects"
+//	@Success		200	{array}		pModel.Project		"array of projects"
+//	@Failure		401	{object}	map[string]string	"error: Error getting current user"
+//	@Failure		500	{object}	map[string]string	"error: Error getting projects"
 //	@Router			/projects [get]
 func (h *Handler) getProjects(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)

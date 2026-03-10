@@ -853,7 +853,7 @@ paths:
       - application/json
       responses:
         "200":
-          description: 'message: Chore added successfully'
+          description: 'message: Chore updated successfully'
           schema:
             additionalProperties:
               type: string
@@ -3060,11 +3060,9 @@ paths:
         "200":
           description: array of projects
           schema:
-            additionalProperties:
-              items:
-                $ref: '#/definitions/model.Project'
-              type: array
-            type: object
+            items:
+              $ref: '#/definitions/model.Project'
+            type: array
         "401":
           description: 'error: Error getting current user'
           schema:
@@ -3198,7 +3196,7 @@ paths:
               $ref: '#/definitions/model.Project'
             type: object
         "400":
-          description: 'error: Invalid project ID | Error binding project data'
+          description: 'error: Invalid project ID or Error binding project data'
           schema:
             additionalProperties:
               type: string
@@ -3210,7 +3208,7 @@ paths:
               type: string
             type: object
         "500":
-          description: 'error: Error updating project | Error getting updated project'
+          description: 'error: Error updating project or Error getting updated project'
           schema:
             additionalProperties:
               type: string
@@ -3233,8 +3231,7 @@ paths:
           description: 'res: array of things'
           schema:
             additionalProperties:
-              items:
-                $ref: '#/definitions/model.Thing'
+              items: {}
               type: array
             type: object
         "401":
@@ -3368,9 +3365,6 @@ paths:
       responses:
         "200":
           description: empty response on success
-          schema:
-            additionalProperties: true
-            type: object
         "400":
           description: 'error: Invalid thing id'
           schema:
@@ -3490,8 +3484,8 @@ paths:
               $ref: '#/definitions/model.Thing'
             type: object
         "400":
-          description: 'error: Invalid thing id | state or increment query param is
-            required | Invalid state'
+          description: 'error: Invalid thing id | value query param is required |
+            Invalid state'
           schema:
             additionalProperties:
               type: string

@@ -114,7 +114,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "message: Chore added successfully",
+                        "description": "message: Chore updated successfully",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -3626,12 +3626,9 @@ const docTemplate = `{
                     "200": {
                         "description": "array of projects",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "array",
-                                "items": {
-                                    "$ref": "#/definitions/model.Project"
-                                }
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.Project"
                             }
                         }
                     },
@@ -3776,7 +3773,7 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "error: Invalid project ID | Error binding project data",
+                        "description": "error: Invalid project ID or Error binding project data",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -3794,7 +3791,7 @@ const docTemplate = `{
                         }
                     },
                     "500": {
-                        "description": "error: Error updating project | Error getting updated project",
+                        "description": "error: Error updating project or Error getting updated project",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -3901,9 +3898,7 @@ const docTemplate = `{
                             "type": "object",
                             "additionalProperties": {
                                 "type": "array",
-                                "items": {
-                                    "$ref": "#/definitions/model.Thing"
-                                }
+                                "items": {}
                             }
                         }
                     },
@@ -4109,11 +4104,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "empty response on success",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
+                        "description": "empty response on success"
                     },
                     "400": {
                         "description": "error: Invalid thing id",
@@ -4295,7 +4286,7 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "error: Invalid thing id | state or increment query param is required | Invalid state",
+                        "description": "error: Invalid thing id | value query param is required | Invalid state",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {

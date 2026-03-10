@@ -49,19 +49,19 @@ func (h *API) UpdateThingState(c *gin.Context) {
 
 	state := c.Query("state")
 	if state == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid state value"})
+		c.JSON(http.StatusBadRequest, "Invalid state value")
 		return
 	}
 
 	oldState := thing.State
 	thing.State = state
 	if !isValidThingState(thing) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid state for thing"})
+		c.JSON(http.StatusBadRequest, "Invalid state for thing")
 		return
 	}
 
 	if err := h.thingRepo.UpdateThingState(c, thing); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -91,7 +91,7 @@ func (h *API) ChangeThingState(c *gin.Context) {
 	setRaw := c.Query("set")
 
 	if addRemoveRaw == "" && setRaw == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid increment value"})
+		c.JSON(http.StatusBadRequest, "Invalid increment value")
 		return
 	}
 
@@ -101,12 +101,12 @@ func (h *API) ChangeThingState(c *gin.Context) {
 	if addRemoveRaw != "" {
 		xValue, err = strconv.Atoi(addRemoveRaw)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid increment value"})
+			c.JSON(http.StatusBadRequest, "Invalid increment value")
 			return
 		}
 		currentState, err := strconv.Atoi(thing.State)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid state for thing"})
+			c.JSON(http.StatusBadRequest, "Invalid state for thing")
 			return
 		}
 		newState := currentState + xValue
@@ -117,11 +117,11 @@ func (h *API) ChangeThingState(c *gin.Context) {
 	}
 
 	if !isValidThingState(thing) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid state for thing"})
+		c.JSON(http.StatusBadRequest, "Invalid state for thing")
 		return
 	}
 	if err := h.thingRepo.UpdateThingState(c, thing); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -150,7 +150,7 @@ func WebhookEvaluateTriggerAndScheduleDueDate(h *API, c *gin.Context, thing *tMo
 
 	thingChores, err := h.tRepo.GetThingChoresByThingId(c, thing.ID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, err.Error())
 		return true
 	}
 	for _, tc := range thingChores {
@@ -170,17 +170,17 @@ func WebhookEvaluateTriggerAndScheduleDueDate(h *API, c *gin.Context, thing *tMo
 func validateUserAndThing(c *gin.Context, h *API) (*tModel.Thing, bool) {
 	thingID, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, err.Error())
 		return nil, true
 	}
 	user := auth.MustCurrentUser(c)
 	thing, err := h.thingRepo.GetThingByID(c, thingID)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid thing id"})
+		c.JSON(http.StatusBadRequest, "Invalid thing id")
 		return nil, true
 	}
 	if thing.UserID != user.ID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Unauthorized"})
+		c.JSON(http.StatusForbidden, "Unauthorized")
 		return nil, true
 	}
 	return thing, false
@@ -217,7 +217,7 @@ func (h *API) GetAllThings(c *gin.Context) {
 	user := auth.MustCurrentUser(c)
 	things, err := h.thingRepo.GetThingsByUserID(c, user.ID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, err.Error())
 		return
 	}
 	c.JSON(http.StatusOK, things)

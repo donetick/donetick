@@ -340,7 +340,7 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 			sessionToken, err := h.mfaService.GenerateSessionToken()
 			if err != nil {
 				logger.Errorw("Failed to generate MFA session token", "error", err)
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Authentication failed"})
+				c.JSON(http.StatusInternalServerError, "Authentication failed")
 				return
 			}
 
@@ -356,7 +356,7 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 
 			if err := h.userRepo.CreateMFASession(c, mfaSession); err != nil {
 				logger.Errorw("Failed to create MFA session", "error", err)
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Authentication failed"})
+				c.JSON(http.StatusInternalServerError, "Authentication failed")
 				return
 			}
 
@@ -513,7 +513,7 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 			sessionToken, err := h.mfaService.GenerateSessionToken()
 			if err != nil {
 				logger.Errorw("Failed to generate MFA session token", "error", err)
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Authentication failed"})
+				c.JSON(http.StatusInternalServerError, "Authentication failed")
 				return
 			}
 
@@ -529,7 +529,7 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 
 			if err := h.userRepo.CreateMFASession(c, mfaSession); err != nil {
 				logger.Errorw("Failed to create MFA session", "error", err)
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Authentication failed"})
+				c.JSON(http.StatusInternalServerError, "Authentication failed")
 				return
 			}
 
@@ -562,14 +562,14 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 		var req Request
 		if err := c.ShouldBindJSON(&req); err != nil {
 			logger.Errorw("account.handler.thirdPartyAuthCallback (oauth2) failed to bind request", "err", err)
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+			c.JSON(http.StatusBadRequest, "Invalid request")
 			return
 		}
 
 		// Validate that the code is not empty
 		if req.Code == "" {
 			logger.Errorw("account.handler.thirdPartyAuthCallback (oauth2) empty authorization code")
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Authorization code is required"})
+			c.JSON(http.StatusBadRequest, "Authorization code is required")
 			return
 		}
 
@@ -605,7 +605,7 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 			encodedPassword, err := auth.EncodePassword(password)
 			if err != nil {
 				logger.Error("account.handler.thirdPartyAuthCallback (oauth2) password encoding failed", "err", err)
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Password encoding failed"})
+				c.JSON(http.StatusInternalServerError, "Password encoding failed")
 				return
 			}
 			account := &uModel.User{
@@ -667,7 +667,7 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 			sessionToken, err := h.mfaService.GenerateSessionToken()
 			if err != nil {
 				logger.Error("Failed to generate MFA session token", "error", err)
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Authentication failed"})
+				c.JSON(http.StatusInternalServerError, "Authentication failed")
 				return
 			}
 
@@ -683,7 +683,7 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 
 			if err := h.userRepo.CreateMFASession(c, mfaSession); err != nil {
 				logger.Error("Failed to create MFA session", "error", err)
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Authentication failed"})
+				c.JSON(http.StatusInternalServerError, "Authentication failed")
 				return
 			}
 
@@ -872,7 +872,7 @@ func (h *Handler) UpdateUserDetails(c *gin.Context) {
 func (h *Handler) CreateLongLivedToken(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get current user"})
+		c.JSON(http.StatusInternalServerError, "Failed to get current user")
 		return
 	}
 
@@ -882,7 +882,7 @@ func (h *Handler) CreateLongLivedToken(c *gin.Context) {
 	}
 	var req TokenRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		c.JSON(http.StatusBadRequest, "Invalid request")
 		return
 	}
 
@@ -896,12 +896,12 @@ func (h *Handler) CreateLongLivedToken(c *gin.Context) {
 		)
 
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to validate MFA code"})
+			c.JSON(http.StatusInternalServerError, "Failed to validate MFA code")
 			return
 		}
 
 		if !valid {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid MFA code"})
+			c.JSON(http.StatusBadRequest, "Invalid MFA code")
 			return
 		}
 
@@ -917,7 +917,7 @@ func (h *Handler) CreateLongLivedToken(c *gin.Context) {
 	randomBytes := make([]byte, 16) // 128 bits are enough for strong randomness
 	_, err := rand.Read(randomBytes)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate random part of the token"})
+		c.JSON(http.StatusInternalServerError, "Failed to generate random part of the token")
 		return
 	}
 
@@ -928,30 +928,28 @@ func (h *Handler) CreateLongLivedToken(c *gin.Context) {
 
 	tokenModel, err := h.userRepo.StoreAPIToken(c, currentUser.ID, req.Name, token)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to store the token"})
+		c.JSON(http.StatusInternalServerError, "Failed to store the token")
 		return
 	}
 
-	response := gin.H{"res": tokenModel}
-
 	// If user has MFA enabled but didn't provide a code, suggest using MFA for enhanced security
-	if currentUser.MFAEnabled && req.MFACode == "" {
-		response["message"] = "API token created successfully. For enhanced security, consider providing an MFA code when creating API tokens."
-	}
+	// if currentUser.MFAEnabled && req.MFACode == "" {
+	// 	response["message"] = "API token created successfully. For enhanced security, consider providing an MFA code when creating API tokens." // TODO: Check if we still need this.
+	// }
 
-	c.JSON(http.StatusOK, response)
+	c.JSON(http.StatusOK, tokenModel)
 }
 
 func (h *Handler) GetAllUserToken(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get current user"})
+		c.JSON(http.StatusInternalServerError, "Failed to get current user")
 		return
 	}
 
 	tokens, err := h.userRepo.GetAllUserTokens(c, currentUser.ID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user tokens"})
+		c.JSON(http.StatusInternalServerError, "Failed to get user tokens")
 		return
 	}
 
@@ -962,7 +960,7 @@ func (h *Handler) GetAllUserToken(c *gin.Context) {
 func (h *Handler) DeleteUserToken(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get current user"})
+		c.JSON(http.StatusInternalServerError, "Failed to get current user")
 		return
 	}
 
@@ -970,7 +968,7 @@ func (h *Handler) DeleteUserToken(c *gin.Context) {
 
 	err := h.userRepo.DeleteAPIToken(c, currentUser.ID, tokenID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete the token"})
+		c.JSON(http.StatusInternalServerError, "Failed to delete the token")
 		return
 	}
 
@@ -980,7 +978,7 @@ func (h *Handler) DeleteUserToken(c *gin.Context) {
 func (h *Handler) UpdateNotificationTarget(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get current user"})
+		c.JSON(http.StatusInternalServerError, "Failed to get current user")
 		return
 	}
 
@@ -991,13 +989,13 @@ func (h *Handler) UpdateNotificationTarget(c *gin.Context) {
 
 	var req Request
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		c.JSON(http.StatusBadRequest, "Invalid request")
 		return
 	}
 	if req.Type == nModel.NotificationPlatformNone {
 		err := h.userRepo.DeleteNotificationTarget(c, currentUser.ID)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete notification target"})
+			c.JSON(http.StatusInternalServerError, "Failed to delete notification target")
 			return
 		}
 		c.JSON(http.StatusOK, gin.H{})
@@ -1006,13 +1004,13 @@ func (h *Handler) UpdateNotificationTarget(c *gin.Context) {
 
 	err := h.userRepo.UpdateNotificationTarget(c, currentUser.ID, req.Target, req.Type)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update notification target"})
+		c.JSON(http.StatusInternalServerError, "Failed to update notification target")
 		return
 	}
 
 	err = h.userRepo.UpdateNotificationTargetForAllNotifications(c, currentUser.ID, req.Target, req.Type)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update notification target for all notifications"})
+		c.JSON(http.StatusInternalServerError, "Failed to update notification target for all notifications")
 		return
 	}
 
@@ -1022,7 +1020,7 @@ func (h *Handler) UpdateNotificationTarget(c *gin.Context) {
 func (h *Handler) updateUserPasswordLoggedInOnly(c *gin.Context) {
 	if h.isDonetickDotCom {
 		// only enable this feature for self-hosted instances
-		c.JSON(http.StatusForbidden, gin.H{"error": "This action is not allowed on donetick.com"})
+		c.JSON(http.StatusForbidden, "This action is not allowed on donetick.com")
 		return
 	}
 	logger := logging.FromContext(c)
@@ -1040,7 +1038,7 @@ func (h *Handler) updateUserPasswordLoggedInOnly(c *gin.Context) {
 
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get current user"})
+		c.JSON(http.StatusInternalServerError, "Failed to get current user")
 		return
 	}
 
@@ -1066,7 +1064,7 @@ func (h *Handler) updateUserPasswordLoggedInOnly(c *gin.Context) {
 func (h *Handler) setWebhook(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get current user"})
+		c.JSON(http.StatusInternalServerError, "Failed to get current user")
 		return
 	}
 
@@ -1076,19 +1074,19 @@ func (h *Handler) setWebhook(c *gin.Context) {
 
 	var req Request
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		c.JSON(http.StatusBadRequest, "Invalid request")
 		return
 	}
 
 	if !currentUser.IsPlusMember() {
-		c.JSON(http.StatusForbidden, gin.H{"error": "This action is only available for Plus members"})
+		c.JSON(http.StatusForbidden, "This action is only available for Plus members")
 		return
 	}
 
 	// get circle admins
 	admins, err := h.circleRepo.GetCircleAdmins(c, currentUser.CircleID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get circle details"})
+		c.JSON(http.StatusInternalServerError, "Failed to get circle details")
 		return
 	}
 
@@ -1101,13 +1099,13 @@ func (h *Handler) setWebhook(c *gin.Context) {
 		}
 	}
 	if !isAdmin {
-		c.JSON(http.StatusForbidden, gin.H{"error": "You are not an admin"})
+		c.JSON(http.StatusForbidden, "You are not an admin")
 		return
 	}
 
 	err = h.circleRepo.SetWebhookURL(c, currentUser.CircleID, req.URL)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to set webhook URL"})
+		c.JSON(http.StatusInternalServerError, "Failed to set webhook URL")
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{})
@@ -1116,19 +1114,19 @@ func (h *Handler) setWebhook(c *gin.Context) {
 func (h *Handler) updateProfilePhoto(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get current user"})
+		c.JSON(http.StatusInternalServerError, "Failed to get current user")
 		return
 	}
 
 	file, err := c.FormFile("file")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid file"})
+		c.JSON(http.StatusBadRequest, "Invalid file")
 		return
 	}
 	fileExtension := file.Filename[strings.LastIndex(file.Filename, "."):]
 	// validate file extension:
 	if fileExtension != ".jpg" && fileExtension != ".jpeg" && fileExtension != ".png" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid file extension"})
+		c.JSON(http.StatusBadRequest, "Invalid file extension")
 		return
 	}
 
@@ -1141,7 +1139,7 @@ func (h *Handler) updateProfilePhoto(c *gin.Context) {
 
 	openedFile, err := file.Open()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to open file"})
+		c.JSON(http.StatusInternalServerError, "Failed to open file")
 		return
 	}
 	defer openedFile.Close()
@@ -1149,23 +1147,23 @@ func (h *Handler) updateProfilePhoto(c *gin.Context) {
 	err = h.storage.Save(c, filename, openedFile)
 	if err != nil {
 		logging.FromContext(c).Errorw("Failed to save profile photo", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save file"})
+		c.JSON(http.StatusInternalServerError, "Failed to save file")
 		return
 	}
 	signedFileName, err := h.signer.Sign(filename)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to sign URL"})
+		c.JSON(http.StatusInternalServerError, "Failed to sign URL")
 		return
 	}
 	err = h.userRepo.UpdateUserImage(c, currentUser.ID, signedFileName)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update profile photo"})
+		c.JSON(http.StatusInternalServerError, "Failed to update profile photo")
 		return
 	}
 	// create signed URL for the file:
 	signedURL, err := h.signer.Sign(filename)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to sign URL"})
+		c.JSON(http.StatusInternalServerError, "Failed to sign URL")
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"sign": signedURL})
@@ -1174,13 +1172,13 @@ func (h *Handler) updateProfilePhoto(c *gin.Context) {
 func (h *Handler) getStorageUsage(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get current user"})
+		c.JSON(http.StatusInternalServerError, "Failed to get current user")
 		return
 	}
 
 	used, available, err := h.storageRepo.GetStorageStats(c, currentUser)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get storage usage"})
+		c.JSON(http.StatusInternalServerError, "Failed to get storage usage")
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
@@ -1205,26 +1203,26 @@ type AccountDeletionCheckRequest struct {
 func (h *Handler) checkAccountDeletion(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		c.JSON(http.StatusUnauthorized, "User not authenticated")
 		return
 	}
 
 	var req AccountDeletionCheckRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, err.Error())
 		return
 	}
 
 	// Verify password
 	if auth.Matches(currentUser.Password, req.Password) != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid password"})
+		c.JSON(http.StatusBadRequest, "Invalid password")
 		return
 	}
 
 	// Check what would be deleted (dry run)
 	result, err := h.deletionService.CheckUserAccountDeletion(c.Request.Context(), currentUser.ID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check account deletion: " + err.Error()})
+		c.JSON(http.StatusInternalServerError, "Failed to check account deletion: "+err.Error())
 		return
 	}
 
@@ -1234,25 +1232,25 @@ func (h *Handler) checkAccountDeletion(c *gin.Context) {
 func (h *Handler) deleteAccount(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		c.JSON(http.StatusUnauthorized, "User not authenticated")
 		return
 	}
 
 	var req AccountDeletionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, err.Error())
 		return
 	}
 
 	// Validate confirmation text
 	if req.Confirmation != "DELETE" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Confirmation text must be 'DELETE'"})
+		c.JSON(http.StatusBadRequest, "Confirmation text must be 'DELETE'")
 		return
 	}
 
 	// Verify password
 	if auth.Matches(currentUser.Password, req.Password) != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid password"})
+		c.JSON(http.StatusUnauthorized, "Invalid password")
 		return
 	}
 
@@ -1260,7 +1258,7 @@ func (h *Handler) deleteAccount(c *gin.Context) {
 	result, err := h.deletionService.DeleteUserAccount(c.Request.Context(), currentUser.ID, req.TransferOptions)
 	if err != nil {
 		logging.DefaultLogger().Errorf("Failed to delete account for user %d: %v", currentUser.ID, err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete account: " + err.Error()})
+		c.JSON(http.StatusInternalServerError, "Failed to delete account: "+err.Error())
 		return
 	}
 
@@ -1302,19 +1300,19 @@ type ChildUserResponse struct {
 func (h *Handler) createChildUser(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		c.JSON(http.StatusUnauthorized, "User not authenticated")
 		return
 	}
 
 	// Only parent users can create child users
 	if currentUser.UserType != uModel.UserTypeParent {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Only parent users can create child accounts"})
+		c.JSON(http.StatusForbidden, "Only parent users can create child accounts")
 		return
 	}
 
 	var req CreateChildUserRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -1322,7 +1320,7 @@ func (h *Handler) createChildUser(c *gin.Context) {
 	if h.isDonetickDotCom {
 		currentChildCount, err := h.userRepo.GetChildUserCount(c, currentUser.ID)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check existing subaccounts"})
+			c.JSON(http.StatusInternalServerError, "Failed to check existing subaccounts")
 			return
 		}
 
@@ -1340,11 +1338,11 @@ func (h *Handler) createChildUser(c *gin.Context) {
 	}
 	// Validate username and child username:
 	if !utils.IsValidUsername(currentUser.Username) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid parent username format"})
+		c.JSON(http.StatusBadRequest, "Invalid parent username format")
 		return
 	}
 	if !utils.IsValidUsername(req.ChildName) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid child username format"})
+		c.JSON(http.StatusBadRequest, "Invalid child username format")
 		return
 	}
 
@@ -1359,7 +1357,7 @@ func (h *Handler) createChildUser(c *gin.Context) {
 	// Encode password
 	encodedPassword, err := auth.EncodePassword(req.Password)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process password"})
+		c.JSON(http.StatusInternalServerError, "Failed to process password")
 		return
 	}
 
@@ -1378,13 +1376,13 @@ func (h *Handler) createChildUser(c *gin.Context) {
 
 	// Validate child user
 	if err := childUser.ValidateChildUser(); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, err.Error())
 		return
 	}
 
 	createdUser, err := h.userRepo.CreateUser(c, childUser)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create child user"})
+		c.JSON(http.StatusInternalServerError, "Failed to create child user")
 		return
 	}
 
@@ -1397,7 +1395,7 @@ func (h *Handler) createChildUser(c *gin.Context) {
 		CreatedAt: time.Now().UTC(),
 		UpdatedAt: time.Now().UTC(),
 	}); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to add child user to circle"})
+		c.JSON(http.StatusInternalServerError, "Failed to add child user to circle")
 		return
 	}
 
@@ -1415,45 +1413,45 @@ func (h *Handler) createChildUser(c *gin.Context) {
 func (h *Handler) updateChildPassword(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		c.JSON(http.StatusUnauthorized, "User not authenticated")
 		return
 	}
 
 	// Only parent users can update child passwords
 	if currentUser.UserType != uModel.UserTypeParent {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Only parent users can update child passwords"})
+		c.JSON(http.StatusForbidden, "Only parent users can update child passwords")
 		return
 	}
 
 	var req UpdateChildPasswordRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, err.Error())
 		return
 	}
 
 	// Verify that the child user belongs to the current parent
 	childUser, err := h.userRepo.GetUserByID(c, req.ChildUserID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Child user not found"})
+		c.JSON(http.StatusNotFound, "Child user not found")
 		return
 	}
 
 	if childUser.ParentUserID == nil || *childUser.ParentUserID != currentUser.ID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "You can only update passwords for your own child users"})
+		c.JSON(http.StatusForbidden, "You can only update passwords for your own child users")
 		return
 	}
 
 	// Encode new password
 	encodedPassword, err := auth.EncodePassword(req.Password)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process password"})
+		c.JSON(http.StatusInternalServerError, "Failed to process password")
 		return
 	}
 
 	// Update password
 	err = h.userRepo.UpdatePasswordByUserId(c.Request.Context(), req.ChildUserID, encodedPassword)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update password"})
+		c.JSON(http.StatusInternalServerError, "Failed to update password")
 		return
 	}
 
@@ -1463,50 +1461,50 @@ func (h *Handler) updateChildPassword(c *gin.Context) {
 func (h *Handler) deleteChildUser(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		c.JSON(http.StatusUnauthorized, "User not authenticated")
 		return
 	}
 
 	// Only parent users can delete child users
 	if currentUser.UserType != uModel.UserTypeParent {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Only parent users can delete child accounts"})
+		c.JSON(http.StatusForbidden, "Only parent users can delete child accounts")
 		return
 	}
 
 	childUserID := c.Param("id")
 	if childUserID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Child user ID is required"})
+		c.JSON(http.StatusBadRequest, "Child user ID is required")
 		return
 	}
 
 	// Parse child user ID
 	childID := 0
 	if _, err := fmt.Sscanf(childUserID, "%d", &childID); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid child user ID"})
+		c.JSON(http.StatusBadRequest, "Invalid child user ID")
 		return
 	}
 
 	// Verify that the child user belongs to the current parent
 	childUser, err := h.userRepo.GetUserByID(c, childID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Child user not found"})
+		c.JSON(http.StatusNotFound, "Child user not found")
 		return
 	}
 
 	if childUser.ParentUserID == nil || *childUser.ParentUserID != currentUser.ID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "You can only delete your own child users"})
+		c.JSON(http.StatusForbidden, "You can only delete your own child users")
 		return
 	}
 
 	// Delete child user account (this will cascade delete all associated data)
 	result, err := h.deletionService.DeleteUserAccount(c.Request.Context(), childID, nil)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete child user: " + err.Error()})
+		c.JSON(http.StatusInternalServerError, "Failed to delete child user: "+err.Error())
 		return
 	}
 
 	if !result.Success {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete child user"})
+		c.JSON(http.StatusInternalServerError, "Failed to delete child user")
 		return
 	}
 
@@ -1516,19 +1514,19 @@ func (h *Handler) deleteChildUser(c *gin.Context) {
 func (h *Handler) getChildUsers(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		c.JSON(http.StatusUnauthorized, "User not authenticated")
 		return
 	}
 
 	// Only parent users can view child users
 	if currentUser.UserType != uModel.UserTypeParent {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Only parent users can view child accounts"})
+		c.JSON(http.StatusForbidden, "Only parent users can view child accounts")
 		return
 	}
 
 	childUsers, err := h.userRepo.GetChildUsersByParentID(c, currentUser.ID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get child users"})
+		c.JSON(http.StatusInternalServerError, "Failed to get child users")
 		return
 	}
 

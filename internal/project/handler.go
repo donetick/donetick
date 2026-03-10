@@ -26,7 +26,8 @@ func NewHandler(pRepo *pRepo.ProjectRepository) *Handler {
 //	@Tags			projects
 //	@Accept			json
 //	@Produce		json
-//	@Security		JWTKeyAuth || APIKeyAuth
+//	@Security		JWTKeyAuth
+//	@Security		APIKeyAuth
 //	@Success		200	{object}	map[string][]pModel.Project	"array of projects"
 //	@Failure		401	{object}	map[string]string			"error: Error getting current user"
 //	@Failure		500	{object}	map[string]string			"error: Error getting projects"
@@ -58,7 +59,8 @@ func (h *Handler) getProjects(c *gin.Context) {
 //	@Tags			projects
 //	@Accept			json
 //	@Produce		json
-//	@Security		JWTKeyAuth || APIKeyAuth
+//	@Security		JWTKeyAuth
+//	@Security		APIKeyAuth
 //	@Param			project	body		pModel.ProjectReq			true	"Project creation request"
 //	@Success		200		{object}	map[string]model.Project	"res: created project object"
 //	@Failure		400		{object}	map[string]string			"error: Error binding project data"
@@ -110,7 +112,8 @@ func (h *Handler) createProject(c *gin.Context) {
 //	@Tags			projects
 //	@Accept			json
 //	@Produce		json
-//	@Security		JWTKeyAuth || APIKeyAuth
+//	@Security		JWTKeyAuth
+//	@Security		APIKeyAuth
 //	@Param			id		path		int							true	"Project ID"
 //	@Param			project	body		pModel.ProjectReq			true	"Project update request"
 //	@Success		200		{object}	map[string]pModel.Project	"res: updated project object"
@@ -178,7 +181,8 @@ func (h *Handler) updateProject(c *gin.Context) {
 //	@Tags			projects
 //	@Accept			json
 //	@Produce		json
-//	@Security		JWTKeyAuth || APIKeyAuth
+//	@Security		JWTKeyAuth
+//	@Security		APIKeyAuth
 //	@Param			id	path		int					true	"Project ID"
 //	@Success		200	{object}	map[string]string	"res: Project deleted successfully"
 //	@Failure		400	{object}	map[string]string	"error: Invalid project ID"

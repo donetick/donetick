@@ -53,20 +53,20 @@ func (h *Handler) AssetHandler(c *gin.Context) {
 	logger.Debug("AssetHandler", "url", rawURL)
 
 	if rawURL == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "missing asset url"})
+		c.JSON(http.StatusBadRequest, "missing asset url")
 		return
 	}
 
 	parsed, err := url.Parse(rawURL)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid url format"})
+		c.JSON(http.StatusBadRequest, "invalid url format")
 		return
 	}
 
 	sig := c.Query("sig")
 
 	if !h.signer.IsValid(parsed.Path[1:], sig) {
-		c.JSON(http.StatusForbidden, gin.H{"error": "invalid or expired signature for url: " + parsed.Path[1:]})
+		c.JSON(http.StatusForbidden, "invalid or expired signature for url: "+parsed.Path[1:])
 		return
 	}
 
@@ -74,7 +74,7 @@ func (h *Handler) AssetHandler(c *gin.Context) {
 
 	file, err := h.storage.Get(context.Background(), filename)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "file not found"})
+		c.JSON(http.StatusNotFound, "file not found")
 		return
 	}
 	defer file.Close()
@@ -87,7 +87,7 @@ func (h *Handler) AssetHandler(c *gin.Context) {
 	// Reset reader to stream full file
 
 	// if err != nil {
-	// 	c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to read file"})
+	// 	c.JSON(http.StatusInternalServerError, "failed to read file"})
 	// 	return
 	// }
 
@@ -107,20 +107,20 @@ func (h *Handler) ChoreUploadHandler(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
 		log.Error("failed to get current user from context")
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		c.JSON(http.StatusUnauthorized, "unauthorized")
 		return
 	}
 	file, err := c.FormFile("file")
 	if err != nil {
 		log.Error("failed to get file from formdata", "error", err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "missing file"})
+		c.JSON(http.StatusBadRequest, "missing file")
 		return
 	}
 
 	// validate file size:
 	if file.Size > h.maxFileSize {
 		log.Error("file size is too large", "size", file.Size)
-		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "file size is too large"})
+		c.JSON(http.StatusRequestEntityTooLarge, "file size is too large")
 		return
 	}
 
@@ -129,7 +129,7 @@ func (h *Handler) ChoreUploadHandler(c *gin.Context) {
 	// save the file to storage:
 	src, err := file.Open()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to open uploaded file"})
+		c.JSON(http.StatusInternalServerError, "failed to open uploaded file")
 		return
 	}
 	defer src.Close()
@@ -153,28 +153,28 @@ func (h *Handler) ChoreUploadHandler(c *gin.Context) {
 		switch {
 		case err == errorx.ErrNotEnoughSpace:
 			log.Error("user has no enough space", "error", err)
-			c.JSON(http.StatusInsufficientStorage, gin.H{"error": "no enough space"})
+			c.JSON(http.StatusInsufficientStorage, "no enough space")
 			return
 		case err == errorx.ErrNotAPlusMember:
 			log.Error("user is not a plus member", "error", err)
-			c.JSON(http.StatusForbidden, gin.H{"error": "user is not a plus member"})
+			c.JSON(http.StatusForbidden, "user is not a plus member")
 			return
 		default:
 			log.Error("failed to save file record to db", "error", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save file record"})
+			c.JSON(http.StatusInternalServerError, "failed to save file record")
 		}
 		return
 	}
 	err = h.storage.Save(context.Background(), path, src)
 	if err != nil {
 		log.Error("failed to save file to storage", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save file"})
+		c.JSON(http.StatusInternalServerError, "failed to save file")
 		return
 	}
 	// generate a signed url for the file:
 	signedURL, err := h.signer.Sign(path)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to sign url"})
+		c.JSON(http.StatusInternalServerError, "failed to sign url")
 		return
 	}
 	// return the signed url:
@@ -209,7 +209,7 @@ func handleEntityType(c *gin.Context, h *Handler, currentUser *user.UserDetails)
 		now := time.Now().UTC()
 		if err := chore.CanEdit(currentUser.ID, circleUsers, &now); err != nil {
 			log.Error("user is not allowed to edit chore", "error", err)
-			c.JSON(http.StatusForbidden, gin.H{"error": "user is not allowed to edit chore"})
+			c.JSON(http.StatusForbidden, "user is not allowed to edit chore")
 			return storageModel.EntityTypeChoreDescription, 0, false
 		}
 		return storageModel.EntityTypeChoreDescription, chore.ID, true

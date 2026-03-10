@@ -109,7 +109,7 @@ func (h *Handler) getFilterByID(c *gin.Context) {
 //	@Produce		json
 //	@Security		JWTKeyAuth || APIKeyAuth
 //	@Param			filter	body		fModel.FilterReq			true	"Filter creation request"
-//	@Success		200		{object}	map[string]model.Filter	"res: created filter object"
+//	@Success		200		{object}	map[string]fModel.Filter	"res: created filter object"
 //	@Failure		400		{object}	map[string]string		"error: Error binding filter data | Filter name already exists"
 //	@Failure		500		{object}	map[string]string		"error: Error getting current user | Error checking filter name | Error creating filter"
 //	@Router			/filters [post]
@@ -185,7 +185,7 @@ func (h *Handler) createFilter(c *gin.Context) {
 //	@Security		JWTKeyAuth || APIKeyAuth
 //	@Param			id		path		int						true	"Filter ID"
 //	@Param			filter	body		fModel.FilterReq			true	"Filter update request"
-//	@Success		200		{object}	map[string]model.Filter	"res: updated filter object"
+//	@Success		200		{object}	map[string]fModel.Filter	"res: updated filter object"
 //	@Failure		400		{object}	map[string]string		"error: Filter ID is required | Invalid filter ID | Error binding filter data | Filter name already exists"
 //	@Failure		500		{object}	map[string]string		"error: Error getting current user | Error checking filter name | Error getting updated filter | internal error"
 //	@Router			/filters/{id} [put]

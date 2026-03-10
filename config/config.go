@@ -115,6 +115,7 @@ type ServerConfig struct {
 	CorsAllowOrigins []string      `mapstructure:"cors_allow_origins" yaml:"cors_allow_origins"`
 	ServeFrontend    bool          `mapstructure:"serve_frontend" yaml:"serve_frontend"`
 	ServeSwagger     bool          `mapstructure:"serve_swagger" yaml:"serve_swagger"`
+	PublicHost       string        `mapstructure:"public_host" yaml:"public_host" default:"http://localhost:2021"`
 }
 
 type SchedulerConfig struct {

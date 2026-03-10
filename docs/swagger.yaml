@@ -1,3 +1,4 @@
+basePath: /api/v1
 definitions:
   circle.Circle:
     properties:
@@ -743,6 +744,12 @@ definitions:
     type: object
 info:
   contact: {}
+  description: Donetick swagger documentation.
+  license:
+    name: GNU Affero General Public License v3.0
+    url: https://github.com/donetick/donetick/blob/main/LICENSE.md
+  title: Donetick Swagger API
+  version: "1.0"
 paths:
   /chores:
     get:

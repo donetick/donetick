@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"donetick.com/core/config"
-	"donetick.com/core/docs"
+	docs "donetick.com/core/docs"
 	"donetick.com/core/external/payment"
 	"donetick.com/core/frontend"
 	auth "donetick.com/core/internal/auth"
@@ -59,16 +59,6 @@ import (
 	"donetick.com/core/internal/filter"
 	fRepo "donetick.com/core/internal/filter/repo"
 )
-
-//	@securityDefinitions.apikey	JWTKeyAuth
-//	@in							header
-//	@name						Authorization
-//	@description				Type "Bearer" followed by a space and JWT token.
-
-//	@securityDefinitions.apikey	APIKeyAuth
-//	@in							header
-//	@name						secretkey
-//	@description				donetick issued apikey
 
 func main() {
 	// Load configuration first

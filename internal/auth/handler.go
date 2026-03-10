@@ -160,7 +160,7 @@ func (h *AuthHandler) EnhancedLoginHandler(c *gin.Context) {
 		sessionToken, err := h.mfaService.GenerateSessionToken()
 		if err != nil {
 			logger.Errorw("Failed to generate MFA session token", "error", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Authentication failed"})
+			c.JSON(http.StatusInternalServerError, "Authentication failed")
 			return
 		}
 
@@ -176,7 +176,7 @@ func (h *AuthHandler) EnhancedLoginHandler(c *gin.Context) {
 
 		if err := h.userRepo.CreateMFASession(c, mfaSession); err != nil {
 			logger.Errorw("Failed to create MFA session", "error", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Authentication failed"})
+			c.JSON(http.StatusInternalServerError, "Authentication failed")
 			return
 		}
 

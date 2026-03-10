@@ -15,20 +15,20 @@ func APITokenMiddleware(userRepo *uRepo.UserRepository) gin.HandlerFunc {
 	return gin.HandlerFunc(func(c *gin.Context) {
 		apiToken := c.GetHeader("secretkey")
 		if apiToken == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "API token required"})
+			c.JSON(http.StatusUnauthorized, "API token required")
 			c.Abort()
 			return
 		}
 
 		user, err := userRepo.GetUserByToken(c, apiToken)
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid API token"})
+			c.JSON(http.StatusUnauthorized, "Invalid API token")
 			c.Abort()
 			return
 		}
 
 		if user.Disabled {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "User account is disabled"})
+			c.JSON(http.StatusUnauthorized, "User account is disabled")
 			c.Abort()
 			return
 		}
@@ -70,13 +70,13 @@ func OptionalMFAMiddleware(userRepo *uRepo.UserRepository, mfaService *mfa.MFASe
 
 			if err != nil {
 				logger.Errorw("Error validating MFA code in API request", "error", err)
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to validate MFA code"})
+				c.JSON(http.StatusInternalServerError, "Failed to validate MFA code")
 				c.Abort()
 				return
 			}
 
 			if !valid {
-				c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid MFA code"})
+				c.JSON(http.StatusBadRequest, "Invalid MFA code")
 				c.Abort()
 				return
 			}
@@ -102,14 +102,14 @@ func RequireMFAMiddleware() gin.HandlerFunc {
 		// Get current user from context
 		user, exists := c.Get(identityKey)
 		if !exists {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+			c.JSON(http.StatusUnauthorized, "Authentication required")
 			c.Abort()
 			return
 		}
 
 		userDetails, ok := user.(*uModel.UserDetails)
 		if !ok {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user context"})
+			c.JSON(http.StatusInternalServerError, "Invalid user context")
 			c.Abort()
 			return
 		}
@@ -137,21 +137,21 @@ func RequirePlusMemberMiddleware() gin.HandlerFunc {
 		// Get current user from context (should be set by APITokenMiddleware)
 		user, exists := c.Get(identityKey)
 		if !exists {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+			c.JSON(http.StatusUnauthorized, "Authentication required")
 			c.Abort()
 			return
 		}
 
 		userDetails, ok := user.(*uModel.UserDetails)
 		if !ok {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user context"})
+			c.JSON(http.StatusInternalServerError, "Invalid user context")
 			c.Abort()
 			return
 		}
 
 		// Check if user is a plus member
 		if !userDetails.IsPlusMember() {
-			c.JSON(http.StatusForbidden, gin.H{"error": "Only plus members can access this endpoint"})
+			c.JSON(http.StatusForbidden, "Only plus members can access this endpoint")
 			c.Abort()
 			return
 		}

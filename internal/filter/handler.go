@@ -27,8 +27,8 @@ func NewHandler(fRepo *fRepo.FilterRepository) *Handler {
 //	@Accept			json
 //	@Produce		json
 //	@Security		JWTKeyAuth || APIKeyAuth
-//	@Success		200	{array}		map[string][]fModel.Filter		"array of filters"
-//	@Failure		500	{object}	map[string]string	"error: Error getting current user | Error getting filters"
+//	@Success		200	{array}		map[string][]fModel.Filter	"array of filters"
+//	@Failure		500	{object}	map[string]string			"error: Error getting current user | Error getting filters"
 //	@Router			/filters [get]
 func (h *Handler) getFilters(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
@@ -110,8 +110,8 @@ func (h *Handler) getFilterByID(c *gin.Context) {
 //	@Security		JWTKeyAuth || APIKeyAuth
 //	@Param			filter	body		fModel.FilterReq			true	"Filter creation request"
 //	@Success		200		{object}	map[string]fModel.Filter	"res: created filter object"
-//	@Failure		400		{object}	map[string]string		"error: Error binding filter data | Filter name already exists"
-//	@Failure		500		{object}	map[string]string		"error: Error getting current user | Error checking filter name | Error creating filter"
+//	@Failure		400		{object}	map[string]string			"error: Error binding filter data | Filter name already exists"
+//	@Failure		500		{object}	map[string]string			"error: Error getting current user | Error checking filter name | Error creating filter"
 //	@Router			/filters [post]
 func (h *Handler) createFilter(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
@@ -183,11 +183,11 @@ func (h *Handler) createFilter(c *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Security		JWTKeyAuth || APIKeyAuth
-//	@Param			id		path		int						true	"Filter ID"
+//	@Param			id		path		int							true	"Filter ID"
 //	@Param			filter	body		fModel.FilterReq			true	"Filter update request"
 //	@Success		200		{object}	map[string]fModel.Filter	"res: updated filter object"
-//	@Failure		400		{object}	map[string]string		"error: Filter ID is required | Invalid filter ID | Error binding filter data | Filter name already exists"
-//	@Failure		500		{object}	map[string]string		"error: Error getting current user | Error checking filter name | Error getting updated filter | internal error"
+//	@Failure		400		{object}	map[string]string			"error: Filter ID is required | Invalid filter ID | Error binding filter data | Filter name already exists"
+//	@Failure		500		{object}	map[string]string			"error: Error getting current user | Error checking filter name | Error getting updated filter | internal error"
 //	@Router			/filters/{id} [put]
 func (h *Handler) updateFilter(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)

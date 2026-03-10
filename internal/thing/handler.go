@@ -99,8 +99,8 @@ func (h *Handler) CreateThing(c *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Security		JWTKeyAuth || APIKeyAuth
-//	@Param			id		path		int					true	"Thing ID"
-//	@Param			value	query		string				true	"New state value"
+//	@Param			id		path		int						true	"Thing ID"
+//	@Param			value	query		string					true	"New state value"
 //	@Success		200		{object}	map[string]tModel.Thing	"res: updated thing object"
 //	@Failure		400		{object}	map[string]string		"error: Invalid thing id | state or increment query param is required | Invalid state"
 //	@Failure		401		{object}	map[string]string		"error: Unauthorized"
@@ -333,7 +333,7 @@ func (h *Handler) GetThingHistory(c *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Security		JWTKeyAuth || APIKeyAuth
-//	@Param			id	path		int					true	"Thing ID"
+//	@Param			id	path		int						true	"Thing ID"
 //	@Success		200	{object}	map[string]interface{}	"empty response on success"
 //	@Failure		400	{object}	map[string]string		"error: Invalid thing id"
 //	@Failure		401	{object}	map[string]string		"error: Unauthorized"

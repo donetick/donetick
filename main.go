@@ -60,15 +60,15 @@ import (
 	fRepo "donetick.com/core/internal/filter/repo"
 )
 
-//  @securityDefinitions.apikey JWTKeyAuth
+//	@securityDefinitions.apikey	JWTKeyAuth
 //	@in							header
 //	@name						Authorization
-//  @description Type "Bearer" followed by a space and JWT token.
+//	@description				Type "Bearer" followed by a space and JWT token.
 
-//  @securityDefinitions.apikey APIKeyAuth
+//	@securityDefinitions.apikey	APIKeyAuth
 //	@in							header
 //	@name						secretkey
-//  @description donetick issued apikey
+//	@description				donetick issued apikey
 
 func main() {
 	// Load configuration first

@@ -54,7 +54,7 @@ func (h *Handler) CreateSubscription(c *gin.Context) {
 		sCustomer, err := h.stripe.CreateCustomer(c, currentUser)
 		if err != nil {
 			logger.Errorw("payment.handler.CreateSubscription failed to create customer", "err", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create customer"})
+			c.JSON(http.StatusInternalServerError, "Failed to create customer")
 		}
 		customer = &model.StripeCustomer{
 			UserID:     uint64(currentUser.ID),
@@ -64,21 +64,21 @@ func (h *Handler) CreateSubscription(c *gin.Context) {
 		customer, err = h.stripeDB.SaveCustomer(c, customer)
 		if err != nil {
 			logger.Errorw("payment.handler.CreateSubscription failed to save customer", "err", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save customer"})
+			c.JSON(http.StatusInternalServerError, "Failed to save customer")
 			return
 		}
 	} else {
 		customer, err = h.stripeDB.GetCustomer(c, currentUser.ID)
 		if err != nil {
 			logger.Errorw("payment.handler.CreateSubscription failed to get customer", "err", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get customer"})
+			c.JSON(http.StatusInternalServerError, "Failed to get customer")
 			return
 		}
 	}
 	session, err := h.stripe.CreateSubscriptionCheckoutSession(c, customer.CustomerID, h.prices[0].PriceID)
 	if err != nil {
 		logger.Errorw("payment.handler.CreateSubscription failed to create checkout session", "err", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create checkout session"})
+		c.JSON(http.StatusInternalServerError, "Failed to create checkout session")
 		return
 	}
 	h.stripeDB.SaveSession(c, &model.StripeSession{
@@ -99,13 +99,13 @@ func (h *Handler) CancelSubscription(c *gin.Context) {
 	sub, err := h.subscriptionDB.GetSubscriptionByUserID(c, currentUser.ID)
 	if err != nil {
 		logger.Errorw("payment.handler.CancelSubscription failed to get subscription", "err", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get subscription"})
+		c.JSON(http.StatusInternalServerError, "Failed to get subscription")
 		return
 	}
 
 	if sub == nil {
 		logger.Errorw("payment.handler.CancelSubscription no active subscription found", "user_id", currentUser.ID)
-		c.JSON(http.StatusNotFound, gin.H{"error": "No active subscription found"})
+		c.JSON(http.StatusNotFound, "No active subscription found")
 		return
 	}
 
@@ -114,7 +114,7 @@ func (h *Handler) CancelSubscription(c *gin.Context) {
 		subscription, err := h.stripe.CancelSubscription(sub.ExternalSubscriptionID)
 		if err != nil {
 			logger.Errorw("payment.handler.CancelSubscription failed to cancel stripe subscription", "err", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to cancel subscription"})
+			c.JSON(http.StatusInternalServerError, "Failed to cancel subscription")
 			return
 		}
 
@@ -134,7 +134,7 @@ func (h *Handler) CancelSubscription(c *gin.Context) {
 		sub.Status = "cancelled"
 		if err := h.subscriptionDB.UpdateSubscription(c, sub); err != nil {
 			logger.Errorw("payment.handler.CancelSubscription failed to update subscription status", "err", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update subscription"})
+			c.JSON(http.StatusInternalServerError, "Failed to update subscription")
 			return
 		}
 	}

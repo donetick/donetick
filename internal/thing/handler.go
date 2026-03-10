@@ -104,7 +104,7 @@ func (h *Handler) CreateThing(c *gin.Context) {
 //	@Param			id		path		int						true	"Thing ID"
 //	@Param			value	query		string					true	"New state value"
 //	@Success		200		{object}	map[string]tModel.Thing	"res: updated thing object"
-//	@Failure		400		{object}	map[string]string		"error: Invalid thing id | state or increment query param is required | Invalid state"
+//	@Failure		400		{object}	map[string]string		"error: Invalid thing id | value query param is required | Invalid state"
 //	@Failure		401		{object}	map[string]string		"error: Unauthorized"
 //	@Failure		403		{object}	map[string]string		"error: Forbidden"
 //	@Failure		500		{object}	map[string]string		"error: Unable to find thing | Failed to update state"
@@ -252,7 +252,7 @@ func (h *Handler) UpdateThing(c *gin.Context) {
 //	@Produce		json
 //	@Security		JWTKeyAuth
 //	@Security		APIKeyAuth
-//	@Success		200	{object}	map[string][]tModel.Thing	"res: array of things"
+//	@Success		200	{object}	map[string][]interface{}	"res: array of things"
 //	@Failure		401	{object}	map[string]string			"error: Unauthorized"
 //	@Failure		500	{object}	map[string]string			"error: Failed to retrieve things"
 //	@Router			/things [get]
@@ -340,7 +340,7 @@ func (h *Handler) GetThingHistory(c *gin.Context) {
 //	@Security		JWTKeyAuth
 //	@Security		APIKeyAuth
 //	@Param			id	path		int						true	"Thing ID"
-//	@Success		200	{object}	map[string]interface{}	"empty response on success"
+//	@Success		200	{object}	nil						"empty response on success"
 //	@Failure		400	{object}	map[string]string		"error: Invalid thing id"
 //	@Failure		401	{object}	map[string]string		"error: Unauthorized"
 //	@Failure		403	{object}	map[string]string		"error: Forbidden"

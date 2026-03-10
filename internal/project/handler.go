@@ -28,7 +28,7 @@ func NewHandler(pRepo *pRepo.ProjectRepository) *Handler {
 //	@Produce		json
 //	@Security		JWTKeyAuth
 //	@Security		APIKeyAuth
-//	@Success		200	{object}	map[string][]pModel.Project	"array of projects"
+//	@Success		200	{object}	{array}pModel.Project	"array of projects"
 //	@Failure		401	{object}	map[string]string			"error: Error getting current user"
 //	@Failure		500	{object}	map[string]string			"error: Error getting projects"
 //	@Router			/projects [get]
@@ -62,7 +62,7 @@ func (h *Handler) getProjects(c *gin.Context) {
 //	@Security		JWTKeyAuth
 //	@Security		APIKeyAuth
 //	@Param			project	body		pModel.ProjectReq			true	"Project creation request"
-//	@Success		200		{object}	map[string]model.Project	"res: created project object"
+//	@Success		200		{object}	map[string]pModel.Project	"res: created project object"
 //	@Failure		400		{object}	map[string]string			"error: Error binding project data"
 //	@Failure		401		{object}	map[string]string			"error: Error getting current user"
 //	@Failure		500		{object}	map[string]string			"error: Error creating project"
@@ -117,9 +117,9 @@ func (h *Handler) createProject(c *gin.Context) {
 //	@Param			id		path		int							true	"Project ID"
 //	@Param			project	body		pModel.ProjectReq			true	"Project update request"
 //	@Success		200		{object}	map[string]pModel.Project	"res: updated project object"
-//	@Failure		400		{object}	map[string]string			"error: Invalid project ID | Error binding project data"
+//	@Failure		400		{object}	map[string]string			"error: Invalid project ID or Error binding project data"
 //	@Failure		401		{object}	map[string]string			"error: Error getting current user"
-//	@Failure		500		{object}	map[string]string			"error: Error updating project | Error getting updated project"
+//	@Failure		500		{object}	map[string]string			"error: Error updating project or Error getting updated project"
 //	@Router			/projects/{id} [put]
 func (h *Handler) updateProject(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)

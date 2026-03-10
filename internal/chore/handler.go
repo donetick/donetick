@@ -92,18 +92,16 @@ func NewHandler(cr *chRepo.ChoreRepository, circleRepo *cRepo.CircleRepository, 
 //	@Produce		json
 //	@Security		JWTKeyAuth && APIKeyAuth
 //	@Param			includeArchived	query		boolean						false	"Include archived chores"
-//	@Success		200				{object}	map[string][]model.Chore	"res: array of chores"
-//	@Failure		401				{object}	map[string]string			"error: Authentication failed"
-//	@Failure		500				{object}	map[string]string			"error: Failed to retrieve chores"
+//	@Success		200				{object}	[]model.Chore	"array of chores"
+//	@Failure		401				{object}	string			"Authentication failed"
+//	@Failure		500				{object}	string			"Failed to retrieve chores"
 //	@Router			/chores [get]
 func (h *Handler) getChores(c *gin.Context) {
 	logger := logging.FromContext(c)
 	u, ok := auth.CurrentUser(c)
 	if !ok {
 		logger.Error("Failed to get current user from authentication context")
-		c.JSON(401, gin.H{
-			"error": "Authentication failed",
-		})
+		c.JSON(401, "Authentication failed")
 		return
 	}
 	includeArchived := false
@@ -115,15 +113,11 @@ func (h *Handler) getChores(c *gin.Context) {
 	chores, err := h.choreRepo.GetChores(c, u.CircleID, u.ID, includeArchived)
 	if err != nil {
 		logger.Error("Failed to retrieve chores", "error", err, "userID", u.ID, "circleID", u.CircleID, "includeArchived", includeArchived)
-		c.JSON(500, gin.H{
-			"error": "Failed to retrieve chores",
-		})
+		c.JSON(500, "Failed to retrieve chores")
 		return
 	}
 
-	c.JSON(200, gin.H{
-		"res": chores,
-	})
+	c.JSON(200, chores)
 }
 
 // GetArchivedChores godoc
@@ -134,32 +128,26 @@ func (h *Handler) getChores(c *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Security		JWTKeyAuth && APIKeyAuth
-//	@Success		200	{object}	map[string][]model.Chore	"res: array of archived chores"
-//	@Failure		401	{object}	map[string]string			"error: Authentication failed"
-//	@Failure		500	{object}	map[string]string			"error: Failed to retrieve archived chores"
+//	@Success		200	{object}	[]model.Chore	"array of archived chores"
+//	@Failure		401	{object}	string			"Authentication failed"
+//	@Failure		500	{object}	string			"Failed to retrieve archived chores"
 //	@Router			/chores/archived [get]
 func (h *Handler) getArchivedChores(c *gin.Context) {
 	logger := logging.FromContext(c)
 	u, ok := auth.CurrentUser(c)
 	if !ok {
 		logger.Error("Failed to get current user from authentication context")
-		c.JSON(401, gin.H{
-			"error": "Authentication failed",
-		})
+		c.JSON(401, "Authentication failed")
 		return
 	}
 	chores, err := h.choreRepo.GetArchivedChores(c, u.CircleID, u.ID)
 	if err != nil {
 		logger.Error("Failed to retrieve archived chores", "error", err, "userID", u.ID, "circleID", u.CircleID)
-		c.JSON(500, gin.H{
-			"error": "Failed to retrieve archived chores",
-		})
+		c.JSON(500, "Failed to retrieve archived chores")
 		return
 	}
 
-	c.JSON(200, gin.H{
-		"res": chores,
-	})
+	c.JSON(200, chores)
 }
 
 // GetChore godoc
@@ -171,20 +159,18 @@ func (h *Handler) getArchivedChores(c *gin.Context) {
 //	@Produce		json
 //	@Security		JWTKeyAuth && APIKeyAuth
 //	@Param			id	path		int						true	"Chore ID"
-//	@Success		200	{object}	map[string]model.Chore	"res: chore object"
-//	@Failure		400	{object}	map[string]string		"error: Invalid chore ID"
-//	@Failure		401	{object}	map[string]string		"error: Authentication failed"
-//	@Failure		403	{object}	map[string]string		"error: You are not allowed to view this chore"
-//	@Failure		500	{object}	map[string]string		"error: Failed to retrieve chore"
+//	@Success		200	{object}	model.Chore	"chore object"
+//	@Failure		400	{object}	string		"Invalid chore ID"
+//	@Failure		401	{object}	string		"Authentication failed"
+//	@Failure		403	{object}	string		"You are not allowed to view this chore"
+//	@Failure		500	{object}	string		"Failed to retrieve chore"
 //	@Router			/chores/{id} [get]
 func (h *Handler) getChore(c *gin.Context) {
 	logger := logging.FromContext(c)
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
 		logger.Error("Failed to get current user from authentication context")
-		c.JSON(401, gin.H{
-			"error": "Authentication failed",
-		})
+		c.JSON(401, "Authentication failed")
 		return
 	}
 
@@ -192,37 +178,29 @@ func (h *Handler) getChore(c *gin.Context) {
 	id, err := strconv.Atoi(rawID)
 	if err != nil {
 		logger.Error("Invalid chore ID format", "error", err, "rawID", rawID)
-		c.JSON(400, gin.H{
-			"error": "Invalid chore ID",
-		})
+		c.JSON(400, "Invalid chore ID")
 		return
 	}
 
 	chore, err := h.choreRepo.GetChore(c, id, currentUser.ID)
 	if err != nil {
 		logger.Error("Failed to retrieve chore", "error", err, "choreID", id, "userID", currentUser.ID)
-		c.JSON(500, gin.H{
-			"error": "Failed to retrieve chore",
-		})
+		c.JSON(500, "Failed to retrieve chore")
 		return
 	}
 	circleUsers, err := h.circleRepo.GetCircleUsers(c, currentUser.CircleID)
 	if err != nil {
 		logger.Error("Failed to retrieve circle users", "error", err, "circleID", currentUser.CircleID, "userID", currentUser.ID)
-		c.JSON(500, gin.H{"error": "Failed to retrieve circle users"})
+		c.JSON(500, "Failed to retrieve circle users")
 		return
 	}
 
 	if !chore.CanView(currentUser.ID, circleUsers) {
-		c.JSON(403, gin.H{
-			"error": "You are not allowed to view this chore",
-		})
+		c.JSON(403, "You are not allowed to view this chore")
 		return
 	}
 
-	c.JSON(200, gin.H{
-		"res": chore,
-	})
+	c.JSON(200, chore)
 }
 
 // CreateChore godoc
@@ -234,10 +212,10 @@ func (h *Handler) getChore(c *gin.Context) {
 //	@Produce		json
 //	@Security		JWTKeyAuth && APIKeyAuth
 //	@Param			chore	body		model.ChoreReq		true	"Chore creation request"
-//	@Success		200		{object}	map[string]int		"res: created chore ID"
-//	@Failure		400		{object}	map[string]string	"error: Invalid request format | Assignee not found in circle | Invalid date"
-//	@Failure		401		{object}	map[string]string	"error: Authentication failed"
-//	@Failure		500		{object}	map[string]string	"error: Failed to create chore | Error adding labels | Error adding chore assignees"
+//	@Success		200		{object}	int		"created chore ID"
+//	@Failure		400		{object}	string	"Invalid request format | Assignee not found in circle | Invalid date"
+//	@Failure		401		{object}	string	"Authentication failed"
+//	@Failure		500		{object}	string	"Failed to create chore | Error adding labels | Error adding chore assignees"
 //	@Router			/chores [post]
 func (h *Handler) createChore(c *gin.Context) {
 	logger := logging.FromContext(c)
@@ -246,25 +224,21 @@ func (h *Handler) createChore(c *gin.Context) {
 	logger.Debug("Create chore", "currentUser", currentUser)
 	if !ok {
 		logger.Error("Failed to get current user from authentication context")
-		c.JSON(401, gin.H{
-			"error": "Authentication failed",
-		})
+		c.JSON(401, "Authentication failed")
 		return
 	}
 	// Validate chore:
 	var choreReq chModel.ChoreReq
 	if err := c.ShouldBindJSON(&choreReq); err != nil {
 		logger.Error("Invalid request body", "error", err)
-		c.JSON(400, gin.H{
-			"error": "Invalid request format",
-		})
+		c.JSON(400, "Invalid request format")
 		return
 	}
 
 	circleUsers, err := h.circleRepo.GetCircleUsers(c, currentUser.CircleID)
 	if err != nil {
 		logger.Error("Failed to retrieve circle users", "error", err, "circleID", currentUser.CircleID, "userID", currentUser.ID)
-		c.JSON(500, gin.H{"error": "Failed to retrieve circle users"})
+		c.JSON(500, "Failed to retrieve circle users")
 		return
 	}
 	for _, assignee := range choreReq.Assignees {
@@ -276,9 +250,7 @@ func (h *Handler) createChore(c *gin.Context) {
 			}
 		}
 		if !userFound {
-			c.JSON(400, gin.H{
-				"error": "Assignee not found in circle",
-			})
+			c.JSON(400, "Assignee not found in circle")
 			return
 		}
 
@@ -292,9 +264,7 @@ func (h *Handler) createChore(c *gin.Context) {
 		rawDueDate = rawDueDate.UTC()
 		dueDate = &rawDueDate
 		if err != nil {
-			c.JSON(400, gin.H{
-				"error": "Invalid date",
-			})
+			c.JSON(400, "Invalid date")
 			return
 		}
 
@@ -336,9 +306,7 @@ func (h *Handler) createChore(c *gin.Context) {
 
 	if err != nil {
 		logger.Error("Failed to create chore", "error", err, "userID", currentUser.ID, "circleID", currentUser.CircleID)
-		c.JSON(500, gin.H{
-			"error": "Failed to create chore",
-		})
+		c.JSON(500, "Failed to create chore")
 		return
 	}
 
@@ -359,9 +327,7 @@ func (h *Handler) createChore(c *gin.Context) {
 			labelsV2[i] = int(label.LabelID)
 		}
 		if err := h.lRepo.AssignLabelsToChore(c, createdChore.ID, currentUser.ID, currentUser.CircleID, labelsV2, []int{}); err != nil {
-			c.JSON(500, gin.H{
-				"error": "Error adding labels",
-			})
+			c.JSON(500, "Error adding labels")
 			return
 		}
 	}
@@ -369,17 +335,13 @@ func (h *Handler) createChore(c *gin.Context) {
 	if choreReq.Description != nil {
 		description := *choreReq.Description
 		if err := h.cleanUpUnreferencedFiles(c, currentUser.ID, storageModel.EntityTypeChoreDescription, createdChore.ID, description); err != nil {
-			c.JSON(500, gin.H{
-				"error": "Error processing description",
-			})
+			c.JSON(500, "Error processing description")
 			return
 		}
 	}
 	if len(choreAssignees) > 0 {
 		if err := h.choreRepo.UpdateChoreAssignees(c, choreAssignees); err != nil {
-			c.JSON(500, gin.H{
-				"error": "Error adding chore assignees",
-			})
+			c.JSON(500, "Error adding chore assignees")
 			return
 		}
 	}
@@ -399,9 +361,7 @@ func (h *Handler) createChore(c *gin.Context) {
 	if shouldReturn {
 		return
 	}
-	c.JSON(200, gin.H{
-		"res": id,
-	})
+	c.JSON(200, id)
 }
 
 // EditChore godoc
@@ -413,11 +373,11 @@ func (h *Handler) createChore(c *gin.Context) {
 //	@Produce		json
 //	@Security		JWTKeyAuth && APIKeyAuth
 //	@Param			chore	body		model.ChoreReq		true	"Chore update request"
-//	@Success		200		{object}	map[string]string	"message: Chore added successfully"
-//	@Failure		400		{object}	map[string]string	"error: Invalid request format | Invalid date | Assignee not found in circle | Assigned to not found in assignees"
-//	@Failure		401		{object}	map[string]string	"error: Authentication failed"
-//	@Failure		403		{object}	map[string]string	"error: You cannot edit this chore"
-//	@Failure		500		{object}	map[string]string	"error: Failed to retrieve chore | Error adding chore | Error adding subtasks"
+//	@Success		200		{object}	string	"Chore edited successfully"
+//	@Failure		400		{object}	string	"Invalid request format | Invalid date | Assignee not found in circle | Assigned to not found in assignees"
+//	@Failure		401		{object}	string	"Authentication failed"
+//	@Failure		403		{object}	string	"You cannot edit this chore"
+//	@Failure		500		{object}	string	"Failed to retrieve chore | Error adding chore | Error adding subtasks"
 //	@Router			/chores [put]
 func (h *Handler) editChore(c *gin.Context) {
 	// logger := logging.FromContext(c)
@@ -425,35 +385,27 @@ func (h *Handler) editChore(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
 		logger.Error("Failed to get current user from authentication context")
-		c.JSON(401, gin.H{
-			"error": "Authentication failed",
-		})
+		c.JSON(401, "Authentication failed")
 		return
 	}
 
 	var choreReq chModel.ChoreReq
 	if err := c.ShouldBindJSON(&choreReq); err != nil {
 		logger.Error("Invalid request body", "error", err)
-		c.JSON(400, gin.H{
-			"error": "Invalid request format",
-		})
+		c.JSON(400, "Invalid request format")
 		return
 	}
 
 	circleUsers, err := h.circleRepo.GetCircleUsers(c, currentUser.CircleID)
 	if err != nil {
 		logger.Error("Failed to retrieve circle users", "error", err)
-		c.JSON(500, gin.H{
-			"error": "Failed to retrieve circle users",
-		})
+		c.JSON(500, "Failed to retrieve circle users")
 		return
 	}
 
 	existedChoreAssignees, err := h.choreRepo.GetChoreAssignees(c, choreReq.ID)
 	if err != nil {
-		c.JSON(500, gin.H{
-			"error": "Error getting chore assignees",
-		})
+		c.JSON(500, "Error getting chore assignees")
 		return
 	}
 
@@ -470,9 +422,7 @@ func (h *Handler) editChore(c *gin.Context) {
 			}
 		}
 		if !userFound {
-			c.JSON(400, gin.H{
-				"error": "Assignee not found in circle",
-			})
+			c.JSON(400, "Assignee not found in circle")
 			return
 		}
 		userAlreadyAssignee := false
@@ -511,9 +461,7 @@ func (h *Handler) editChore(c *gin.Context) {
 		rawDueDate = rawDueDate.UTC()
 		dueDate = &rawDueDate
 		if err != nil {
-			c.JSON(400, gin.H{
-				"error": "Invalid date",
-			})
+			c.JSON(400, "Invalid date")
 			return
 		}
 
@@ -529,9 +477,7 @@ func (h *Handler) editChore(c *gin.Context) {
 			}
 		}
 		if !assigneeFound {
-			c.JSON(400, gin.H{
-				"error": "Assigned to not found in assignees",
-			})
+			c.JSON(400, "Assigned to not found in assignees")
 			return
 		}
 	}
@@ -541,15 +487,11 @@ func (h *Handler) editChore(c *gin.Context) {
 
 	if err != nil {
 		logger.Error("Failed to retrieve chore", "error", err)
-		c.JSON(500, gin.H{
-			"error": "Failed to retrieve chore",
-		})
+		c.JSON(500, "Failed to retrieve chore")
 		return
 	}
 	if err := oldChore.CanEdit(currentUser.ID, circleUsers, choreReq.UpdatedAt); err != nil {
-		c.JSON(403, gin.H{
-			"error": fmt.Sprintf("You cannot edit this chore: %s", err.Error()),
-		})
+		c.JSON(403, fmt.Sprintf("You cannot edit this chore: %s", err.Error()))
 		return
 	}
 
@@ -578,9 +520,7 @@ func (h *Handler) editChore(c *gin.Context) {
 	}
 
 	if err := h.lRepo.AssignLabelsToChore(c, choreReq.ID, currentUser.ID, currentUser.CircleID, labelsV2ToAdd, labelsV2ToBeRemoved); err != nil {
-		c.JSON(500, gin.H{
-			"error": "Error adding labels",
-		})
+		c.JSON(500, "Error adding labels")
 		return
 	}
 	description := *choreReq.Description
@@ -589,9 +529,7 @@ func (h *Handler) editChore(c *gin.Context) {
 
 	}
 	if err := h.cleanUpUnreferencedFiles(c, currentUser.ID, storageModel.EntityTypeChoreDescription, choreReq.ID, description); err != nil {
-		c.JSON(500, gin.H{
-			"error": "Error processing description",
-		})
+		c.JSON(500, "Error processing description")
 		return
 	}
 
@@ -626,9 +564,7 @@ func (h *Handler) editChore(c *gin.Context) {
 		Status:                 oldChore.Status,
 	}
 	if err := h.choreRepo.UpsertChore(c, updatedChore); err != nil {
-		c.JSON(500, gin.H{
-			"error": "Error adding chore",
-		})
+		c.JSON(500, "Error adding chore")
 		return
 	}
 	if choreReq.SubTasks != nil {
@@ -672,9 +608,7 @@ func (h *Handler) editChore(c *gin.Context) {
 			}
 		}
 		if err := h.stRepo.UpdateSubtask(c, oldChore.ID, ToBeRemoved, ToBeAdded); err != nil {
-			c.JSON(500, gin.H{
-				"error": "Error adding subtasks",
-			})
+			c.JSON(500, "Error adding subtasks")
 			return
 		}
 	}
@@ -683,18 +617,14 @@ func (h *Handler) editChore(c *gin.Context) {
 		err = h.choreRepo.UpdateChoreAssignees(c, choreAssigneesToAdd)
 
 		if err != nil {
-			c.JSON(500, gin.H{
-				"error": "Error updating chore assignees",
-			})
+			c.JSON(500, "Error updating chore assignees")
 			return
 		}
 	}
 	if len(choreAssigneesToDelete) > 0 {
 		err = h.choreRepo.DeleteChoreAssignees(c, choreAssigneesToDelete)
 		if err != nil {
-			c.JSON(500, gin.H{
-				"error": "Error deleting chore assignees",
-			})
+			c.JSON(500, "Error deleting chore assignees")
 			return
 		}
 	}
@@ -723,9 +653,7 @@ func (h *Handler) editChore(c *gin.Context) {
 		return
 	}
 
-	c.JSON(200, gin.H{
-		"message": "Chore added successfully",
-	})
+	c.JSON(200, "Chore edited successfully") // TODO: Should we not return the edited chore object?
 }
 
 func (h *Handler) cleanUpUnreferencedFiles(ctx *gin.Context, userID int, entityType storageModel.EntityType, entityID int, text string) error {
@@ -760,24 +688,17 @@ func HandleThingAssociation(choreReq chModel.ChoreReq, savedChore *chModel.Chore
 	if choreReq.ThingTrigger != nil {
 		thing, err := h.tRepo.GetThingByID(c, choreReq.ThingTrigger.ID)
 		if err != nil {
-			c.JSON(500, gin.H{
-				"error": "Error getting thing",
-			})
+			c.JSON(500, "Error getting thing")
 			return true
 		}
 		if thing.UserID != currentUser.ID {
-			c.JSON(403, gin.H{
-				"error": "You are not allowed to trigger this thing",
-			})
+			c.JSON(403, "You are not allowed to trigger this thing")
 			return true
 		}
 		if err := h.tRepo.AssociateThingWithChore(c, choreReq.ThingTrigger.ID, savedChore.ID, choreReq.ThingTrigger.TriggerState, choreReq.ThingTrigger.Condition); err != nil {
-			c.JSON(500, gin.H{
-				"error": "Error associating thing with chore",
-			})
+			c.JSON(500, "Error associating thing with chore")
 			return true
 		}
-
 	}
 	return false
 }
@@ -791,11 +712,11 @@ func HandleThingAssociation(choreReq chModel.ChoreReq, savedChore *chModel.Chore
 //	@Produce		json
 //	@Security		JWTKeyAuth && APIKeyAuth
 //	@Param			id	path		int					true	"Chore ID"
-//	@Success		200	{object}	map[string]string	"message: Chore deleted successfully"
-//	@Failure		400	{object}	map[string]string	"error: Invalid ID"
-//	@Failure		401	{object}	map[string]string	"error: Authentication failed"
-//	@Failure		403	{object}	map[string]string	"error: You are not allowed to delete this chore"
-//	@Failure		500	{object}	map[string]string	"error: Failed to retrieve chore | Failed to delete chore"
+//	@Success		200	{object}	string	"Chore deleted successfully"
+//	@Failure		400	{object}	string	"Invalid ID"
+//	@Failure		401	{object}	string	"Authentication failed"
+//	@Failure		403	{object}	string	"You are not allowed to delete this chore"
+//	@Failure		500	{object}	string	"Failed to retrieve chore | Failed to delete chore"
 //	@Router			/chores/{id} [delete]
 func (h *Handler) deleteChore(c *gin.Context) {
 	// logger := logging.FromContext(c)
@@ -803,25 +724,19 @@ func (h *Handler) deleteChore(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
 		logger.Error("Failed to get current user from authentication context")
-		c.JSON(401, gin.H{
-			"error": "Authentication failed",
-		})
+		c.JSON(401, "Authentication failed")
 		return
 	}
 
 	rawID := c.Param("id")
 	id, err := strconv.Atoi(rawID)
 	if err != nil {
-		c.JSON(400, gin.H{
-			"error": "Invalid ID",
-		})
+		c.JSON(400, "Invalid ID")
 		return
 	}
 	// check if the user is the owner of the chore before deleting
 	if err := h.choreRepo.IsChoreOwner(c, id, currentUser.ID); err != nil {
-		c.JSON(403, gin.H{
-			"error": "You are not allowed to delete this chore",
-		})
+		c.JSON(403, "You are not allowed to delete this chore")
 		return
 	}
 
@@ -829,17 +744,13 @@ func (h *Handler) deleteChore(c *gin.Context) {
 	chore, err := h.choreRepo.GetChore(c, id, currentUser.ID)
 	if err != nil {
 		logger.Error("Failed to retrieve chore", "error", err)
-		c.JSON(500, gin.H{
-			"error": "Failed to retrieve chore",
-		})
+		c.JSON(500, "Failed to retrieve chore")
 		return
 	}
 
 	if err := h.choreRepo.DeleteChore(c, id); err != nil {
 		logger.Error("Failed to delete chore", "error", err, "choreID", id, "userID", currentUser.ID)
-		c.JSON(500, gin.H{
-			"error": "Failed to delete chore",
-		})
+		c.JSON(500, "Failed to delete chore")
 		return
 	}
 	h.nRepo.DeleteAllChoreNotifications(id)
@@ -851,9 +762,7 @@ func (h *Handler) deleteChore(c *gin.Context) {
 		broadcaster.BroadcastChoreDeleted(chore.ID, chore.Name, chore.CircleID, &currentUser.User)
 	}
 
-	c.JSON(200, gin.H{
-		"message": "Chore deleted successfully",
-	})
+	c.JSON(200, "Chore deleted successfully")
 }
 
 // func (h *Handler) createChore(c *gin.Context) {
@@ -862,15 +771,13 @@ func (h *Handler) deleteChore(c *gin.Context) {
 
 // 	logger.Debug("Create chore", "currentUser", currentUser)
 // 	if !ok {
-// 		c.JSON(500, gin.H{
-// 			"error": "Error getting current user",
+// 		c.JSON(500, "Error getting current user",
 // 		})
 // 		return
 // 	}
 // 	id, err := h.choreRepo.CreateChore(currentUser.ID, currentUser.CircleID)
 // 	if err != nil {
-// 		c.JSON(500, gin.H{
-// 			"error": "Error creating chore",
+// 		c.JSON(500, "Error creating chore",
 // 		})
 // 		return
 // 	}
@@ -890,28 +797,24 @@ func (h *Handler) deleteChore(c *gin.Context) {
 //	@Security		JWTKeyAuth && APIKeyAuth
 //	@Param			id			path		int										true	"Chore ID"
 //	@Param			assignee	body		object{assignee=int,updatedAt=string}	true	"Assignee update request"
-//	@Success		200			{object}	map[string]model.Chore					"res: updated chore"
-//	@Failure		400			{object}	map[string]string						"error: Invalid ID | Invalid request | Assignee not found in assignees"
-//	@Failure		401			{object}	map[string]string						"error: Authentication failed"
-//	@Failure		403			{object}	map[string]string						"error: You cannot edit this chore"
-//	@Failure		500			{object}	map[string]string						"error: Failed to retrieve chore | Error updating assignee"
+//	@Success		200			{object}	model.Chore					"updated chore"
+//	@Failure		400			{object}	string						"Invalid ID | Invalid request | Assignee not found in assignees"
+//	@Failure		401			{object}	string						"Authentication failed"
+//	@Failure		403			{object}	string						"You cannot edit this chore"
+//	@Failure		500			{object}	string						"Failed to retrieve chore | Error updating assignee"
 //	@Router			/chores/{id}/assignee [put]
 func (h *Handler) updateAssignee(c *gin.Context) {
 	logger := logging.FromContext(c)
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
 		logger.Error("Failed to get current user from authentication context")
-		c.JSON(401, gin.H{
-			"error": "Authentication failed",
-		})
+		c.JSON(401, "Authentication failed")
 		return
 	}
 	rawID := c.Param("id")
 	id, err := strconv.Atoi(rawID)
 	if err != nil {
-		c.JSON(400, gin.H{
-			"error": "Invalid ID",
-		})
+		c.JSON(400, "Invalid ID")
 		return
 	}
 	type AssigneeReq struct {
@@ -922,17 +825,13 @@ func (h *Handler) updateAssignee(c *gin.Context) {
 	var assigneeReq AssigneeReq
 	if err := c.ShouldBindJSON(&assigneeReq); err != nil {
 		logging.FromContext(c).Error("Operation failed", "error", err)
-		c.JSON(400, gin.H{
-			"error": "Invalid request",
-		})
+		c.JSON(400, "Invalid request")
 		return
 	}
 	chore, err := h.choreRepo.GetChore(c, id, currentUser.ID)
 	if err != nil {
 		logger.Error("Failed to retrieve chore", "error", err)
-		c.JSON(500, gin.H{
-			"error": "Failed to retrieve chore",
-		})
+		c.JSON(500, "Failed to retrieve chore")
 		return
 	}
 	// confirm that the assignee is one of the assignees:
@@ -945,23 +844,17 @@ func (h *Handler) updateAssignee(c *gin.Context) {
 		}
 	}
 	if !assigneeFound {
-		c.JSON(400, gin.H{
-			"error": "Assignee not found in assignees",
-		})
+		c.JSON(400, "Assignee not found in assignees")
 		return
 	}
 	circleUsers, err := h.circleRepo.GetCircleUsers(c, currentUser.CircleID)
 	if err != nil {
 		logger.Error("Failed to retrieve circle users", "error", err)
-		c.JSON(500, gin.H{
-			"error": "Failed to retrieve circle users",
-		})
+		c.JSON(500, "Failed to retrieve circle users")
 		return
 	}
 	if err := chore.CanEdit(currentUser.ID, circleUsers, &assigneeReq.UpdatedAt); err != nil {
-		c.JSON(403, gin.H{
-			"error": fmt.Sprintf("You cannot edit this chore: %s", err.Error()),
-		})
+		c.JSON(403, fmt.Sprintf("You cannot edit this chore: %s", err.Error()))
 		return
 	}
 
@@ -972,9 +865,7 @@ func (h *Handler) updateAssignee(c *gin.Context) {
 	}); err != nil {
 		logging.FromContext(c).Error("Error updating assignee", "error", err, "choreID", id, "assignee", assigneeReq.Assignee)
 
-		c.JSON(500, gin.H{
-			"error": "Error updating assignee",
-		})
+		c.JSON(500, "Error updating assignee")
 		return
 	}
 
@@ -992,9 +883,7 @@ func (h *Handler) updateAssignee(c *gin.Context) {
 		}
 	}
 
-	c.JSON(200, gin.H{
-		"res": chore,
-	})
+	c.JSON(200, chore)
 }
 
 // StartChore godoc
@@ -1006,20 +895,18 @@ func (h *Handler) updateAssignee(c *gin.Context) {
 //	@Produce		json
 //	@Security		JWTKeyAuth && APIKeyAuth
 //	@Param			id	path		int						true	"Chore ID"
-//	@Success		200	{object}	map[string]interface{}	"res: {timerUpdatedAt, status, duration}"
-//	@Failure		400	{object}	map[string]string		"error: Invalid ID | Chore is not in a state that can be started"
-//	@Failure		401	{object}	map[string]string		"error: Authentication failed"
-//	@Failure		403	{object}	map[string]string		"error: You are not allowed to start this chore"
-//	@Failure		500	{object}	map[string]string		"error: Failed to retrieve chore | Error creating time session"
+//	@Success		200	{object}	map[string]interface{}	"{timerUpdatedAt, status, duration}"
+//	@Failure		400	{object}	string		"Invalid ID | Chore is not in a state that can be started"
+//	@Failure		401	{object}	string		"Authentication failed"
+//	@Failure		403	{object}	string		"You are not allowed to start this chore"
+//	@Failure		500	{object}	string		"Failed to retrieve chore | Error creating time session"
 //	@Router			/chores/{id}/start [put]
 func (h *Handler) startChore(c *gin.Context) {
 	rawID := c.Param("id")
 	id, err := strconv.Atoi(rawID)
 
 	if err != nil {
-		c.JSON(400, gin.H{
-			"error": "Invalid ID",
-		})
+		c.JSON(400, "Invalid ID")
 		return
 	}
 	logger := logging.FromContext(c)
@@ -1028,9 +915,7 @@ func (h *Handler) startChore(c *gin.Context) {
 	actualUser, impersonatedUser, hasImpersonation := auth.CurrentUserWithImpersonation(c)
 	if actualUser == nil {
 		logger.Error("Failed to get current user from authentication context")
-		c.JSON(401, gin.H{
-			"error": "Authentication failed",
-		})
+		c.JSON(401, "Authentication failed")
 		return
 	}
 
@@ -1049,23 +934,17 @@ func (h *Handler) startChore(c *gin.Context) {
 	chore, err := h.choreRepo.GetChore(c, id, effectiveUser.ID)
 	if err != nil {
 		logger.Error("Failed to retrieve chore", "error", err)
-		c.JSON(500, gin.H{
-			"error": "Failed to retrieve chore",
-		})
+		c.JSON(500, "Failed to retrieve chore")
 		return
 	}
 	circleUsers, err := h.circleRepo.GetCircleUsers(c, actualUser.CircleID)
 	if err != nil {
 		logger.Error("Failed to retrieve circle users", "error", err)
-		c.JSON(500, gin.H{
-			"error": "Failed to retrieve circle users",
-		})
+		c.JSON(500, "Failed to retrieve circle users")
 		return
 	}
 	if !chore.CanComplete(effectiveUser.ID, circleUsers) {
-		c.JSON(403, gin.H{
-			"error": "You are not allowed to start this chore",
-		})
+		c.JSON(403, "You are not allowed to start this chore")
 		return
 	}
 	var session *chModel.TimeSession
@@ -1073,35 +952,27 @@ func (h *Handler) startChore(c *gin.Context) {
 	case chModel.ChoreStatusNoStatus:
 		session, err = h.choreRepo.CreateTimeSession(c, chore, effectiveUser.ID)
 		if err != nil {
-			c.JSON(500, gin.H{
-				"error": "Error creating time session",
-			})
+			c.JSON(500, "Error creating time session")
 			return
 		}
 		h.choreRepo.UpdateChoreStatus(c, chore.ID, chModel.ChoreStatusInProgress)
 	case chModel.ChoreStatusPaused:
 		session, err = h.choreRepo.GetActiveTimeSession(c, chore.ID)
 		if err != nil {
-			c.JSON(500, gin.H{
-				"error": "Error getting active time session",
-			})
+			c.JSON(500, "Error getting active time session")
 			return
 		}
 		if session != nil {
 			session.Start(effectiveUser.ID)
 			if err := h.choreRepo.UpdateTimeSession(c, session); err != nil {
-				c.JSON(500, gin.H{
-					"error": "Error updating time session",
-				})
+				c.JSON(500, "Error updating time session")
 				return
 			}
 		}
 		h.choreRepo.UpdateChoreStatus(c, chore.ID, chModel.ChoreStatusInProgress)
 
 	default:
-		c.JSON(400, gin.H{
-			"error": "Chore is not in a state that can be started",
-		})
+		c.JSON(400, "Chore is not in a state that can be started")
 		return
 	}
 	if h.realTimeService != nil {
@@ -1118,12 +989,10 @@ func (h *Handler) startChore(c *gin.Context) {
 	}
 
 	if session != nil {
-		c.JSON(200, gin.H{
-			"res": map[string]interface{}{
-				"timerUpdatedAt": session.UpdateAt,
-				"status":         chModel.ChoreStatusInProgress,
-				"duration":       session.Duration,
-			},
+		c.JSON(200, map[string]interface{}{
+			"timerUpdatedAt": session.UpdateAt,
+			"status":         chModel.ChoreStatusInProgress,
+			"duration":       session.Duration,
 		})
 	}
 }
@@ -1137,20 +1006,18 @@ func (h *Handler) startChore(c *gin.Context) {
 //	@Produce		json
 //	@Security		JWTKeyAuth && APIKeyAuth
 //	@Param			id	path		int						true	"Chore ID"
-//	@Success		200	{object}	map[string]interface{}	"res: {duration, status, timerUpdatedAt}"
-//	@Failure		400	{object}	map[string]string		"error: Invalid ID | No active time session found for this chore"
-//	@Failure		401	{object}	map[string]string		"error: Authentication failed"
-//	@Failure		403	{object}	map[string]string		"error: You are not allowed to pause this chore"
-//	@Failure		500	{object}	map[string]string		"error: Failed to retrieve chore | Error getting active time session"
+//	@Success		200	{object}	map[string]interface{}	"{duration, status, timerUpdatedAt}"
+//	@Failure		400	{object}	string		"Invalid ID | No active time session found for this chore"
+//	@Failure		401	{object}	string		"Authentication failed"
+//	@Failure		403	{object}	string		"You are not allowed to pause this chore"
+//	@Failure		500	{object}	string		"Failed to retrieve chore | Error getting active time session"
 //	@Router			/chores/{id}/pause [put]
 func (h *Handler) pauseChore(c *gin.Context) {
 	rawID := c.Param("id")
 	id, err := strconv.Atoi(rawID)
 
 	if err != nil {
-		c.JSON(400, gin.H{
-			"error": "Invalid ID",
-		})
+		c.JSON(400, "Invalid ID")
 		return
 	}
 	logger := logging.FromContext(c)
@@ -1159,9 +1026,7 @@ func (h *Handler) pauseChore(c *gin.Context) {
 	actualUser, impersonatedUser, hasImpersonation := auth.CurrentUserWithImpersonation(c)
 	if actualUser == nil {
 		logger.Error("Failed to get current user from authentication context")
-		c.JSON(401, gin.H{
-			"error": "Authentication failed",
-		})
+		c.JSON(401, "Authentication failed")
 		return
 	}
 
@@ -1180,44 +1045,32 @@ func (h *Handler) pauseChore(c *gin.Context) {
 	chore, err := h.choreRepo.GetChore(c, id, effectiveUser.ID)
 	if err != nil {
 		logger.Error("Failed to retrieve chore", "error", err)
-		c.JSON(500, gin.H{
-			"error": "Failed to retrieve chore",
-		})
+		c.JSON(500, "Failed to retrieve chore")
 		return
 	}
 	circleUsers, err := h.circleRepo.GetCircleUsers(c, actualUser.CircleID)
 	if err != nil {
 		logger.Error("Failed to retrieve circle users", "error", err)
-		c.JSON(500, gin.H{
-			"error": "Failed to retrieve circle users",
-		})
+		c.JSON(500, "Failed to retrieve circle users")
 		return
 	}
 	if !chore.CanComplete(effectiveUser.ID, circleUsers) {
-		c.JSON(403, gin.H{
-			"error": "You are not allowed to pause this chore",
-		})
+		c.JSON(403, "You are not allowed to pause this chore")
 		return
 	}
 
 	session, err := h.choreRepo.GetActiveTimeSession(c, chore.ID)
 	if err != nil {
-		c.JSON(500, gin.H{
-			"error": "Error getting active time session",
-		})
+		c.JSON(500, "Error getting active time session")
 		return
 	}
 	if session == nil {
-		c.JSON(400, gin.H{
-			"error": "No active time session found for this chore",
-		})
+		c.JSON(400, "No active time session found for this chore")
 		return
 	}
 	session.Pause(effectiveUser.ID)
 	if err := h.choreRepo.UpdateTimeSession(c, session); err != nil {
-		c.JSON(500, gin.H{
-			"error": "Error updating time session",
-		})
+		c.JSON(500, "Error updating time session")
 		return
 	}
 	h.choreRepo.UpdateChoreStatus(c, chore.ID, chModel.ChoreStatusPaused)
@@ -1234,13 +1087,12 @@ func (h *Handler) pauseChore(c *gin.Context) {
 			})
 	}
 
-	c.JSON(200, gin.H{
-		"res": map[string]interface{}{
-			"duration":       session.Duration,
-			"status":         chModel.ChoreStatusPaused,
-			"timerUpdatedAt": session.UpdateAt,
-		},
-	})
+	c.JSON(200, map[string]interface{}{
+		"duration":       session.Duration,
+		"status":         chModel.ChoreStatusPaused,
+		"timerUpdatedAt": session.UpdateAt,
+	},
+	)
 
 }
 
@@ -1253,20 +1105,18 @@ func (h *Handler) pauseChore(c *gin.Context) {
 //	@Produce		json
 //	@Security		JWTKeyAuth && APIKeyAuth
 //	@Param			id	path		int						true	"Chore ID"
-//	@Success		200	{object}	map[string]interface{}	"res: {timerUpdatedAt, status, duration}"
-//	@Failure		400	{object}	map[string]string		"error: Invalid ID | No active time session found for this chore"
-//	@Failure		401	{object}	map[string]string		"error: Authentication failed"
-//	@Failure		403	{object}	map[string]string		"error: You are not allowed to reset timer for this chore"
-//	@Failure		500	{object}	map[string]string		"error: Failed to retrieve chore | Error updating time session"
+//	@Success		200	{object}	map[string]interface{}	"{timerUpdatedAt, status, duration}"
+//	@Failure		400	{object}	string		"Invalid ID | No active time session found for this chore"
+//	@Failure		401	{object}	string		"Authentication failed"
+//	@Failure		403	{object}	string		"You are not allowed to reset timer for this chore"
+//	@Failure		500	{object}	string		"Failed to retrieve chore | Error updating time session"
 //	@Router			/chores/{id}/timer/reset [put]
 func (h *Handler) ResetChoreTimer(c *gin.Context) {
 	rawID := c.Param("id")
 	id, err := strconv.Atoi(rawID)
 
 	if err != nil {
-		c.JSON(400, gin.H{
-			"error": "Invalid ID",
-		})
+		c.JSON(400, "Invalid ID")
 		return
 	}
 
@@ -1274,47 +1124,35 @@ func (h *Handler) ResetChoreTimer(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
 		logger.Error("Failed to get current user from authentication context")
-		c.JSON(401, gin.H{
-			"error": "Authentication failed",
-		})
+		c.JSON(401, "Authentication failed")
 		return
 	}
 
 	chore, err := h.choreRepo.GetChore(c, id, currentUser.ID)
 	if err != nil {
 		logger.Error("Failed to retrieve chore", "error", err)
-		c.JSON(500, gin.H{
-			"error": "Failed to retrieve chore",
-		})
+		c.JSON(500, "Failed to retrieve chore")
 		return
 	}
 	circleUsers, err := h.circleRepo.GetCircleUsers(c, currentUser.CircleID)
 	if err != nil {
 		logger.Error("Failed to retrieve circle users", "error", err)
-		c.JSON(500, gin.H{
-			"error": "Failed to retrieve circle users",
-		})
+		c.JSON(500, "Failed to retrieve circle users")
 		return
 	}
 	if !chore.CanComplete(currentUser.ID, circleUsers) {
-		c.JSON(403, gin.H{
-			"error": "You are not allowed to reset timer for this chore",
-		})
+		c.JSON(403, "You are not allowed to reset timer for this chore")
 		return
 	}
 
 	session, err := h.choreRepo.GetActiveTimeSession(c, chore.ID)
 	if err != nil {
-		c.JSON(500, gin.H{
-			"error": "Error getting active time session",
-		})
+		c.JSON(500, "Error getting active time session")
 		return
 	}
 
 	if session == nil {
-		c.JSON(400, gin.H{
-			"error": "No active time session found for this chore",
-		})
+		c.JSON(400, "No active time session found for this chore")
 		return
 	}
 
@@ -1334,9 +1172,7 @@ func (h *Handler) ResetChoreTimer(c *gin.Context) {
 	})
 
 	if err := h.choreRepo.UpdateTimeSession(c, session); err != nil {
-		c.JSON(500, gin.H{
-			"error": "Error updating time session",
-		})
+		c.JSON(500, "Error updating time session")
 		return
 	}
 
@@ -1357,13 +1193,12 @@ func (h *Handler) ResetChoreTimer(c *gin.Context) {
 		broadcaster.BroadcastChoreUpdated(chore, &currentUser.User, changes, nil)
 	}
 
-	c.JSON(200, gin.H{
-		"res": map[string]interface{}{
-			"timerUpdatedAt": session.UpdateAt,
-			"status":         chModel.ChoreStatusInProgress,
-			"duration":       session.Duration,
-		},
-	})
+	c.JSON(200, map[string]interface{}{
+		"timerUpdatedAt": session.UpdateAt,
+		"status":         chModel.ChoreStatusInProgress,
+		"duration":       session.Duration,
+	},
+	)
 }
 
 // SkipChore godoc
@@ -1375,19 +1210,17 @@ func (h *Handler) ResetChoreTimer(c *gin.Context) {
 //	@Produce		json
 //	@Security		JWTKeyAuth && APIKeyAuth
 //	@Param			id	path		int						true	"Chore ID"
-//	@Success		200	{object}	map[string]model.Chore	"res: updated chore"
-//	@Failure		400	{object}	map[string]string		"error: Invalid ID"
-//	@Failure		401	{object}	map[string]string		"error: Authentication failed"
-//	@Failure		500	{object}	map[string]string		"error: Failed to retrieve chore | Error scheduling next due date | Error completing chore"
+//	@Success		200	{object}	model.Chore				"updated chore"
+//	@Failure		400	{object}	string		"Invalid ID"
+//	@Failure		401	{object}	string		"Authentication failed"
+//	@Failure		500	{object}	string		"Failed to retrieve chore | Error scheduling next due date | Error completing chore"
 //	@Router			/chores/{id}/skip [post]
 func (h *Handler) skipChore(c *gin.Context) {
 	rawID := c.Param("id")
 	id, err := strconv.Atoi(rawID)
 
 	if err != nil {
-		c.JSON(400, gin.H{
-			"error": "Invalid ID",
-		})
+		c.JSON(400, "Invalid ID")
 		return
 	}
 	logger := logging.FromContext(c)
@@ -1396,9 +1229,7 @@ func (h *Handler) skipChore(c *gin.Context) {
 	actualUser, impersonatedUser, hasImpersonation := auth.CurrentUserWithImpersonation(c)
 	if actualUser == nil {
 		logger.Error("Failed to get current user from authentication context")
-		c.JSON(401, gin.H{
-			"error": "Authentication failed",
-		})
+		c.JSON(401, "Authentication failed")
 		return
 	}
 
@@ -1417,33 +1248,25 @@ func (h *Handler) skipChore(c *gin.Context) {
 	chore, err := h.choreRepo.GetChore(c, id, effectiveUser.ID)
 	if err != nil {
 		logger.Error("Failed to retrieve chore", "error", err)
-		c.JSON(500, gin.H{
-			"error": "Failed to retrieve chore",
-		})
+		c.JSON(500, "Failed to retrieve chore")
 		return
 	}
 	nextDueDate, err := scheduleNextDueDate(c, chore, chore.NextDueDate.UTC())
 	if err != nil {
-		c.JSON(500, gin.H{
-			"error": "Error scheduling next due date",
-		})
+		c.JSON(500, "Error scheduling next due date")
 		return
 	}
 
 	nextAssignedTo := chore.AssignedTo
 	if err := h.choreRepo.SkipChore(c, chore, effectiveUser.ID, nextDueDate, nextAssignedTo); err != nil {
-		c.JSON(500, gin.H{
-			"error": "Error completing chore",
-		})
+		c.JSON(500, "Error completing chore")
 		return
 	}
 
 	updatedChore, err := h.choreRepo.GetChore(c, id, effectiveUser.ID)
 	if err != nil {
 		logger.Error("Failed to retrieve chore", "error", err)
-		c.JSON(500, gin.H{
-			"error": "Failed to retrieve chore",
-		})
+		c.JSON(500, "Failed to retrieve chore")
 		return
 	}
 	h.eventProducer.ChoreSkipped(c, effectiveUser.WebhookURL, updatedChore, &effectiveUser.User)
@@ -1460,9 +1283,7 @@ func (h *Handler) skipChore(c *gin.Context) {
 		broadcaster.BroadcastChoreSkipped(updatedChore, &effectiveUser.User, choreHistory, nil)
 	}
 
-	c.JSON(200, gin.H{
-		"res": updatedChore,
-	})
+	c.JSON(200, updatedChore)
 }
 
 // UpdateDueDate godoc
@@ -1475,20 +1296,18 @@ func (h *Handler) skipChore(c *gin.Context) {
 //	@Security		JWTKeyAuth && APIKeyAuth
 //	@Param			id		path		int										true	"Chore ID"
 //	@Param			dueDate	body		object{dueDate=string,updatedAt=string}	true	"Due date update request"
-//	@Success		200		{object}	map[string]model.Chore					"res: updated chore"
-//	@Failure		400		{object}	map[string]string						"error: Invalid ID | Invalid request | Invalid date"
-//	@Failure		401		{object}	map[string]string						"error: Authentication failed"
-//	@Failure		403		{object}	map[string]string						"error: You cannot edit this chore"
-//	@Failure		500		{object}	map[string]string						"error: Failed to retrieve chore | Error updating due date"
+//	@Success		200		{object}	model.Chore					"updated chore"
+//	@Failure		400		{object}	string						"Invalid ID | Invalid request | Invalid date"
+//	@Failure		401		{object}	string						"Authentication failed"
+//	@Failure		403		{object}	string						"You cannot edit this chore"
+//	@Failure		500		{object}	string						"Failed to retrieve chore | Error updating due date"
 //	@Router			/chores/{id}/dueDate [put]
 func (h *Handler) updateDueDate(c *gin.Context) {
 	logger := logging.FromContext(c)
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
 		logger.Error("Failed to get current user from authentication context")
-		c.JSON(401, gin.H{
-			"error": "Authentication failed",
-		})
+		c.JSON(401, "Authentication failed")
 		return
 	}
 
@@ -1500,18 +1319,14 @@ func (h *Handler) updateDueDate(c *gin.Context) {
 	var dueDateReq DueDateReq
 	if err := c.ShouldBindJSON(&dueDateReq); err != nil {
 		logging.FromContext(c).Error("Operation failed", "error", err)
-		c.JSON(400, gin.H{
-			"error": "Invalid request",
-		})
+		c.JSON(400, "Invalid request")
 		return
 	}
 
 	rawID := c.Param("id")
 	id, err := strconv.Atoi(rawID)
 	if err != nil {
-		c.JSON(400, gin.H{
-			"error": "Invalid ID",
-		})
+		c.JSON(400, "Invalid ID")
 		return
 	}
 
@@ -1521,9 +1336,7 @@ func (h *Handler) updateDueDate(c *gin.Context) {
 	if dueDateReq.DueDate != nil && *dueDateReq.DueDate != "" && *dueDateReq.DueDate != "null" {
 		rawDueDate, err := time.Parse(time.RFC3339, *dueDateReq.DueDate)
 		if err != nil {
-			c.JSON(400, gin.H{
-				"error": "Invalid date",
-			})
+			c.JSON(400, "Invalid date")
 			return
 		}
 		utcDueDate := rawDueDate.UTC()
@@ -1532,17 +1345,13 @@ func (h *Handler) updateDueDate(c *gin.Context) {
 	chore, err := h.choreRepo.GetChore(c, id, currentUser.ID)
 	if err != nil {
 		logger.Error("Failed to retrieve chore", "error", err)
-		c.JSON(500, gin.H{
-			"error": "Failed to retrieve chore",
-		})
+		c.JSON(500, "Failed to retrieve chore")
 		return
 	}
 	circleUsers, err := h.circleRepo.GetCircleUsers(c, currentUser.CircleID)
 	if err != nil {
 		logger.Error("Failed to retrieve circle users", "error", err)
-		c.JSON(500, gin.H{
-			"error": "Failed to retrieve circle users",
-		})
+		c.JSON(500, "Failed to retrieve circle users")
 		return
 	}
 	if err := chore.CanEdit(currentUser.ID, circleUsers, &dueDateReq.UpdatedAt); err != nil {
@@ -1555,9 +1364,7 @@ func (h *Handler) updateDueDate(c *gin.Context) {
 		"updated_at":    time.Now().UTC(),
 	}); err != nil {
 		logging.FromContext(c).Error("Failed to update due date", "error", err)
-		c.JSON(500, gin.H{
-			"error": "Error updating due date",
-		})
+		c.JSON(500, "Error updating due date")
 		return
 	}
 
@@ -1575,9 +1382,7 @@ func (h *Handler) updateDueDate(c *gin.Context) {
 		}
 	}
 
-	c.JSON(200, gin.H{
-		"res": chore,
-	})
+	c.JSON(200, chore)
 }
 
 // ArchiveChore godoc
@@ -1589,37 +1394,31 @@ func (h *Handler) updateDueDate(c *gin.Context) {
 //	@Produce		json
 //	@Security		JWTKeyAuth && APIKeyAuth
 //	@Param			id	path		int					true	"Chore ID"
-//	@Success		200	{object}	map[string]string	"message: Chore archived successfully"
-//	@Failure		400	{object}	map[string]string	"error: Invalid ID"
-//	@Failure		401	{object}	map[string]string	"error: Authentication failed"
-//	@Failure		500	{object}	map[string]string	"error: Error archiving chore"
+//	@Success		200	{object}	string	"Chore archived successfully"
+//	@Failure		400	{object}	string	"Invalid ID"
+//	@Failure		401	{object}	string	"Authentication failed"
+//	@Failure		500	{object}	string	"Error archiving chore"
 //	@Router			/chores/{id}/archive [put]
 func (h *Handler) archiveChore(c *gin.Context) {
 	rawID := c.Param("id")
 	id, err := strconv.Atoi(rawID)
 
 	if err != nil {
-		c.JSON(400, gin.H{
-			"error": "Invalid ID",
-		})
+		c.JSON(400, "Invalid ID")
 		return
 	}
 	logger := logging.FromContext(c)
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
 		logger.Error("Failed to get current user from authentication context")
-		c.JSON(401, gin.H{
-			"error": "Authentication failed",
-		})
+		c.JSON(401, "Authentication failed")
 		return
 	}
 
 	err = h.choreRepo.ArchiveChore(c, id, currentUser.ID)
 
 	if err != nil {
-		c.JSON(500, gin.H{
-			"error": "Error archiving chore",
-		})
+		c.JSON(500, "Error archiving chore")
 		return
 	}
 
@@ -1637,9 +1436,7 @@ func (h *Handler) archiveChore(c *gin.Context) {
 		}
 	}
 
-	c.JSON(200, gin.H{
-		"message": "Chore archived successfully",
-	})
+	c.JSON(200, "Chore archived successfully")
 }
 
 // UnarchiveChore godoc
@@ -1651,37 +1448,31 @@ func (h *Handler) archiveChore(c *gin.Context) {
 //	@Produce		json
 //	@Security		JWTKeyAuth && APIKeyAuth
 //	@Param			id	path		int					true	"Chore ID"
-//	@Success		200	{object}	map[string]string	"message: Chore unarchived successfully"
-//	@Failure		400	{object}	map[string]string	"error: Invalid ID"
-//	@Failure		401	{object}	map[string]string	"error: Authentication failed"
-//	@Failure		500	{object}	map[string]string	"error: Error unarchiving chore"
+//	@Success		200	{object}	string	"Chore unarchived successfully"
+//	@Failure		400	{object}	string	"Invalid ID"
+//	@Failure		401	{object}	string	"Authentication failed"
+//	@Failure		500	{object}	string	"Error unarchiving chore"
 //	@Router			/chores/{id}/unarchive [put]
 func (h *Handler) UnarchiveChore(c *gin.Context) {
 	rawID := c.Param("id")
 	id, err := strconv.Atoi(rawID)
 
 	if err != nil {
-		c.JSON(400, gin.H{
-			"error": "Invalid ID",
-		})
+		c.JSON(400, "Invalid ID")
 		return
 	}
 	logger := logging.FromContext(c)
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
 		logger.Error("Failed to get current user from authentication context")
-		c.JSON(401, gin.H{
-			"error": "Authentication failed",
-		})
+		c.JSON(401, "Authentication failed")
 		return
 	}
 
 	err = h.choreRepo.UnarchiveChore(c, id, currentUser.ID)
 
 	if err != nil {
-		c.JSON(500, gin.H{
-			"error": "Error unarchiving chore",
-		})
+		c.JSON(500, "Error unarchiving chore")
 		return
 	}
 
@@ -1699,9 +1490,7 @@ func (h *Handler) UnarchiveChore(c *gin.Context) {
 		}
 	}
 
-	c.JSON(200, gin.H{
-		"message": "Chore unarchived successfully",
-	})
+	c.JSON(200, "Chore unarchived successfully")
 }
 
 // CompleteChore godoc
@@ -1715,11 +1504,11 @@ func (h *Handler) UnarchiveChore(c *gin.Context) {
 //	@Param			id				path		int									true	"Chore ID"
 //	@Param			completedDate	query		string								false	"Completion date in RFC3339 format (defaults to now)"
 //	@Param			completion		body		object{note=string,completedBy=int}	false	"Completion details"
-//	@Success		200				{object}	map[string]model.Chore				"res: updated chore"
-//	@Failure		400				{object}	map[string]string					"error: Invalid ID | Invalid date | User is not assigned to chore | Chore is out of completion window"
-//	@Failure		401				{object}	map[string]string					"error: Authentication failed"
-//	@Failure		403				{object}	map[string]string					"error: You are not allowed to complete this action"
-//	@Failure		500				{object}	map[string]string					"error: Failed to retrieve chore | Error completing chore"
+//	@Success		200				{object}	model.Chore				"updated chore"
+//	@Failure		400				{object}	string					"Invalid ID | Invalid date | User is not assigned to chore | Chore is out of completion window"
+//	@Failure		401				{object}	string					"Authentication failed"
+//	@Failure		403				{object}	string					"You are not allowed to complete this action"
+//	@Failure		500				{object}	string					"Failed to retrieve chore | Error completing chore"
 //	@Router			/chores/{id}/do [post]
 func (h *Handler) completeChore(c *gin.Context) {
 	type CompleteChoreReq struct {
@@ -1733,9 +1522,7 @@ func (h *Handler) completeChore(c *gin.Context) {
 	actualUser, impersonatedUser, hasImpersonation := auth.CurrentUserWithImpersonation(c)
 	if actualUser == nil {
 		logger.Error("Failed to get current user from authentication context")
-		c.JSON(401, gin.H{
-			"error": "Authentication failed",
-		})
+		c.JSON(401, "Authentication failed")
 		return
 	}
 
@@ -1761,9 +1548,7 @@ func (h *Handler) completeChore(c *gin.Context) {
 		var err error
 		completedDate, err = time.Parse(time.RFC3339, rawCompletedDate)
 		if err != nil {
-			c.JSON(400, gin.H{
-				"error": "Invalid date",
-			})
+			c.JSON(400, "Invalid date")
 			return
 		}
 	}
@@ -1777,17 +1562,13 @@ func (h *Handler) completeChore(c *gin.Context) {
 
 	id, err := strconv.Atoi(completeChoreID)
 	if err != nil {
-		c.JSON(400, gin.H{
-			"error": "Invalid ID",
-		})
+		c.JSON(400, "Invalid ID")
 		return
 	}
 	chore, err := h.choreRepo.GetChore(c, id, effectiveUser.ID)
 	if err != nil {
 		logger.Error("Failed to retrieve chore", "error", err)
-		c.JSON(500, gin.H{
-			"error": "Failed to retrieve chore",
-		})
+		c.JSON(500, "Failed to retrieve chore")
 		return
 	}
 
@@ -1795,24 +1576,18 @@ func (h *Handler) completeChore(c *gin.Context) {
 	circleUsers, err := h.circleRepo.GetCircleUsers(c, actualUser.CircleID)
 	if err != nil {
 		logger.Error("Failed to retrieve circle users", "error", err)
-		c.JSON(500, gin.H{
-			"error": "Failed to retrieve circle users",
-		})
+		c.JSON(500, "Failed to retrieve circle users")
 		return
 	}
 	if !chore.CanComplete(effectiveUser.ID, circleUsers) {
-		c.JSON(400, gin.H{
-			"error": "User is not assigned to chore",
-		})
+		c.JSON(400, "User is not assigned to chore")
 		return
 	}
 
 	// confirm that the chore in completion window:
 	if chore.CompletionWindow != nil {
 		if completedDate.UTC().Before(chore.NextDueDate.UTC().Add(-time.Hour * time.Duration(*chore.CompletionWindow))) {
-			c.JSON(400, gin.H{
-				"error": "Chore is out of completion window",
-			})
+			c.JSON(400, "Chore is out of completion window")
 			return
 		}
 	}
@@ -1831,17 +1606,13 @@ func (h *Handler) completeChore(c *gin.Context) {
 		history, err := h.choreRepo.GetChoreHistoryWithLimit(c, chore.ID, 5)
 		if err != nil {
 			logging.FromContext(c).Errorw("Failed to fetch chore history for adaptive scheduling", "error", err, "choreID", chore.ID)
-			c.JSON(500, gin.H{
-				"error": "Failed to fetch chore history for adaptive scheduling",
-			})
+			c.JSON(500, "Failed to fetch chore history for adaptive scheduling")
 			return
 		}
 		nextDueDate, err = scheduleAdaptiveNextDueDate(chore, completedDate, history)
 		if err != nil {
 			logging.FromContext(c).Error("Failed to schedule next due date", "error", err)
-			c.JSON(500, gin.H{
-				"error": "Error scheduling next due date",
-			})
+			c.JSON(500, "Error scheduling next due date")
 			return
 		}
 
@@ -1849,18 +1620,14 @@ func (h *Handler) completeChore(c *gin.Context) {
 		nextDueDate, err = scheduleNextDueDate(c, chore, completedDate.UTC())
 		if err != nil {
 			logging.FromContext(c).Error("Failed to schedule next due date", "error", err)
-			c.JSON(500, gin.H{
-				"error": "Error scheduling next due date",
-			})
+			c.JSON(500, "Error scheduling next due date")
 			return
 		}
 	}
 	choreHistory, err := h.choreRepo.GetChoreHistory(c, chore.ID)
 	if err != nil {
 		logging.FromContext(c).Errorw("Failed to fetch chore history for assignee calculation", "error", err, "choreID", chore.ID)
-		c.JSON(500, gin.H{
-			"error": "Failed to fetch chore history for assignee calculation",
-		})
+		c.JSON(500, "Failed to fetch chore history for assignee calculation")
 		return
 	}
 
@@ -1868,17 +1635,13 @@ func (h *Handler) completeChore(c *gin.Context) {
 	if chore.RequireApproval {
 		// Set chore status to pending approval instead of completing
 		if err := h.choreRepo.SetChorePendingApproval(c, chore, additionalNotes, completedBy, &completedDate); err != nil {
-			c.JSON(500, gin.H{
-				"error": "Error setting chore pending approval",
-			})
+			c.JSON(500, "Error setting chore pending approval")
 			return
 		}
 
 		updatedChore, err := h.choreRepo.GetChore(c, id, effectiveUser.ID)
 		if err != nil {
-			c.JSON(500, gin.H{
-				"error": "Error getting chore",
-			})
+			c.JSON(500, "Error getting chore")
 			return
 		}
 
@@ -1893,34 +1656,25 @@ func (h *Handler) completeChore(c *gin.Context) {
 			broadcaster.BroadcastChoreUpdated(updatedChore, &effectiveUser.User, changes, additionalNotes)
 		}
 
-		c.JSON(200, gin.H{
-			"res":     updatedChore,
-			"message": "Chore completion submitted for approval",
-		})
+		c.JSON(200, updatedChore)
 		return
 	}
 
 	nextAssignedTo, err := checkNextAssignee(chore, choreHistory, completedBy)
 	if err != nil {
 		logging.FromContext(c).Error("Failed to check next assignee", "error", err)
-		c.JSON(500, gin.H{
-			"error": "Error checking next assignee",
-		})
+		c.JSON(500, "Error checking next assignee")
 		return
 	}
 
 	if err := h.choreRepo.CompleteChore(c, chore, additionalNotes, completedBy, nextDueDate, &completedDate, nextAssignedTo, true); err != nil {
-		c.JSON(500, gin.H{
-			"error": "Error completing chore",
-		})
+		c.JSON(500, "Error completing chore")
 		return
 	}
 	updatedChore, err := h.choreRepo.GetChore(c, id, effectiveUser.ID)
 	if err != nil {
 		logger.Error("Failed to retrieve chore", "error", err)
-		c.JSON(500, gin.H{
-			"error": "Failed to retrieve chore",
-		})
+		c.JSON(500, "Failed to retrieve chore")
 		return
 	}
 	if updatedChore.SubTasks != nil && updatedChore.FrequencyType != chModel.FrequencyTypeOnce {
@@ -1945,17 +1699,13 @@ func (h *Handler) completeChore(c *gin.Context) {
 		broadcaster.BroadcastChoreCompleted(updatedChore, &effectiveUser.User, choreHistory, additionalNotes)
 	}
 
-	c.JSON(200, gin.H{
-		"res": updatedChore,
-	})
+	c.JSON(200, updatedChore)
 }
 
 func authorizeChoreCompletionForUser(h *Handler, c *gin.Context, currentUser *uModel.UserDetails, completedByUserID *int) bool {
 	circleUsers, err := h.circleRepo.GetCircleUsers(c, currentUser.CircleID)
 	if err != nil {
-		c.JSON(500, gin.H{
-			"error": "Error getting circle users",
-		})
+		c.JSON(500, "Error getting circle users")
 		return false
 	}
 
@@ -1972,9 +1722,7 @@ func authorizeChoreCompletionForUser(h *Handler, c *gin.Context, currentUser *uM
 	}
 	if !isAuthorized || !isCompletedByAuthorized {
 
-		c.JSON(403, gin.H{
-			"error": "You are not allowed to complete this action, either you are not admin or the completed by user is not in the circle",
-		})
+		c.JSON(403, "You are not allowed to complete this action, either you are not admin or the completed by user is not in the circle")
 		return false
 	}
 
@@ -1990,32 +1738,26 @@ func authorizeChoreCompletionForUser(h *Handler, c *gin.Context, currentUser *uM
 //	@Produce		json
 //	@Security		JWTKeyAuth && APIKeyAuth
 //	@Param			id	path		int								true	"Chore ID"
-//	@Success		200	{object}	map[string][]model.ChoreHistory	"res: array of chore history entries"
-//	@Failure		400	{object}	map[string]string				"error: Invalid ID"
-//	@Failure		500	{object}	map[string]string				"error: Failed to fetch chore history"
+//	@Success		200	{object}	[]model.ChoreHistory			"array of chore history entries"
+//	@Failure		400	{object}	string				"Invalid ID"
+//	@Failure		500	{object}	string				"Failed to fetch chore history"
 //	@Router			/chores/{id}/history [get]
 func (h *Handler) GetChoreHistory(c *gin.Context) {
 	rawID := c.Param("id")
 	id, err := strconv.Atoi(rawID)
 	if err != nil {
-		c.JSON(400, gin.H{
-			"error": "Invalid ID",
-		})
+		c.JSON(400, "Invalid ID")
 		return
 	}
 
 	choreHistory, err := h.choreRepo.GetChoreHistory(c, id)
 	if err != nil {
 		logging.FromContext(c).Errorw("Failed to fetch chore history", "error", err, "choreID", id)
-		c.JSON(500, gin.H{
-			"error": "Failed to fetch chore history",
-		})
+		c.JSON(500, "Failed to fetch chore history")
 		return
 	}
 
-	c.JSON(200, gin.H{
-		"res": choreHistory,
-	})
+	c.JSON(200, choreHistory)
 }
 
 // GetChoreDetail godoc
@@ -2027,10 +1769,10 @@ func (h *Handler) GetChoreHistory(c *gin.Context) {
 //	@Produce		json
 //	@Security		JWTKeyAuth && APIKeyAuth
 //	@Param			id	path		int						true	"Chore ID"
-//	@Success		200	{object}	map[string]interface{}	"res: detailed chore information"
-//	@Failure		400	{object}	map[string]string		"error: Invalid ID"
-//	@Failure		401	{object}	map[string]string		"error: Authentication failed"
-//	@Failure		500	{object}	map[string]string		"error: Failed to fetch chore details"
+//	@Success		200	{object}	chModel.ChoreDetail	"detailed chore information"
+//	@Failure		400	{object}	string		"Invalid ID"
+//	@Failure		401	{object}	string		"Authentication failed"
+//	@Failure		500	{object}	string		"Failed to fetch chore details"
 //	@Router			/chores/{id}/details [get]
 func (h *Handler) GetChoreDetail(c *gin.Context) {
 
@@ -2038,32 +1780,24 @@ func (h *Handler) GetChoreDetail(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
 		logger.Error("Failed to get current user from authentication context")
-		c.JSON(401, gin.H{
-			"error": "Authentication failed",
-		})
+		c.JSON(401, "Authentication failed")
 		return
 	}
 	rawID := c.Param("id")
 	id, err := strconv.Atoi(rawID)
 	if err != nil {
-		c.JSON(400, gin.H{
-			"error": "Invalid ID",
-		})
+		c.JSON(400, "Invalid ID")
 		return
 	}
 
 	detailed, err := h.choreRepo.GetChoreDetailByID(c, id, currentUser.CircleID, currentUser.ID)
 	if err != nil {
 		logger.Errorw("Failed to fetch chore details", "error", err, "choreID", id, "userID", currentUser.ID)
-		c.JSON(500, gin.H{
-			"error": "Failed to fetch chore details",
-		})
+		c.JSON(500, "Failed to fetch chore details")
 		return
 	}
 
-	c.JSON(200, gin.H{
-		"res": detailed,
-	})
+	c.JSON(200, detailed)
 }
 
 // ModifyHistory godoc
@@ -2077,11 +1811,11 @@ func (h *Handler) GetChoreDetail(c *gin.Context) {
 //	@Param			id			path		int														true	"Chore ID"
 //	@Param			history_id	path		int														true	"History ID"
 //	@Param			history		body		object{performedAt=string,dueDate=string,notes=string}	true	"History modification request"
-//	@Success		200			{object}	map[string]model.ChoreHistory							"res: updated history entry"
-//	@Failure		400			{object}	map[string]string										"error: Invalid Chore ID | Invalid History ID | Invalid request"
-//	@Failure		401			{object}	map[string]string										"error: Authentication failed"
-//	@Failure		403			{object}	map[string]string										"error: You are not allowed to modify this history"
-//	@Failure		500			{object}	map[string]string										"error: Failed to fetch chore history entry | Error updating history"
+//	@Success		200			{object}	model.ChoreHistory							"updated history entry"
+//	@Failure		400			{object}	string										"Invalid Chore ID | Invalid History ID | Invalid request"
+//	@Failure		401			{object}	string										"Authentication failed"
+//	@Failure		403			{object}	string										"You are not allowed to modify this history"
+//	@Failure		500			{object}	string										"Failed to fetch chore history entry | Error updating history"
 //	@Router			/chores/{id}/history/{history_id} [put]
 func (h *Handler) ModifyHistory(c *gin.Context) {
 
@@ -2089,18 +1823,14 @@ func (h *Handler) ModifyHistory(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
 		logger.Error("Failed to get current user from authentication context")
-		c.JSON(401, gin.H{
-			"error": "Authentication failed",
-		})
+		c.JSON(401, "Authentication failed")
 		return
 	}
 
 	rawID := c.Param("id")
 	choreID, err := strconv.Atoi(rawID)
 	if err != nil {
-		c.JSON(400, gin.H{
-			"error": "Invalid Chore ID",
-		})
+		c.JSON(400, "Invalid Chore ID")
 		return
 	}
 	type ModifyHistoryReq struct {
@@ -2112,42 +1842,32 @@ func (h *Handler) ModifyHistory(c *gin.Context) {
 	var req ModifyHistoryReq
 	if err := c.ShouldBindJSON(&req); err != nil {
 		logging.FromContext(c).Error("Operation failed", "error", err)
-		c.JSON(400, gin.H{
-			"error": "Invalid request",
-		})
+		c.JSON(400, "Invalid request")
 		return
 	}
 	rawHistoryID := c.Param("history_id")
 	historyID, err := strconv.Atoi(rawHistoryID)
 	if err != nil {
-		c.JSON(400, gin.H{
-			"error": "Invalid History ID",
-		})
+		c.JSON(400, "Invalid History ID")
 		return
 	}
 
 	history, err := h.choreRepo.GetChoreHistoryByID(c, choreID, historyID)
 	if err != nil {
 		logging.FromContext(c).Errorw("Failed to fetch chore history entry", "error", err, "choreID", choreID, "historyID", historyID)
-		c.JSON(500, gin.H{
-			"error": "Failed to fetch chore history entry",
-		})
+		c.JSON(500, "Failed to fetch chore history entry")
 		return
 	}
 
 	circleUsers, err := h.circleRepo.GetCircleUsers(c, currentUser.CircleID)
 	if err != nil {
 		logger.Error("Failed to retrieve circle users", "error", err)
-		c.JSON(500, gin.H{
-			"error": "Failed to retrieve circle users",
-		})
+		c.JSON(500, "Failed to retrieve circle users")
 		return
 	}
 
 	if currentUser.ID != history.CompletedBy && (history.AssignedTo == nil || currentUser.ID != *history.AssignedTo) && !currentUser.IsAdminOrManager(circleUsers) {
-		c.JSON(403, gin.H{
-			"error": "You are not allowed to modify this history",
-		})
+		c.JSON(403, "You are not allowed to modify this history")
 		return
 	}
 	if req.PerformedAt != nil {
@@ -2161,15 +1881,11 @@ func (h *Handler) ModifyHistory(c *gin.Context) {
 	}
 
 	if err := h.choreRepo.UpdateChoreHistory(c, history); err != nil {
-		c.JSON(500, gin.H{
-			"error": "Error updating history",
-		})
+		c.JSON(500, "Error updating history")
 		return
 	}
 
-	c.JSON(200, gin.H{
-		"res": history,
-	})
+	c.JSON(200, history)
 }
 
 // UpdatePriority godoc
@@ -2182,11 +1898,11 @@ func (h *Handler) ModifyHistory(c *gin.Context) {
 //	@Security		JWTKeyAuth && APIKeyAuth
 //	@Param			id			path		int						true	"Chore ID"
 //	@Param			priority	body		object{priority=int}	true	"Priority value (0-4)"
-//	@Success		200			{object}	map[string]string		"message: Priority updated successfully"
-//	@Failure		400			{object}	map[string]string		"error: Invalid ID | Invalid request"
-//	@Failure		401			{object}	map[string]string		"error: Authentication failed"
-//	@Failure		403			{object}	map[string]string		"error: You are not allowed to edit this chore"
-//	@Failure		500			{object}	map[string]string		"error: Failed to retrieve chore | Error updating priority"
+//	@Success		200			{object}	string		"Priority updated successfully"
+//	@Failure		400			{object}	string		"Invalid ID | Invalid request"
+//	@Failure		401			{object}	string		"Authentication failed"
+//	@Failure		403			{object}	string		"You are not allowed to edit this chore"
+//	@Failure		500			{object}	string		"Failed to retrieve chore | Error updating priority"
 //	@Router			/chores/{id}/priority [put]
 func (h *Handler) updatePriority(c *gin.Context) {
 	type PriorityReq struct {
@@ -2197,27 +1913,21 @@ func (h *Handler) updatePriority(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
 		logger.Error("Failed to get current user from authentication context")
-		c.JSON(401, gin.H{
-			"error": "Authentication failed",
-		})
+		c.JSON(401, "Authentication failed")
 		return
 	}
 
 	var priorityReq PriorityReq
 	if err := c.ShouldBindJSON(&priorityReq); err != nil {
 		logging.FromContext(c).Error("Operation failed", "error", err)
-		c.JSON(400, gin.H{
-			"error": "Invalid request",
-		})
+		c.JSON(400, "Invalid request")
 		return
 	}
 
 	rawID := c.Param("id")
 	id, err := strconv.Atoi(rawID)
 	if err != nil {
-		c.JSON(400, gin.H{
-			"error": "Invalid ID",
-		})
+		c.JSON(400, "Invalid ID")
 		return
 	}
 
@@ -2225,38 +1935,28 @@ func (h *Handler) updatePriority(c *gin.Context) {
 	chore, err := h.choreRepo.GetChore(c, id, currentUser.ID)
 	if err != nil {
 		logger.Error("Failed to retrieve chore", "error", err)
-		c.JSON(500, gin.H{
-			"error": "Failed to retrieve chore",
-		})
+		c.JSON(500, "Failed to retrieve chore")
 		return
 	}
 	circleUsers, err := h.circleRepo.GetCircleUsers(c, currentUser.CircleID)
 	if err != nil {
 		logger.Error("Failed to retrieve circle users", "error", err)
-		c.JSON(500, gin.H{
-			"error": "Failed to retrieve circle users",
-		})
+		c.JSON(500, "Failed to retrieve circle users")
 		return
 	}
 	if err := chore.CanEdit(currentUser.ID, circleUsers, nil); err != nil {
 		logger.Error("User not allowed to edit chore", "userID", currentUser.ID, "choreID", chore.ID)
-		c.JSON(403, gin.H{
-			"error": "You are not allowed to edit this chore",
-		})
+		c.JSON(403, "You are not allowed to edit this chore")
 		return
 	}
 
 	if err := h.choreRepo.UpdateChorePriority(c, currentUser.ID, id, *priorityReq.Priority); err != nil {
 		logger.Error("Failed to update priority", "error", err)
-		c.JSON(500, gin.H{
-			"error": "Error updating priority",
-		})
+		c.JSON(500, "Error updating priority")
 		return
 	}
 
-	c.JSON(200, gin.H{
-		"message": "Priority updated successfully",
-	})
+	c.JSON(200, "Priority updated successfully")
 }
 
 // GetChoresHistory godoc
@@ -2269,10 +1969,10 @@ func (h *Handler) updatePriority(c *gin.Context) {
 //	@Security		JWTKeyAuth && APIKeyAuth
 //	@Param			limit	query		int								false	"Number of days to retrieve history (default: 7)"
 //	@Param			members	query		boolean							false	"Include other circle members' history"
-//	@Success		200		{object}	map[string][]model.ChoreHistory	"res: array of chore history entries"
-//	@Failure		400		{object}	map[string]string				"error: Invalid duration"
-//	@Failure		401		{object}	map[string]string				"error: Authentication failed"
-//	@Failure		500		{object}	map[string]string				"error: Failed to fetch user's chore history"
+//	@Success		200		{object}	[]model.ChoreHistory	"array of chore history entries"
+//	@Failure		400		{object}	string				"Invalid duration"
+//	@Failure		401		{object}	string				"Authentication failed"
+//	@Failure		500		{object}	string				"Failed to fetch user's chore history"
 //	@Router			/chores/history [get]
 func (h *Handler) getChoresHistory(c *gin.Context) {
 
@@ -2280,9 +1980,7 @@ func (h *Handler) getChoresHistory(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
 		logger.Error("Failed to get current user from authentication context")
-		c.JSON(401, gin.H{
-			"error": "Authentication failed",
-		})
+		c.JSON(401, "Authentication failed")
 		return
 	}
 	durationRaw := c.Query("limit")
@@ -2292,9 +1990,7 @@ func (h *Handler) getChoresHistory(c *gin.Context) {
 
 	duration, err := strconv.Atoi(durationRaw)
 	if err != nil {
-		c.JSON(400, gin.H{
-			"error": "Invalid duration",
-		})
+		c.JSON(400, "Invalid duration")
 		return
 	}
 	includeCircleRaw := c.Query("members")
@@ -2306,14 +2002,10 @@ func (h *Handler) getChoresHistory(c *gin.Context) {
 	choreHistories, err := h.choreRepo.GetChoresHistoryByUserID(c, currentUser.ID, currentUser.CircleID, duration, includeCircle)
 	if err != nil {
 		logging.FromContext(c).Errorw("Failed to fetch user's chore history", "error", err, "userID", currentUser.ID, "duration", duration)
-		c.JSON(500, gin.H{
-			"error": "Failed to fetch user's chore history",
-		})
+		c.JSON(500, "Failed to fetch user's chore history")
 		return
 	}
-	c.JSON(200, gin.H{
-		"res": choreHistories,
-	})
+	c.JSON(200, choreHistories)
 }
 
 // DeleteHistory godoc
@@ -2326,11 +2018,11 @@ func (h *Handler) getChoresHistory(c *gin.Context) {
 //	@Security		JWTKeyAuth && APIKeyAuth
 //	@Param			id			path		int					true	"Chore ID"
 //	@Param			history_id	path		int					true	"History ID"
-//	@Success		200			{object}	map[string]string	"message: History deleted successfully"
-//	@Failure		400			{object}	map[string]string	"error: Invalid Chore ID | Invalid History ID"
-//	@Failure		401			{object}	map[string]string	"error: Authentication failed"
-//	@Failure		403			{object}	map[string]string	"error: You are not allowed to delete this history"
-//	@Failure		500			{object}	map[string]string	"error: Failed to fetch chore history entry | Error deleting history"
+//	@Success		200			{object}	string	"History deleted successfully"
+//	@Failure		400			{object}	string	"Invalid Chore ID | Invalid History ID"
+//	@Failure		401			{object}	string	"Authentication failed"
+//	@Failure		403			{object}	string	"You are not allowed to delete this history"
+//	@Failure		500			{object}	string	"Failed to fetch chore history entry | Error deleting history"
 //	@Router			/chores/{id}/history/{history_id} [delete]
 func (h *Handler) DeleteHistory(c *gin.Context) {
 
@@ -2338,72 +2030,56 @@ func (h *Handler) DeleteHistory(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
 		logger.Error("Failed to get current user from authentication context")
-		c.JSON(401, gin.H{
-			"error": "Authentication failed",
-		})
+		c.JSON(401, "Authentication failed")
 		return
 	}
 
 	rawID := c.Param("id")
 	choreID, err := strconv.Atoi(rawID)
 	if err != nil {
-		c.JSON(400, gin.H{
-			"error": "Invalid Chore ID",
-		})
+		c.JSON(400, "Invalid Chore ID")
 		return
 	}
 
 	rawHistoryID := c.Param("history_id")
 	historyID, err := strconv.Atoi(rawHistoryID)
 	if err != nil {
-		c.JSON(400, gin.H{
-			"error": "Invalid History ID",
-		})
+		c.JSON(400, "Invalid History ID")
 		return
 	}
 
 	chore, err := h.choreRepo.GetChore(c, choreID, currentUser.ID)
 	if err != nil {
 		logger.Error("Failed to retrieve chore", "error", err)
-		c.JSON(500, gin.H{
-			"error": "Failed to retrieve chore",
-		})
+		c.JSON(500, "Failed to retrieve chore")
 		return
 	}
 
 	circleUsers, err := h.circleRepo.GetCircleUsers(c, currentUser.CircleID)
 	if err != nil {
 		logger.Error("Failed to retrieve circle users", "error", err, "circleID", currentUser.CircleID, "userID", currentUser.ID)
-		c.JSON(500, gin.H{"error": "Failed to retrieve circle users"})
+		c.JSON(500, "Failed to retrieve circle users")
 		return
 	}
 
 	history, err := h.choreRepo.GetChoreHistoryByID(c, choreID, historyID)
 	if err != nil {
 		logging.FromContext(c).Errorw("Failed to fetch chore history entry", "error", err, "choreID", choreID, "historyID", historyID)
-		c.JSON(500, gin.H{
-			"error": "Failed to fetch chore history entry",
-		})
+		c.JSON(500, "Failed to fetch chore history entry")
 		return
 	}
 
 	if !chore.CanDeleteHistory(currentUser.ID, circleUsers, history) {
-		c.JSON(403, gin.H{
-			"error": "You are not allowed to delete this history",
-		})
+		c.JSON(403, "You are not allowed to delete this history")
 		return
 	}
 
 	if err := h.choreRepo.DeleteChoreHistory(c, historyID); err != nil {
-		c.JSON(500, gin.H{
-			"error": "Error deleting history",
-		})
+		c.JSON(500, "Error deleting history")
 		return
 	}
 
-	c.JSON(200, gin.H{
-		"message": "History deleted successfully",
-	})
+	c.JSON(200, "History deleted successfully")
 }
 
 // UpdateSubtaskCompletedAt godoc
@@ -2417,9 +2093,9 @@ func (h *Handler) DeleteHistory(c *gin.Context) {
 //	@Param			id		path		int												true	"Chore ID"
 //	@Param			subtask	body		object{id=int,choreId=int,completedAt=string}	true	"Subtask completion request"
 //	@Success		200		{object}	map[string]interface{}							"Empty success response"
-//	@Failure		400		{object}	map[string]string								"error: Invalid Chore ID | Invalid request | User is not assigned to chore"
-//	@Failure		401		{object}	map[string]string								"error: Authentication failed"
-//	@Failure		500		{object}	map[string]string								"error: Failed to retrieve chore | Error getting subtask"
+//	@Failure		400		{object}	string								"Invalid Chore ID | Invalid request | User is not assigned to chore"
+//	@Failure		401		{object}	string								"Authentication failed"
+//	@Failure		500		{object}	string								"Failed to retrieve chore | Error getting subtask"
 //	@Router			/chores/{id}/subtask [put]
 func (h *Handler) UpdateSubtaskCompletedAt(c *gin.Context) {
 	logger := logging.FromContext(c)
@@ -2428,9 +2104,7 @@ func (h *Handler) UpdateSubtaskCompletedAt(c *gin.Context) {
 	actualUser, impersonatedUser, hasImpersonation := auth.CurrentUserWithImpersonation(c)
 	if actualUser == nil {
 		logger.Error("Failed to get current user from authentication context")
-		c.JSON(401, gin.H{
-			"error": "Authentication failed",
-		})
+		c.JSON(401, "Authentication failed")
 		return
 	}
 
@@ -2449,9 +2123,7 @@ func (h *Handler) UpdateSubtaskCompletedAt(c *gin.Context) {
 	rawID := c.Param("id")
 	choreID, err := strconv.Atoi(rawID)
 	if err != nil {
-		c.JSON(400, gin.H{
-			"error": "Invalid Chore ID",
-		})
+		c.JSON(400, "Invalid Chore ID")
 		return
 	}
 
@@ -2464,31 +2136,23 @@ func (h *Handler) UpdateSubtaskCompletedAt(c *gin.Context) {
 	var req SubtaskReq
 	if err := c.ShouldBindJSON(&req); err != nil {
 		logging.FromContext(c).Error("Operation failed", "error", err)
-		c.JSON(400, gin.H{
-			"error": "Invalid request",
-		})
+		c.JSON(400, "Invalid request")
 		return
 	}
 	chore, err := h.choreRepo.GetChore(c, choreID, effectiveUser.ID)
 	if err != nil {
 		logger.Error("Failed to retrieve chore", "error", err)
-		c.JSON(500, gin.H{
-			"error": "Failed to retrieve chore",
-		})
+		c.JSON(500, "Failed to retrieve chore")
 		return
 	}
 	circleUsers, err := h.circleRepo.GetCircleUsers(c, actualUser.CircleID)
 	if err != nil {
 		logger.Error("Failed to retrieve circle users", "error", err)
-		c.JSON(500, gin.H{
-			"error": "Failed to retrieve circle users",
-		})
+		c.JSON(500, "Failed to retrieve circle users")
 		return
 	}
 	if !chore.CanComplete(effectiveUser.ID, circleUsers) {
-		c.JSON(400, gin.H{
-			"error": "User is not assigned to chore",
-		})
+		c.JSON(400, "User is not assigned to chore")
 		return
 	}
 	var completedAt *time.Time
@@ -2497,9 +2161,7 @@ func (h *Handler) UpdateSubtaskCompletedAt(c *gin.Context) {
 	}
 	err = h.stRepo.UpdateSubTaskStatus(c, effectiveUser.ID, req.ID, completedAt)
 	if err != nil {
-		c.JSON(500, gin.H{
-			"error": "Error getting subtask",
-		})
+		c.JSON(500, "Error getting subtask")
 		return
 	}
 
@@ -2539,30 +2201,26 @@ func (h *Handler) UpdateSubtaskCompletedAt(c *gin.Context) {
 //	@Security		JWTKeyAuth && APIKeyAuth
 //	@Param			id				path		int								true	"Chore ID"
 //	@Param			choreHistoryId	query		int								false	"Filter by specific history ID"
-//	@Success		200				{object}	map[string][]model.TimeSession	"res: array of time sessions"
-//	@Failure		400				{object}	map[string]string				"error: Invalid ID | Invalid choreHistoryId parameter"
-//	@Failure		401				{object}	map[string]string				"error: Authentication failed"
-//	@Failure		403				{object}	map[string]string				"error: You are not allowed to view time sessions for this chore"
-//	@Failure		404				{object}	map[string]string				"error: No time session found"
-//	@Failure		500				{object}	map[string]string				"error: Failed to retrieve chore | Error getting chore time session"
+//	@Success		200				{object}	[]model.TimeSession	"array of time sessions"
+//	@Failure		400				{object}	string				"Invalid ID | Invalid choreHistoryId parameter"
+//	@Failure		401				{object}	string				"Authentication failed"
+//	@Failure		403				{object}	string				"You are not allowed to view time sessions for this chore"
+//	@Failure		404				{object}	string				"No time session found"
+//	@Failure		500				{object}	string				"Failed to retrieve chore | Error getting chore time session"
 //	@Router			/chores/{id}/timer [get]
 func (h *Handler) GetChoreTimeSessions(c *gin.Context) {
 	logger := logging.FromContext(c)
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
 		logger.Error("Failed to get current user from authentication context")
-		c.JSON(401, gin.H{
-			"error": "Authentication failed",
-		})
+		c.JSON(401, "Authentication failed")
 		return
 	}
 
 	rawID := c.Param("id")
 	id, err := strconv.Atoi(rawID)
 	if err != nil {
-		c.JSON(400, gin.H{
-			"error": "Invalid ID",
-		})
+		c.JSON(400, "Invalid ID")
 		return
 	}
 
@@ -2570,24 +2228,18 @@ func (h *Handler) GetChoreTimeSessions(c *gin.Context) {
 	chore, err := h.choreRepo.GetChore(c, id, currentUser.ID)
 	if err != nil {
 		logger.Error("Failed to retrieve chore", "error", err)
-		c.JSON(500, gin.H{
-			"error": "Failed to retrieve chore",
-		})
+		c.JSON(500, "Failed to retrieve chore")
 		return
 	}
 
 	circleUsers, err := h.circleRepo.GetCircleUsers(c, currentUser.CircleID)
 	if err != nil {
 		logger.Error("Failed to retrieve circle users", "error", err)
-		c.JSON(500, gin.H{
-			"error": "Failed to retrieve circle users",
-		})
+		c.JSON(500, "Failed to retrieve circle users")
 		return
 	}
 	if !chore.CanView(currentUser.ID, circleUsers) {
-		c.JSON(403, gin.H{
-			"error": "You are not allowed to view time sessions for this chore",
-		})
+		c.JSON(403, "You are not allowed to view time sessions for this chore")
 		return
 	}
 
@@ -2597,31 +2249,23 @@ func (h *Handler) GetChoreTimeSessions(c *gin.Context) {
 		if historyIdInt, err := strconv.Atoi(historyIdStr); err == nil {
 			choreHistoryId = &historyIdInt
 		} else {
-			c.JSON(400, gin.H{
-				"error": "Invalid choreHistoryId parameter",
-			})
+			c.JSON(400, "Invalid choreHistoryId parameter")
 			return
 		}
 	}
 
 	session, err := h.choreRepo.GetTimeSessionsByChoreID(c, id, choreHistoryId)
 	if err != nil {
-		c.JSON(500, gin.H{
-			"error": "Error getting chore time session",
-		})
+		c.JSON(500, "Error getting chore time session")
 		return
 	}
 
 	if session == nil {
-		c.JSON(404, gin.H{
-			"error": "No time session found",
-		})
+		c.JSON(404, "No time session found")
 		return
 	}
 
-	c.JSON(200, gin.H{
-		"res": session,
-	})
+	c.JSON(200, session)
 }
 
 // UpdateTimeSession godoc
@@ -2635,38 +2279,32 @@ func (h *Handler) GetChoreTimeSessions(c *gin.Context) {
 //	@Param			id			path		int														true	"Chore ID"
 //	@Param			session_id	path		int														true	"Session ID"
 //	@Param			session		body		object{startTime=string,endTime=string,pauseLog=array}	true	"Time session update request"
-//	@Success		200			{object}	map[string]model.TimeSession							"res: updated time session"
-//	@Failure		400			{object}	map[string]string										"error: Invalid chore ID | Invalid session ID | Invalid request body | Time session does not belong to the specified chore"
-//	@Failure		401			{object}	map[string]string										"error: Authentication failed"
-//	@Failure		403			{object}	map[string]string										"error: You are not allowed to modify time sessions for this chore"
-//	@Failure		500			{object}	map[string]string										"error: Failed to retrieve chore | Error getting time session | Error updating time session"
+//	@Success		200			{object}	model.TimeSession							"updated time session"
+//	@Failure		400			{object}	string										"Invalid chore ID | Invalid session ID | Invalid request body | Time session does not belong to the specified chore"
+//	@Failure		401			{object}	string										"Authentication failed"
+//	@Failure		403			{object}	string										"You are not allowed to modify time sessions for this chore"
+//	@Failure		500			{object}	string										"Failed to retrieve chore | Error getting time session | Error updating time session"
 //	@Router			/chores/{id}/timer/{session_id} [put]
 func (h *Handler) UpdateTimeSession(c *gin.Context) {
 	logger := logging.FromContext(c)
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
 		logger.Error("Failed to get current user from authentication context")
-		c.JSON(401, gin.H{
-			"error": "Authentication failed",
-		})
+		c.JSON(401, "Authentication failed")
 		return
 	}
 
 	rawChoreID := c.Param("id")
 	choreID, err := strconv.Atoi(rawChoreID)
 	if err != nil {
-		c.JSON(400, gin.H{
-			"error": "Invalid chore ID",
-		})
+		c.JSON(400, "Invalid chore ID")
 		return
 	}
 
 	rawSessionID := c.Param("session_id")
 	sessionID, err := strconv.Atoi(rawSessionID)
 	if err != nil {
-		c.JSON(400, gin.H{
-			"error": "Invalid session ID",
-		})
+		c.JSON(400, "Invalid session ID")
 		return
 	}
 
@@ -2678,9 +2316,7 @@ func (h *Handler) UpdateTimeSession(c *gin.Context) {
 
 	var req UpdateTimeSessionReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(400, gin.H{
-			"error": "Invalid request body",
-		})
+		c.JSON(400, "Invalid request body")
 		return
 	}
 
@@ -2688,9 +2324,7 @@ func (h *Handler) UpdateTimeSession(c *gin.Context) {
 	chore, err := h.choreRepo.GetChore(c, choreID, currentUser.ID)
 	if err != nil {
 		logger.Error("Failed to retrieve chore", "error", err)
-		c.JSON(500, gin.H{
-			"error": "Failed to retrieve chore",
-		})
+		c.JSON(500, "Failed to retrieve chore")
 		return
 	}
 
@@ -2705,26 +2339,20 @@ func (h *Handler) UpdateTimeSession(c *gin.Context) {
 	}
 
 	if currentUser.ID != chore.CreatedBy && !isAssignee {
-		c.JSON(403, gin.H{
-			"error": "You are not allowed to modify time sessions for this chore",
-		})
+		c.JSON(403, "You are not allowed to modify time sessions for this chore")
 		return
 	}
 
 	// Get the time session to ensure it exists and belongs to the chore
 	session, err := h.choreRepo.GetTimeSessionByID(c, sessionID)
 	if err != nil {
-		c.JSON(500, gin.H{
-			"error": "Error getting time session",
-		})
+		c.JSON(500, "Error getting time session")
 		return
 	}
 
 	// Verify the session belongs to the specified chore
 	if session.ChoreID != choreID {
-		c.JSON(400, gin.H{
-			"error": "Time session does not belong to the specified chore",
-		})
+		c.JSON(400, "Time session does not belong to the specified chore")
 		return
 	}
 
@@ -2743,15 +2371,11 @@ func (h *Handler) UpdateTimeSession(c *gin.Context) {
 
 	// Save the updated session (this will recalculate duration)
 	if err := h.choreRepo.UpdateTimeSessionData(c, session); err != nil {
-		c.JSON(500, gin.H{
-			"error": "Error updating time session",
-		})
+		c.JSON(500, "Error updating time session")
 		return
 	}
 
-	c.JSON(200, gin.H{
-		"res": session,
-	})
+	c.JSON(200, session)
 }
 
 // DeleteTimeSession godoc
@@ -2764,38 +2388,32 @@ func (h *Handler) UpdateTimeSession(c *gin.Context) {
 //	@Security		JWTKeyAuth && APIKeyAuth
 //	@Param			id			path		int					true	"Chore ID"
 //	@Param			session_id	path		int					true	"Session ID"
-//	@Success		200			{object}	map[string]string	"message: Time session deleted successfully"
-//	@Failure		400			{object}	map[string]string	"error: Invalid chore ID | Invalid session ID | Time session does not belong to the specified chore"
-//	@Failure		401			{object}	map[string]string	"error: Authentication failed"
-//	@Failure		403			{object}	map[string]string	"error: You are not allowed to delete time sessions for this chore"
-//	@Failure		500			{object}	map[string]string	"error: Failed to retrieve chore | Error getting time session | Error deleting time session"
+//	@Success		200			{object}	string	"Time session deleted successfully"
+//	@Failure		400			{object}	string	"Invalid chore ID | Invalid session ID | Time session does not belong to the specified chore"
+//	@Failure		401			{object}	string	"Authentication failed"
+//	@Failure		403			{object}	string	"You are not allowed to delete time sessions for this chore"
+//	@Failure		500			{object}	string	"Failed to retrieve chore | Error getting time session | Error deleting time session"
 //	@Router			/chores/{id}/timer/{session_id} [delete]
 func (h *Handler) DeleteTimeSession(c *gin.Context) {
 	logger := logging.FromContext(c)
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
 		logger.Error("Failed to get current user from authentication context")
-		c.JSON(401, gin.H{
-			"error": "Authentication failed",
-		})
+		c.JSON(401, "Authentication failed")
 		return
 	}
 
 	rawChoreID := c.Param("id")
 	choreID, err := strconv.Atoi(rawChoreID)
 	if err != nil {
-		c.JSON(400, gin.H{
-			"error": "Invalid chore ID",
-		})
+		c.JSON(400, "Invalid chore ID")
 		return
 	}
 
 	rawSessionID := c.Param("session_id")
 	sessionID, err := strconv.Atoi(rawSessionID)
 	if err != nil {
-		c.JSON(400, gin.H{
-			"error": "Invalid session ID",
-		})
+		c.JSON(400, "Invalid session ID")
 		return
 	}
 
@@ -2803,9 +2421,7 @@ func (h *Handler) DeleteTimeSession(c *gin.Context) {
 	chore, err := h.choreRepo.GetChore(c, choreID, currentUser.ID)
 	if err != nil {
 		logger.Error("Failed to retrieve chore", "error", err)
-		c.JSON(500, gin.H{
-			"error": "Failed to retrieve chore",
-		})
+		c.JSON(500, "Failed to retrieve chore")
 		return
 	}
 
@@ -2820,41 +2436,31 @@ func (h *Handler) DeleteTimeSession(c *gin.Context) {
 	}
 
 	if currentUser.ID != chore.CreatedBy && !isAssignee {
-		c.JSON(403, gin.H{
-			"error": "You are not allowed to delete time sessions for this chore",
-		})
+		c.JSON(403, "You are not allowed to delete time sessions for this chore")
 		return
 	}
 
 	// Get the time session to ensure it exists and belongs to the chore
 	session, err := h.choreRepo.GetTimeSessionByID(c, sessionID)
 	if err != nil {
-		c.JSON(500, gin.H{
-			"error": "Error getting time session",
-		})
+		c.JSON(500, "Error getting time session")
 		return
 	}
 
 	// Verify the session belongs to the specified chore
 	if session.ChoreID != choreID {
-		c.JSON(400, gin.H{
-			"error": "Time session does not belong to the specified chore",
-		})
+		c.JSON(400, "Time session does not belong to the specified chore")
 		return
 	}
 
 	// Delete the time session
 	if err := h.choreRepo.DeleteTimeSession(c, sessionID, choreID); err != nil {
-		c.JSON(500, gin.H{
-			"error": "Error deleting time session",
-		})
+		c.JSON(500, "Error deleting time session")
 		return
 	}
 	if chore.Status == chModel.ChoreStatusInProgress || chore.Status == chModel.ChoreStatusPaused {
 		h.choreRepo.UpdateChoreStatus(c, choreID, chModel.ChoreStatusNoStatus)
-		c.JSON(200, gin.H{
-			"message": "Time session deleted successfully",
-		})
+		c.JSON(200, "Time session deleted successfully")
 
 		return
 	}
@@ -2869,29 +2475,25 @@ func (h *Handler) DeleteTimeSession(c *gin.Context) {
 //	@Produce		json
 //	@Security		JWTKeyAuth && APIKeyAuth
 //	@Param			id	path		int						true	"Chore ID"
-//	@Success		200	{object}	map[string]model.Chore	"res: updated chore"
-//	@Failure		400	{object}	map[string]string		"error: Invalid ID | Chore is not pending approval"
-//	@Failure		401	{object}	map[string]string		"error: Authentication failed"
-//	@Failure		403	{object}	map[string]string		"error: Only admins can approve chores"
-//	@Failure		500	{object}	map[string]string		"error: Failed to retrieve chore | Error approving chore"
+//	@Success		200	{object}	model.Chore	"updated chore"
+//	@Failure		400	{object}	string		"Invalid ID | Chore is not pending approval"
+//	@Failure		401	{object}	string		"Authentication failed"
+//	@Failure		403	{object}	string		"Only admins can approve chores"
+//	@Failure		500	{object}	string		"Failed to retrieve chore | Error approving chore"
 //	@Router			/chores/{id}/approve [post]
 func (h *Handler) approveChore(c *gin.Context) {
 	logger := logging.FromContext(c)
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
 		logger.Error("Failed to get current user from authentication context")
-		c.JSON(401, gin.H{
-			"error": "Authentication failed",
-		})
+		c.JSON(401, "Authentication failed")
 		return
 	}
 
 	rawID := c.Param("id")
 	id, err := strconv.Atoi(rawID)
 	if err != nil {
-		c.JSON(400, gin.H{
-			"error": "Invalid ID",
-		})
+		c.JSON(400, "Invalid ID")
 		return
 	}
 
@@ -2899,9 +2501,7 @@ func (h *Handler) approveChore(c *gin.Context) {
 	chore, err := h.choreRepo.GetChore(c, id, currentUser.ID)
 	if err != nil {
 		logger.Error("Failed to retrieve chore", "error", err)
-		c.JSON(500, gin.H{
-			"error": "Failed to retrieve chore",
-		})
+		c.JSON(500, "Failed to retrieve chore")
 		return
 	}
 
@@ -2909,9 +2509,7 @@ func (h *Handler) approveChore(c *gin.Context) {
 	circleUsers, err := h.circleRepo.GetCircleUsers(c, currentUser.CircleID)
 	if err != nil {
 		logger.Error("Failed to retrieve circle users", "error", err)
-		c.JSON(500, gin.H{
-			"error": "Failed to retrieve circle users",
-		})
+		c.JSON(500, "Failed to retrieve circle users")
 		return
 	}
 
@@ -2924,17 +2522,13 @@ func (h *Handler) approveChore(c *gin.Context) {
 	}
 
 	if !isAdmin {
-		c.JSON(403, gin.H{
-			"error": "Only admins can approve chores",
-		})
+		c.JSON(403, "Only admins can approve chores")
 		return
 	}
 
 	// Check if chore is pending approval
 	if chore.Status != chModel.ChoreStatusPendingApproval {
-		c.JSON(400, gin.H{
-			"error": "Chore is not pending approval",
-		})
+		c.JSON(400, "Chore is not pending approval")
 		return
 	}
 
@@ -2942,9 +2536,7 @@ func (h *Handler) approveChore(c *gin.Context) {
 	allHistory, err := h.choreRepo.GetChoreHistory(c, chore.ID)
 	if err != nil {
 		logging.FromContext(c).Errorw("Failed to fetch chore history for approval process", "error", err, "choreID", chore.ID)
-		c.JSON(500, gin.H{
-			"error": "Failed to fetch chore history for approval process",
-		})
+		c.JSON(500, "Failed to fetch chore history for approval process")
 		return
 	}
 
@@ -2958,9 +2550,7 @@ func (h *Handler) approveChore(c *gin.Context) {
 	}
 
 	if pendingHistory == nil {
-		c.JSON(500, gin.H{
-			"error": "No pending approval history found",
-		})
+		c.JSON(500, "No pending approval history found")
 		return
 	}
 
@@ -2973,50 +2563,38 @@ func (h *Handler) approveChore(c *gin.Context) {
 		allHistory, err := h.choreRepo.GetChoreHistoryWithLimit(c, chore.ID, 5)
 		if err != nil {
 			logging.FromContext(c).Errorw("Failed to fetch chore history for adaptive scheduling during approval", "error", err, "choreID", chore.ID)
-			c.JSON(500, gin.H{
-				"error": "Failed to fetch chore history for adaptive scheduling",
-			})
+			c.JSON(500, "Failed to fetch chore history for adaptive scheduling")
 			return
 		}
 		nextDueDate, err = scheduleAdaptiveNextDueDate(chore, completedDate, allHistory)
 		if err != nil {
-			c.JSON(500, gin.H{
-				"error": "Error scheduling next due date",
-			})
+			c.JSON(500, "Error scheduling next due date")
 			return
 		}
 	} else {
 		nextDueDate, err = scheduleNextDueDate(c, chore, completedDate.UTC())
 		if err != nil {
-			c.JSON(500, gin.H{
-				"error": "Error scheduling next due date",
-			})
+			c.JSON(500, "Error scheduling next due date")
 			return
 		}
 	}
 
 	nextAssignedTo, err := checkNextAssignee(chore, allHistory, completedBy)
 	if err != nil {
-		c.JSON(500, gin.H{
-			"error": "Error checking next assignee",
-		})
+		c.JSON(500, "Error checking next assignee")
 		return
 	}
 
 	// Approve the chore
 	if err := h.choreRepo.ApproveChore(c, chore, currentUser.ID, nextDueDate, nextAssignedTo, true); err != nil {
-		c.JSON(500, gin.H{
-			"error": "Error approving chore",
-		})
+		c.JSON(500, "Error approving chore")
 		return
 	}
 
 	updatedChore, err := h.choreRepo.GetChore(c, id, currentUser.ID)
 	if err != nil {
 		logger.Error("Failed to retrieve chore", "error", err)
-		c.JSON(500, gin.H{
-			"error": "Failed to retrieve chore",
-		})
+		c.JSON(500, "Failed to retrieve chore")
 		return
 	}
 
@@ -3033,10 +2611,7 @@ func (h *Handler) approveChore(c *gin.Context) {
 		broadcaster.BroadcastChoreCompleted(updatedChore, &currentUser.User, pendingHistory, nil)
 	}
 
-	c.JSON(200, gin.H{
-		"res":     updatedChore,
-		"message": "Chore approved successfully",
-	})
+	c.JSON(200, updatedChore)
 }
 
 // RejectChore godoc
@@ -3049,29 +2624,25 @@ func (h *Handler) approveChore(c *gin.Context) {
 //	@Security		JWTKeyAuth && APIKeyAuth
 //	@Param			id			path		int						true	"Chore ID"
 //	@Param			rejection	body		object{note=string}		false	"Rejection details"
-//	@Success		200			{object}	map[string]interface{}	"res: updated chore, message: Chore rejected successfully"
-//	@Failure		400			{object}	map[string]string		"error: Invalid ID | Chore is not pending approval"
-//	@Failure		401			{object}	map[string]string		"error: Authentication failed"
-//	@Failure		403			{object}	map[string]string		"error: Only admins can reject chores"
-//	@Failure		500			{object}	map[string]string		"error: Failed to retrieve chore | Error rejecting chore"
+//	@Success		200			{object}	chModel.Chore	"updated chore, Chore rejected successfully"
+//	@Failure		400			{object}	string		"Invalid ID | Chore is not pending approval"
+//	@Failure		401			{object}	string		"Authentication failed"
+//	@Failure		403			{object}	string		"Only admins can reject chores"
+//	@Failure		500			{object}	string		"Failed to retrieve chore | Error rejecting chore"
 //	@Router			/chores/{id}/reject [post]
 func (h *Handler) rejectChore(c *gin.Context) {
 	logger := logging.FromContext(c)
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
 		logger.Error("Failed to get current user from authentication context")
-		c.JSON(401, gin.H{
-			"error": "Authentication failed",
-		})
+		c.JSON(401, "Authentication failed")
 		return
 	}
 
 	rawID := c.Param("id")
 	id, err := strconv.Atoi(rawID)
 	if err != nil {
-		c.JSON(400, gin.H{
-			"error": "Invalid ID",
-		})
+		c.JSON(400, "Invalid ID")
 		return
 	}
 
@@ -3085,9 +2656,7 @@ func (h *Handler) rejectChore(c *gin.Context) {
 	chore, err := h.choreRepo.GetChore(c, id, currentUser.ID)
 	if err != nil {
 		logger.Error("Failed to retrieve chore", "error", err)
-		c.JSON(500, gin.H{
-			"error": "Failed to retrieve chore",
-		})
+		c.JSON(500, "Failed to retrieve chore")
 		return
 	}
 
@@ -3095,9 +2664,7 @@ func (h *Handler) rejectChore(c *gin.Context) {
 	circleUsers, err := h.circleRepo.GetCircleUsers(c, currentUser.CircleID)
 	if err != nil {
 		logger.Error("Failed to retrieve circle users", "error", err)
-		c.JSON(500, gin.H{
-			"error": "Failed to retrieve circle users",
-		})
+		c.JSON(500, "Failed to retrieve circle users")
 		return
 	}
 
@@ -3110,17 +2677,13 @@ func (h *Handler) rejectChore(c *gin.Context) {
 	}
 
 	if !isAdmin {
-		c.JSON(403, gin.H{
-			"error": "Only admins can reject chores",
-		})
+		c.JSON(403, "Only admins can reject chores")
 		return
 	}
 
 	// Check if chore is pending approval
 	if chore.Status != chModel.ChoreStatusPendingApproval {
-		c.JSON(400, gin.H{
-			"error": "Chore is not pending approval",
-		})
+		c.JSON(400, "Chore is not pending approval")
 		return
 	}
 
@@ -3131,18 +2694,14 @@ func (h *Handler) rejectChore(c *gin.Context) {
 
 	// Reject the chore
 	if err := h.choreRepo.RejectChore(c, id, rejectionNote); err != nil {
-		c.JSON(500, gin.H{
-			"error": "Error rejecting chore",
-		})
+		c.JSON(500, "Error rejecting chore")
 		return
 	}
 
 	updatedChore, err := h.choreRepo.GetChore(c, id, currentUser.ID)
 	if err != nil {
 		logger.Error("Failed to retrieve chore", "error", err)
-		c.JSON(500, gin.H{
-			"error": "Failed to retrieve chore",
-		})
+		c.JSON(500, "Failed to retrieve chore")
 		return
 	}
 
@@ -3157,10 +2716,7 @@ func (h *Handler) rejectChore(c *gin.Context) {
 		broadcaster.BroadcastChoreUpdated(updatedChore, &currentUser.User, changes, rejectionNote)
 	}
 
-	c.JSON(200, gin.H{
-		"res":     updatedChore,
-		"message": "Chore rejected successfully",
-	})
+	c.JSON(200, updatedChore)
 }
 
 // UpdateChoreStatus godoc
@@ -3173,29 +2729,25 @@ func (h *Handler) rejectChore(c *gin.Context) {
 //	@Security		JWTKeyAuth && APIKeyAuth
 //	@Param			id		path		int										true	"Chore ID"
 //	@Param			status	body		object{status=string,updatedAt=string}	true	"Status update request"
-//	@Success		200		{object}	map[string]string						"message: Chore status updated successfully"
-//	@Failure		400		{object}	map[string]string						"error: Invalid ID | Invalid request"
-//	@Failure		401		{object}	map[string]string						"error: Authentication failed"
-//	@Failure		403		{object}	map[string]string						"error: You cannot update the status of this chore"
-//	@Failure		500		{object}	map[string]string						"error: Failed to retrieve chore | Error updating chore status"
+//	@Success		200		{object}	string						"Chore status updated successfully"
+//	@Failure		400		{object}	string						"Invalid ID | Invalid request"
+//	@Failure		401		{object}	string						"Authentication failed"
+//	@Failure		403		{object}	string						"You cannot update the status of this chore"
+//	@Failure		500		{object}	string						"Failed to retrieve chore | Error updating chore status"
 //	@Router			/chores/{id}/status [put]
 func (h *Handler) updateChoreStatus(c *gin.Context) {
 	logger := logging.FromContext(c)
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
 		logger.Error("Failed to get current user from authentication context")
-		c.JSON(401, gin.H{
-			"error": "Authentication failed",
-		})
+		c.JSON(401, "Authentication failed")
 		return
 	}
 
 	rawID := c.Param("id")
 	id, err := strconv.Atoi(rawID)
 	if err != nil {
-		c.JSON(400, gin.H{
-			"error": "Invalid ID",
-		})
+		c.JSON(400, "Invalid ID")
 		return
 	}
 
@@ -3206,33 +2758,25 @@ func (h *Handler) updateChoreStatus(c *gin.Context) {
 
 	var statusReq StatusUpdateReq
 	if err := c.ShouldBindJSON(&statusReq); err != nil {
-		c.JSON(400, gin.H{
-			"error": "Invalid request",
-		})
+		c.JSON(400, "Invalid request")
 		return
 	}
 
 	chore, err := h.choreRepo.GetChore(c, id, currentUser.ID)
 	if err != nil {
 		logger.Error("Failed to retrieve chore", "error", err)
-		c.JSON(500, gin.H{
-			"error": "Failed to retrieve chore",
-		})
+		c.JSON(500, "Failed to retrieve chore")
 		return
 	}
 
 	circleUsers, err := h.circleRepo.GetCircleUsers(c, currentUser.CircleID)
 	if err != nil {
 		logger.Error("Failed to retrieve circle users", "error", err)
-		c.JSON(500, gin.H{
-			"error": "Failed to retrieve circle users",
-		})
+		c.JSON(500, "Failed to retrieve circle users")
 		return
 	}
 	if err := chore.CanEdit(currentUser.ID, circleUsers, &statusReq.UpdatedAt); err != nil {
-		c.JSON(403, gin.H{
-			"error": fmt.Sprintf("You cannot update the status of this chore: %s", err.Error()),
-		})
+		c.JSON(403, fmt.Sprintf("You cannot update the status of this chore: %s", err.Error()))
 		return
 	}
 
@@ -3241,9 +2785,7 @@ func (h *Handler) updateChoreStatus(c *gin.Context) {
 		"updated_by": currentUser.ID,
 		"updated_at": statusReq.UpdatedAt,
 	}); err != nil {
-		c.JSON(500, gin.H{
-			"error": "Error updating chore status",
-		})
+		c.JSON(500, "Error updating chore status")
 		return
 	}
 
@@ -3261,9 +2803,7 @@ func (h *Handler) updateChoreStatus(c *gin.Context) {
 		}
 	}
 
-	c.JSON(200, gin.H{
-		"message": "Chore status updated successfully",
-	})
+	c.JSON(200, "Chore status updated successfully")
 }
 
 // UpdateTimer godoc
@@ -3276,29 +2816,25 @@ func (h *Handler) updateChoreStatus(c *gin.Context) {
 //	@Security		JWTKeyAuth && APIKeyAuth
 //	@Param			id		path		int										true	"Chore ID"
 //	@Param			timer	body		object{duration=int,updatedAt=string}	true	"Timer update request"
-//	@Success		200		{object}	map[string]string						"message: Chore timer updated successfully"
-//	@Failure		400		{object}	map[string]string						"error: Invalid ID | Invalid request"
-//	@Failure		401		{object}	map[string]string						"error: Authentication failed"
-//	@Failure		403		{object}	map[string]string						"error: You cannot update the timer of this chore"
-//	@Failure		500		{object}	map[string]string						"error: Failed to retrieve chore | Error updating chore timer"
+//	@Success		200		{object}	string						"Chore timer updated successfully"
+//	@Failure		400		{object}	string						"Invalid ID | Invalid request"
+//	@Failure		401		{object}	string						"Authentication failed"
+//	@Failure		403		{object}	string						"You cannot update the timer of this chore"
+//	@Failure		500		{object}	string						"Failed to retrieve chore | Error updating chore timer"
 //	@Router			/chores/{id}/timer [put]
 func (h *Handler) updateTimer(c *gin.Context) {
 	logger := logging.FromContext(c)
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
 		logger.Error("Failed to get current user from authentication context")
-		c.JSON(401, gin.H{
-			"error": "Authentication failed",
-		})
+		c.JSON(401, "Authentication failed")
 		return
 	}
 
 	rawID := c.Param("id")
 	id, err := strconv.Atoi(rawID)
 	if err != nil {
-		c.JSON(400, gin.H{
-			"error": "Invalid ID",
-		})
+		c.JSON(400, "Invalid ID")
 		return
 	}
 
@@ -3309,33 +2845,25 @@ func (h *Handler) updateTimer(c *gin.Context) {
 
 	var timerReq TimerUpdateReq
 	if err := c.ShouldBindJSON(&timerReq); err != nil {
-		c.JSON(400, gin.H{
-			"error": "Invalid request",
-		})
+		c.JSON(400, "Invalid request")
 		return
 	}
 
 	chore, err := h.choreRepo.GetChore(c, id, currentUser.ID)
 	if err != nil {
 		logger.Error("Failed to retrieve chore", "error", err)
-		c.JSON(500, gin.H{
-			"error": "Failed to retrieve chore",
-		})
+		c.JSON(500, "Failed to retrieve chore")
 		return
 	}
 
 	circleUsers, err := h.circleRepo.GetCircleUsers(c, currentUser.CircleID)
 	if err != nil {
 		logger.Error("Failed to retrieve circle users", "error", err)
-		c.JSON(500, gin.H{
-			"error": "Failed to retrieve circle users",
-		})
+		c.JSON(500, "Failed to retrieve circle users")
 		return
 	}
 	if err := chore.CanEdit(currentUser.ID, circleUsers, &timerReq.UpdatedAt); err != nil {
-		c.JSON(403, gin.H{
-			"error": fmt.Sprintf("You cannot update the timer of this chore: %s", err.Error()),
-		})
+		c.JSON(403, fmt.Sprintf("You cannot update the timer of this chore: %s", err.Error()))
 		return
 	}
 
@@ -3344,9 +2872,7 @@ func (h *Handler) updateTimer(c *gin.Context) {
 		"updated_by": currentUser.ID,
 		"updated_at": timerReq.UpdatedAt,
 	}); err != nil {
-		c.JSON(500, gin.H{
-			"error": "Error updating chore timer",
-		})
+		c.JSON(500, "Error updating chore timer")
 		return
 	}
 
@@ -3364,9 +2890,7 @@ func (h *Handler) updateTimer(c *gin.Context) {
 		}
 	}
 
-	c.JSON(200, gin.H{
-		"message": "Chore timer updated successfully",
-	})
+	c.JSON(200, "Chore timer updated successfully")
 }
 
 func checkNextAssignee(chore *chModel.Chore, choresHistory []*chModel.ChoreHistory, performerID int) (*int, error) {
@@ -3531,10 +3055,10 @@ type NudgeRequest struct {
 //	@Security		JWTKeyAuth && APIKeyAuth
 //	@Param			id		path		int												true	"Chore ID"
 //	@Param			nudge	body		object{all_assignees=boolean,message=string}	true	"Nudge request"
-//	@Success		200		{object}	map[string]interface{}							"message: Nudge sent status"
-//	@Failure		400		{object}	map[string]string								"error: Invalid chore ID | Invalid request payload | Chore has no assignees | Cannot nudge yourself"
-//	@Failure		401		{object}	map[string]string								"error: Authentication failed"
-//	@Failure		404		{object}	map[string]string								"error: Chore not found"
+//	@Success		200		{object}	map[string]interface{}							"Nudge sent status"
+//	@Failure		400		{object}	string								"Invalid chore ID | Invalid request payload | Chore has no assignees | Cannot nudge yourself"
+//	@Failure		401		{object}	string								"Authentication failed"
+//	@Failure		404		{object}	string								"Chore not found"
 //	@Router			/chores/{id}/nudge [post]
 func (h *Handler) sendNudgeNotification(c *gin.Context) {
 	log := logging.FromContext(c)
@@ -3542,21 +3066,21 @@ func (h *Handler) sendNudgeNotification(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
 		log.Error("Failed to get current user from authentication context")
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication failed"})
+		c.JSON(http.StatusUnauthorized, "Authentication failed")
 		return
 	}
 
 	choreID, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		log.Error("Invalid chore ID", "error", err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid chore ID"})
+		c.JSON(http.StatusBadRequest, "Invalid chore ID")
 		return
 	}
 
 	var req NudgeRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		log.Error("Invalid request payload", "error", err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request payload"})
+		c.JSON(http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 
@@ -3564,7 +3088,7 @@ func (h *Handler) sendNudgeNotification(c *gin.Context) {
 	chore, err := h.choreRepo.GetChore(c, choreID, currentUser.ID)
 	if err != nil {
 		log.Error("Chore not found or access denied", "error", err, "choreID", choreID)
-		c.JSON(http.StatusNotFound, gin.H{"error": "Chore not found"})
+		c.JSON(http.StatusNotFound, "Chore not found")
 		return
 	}
 
@@ -3574,7 +3098,7 @@ func (h *Handler) sendNudgeNotification(c *gin.Context) {
 	if req.AllAssignees {
 		// Send to all assignees
 		if len(chore.Assignees) == 0 {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Chore has no assignees"})
+			c.JSON(http.StatusBadRequest, "Chore has no assignees")
 			return
 		}
 		for _, assignee := range chore.Assignees {
@@ -3583,7 +3107,7 @@ func (h *Handler) sendNudgeNotification(c *gin.Context) {
 	} else {
 		// Send to current assignee only
 		if chore.AssignedTo == nil || *chore.AssignedTo == 0 {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Chore has no current assignee"})
+			c.JSON(http.StatusBadRequest, "Chore has no current assignee")
 			return
 		}
 		targetUserIDs = []int{*chore.AssignedTo}
@@ -3598,7 +3122,7 @@ func (h *Handler) sendNudgeNotification(c *gin.Context) {
 	}
 
 	if len(filteredTargets) == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Cannot nudge yourself or no valid targets found"})
+		c.JSON(http.StatusBadRequest, "Cannot nudge yourself or no valid targets found")
 		return
 	}
 
@@ -3718,18 +3242,14 @@ func (h *Handler) undoChore(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
 		logger.Error("Failed to get current user from authentication context")
-		c.JSON(401, gin.H{
-			"error": "Authentication failed",
-		})
+		c.JSON(401, "Authentication failed")
 		return
 	}
 
 	rawID := c.Param("id")
 	choreID, err := strconv.Atoi(rawID)
 	if err != nil {
-		c.JSON(400, gin.H{
-			"error": "Invalid chore ID",
-		})
+		c.JSON(400, "Invalid chore ID")
 		return
 	}
 
@@ -3737,9 +3257,7 @@ func (h *Handler) undoChore(c *gin.Context) {
 	chore, err := h.choreRepo.GetChore(c, choreID, currentUser.ID)
 	if err != nil {
 		logger.Error("Failed to retrieve chore", "error", err)
-		c.JSON(500, gin.H{
-			"error": "Failed to retrieve chore",
-		})
+		c.JSON(500, "Failed to retrieve chore")
 		return
 	}
 
@@ -3748,14 +3266,10 @@ func (h *Handler) undoChore(c *gin.Context) {
 	lastAction, err := h.choreRepo.GetUserLastChoreAction(c, choreID, currentUser.ID, fiveMinutes)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			c.JSON(400, gin.H{
-				"error": "No recent action found to undo (actions can only be undone within 5 minutes)",
-			})
+			c.JSON(400, "No recent action found to undo (actions can only be undone within 5 minutes)")
 		} else {
 			logger.Error("Failed to get user's last action", "error", err)
-			c.JSON(500, gin.H{
-				"error": "Failed to check recent actions",
-			})
+			c.JSON(500, "Failed to check recent actions")
 		}
 		return
 	}
@@ -3793,9 +3307,7 @@ func (h *Handler) undoChore(c *gin.Context) {
 		previousDueDate = lastAction.DueDate
 
 	default:
-		c.JSON(400, gin.H{
-			"error": "Cannot undo this type of action",
-		})
+		c.JSON(400, "Cannot undo this type of action")
 		return
 	}
 
@@ -3803,9 +3315,7 @@ func (h *Handler) undoChore(c *gin.Context) {
 	err = h.choreRepo.UndoChoreAction(c, choreID, lastAction.ID, previousAssignedTo, previousDueDate)
 	if err != nil {
 		logger.Error("Failed to undo chore action", "error", err)
-		c.JSON(500, gin.H{
-			"error": "Failed to undo action",
-		})
+		c.JSON(500, "Failed to undo action")
 		return
 	}
 
@@ -3815,9 +3325,7 @@ func (h *Handler) undoChore(c *gin.Context) {
 			"status": chModel.ChoreStatusPendingApproval,
 		}); err != nil {
 			logger.Error("Failed to restore pending approval status", "error", err)
-			c.JSON(500, gin.H{
-				"error": "Failed to restore pending approval status",
-			})
+			c.JSON(500, "Failed to restore pending approval status")
 			return
 		}
 	}
@@ -3826,9 +3334,7 @@ func (h *Handler) undoChore(c *gin.Context) {
 	updatedChore, err := h.choreRepo.GetChore(c, choreID, currentUser.ID)
 	if err != nil {
 		logger.Error("Failed to retrieve updated chore", "error", err)
-		c.JSON(500, gin.H{
-			"error": "Failed to retrieve updated chore",
-		})
+		c.JSON(500, "Failed to retrieve updated chore")
 		return
 	}
 
@@ -3846,10 +3352,8 @@ func (h *Handler) undoChore(c *gin.Context) {
 		broadcaster.BroadcastChoreUpdated(updatedChore, &currentUser.User, changes, nil)
 	}
 
-	c.JSON(200, gin.H{
-		"message": fmt.Sprintf("Successfully undid %s action", getActionName(lastAction.Status)),
-		"res":     updatedChore,
-	})
+	c.JSON(200, updatedChore)
+	// "message": fmt.Sprintf("Successfully undid %s action", getActionName(lastAction.Status)), // TODO: Check if this message is needed.
 }
 
 func getActionName(status chModel.ChoreHistoryStatus) string {

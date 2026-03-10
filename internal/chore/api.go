@@ -48,7 +48,7 @@ func (h *API) GetAllChores(c *gin.Context) {
 	user := auth.MustCurrentUser(c)
 	chores, err := h.choreRepo.GetChores(c, user.CircleID, user.ID, false)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, err.Error())
 		return
 	}
 	c.JSON(http.StatusOK, chores)
@@ -61,13 +61,13 @@ func (h *API) CreateChore(c *gin.Context) {
 
 	if err := c.BindJSON(&choreRequest); err != nil {
 		log.Debugw("chore.api.CreateChore failed to bind JSON", "error", err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		c.JSON(http.StatusBadRequest, "Invalid request body")
 		return
 	}
 
 	// Validate required fields
 	if choreRequest.Name == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Chore name is required"})
+		c.JSON(http.StatusBadRequest, "Chore name is required")
 		return
 	}
 
@@ -78,7 +78,7 @@ func (h *API) CreateChore(c *gin.Context) {
 		if err != nil {
 			parsedDateSimple, errSimple := time.Parse("2006-01-02", choreRequest.DueDate)
 			if errSimple != nil {
-				c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid due date format. Use RFC3339 or YYYY-MM-DD"})
+				c.JSON(http.StatusBadRequest, "Invalid due date format. Use RFC3339 or YYYY-MM-DD")
 				return
 			}
 			// Set time to now UTC
@@ -87,7 +87,7 @@ func (h *API) CreateChore(c *gin.Context) {
 			err = nil
 		}
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid due date format. Use RFC3339 format"})
+			c.JSON(http.StatusBadRequest, "Invalid due date format. Use RFC3339 format")
 			return
 		}
 		nextDueDate = &parsedDate
@@ -96,7 +96,7 @@ func (h *API) CreateChore(c *gin.Context) {
 	circleUsers, err := h.circleRepo.GetCircleUsers(c, user.CircleID)
 	if err != nil {
 		log.Errorw("chore.api.CreateChore failed to get circle users", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get circle members"})
+		c.JSON(http.StatusInternalServerError, "Failed to get circle members")
 		return
 	}
 	createdBy := user.ID
@@ -112,7 +112,7 @@ func (h *API) CreateChore(c *gin.Context) {
 		}
 		if !found {
 			log.Errorw("chore.api.CreateChore specified user not found in circle", "userID", *choreRequest.CreatedBy)
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Specified user not found in circle"})
+			c.JSON(http.StatusBadRequest, "Specified user not found in circle")
 			return
 		}
 	}
@@ -135,7 +135,7 @@ func (h *API) CreateChore(c *gin.Context) {
 	id, err := h.choreRepo.CreateChore(c, chore)
 	if err != nil {
 		log.Errorw("chore.api.CreateChore failed to create chore", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error creating chore"})
+		c.JSON(http.StatusInternalServerError, "Error creating chore")
 		return
 	}
 
@@ -143,13 +143,14 @@ func (h *API) CreateChore(c *gin.Context) {
 	createdChore, err := h.choreRepo.GetChore(c, id, user.ID)
 	if err != nil {
 		log.Errorw("chore.api.CreateChore failed to fetch created chore", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error fetching created chore"})
+		c.JSON(http.StatusInternalServerError, "Error fetching created chore")
 		return
 	}
 
+	c.JSON(http.StatusCreated, createdChore)
 	h.eventProducer.ChoreCreated(c, user.WebhookURL, createdChore, &user.User)
 
-	c.JSON(http.StatusCreated, createdChore)
+	c.JSON(201, createdChore)
 }
 
 func (h *API) UpdateChore(c *gin.Context) {
@@ -161,13 +162,13 @@ func (h *API) UpdateChore(c *gin.Context) {
 	choreID, err := strconv.Atoi(choreIDRaw)
 	if err != nil {
 		log.Debugw("chore.api.UpdateChore failed to parse chore ID", "error", err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid chore ID"})
+		c.JSON(http.StatusBadRequest, "Invalid chore ID")
 		return
 	}
 
 	if err := c.BindJSON(&choreRequest); err != nil {
 		log.Debugw("chore.api.UpdateChore failed to bind JSON", "error", err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		c.JSON(http.StatusBadRequest, "Invalid request body")
 		return
 	}
 
@@ -175,27 +176,27 @@ func (h *API) UpdateChore(c *gin.Context) {
 	existingChore, err := h.choreRepo.GetChore(c, choreID, user.ID)
 	if err != nil {
 		log.Errorw("chore.api.UpdateChore failed to get chore", "error", err)
-		c.JSON(http.StatusNotFound, gin.H{"error": "Chore not found"})
+		c.JSON(http.StatusNotFound, "Chore not found")
 		return
 	}
 	// get circle members:
 	circleUsers, err := h.circleRepo.GetCircleUsers(c, user.CircleID)
 	if err != nil {
 		log.Errorw("chore.api.UpdateChore failed to get circle users", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get circle members"})
+		c.JSON(http.StatusInternalServerError, "Failed to get circle members")
 		return
 	}
 	// Check if user owns this chore
 	now := time.Now().UTC()
 	if err := existingChore.CanEdit(user.ID, circleUsers, &now); err != nil {
 		log.Debugw("chore.api.UpdateChore user does not own chore", "userID", user.ID, "choreCreatedBy", existingChore.CreatedBy)
-		c.JSON(http.StatusForbidden, gin.H{"error": "You can only update your own chores"})
+		c.JSON(http.StatusForbidden, "You can only update your own chores")
 		return
 	}
 
 	// Validate required fields
 	if choreRequest.Name == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Chore name is required"})
+		c.JSON(http.StatusBadRequest, "Chore name is required")
 		return
 	}
 
@@ -207,7 +208,7 @@ func (h *API) UpdateChore(c *gin.Context) {
 		if err != nil {
 			parsedDateSimple, errSimple := time.Parse("2006-01-02", choreRequest.DueDate)
 			if errSimple != nil {
-				c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid due date format. Use RFC3339 or YYYY-MM-DD"})
+				c.JSON(http.StatusBadRequest, "Invalid due date format. Use RFC3339 or YYYY-MM-DD")
 				return
 			}
 			// Set time to now UTC
@@ -216,7 +217,7 @@ func (h *API) UpdateChore(c *gin.Context) {
 			err = nil
 		}
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid due date format. Use RFC3339 format"})
+			c.JSON(http.StatusBadRequest, "Invalid due date format. Use RFC3339 format")
 			return
 		}
 		nextDueDate = &parsedDate
@@ -234,7 +235,7 @@ func (h *API) UpdateChore(c *gin.Context) {
 	err = h.choreRepo.UpdateChoreFields(c, choreID, updates)
 	if err != nil {
 		log.Errorw("chore.api.UpdateChore failed to update chore", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error updating chore"})
+		c.JSON(http.StatusInternalServerError, "Error updating chore")
 		return
 	}
 
@@ -242,7 +243,7 @@ func (h *API) UpdateChore(c *gin.Context) {
 	updatedChore, err := h.choreRepo.GetChore(c, choreID, user.ID)
 	if err != nil {
 		log.Errorw("chore.api.UpdateChore failed to fetch updated chore", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error fetching updated chore"})
+		c.JSON(http.StatusInternalServerError, "Error fetching updated chore")
 		return
 	}
 
@@ -381,11 +382,11 @@ func (h *API) GetCircleMembers(c *gin.Context) {
 	currentUser := auth.MustCurrentUser(c)
 	users, err := h.circleRepo.GetCircleUsers(c, currentUser.CircleID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get circle members"})
+		c.JSON(http.StatusInternalServerError, "Failed to get circle members")
 		return
 	}
 	if len(users) == 0 {
-		c.JSON(http.StatusNotFound, gin.H{"error": "No members found in the circle"})
+		c.JSON(http.StatusNotFound, "No members found in the circle")
 		return
 	}
 	c.JSON(http.StatusOK, users)
@@ -394,24 +395,24 @@ func (h *API) DeleteChore(c *gin.Context) {
 	choreIDRaw := c.Param("id")
 	choreID, err := strconv.Atoi(choreIDRaw)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid chore ID"})
+		c.JSON(http.StatusBadRequest, "Invalid chore ID")
 		return
 	}
 	currentUser := auth.MustCurrentUser(c)
 	chore, err := h.choreRepo.GetChore(c, choreID, currentUser.ID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Chore not found"})
+		c.JSON(http.StatusNotFound, "Chore not found")
 		return
 	}
 	if chore.CreatedBy != currentUser.ID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "You can only delete your own chores"})
+		c.JSON(http.StatusForbidden, "You can only delete your own chores")
 		return
 	}
 	if err := h.choreRepo.DeleteChore(c, choreID); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete chore"})
+		c.JSON(http.StatusInternalServerError, "Failed to delete chore")
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "Chore deleted successfully"})
+	c.JSON(http.StatusOK, "Chore deleted successfully")
 }
 
 func APIs(cfg *config.Config, api *API, r *gin.Engine, auth *jwt.GinJWTMiddleware, limiter *limiter.Limiter, userRepo *uRepo.UserRepository) {

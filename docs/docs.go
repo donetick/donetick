@@ -44,33 +44,24 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "res: array of chores",
+                        "description": "array of chores",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "array",
-                                "items": {
-                                    "$ref": "#/definitions/model.Chore"
-                                }
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.Chore"
                             }
                         }
                     },
                     "401": {
-                        "description": "error: Authentication failed",
+                        "description": "Authentication failed",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "500": {
-                        "description": "error: Failed to retrieve chores",
+                        "description": "Failed to retrieve chores",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     }
                 }
@@ -106,48 +97,33 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "message: Chore added successfully",
+                        "description": "Chore edited successfully",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "400": {
-                        "description": "error: Invalid request format | Invalid date | Assignee not found in circle | Assigned to not found in assignees",
+                        "description": "Invalid request format | Invalid date | Assignee not found in circle | Assigned to not found in assignees",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "401": {
-                        "description": "error: Authentication failed",
+                        "description": "Authentication failed",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "403": {
-                        "description": "error: You cannot edit this chore",
+                        "description": "You cannot edit this chore",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "500": {
-                        "description": "error: Failed to retrieve chore | Error adding chore | Error adding subtasks",
+                        "description": "Failed to retrieve chore | Error adding chore | Error adding subtasks",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     }
                 }
@@ -183,39 +159,27 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "res: created chore ID",
+                        "description": "created chore ID",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "integer"
-                            }
+                            "type": "integer"
                         }
                     },
                     "400": {
-                        "description": "error: Invalid request format | Assignee not found in circle | Invalid date",
+                        "description": "Invalid request format | Assignee not found in circle | Invalid date",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "401": {
-                        "description": "error: Authentication failed",
+                        "description": "Authentication failed",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "500": {
-                        "description": "error: Failed to create chore | Error adding labels | Error adding chore assignees",
+                        "description": "Failed to create chore | Error adding labels | Error adding chore assignees",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     }
                 }
@@ -242,33 +206,24 @@ const docTemplate = `{
                 "summary": "Get archived chores",
                 "responses": {
                     "200": {
-                        "description": "res: array of archived chores",
+                        "description": "array of archived chores",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "array",
-                                "items": {
-                                    "$ref": "#/definitions/model.Chore"
-                                }
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.Chore"
                             }
                         }
                     },
                     "401": {
-                        "description": "error: Authentication failed",
+                        "description": "Authentication failed",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "500": {
-                        "description": "error: Failed to retrieve archived chores",
+                        "description": "Failed to retrieve archived chores",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     }
                 }
@@ -309,42 +264,30 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "res: array of chore history entries",
+                        "description": "array of chore history entries",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "array",
-                                "items": {
-                                    "$ref": "#/definitions/model.ChoreHistory"
-                                }
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.ChoreHistory"
                             }
                         }
                     },
                     "400": {
-                        "description": "error: Invalid duration",
+                        "description": "Invalid duration",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "401": {
-                        "description": "error: Authentication failed",
+                        "description": "Authentication failed",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "500": {
-                        "description": "error: Failed to fetch user's chore history",
+                        "description": "Failed to fetch user's chore history",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     }
                 }
@@ -380,48 +323,33 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "res: chore object",
+                        "description": "chore object",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "$ref": "#/definitions/model.Chore"
-                            }
+                            "$ref": "#/definitions/model.Chore"
                         }
                     },
                     "400": {
-                        "description": "error: Invalid chore ID",
+                        "description": "Invalid chore ID",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "401": {
-                        "description": "error: Authentication failed",
+                        "description": "Authentication failed",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "403": {
-                        "description": "error: You are not allowed to view this chore",
+                        "description": "You are not allowed to view this chore",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "500": {
-                        "description": "error: Failed to retrieve chore",
+                        "description": "Failed to retrieve chore",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     }
                 }
@@ -455,48 +383,33 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "message: Chore deleted successfully",
+                        "description": "Chore deleted successfully",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "400": {
-                        "description": "error: Invalid ID",
+                        "description": "Invalid ID",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "401": {
-                        "description": "error: Authentication failed",
+                        "description": "Authentication failed",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "403": {
-                        "description": "error: You are not allowed to delete this chore",
+                        "description": "You are not allowed to delete this chore",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "500": {
-                        "description": "error: Failed to retrieve chore | Failed to delete chore",
+                        "description": "Failed to retrieve chore | Failed to delete chore",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     }
                 }
@@ -532,48 +445,33 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "res: updated chore",
+                        "description": "updated chore",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "$ref": "#/definitions/model.Chore"
-                            }
+                            "$ref": "#/definitions/model.Chore"
                         }
                     },
                     "400": {
-                        "description": "error: Invalid ID | Chore is not pending approval",
+                        "description": "Invalid ID | Chore is not pending approval",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "401": {
-                        "description": "error: Authentication failed",
+                        "description": "Authentication failed",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "403": {
-                        "description": "error: Only admins can approve chores",
+                        "description": "Only admins can approve chores",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "500": {
-                        "description": "error: Failed to retrieve chore | Error approving chore",
+                        "description": "Failed to retrieve chore | Error approving chore",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     }
                 }
@@ -609,39 +507,27 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "message: Chore archived successfully",
+                        "description": "Chore archived successfully",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "400": {
-                        "description": "error: Invalid ID",
+                        "description": "Invalid ID",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "401": {
-                        "description": "error: Authentication failed",
+                        "description": "Authentication failed",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "500": {
-                        "description": "error: Error archiving chore",
+                        "description": "Error archiving chore",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     }
                 }
@@ -694,48 +580,33 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "res: updated chore",
+                        "description": "updated chore",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "$ref": "#/definitions/model.Chore"
-                            }
+                            "$ref": "#/definitions/model.Chore"
                         }
                     },
                     "400": {
-                        "description": "error: Invalid ID | Invalid request | Assignee not found in assignees",
+                        "description": "Invalid ID | Invalid request | Assignee not found in assignees",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "401": {
-                        "description": "error: Authentication failed",
+                        "description": "Authentication failed",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "403": {
-                        "description": "error: You cannot edit this chore",
+                        "description": "You cannot edit this chore",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "500": {
-                        "description": "error: Failed to retrieve chore | Error updating assignee",
+                        "description": "Failed to retrieve chore | Error updating assignee",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     }
                 }
@@ -771,37 +642,27 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "res: detailed chore information",
+                        "description": "detailed chore information",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/model.ChoreDetail"
                         }
                     },
                     "400": {
-                        "description": "error: Invalid ID",
+                        "description": "Invalid ID",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "401": {
-                        "description": "error: Authentication failed",
+                        "description": "Authentication failed",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "500": {
-                        "description": "error: Failed to fetch chore details",
+                        "description": "Failed to fetch chore details",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     }
                 }
@@ -859,48 +720,33 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "res: updated chore",
+                        "description": "updated chore",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "$ref": "#/definitions/model.Chore"
-                            }
+                            "$ref": "#/definitions/model.Chore"
                         }
                     },
                     "400": {
-                        "description": "error: Invalid ID | Invalid date | User is not assigned to chore | Chore is out of completion window",
+                        "description": "Invalid ID | Invalid date | User is not assigned to chore | Chore is out of completion window",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "401": {
-                        "description": "error: Authentication failed",
+                        "description": "Authentication failed",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "403": {
-                        "description": "error: You are not allowed to complete this action",
+                        "description": "You are not allowed to complete this action",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "500": {
-                        "description": "error: Failed to retrieve chore | Error completing chore",
+                        "description": "Failed to retrieve chore | Error completing chore",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     }
                 }
@@ -953,48 +799,33 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "res: updated chore",
+                        "description": "updated chore",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "$ref": "#/definitions/model.Chore"
-                            }
+                            "$ref": "#/definitions/model.Chore"
                         }
                     },
                     "400": {
-                        "description": "error: Invalid ID | Invalid request | Invalid date",
+                        "description": "Invalid ID | Invalid request | Invalid date",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "401": {
-                        "description": "error: Authentication failed",
+                        "description": "Authentication failed",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "403": {
-                        "description": "error: You cannot edit this chore",
+                        "description": "You cannot edit this chore",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "500": {
-                        "description": "error: Failed to retrieve chore | Error updating due date",
+                        "description": "Failed to retrieve chore | Error updating due date",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     }
                 }
@@ -1030,33 +861,24 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "res: array of chore history entries",
+                        "description": "array of chore history entries",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "array",
-                                "items": {
-                                    "$ref": "#/definitions/model.ChoreHistory"
-                                }
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.ChoreHistory"
                             }
                         }
                     },
                     "400": {
-                        "description": "error: Invalid ID",
+                        "description": "Invalid ID",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "500": {
-                        "description": "error: Failed to fetch chore history",
+                        "description": "Failed to fetch chore history",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     }
                 }
@@ -1119,48 +941,33 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "res: updated history entry",
+                        "description": "updated history entry",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "$ref": "#/definitions/model.ChoreHistory"
-                            }
+                            "$ref": "#/definitions/model.ChoreHistory"
                         }
                     },
                     "400": {
-                        "description": "error: Invalid Chore ID | Invalid History ID | Invalid request",
+                        "description": "Invalid Chore ID | Invalid History ID | Invalid request",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "401": {
-                        "description": "error: Authentication failed",
+                        "description": "Authentication failed",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "403": {
-                        "description": "error: You are not allowed to modify this history",
+                        "description": "You are not allowed to modify this history",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "500": {
-                        "description": "error: Failed to fetch chore history entry | Error updating history",
+                        "description": "Failed to fetch chore history entry | Error updating history",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     }
                 }
@@ -1201,48 +1008,33 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "message: History deleted successfully",
+                        "description": "History deleted successfully",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "400": {
-                        "description": "error: Invalid Chore ID | Invalid History ID",
+                        "description": "Invalid Chore ID | Invalid History ID",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "401": {
-                        "description": "error: Authentication failed",
+                        "description": "Authentication failed",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "403": {
-                        "description": "error: You are not allowed to delete this history",
+                        "description": "You are not allowed to delete this history",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "500": {
-                        "description": "error: Failed to fetch chore history entry | Error deleting history",
+                        "description": "Failed to fetch chore history entry | Error deleting history",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     }
                 }
@@ -1295,37 +1087,28 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "message: Nudge sent status",
+                        "description": "Nudge sent status",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
                         }
                     },
                     "400": {
-                        "description": "error: Invalid chore ID | Invalid request payload | Chore has no assignees | Cannot nudge yourself",
+                        "description": "Invalid chore ID | Invalid request payload | Chore has no assignees | Cannot nudge yourself",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "401": {
-                        "description": "error: Authentication failed",
+                        "description": "Authentication failed",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "404": {
-                        "description": "error: Chore not found",
+                        "description": "Chore not found",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     }
                 }
@@ -1361,46 +1144,34 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "res: {duration, status, timerUpdatedAt}",
+                        "description": "{duration, status, timerUpdatedAt}",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
                         }
                     },
                     "400": {
-                        "description": "error: Invalid ID | No active time session found for this chore",
+                        "description": "Invalid ID | No active time session found for this chore",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "401": {
-                        "description": "error: Authentication failed",
+                        "description": "Authentication failed",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "403": {
-                        "description": "error: You are not allowed to pause this chore",
+                        "description": "You are not allowed to pause this chore",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "500": {
-                        "description": "error: Failed to retrieve chore | Error getting active time session",
+                        "description": "Failed to retrieve chore | Error getting active time session",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     }
                 }
@@ -1450,48 +1221,33 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "message: Priority updated successfully",
+                        "description": "Priority updated successfully",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "400": {
-                        "description": "error: Invalid ID | Invalid request",
+                        "description": "Invalid ID | Invalid request",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "401": {
-                        "description": "error: Authentication failed",
+                        "description": "Authentication failed",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "403": {
-                        "description": "error: You are not allowed to edit this chore",
+                        "description": "You are not allowed to edit this chore",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "500": {
-                        "description": "error: Failed to retrieve chore | Error updating priority",
+                        "description": "Failed to retrieve chore | Error updating priority",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     }
                 }
@@ -1540,46 +1296,33 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "res: updated chore, message: Chore rejected successfully",
+                        "description": "updated chore, Chore rejected successfully",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/model.Chore"
                         }
                     },
                     "400": {
-                        "description": "error: Invalid ID | Chore is not pending approval",
+                        "description": "Invalid ID | Chore is not pending approval",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "401": {
-                        "description": "error: Authentication failed",
+                        "description": "Authentication failed",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "403": {
-                        "description": "error: Only admins can reject chores",
+                        "description": "Only admins can reject chores",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "500": {
-                        "description": "error: Failed to retrieve chore | Error rejecting chore",
+                        "description": "Failed to retrieve chore | Error rejecting chore",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     }
                 }
@@ -1615,39 +1358,27 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "res: updated chore",
+                        "description": "updated chore",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "$ref": "#/definitions/model.Chore"
-                            }
+                            "$ref": "#/definitions/model.Chore"
                         }
                     },
                     "400": {
-                        "description": "error: Invalid ID",
+                        "description": "Invalid ID",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "401": {
-                        "description": "error: Authentication failed",
+                        "description": "Authentication failed",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "500": {
-                        "description": "error: Failed to retrieve chore | Error scheduling next due date | Error completing chore",
+                        "description": "Failed to retrieve chore | Error scheduling next due date | Error completing chore",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     }
                 }
@@ -1683,46 +1414,34 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "res: {timerUpdatedAt, status, duration}",
+                        "description": "{timerUpdatedAt, status, duration}",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
                         }
                     },
                     "400": {
-                        "description": "error: Invalid ID | Chore is not in a state that can be started",
+                        "description": "Invalid ID | Chore is not in a state that can be started",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "401": {
-                        "description": "error: Authentication failed",
+                        "description": "Authentication failed",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "403": {
-                        "description": "error: You are not allowed to start this chore",
+                        "description": "You are not allowed to start this chore",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "500": {
-                        "description": "error: Failed to retrieve chore | Error creating time session",
+                        "description": "Failed to retrieve chore | Error creating time session",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     }
                 }
@@ -1775,48 +1494,33 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "message: Chore status updated successfully",
+                        "description": "Chore status updated successfully",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "400": {
-                        "description": "error: Invalid ID | Invalid request",
+                        "description": "Invalid ID | Invalid request",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "401": {
-                        "description": "error: Authentication failed",
+                        "description": "Authentication failed",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "403": {
-                        "description": "error: You cannot update the status of this chore",
+                        "description": "You cannot update the status of this chore",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "500": {
-                        "description": "error: Failed to retrieve chore | Error updating chore status",
+                        "description": "Failed to retrieve chore | Error updating chore status",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     }
                 }
@@ -1879,30 +1583,21 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "error: Invalid Chore ID | Invalid request | User is not assigned to chore",
+                        "description": "Invalid Chore ID | Invalid request | User is not assigned to chore",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "401": {
-                        "description": "error: Authentication failed",
+                        "description": "Authentication failed",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "500": {
-                        "description": "error: Failed to retrieve chore | Error getting subtask",
+                        "description": "Failed to retrieve chore | Error getting subtask",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     }
                 }
@@ -1944,60 +1639,42 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "res: array of time sessions",
+                        "description": "array of time sessions",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "array",
-                                "items": {
-                                    "$ref": "#/definitions/model.TimeSession"
-                                }
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.TimeSession"
                             }
                         }
                     },
                     "400": {
-                        "description": "error: Invalid ID | Invalid choreHistoryId parameter",
+                        "description": "Invalid ID | Invalid choreHistoryId parameter",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "401": {
-                        "description": "error: Authentication failed",
+                        "description": "Authentication failed",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "403": {
-                        "description": "error: You are not allowed to view time sessions for this chore",
+                        "description": "You are not allowed to view time sessions for this chore",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "404": {
-                        "description": "error: No time session found",
+                        "description": "No time session found",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "500": {
-                        "description": "error: Failed to retrieve chore | Error getting chore time session",
+                        "description": "Failed to retrieve chore | Error getting chore time session",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     }
                 }
@@ -2048,48 +1725,33 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "message: Chore timer updated successfully",
+                        "description": "Chore timer updated successfully",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "400": {
-                        "description": "error: Invalid ID | Invalid request",
+                        "description": "Invalid ID | Invalid request",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "401": {
-                        "description": "error: Authentication failed",
+                        "description": "Authentication failed",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "403": {
-                        "description": "error: You cannot update the timer of this chore",
+                        "description": "You cannot update the timer of this chore",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "500": {
-                        "description": "error: Failed to retrieve chore | Error updating chore timer",
+                        "description": "Failed to retrieve chore | Error updating chore timer",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     }
                 }
@@ -2125,46 +1787,34 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "res: {timerUpdatedAt, status, duration}",
+                        "description": "{timerUpdatedAt, status, duration}",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
                         }
                     },
                     "400": {
-                        "description": "error: Invalid ID | No active time session found for this chore",
+                        "description": "Invalid ID | No active time session found for this chore",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "401": {
-                        "description": "error: Authentication failed",
+                        "description": "Authentication failed",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "403": {
-                        "description": "error: You are not allowed to reset timer for this chore",
+                        "description": "You are not allowed to reset timer for this chore",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "500": {
-                        "description": "error: Failed to retrieve chore | Error updating time session",
+                        "description": "Failed to retrieve chore | Error updating time session",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     }
                 }
@@ -2227,48 +1877,33 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "res: updated time session",
+                        "description": "updated time session",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "$ref": "#/definitions/model.TimeSession"
-                            }
+                            "$ref": "#/definitions/model.TimeSession"
                         }
                     },
                     "400": {
-                        "description": "error: Invalid chore ID | Invalid session ID | Invalid request body | Time session does not belong to the specified chore",
+                        "description": "Invalid chore ID | Invalid session ID | Invalid request body | Time session does not belong to the specified chore",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "401": {
-                        "description": "error: Authentication failed",
+                        "description": "Authentication failed",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "403": {
-                        "description": "error: You are not allowed to modify time sessions for this chore",
+                        "description": "You are not allowed to modify time sessions for this chore",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "500": {
-                        "description": "error: Failed to retrieve chore | Error getting time session | Error updating time session",
+                        "description": "Failed to retrieve chore | Error getting time session | Error updating time session",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     }
                 }
@@ -2309,48 +1944,33 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "message: Time session deleted successfully",
+                        "description": "Time session deleted successfully",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "400": {
-                        "description": "error: Invalid chore ID | Invalid session ID | Time session does not belong to the specified chore",
+                        "description": "Invalid chore ID | Invalid session ID | Time session does not belong to the specified chore",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "401": {
-                        "description": "error: Authentication failed",
+                        "description": "Authentication failed",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "403": {
-                        "description": "error: You are not allowed to delete time sessions for this chore",
+                        "description": "You are not allowed to delete time sessions for this chore",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "500": {
-                        "description": "error: Failed to retrieve chore | Error getting time session | Error deleting time session",
+                        "description": "Failed to retrieve chore | Error getting time session | Error deleting time session",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     }
                 }
@@ -2386,39 +2006,27 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "message: Chore unarchived successfully",
+                        "description": "Chore unarchived successfully",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "400": {
-                        "description": "error: Invalid ID",
+                        "description": "Invalid ID",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "401": {
-                        "description": "error: Authentication failed",
+                        "description": "Authentication failed",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     },
                     "500": {
-                        "description": "error: Error unarchiving chore",
+                        "description": "Error unarchiving chore",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "type": "string"
                         }
                     }
                 }
@@ -2615,6 +2223,79 @@ const docTemplate = `{
             "properties": {
                 "userId": {
                     "description": "The user this assignee is for",
+                    "type": "integer"
+                }
+            }
+        },
+        "model.ChoreDetail": {
+            "type": "object",
+            "properties": {
+                "assignedTo": {
+                    "type": "integer"
+                },
+                "completionWindow": {
+                    "type": "integer"
+                },
+                "createdBy": {
+                    "type": "integer"
+                },
+                "deadlineOffset": {
+                    "type": "integer"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "duration": {
+                    "description": "Total duration in seconds for the chore",
+                    "type": "integer"
+                },
+                "frequencyType": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "isActive": {
+                    "type": "boolean"
+                },
+                "lastCompletedBy": {
+                    "type": "integer"
+                },
+                "lastCompletedDate": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "nextDueDate": {
+                    "type": "string"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "priority": {
+                    "type": "integer"
+                },
+                "projectId": {
+                    "type": "integer"
+                },
+                "startTime": {
+                    "type": "string"
+                },
+                "status": {
+                    "$ref": "#/definitions/model.Status"
+                },
+                "subTasks": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.SubTask"
+                    }
+                },
+                "timerUpdatedAt": {
+                    "description": "When the chore was last started",
+                    "type": "string"
+                },
+                "totalCompletedCount": {
                     "type": "integer"
                 }
             }

@@ -107,8 +107,8 @@ type JwtConfig struct {
 
 type ServerConfig struct {
 	Port             int           `mapstructure:"port" yaml:"port"`
-	RatePeriod       time.Duration `mapstructure:"rate_period" yaml:"rate_period"`
-	RateLimit        int           `mapstructure:"rate_limit" yaml:"rate_limit"`
+	RatePeriod       time.Duration `mapstructure:"rate_period" yaml:"rate_period" default:"60s"`
+	RateLimit        int           `mapstructure:"rate_limit" yaml:"rate_limit" default:"300"`
 	ReadTimeout      time.Duration `mapstructure:"read_timeout" yaml:"read_timeout"`
 	WriteTimeout     time.Duration `mapstructure:"write_timeout" yaml:"write_timeout"`
 	WebhookTimeout   time.Duration `mapstructure:"webhook_timeout" yaml:"webhook_timeout"`
@@ -166,11 +166,12 @@ type FCMConfig struct {
 	ProjectID       string `json:"project_id" mapstructure:"project_id"`
 }
 type EmailConfig struct {
-	Email   string `mapstructure:"email"`
-	Key     string `mapstructure:"key"`
-	Host    string `mapstructure:"host"`
-	Port    int    `mapstructure:"port"`
-	AppHost string `mapstructure:"appHost"`
+	Email   	string `mapstructure:"email"`
+	User		string `mapstructure:"user"`
+	Key     	string `mapstructure:"key"`
+	Host    	string `mapstructure:"host"`
+	Port    	int    `mapstructure:"port"`
+	AppHost 	string `mapstructure:"appHost"`
 }
 
 type OAuth2Config struct {

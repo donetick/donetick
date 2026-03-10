@@ -147,6 +147,8 @@ func (h *API) CreateChore(c *gin.Context) {
 		return
 	}
 
+	h.eventProducer.ChoreCreated(c, user.WebhookURL, createdChore, &user.User)
+
 	c.JSON(http.StatusCreated, createdChore)
 }
 

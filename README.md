@@ -91,8 +91,13 @@ Donetick is an open-source, user-friendly app designed to help you organize task
    ```bash
    docker run -v /path/to/host/data:/donetick-data -p 2021:2021 \
      -e DT_ENV=selfhosted \
-     -e DT_SQLITE_PATH=/donetick-data/donetick.db \ 
-     -e TZ=Etc/UTC \
+     -e DT_SQLITE_PATH=/donetick-data/donetick.db \
+     -e TZ=Etc/UTC \  
+     --health-cmd "wget --no-verbose --tries=1 --spider http://localhost:2021/api/v1/health || exit 1" \
+     --health-start-period 1m \
+     --health-timeout 5s \
+     --health-interval 1m \
+     --health-retries 3 \
      donetick/donetick
    ```
 
@@ -113,6 +118,12 @@ services:
       - DT_ENV=selfhosted
       - DT_SQLITE_PATH=/donetick-data/donetick.db
       - TZ=Etc/UTC
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider http://localhost:2021/api/v1/health || exit 1
+      start_period: 1m
+      timeout: 5s
+      interval: 1m
+      retries: 3
       
 ```
 
@@ -152,6 +163,11 @@ services:
    ```bash
    npm run build-selfhosted
    ```
+5. If you want to work on the frontend you can run:
+   ```bash
+   npm start
+   ```
+
 
 ### Build the application
 
@@ -172,7 +188,8 @@ services:
    rm -rf ./frontend/dist
    cp -r ../donetick-frontend/dist ./frontend
    ```
-5. Run the app locally:
+5. Set a valid JWT secret in `config/selfhosted.yaml`. It must be a 32 characters long string.
+6. Run the app locally:
    ```bash
    go run .
    ```

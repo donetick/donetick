@@ -11,14 +11,14 @@ import (
 )
 
 type EmailSender struct {
-	client  *gomail.Dialer
-	appHost string
+	client   *gomail.Dialer
+	appHost  string
 	fromMail string
 }
 
 func NewEmailSender(conf *config.Config) *EmailSender {
 
-    // if no user is set, use the email as user
+	// if no user is set, use the email as user
 	if conf.EmailConfig.User == "" {
 		conf.EmailConfig.User = conf.EmailConfig.Email
 	}
@@ -29,9 +29,9 @@ func NewEmailSender(conf *config.Config) *EmailSender {
 
 	// auth := smtp.PlainAuth("", conf.EmailConfig.Email, conf.EmailConfig.Password, host)
 	return &EmailSender{
-        fromMail: conf.EmailConfig.Email,
-		client:  client,
-		appHost: conf.EmailConfig.AppHost,
+		fromMail: conf.EmailConfig.Email,
+		client:   client,
+		appHost:  conf.EmailConfig.AppHost,
 	}
 }
 

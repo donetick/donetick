@@ -90,7 +90,7 @@ func NewHandler(cr *chRepo.ChoreRepository, circleRepo *cRepo.CircleRepository, 
 //	@Produce		json
 //	@Security		JWTKeyAuth || APIKeyAuth
 //	@Param			includeArchived	query		boolean						false	"Include archived chores"
-//	@Success		200				{object}	map[string][]model.Chore	"res: array of chores"
+//	@Success		200				{object}	map[string][]chModel.Chore	"res: array of chores"
 //	@Failure		401				{object}	map[string]string			"error: Authentication failed"
 //	@Failure		500				{object}	map[string]string			"error: Failed to retrieve chores"
 //	@Router			/chores [get]
@@ -132,7 +132,7 @@ func (h *Handler) getChores(c *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Security		JWTKeyAuth || APIKeyAuth
-//	@Success		200	{object}	map[string][]model.Chore	"res: array of archived chores"
+//	@Success		200	{object}	map[string][]chModel.Chore	"res: array of archived chores"
 //	@Failure		401	{object}	map[string]string			"error: Authentication failed"
 //	@Failure		500	{object}	map[string]string			"error: Failed to retrieve archived chores"
 //	@Router			/chores/archived [get]
@@ -169,7 +169,7 @@ func (h *Handler) getArchivedChores(c *gin.Context) {
 //	@Produce		json
 //	@Security		JWTKeyAuth || APIKeyAuth
 //	@Param			id	path		int						true	"Chore ID"
-//	@Success		200	{object}	map[string]model.Chore	"res: chore object"
+//	@Success		200	{object}	map[string]chModel.Chore	"res: chore object"
 //	@Failure		400	{object}	map[string]string		"error: Invalid chore ID"
 //	@Failure		401	{object}	map[string]string		"error: Authentication failed"
 //	@Failure		403	{object}	map[string]string		"error: You are not allowed to view this chore"
@@ -231,7 +231,7 @@ func (h *Handler) getChore(c *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Security		JWTKeyAuth || APIKeyAuth
-//	@Param			chore	body		model.ChoreReq		true	"Chore creation request"
+//	@Param			chore	body		chModel.ChoreReq		true	"Chore creation request"
 //	@Success		200		{object}	map[string]int		"res: created chore ID"
 //	@Failure		400		{object}	map[string]string	"error: Invalid request format | Assignee not found in circle | Invalid date"
 //	@Failure		401		{object}	map[string]string	"error: Authentication failed"
@@ -410,7 +410,7 @@ func (h *Handler) createChore(c *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Security		JWTKeyAuth || APIKeyAuth
-//	@Param			chore	body		model.ChoreReq		true	"Chore update request"
+//	@Param			chore	body		chModel.ChoreReq		true	"Chore update request"
 //	@Success		200		{object}	map[string]string	"message: Chore added successfully"
 //	@Failure		400		{object}	map[string]string	"error: Invalid request format | Invalid date | Assignee not found in circle | Assigned to not found in assignees"
 //	@Failure		401		{object}	map[string]string	"error: Authentication failed"
@@ -888,7 +888,7 @@ func (h *Handler) deleteChore(c *gin.Context) {
 //	@Security		JWTKeyAuth || APIKeyAuth
 //	@Param			id			path		int										true	"Chore ID"
 //	@Param			assignee	body		object{assignee=int,updatedAt=string}	true	"Assignee update request"
-//	@Success		200			{object}	map[string]model.Chore					"res: updated chore"
+//	@Success		200			{object}	map[string]chModel.Chore					"res: updated chore"
 //	@Failure		400			{object}	map[string]string						"error: Invalid ID | Invalid request | Assignee not found in assignees"
 //	@Failure		401			{object}	map[string]string						"error: Authentication failed"
 //	@Failure		403			{object}	map[string]string						"error: You cannot edit this chore"
@@ -1373,7 +1373,7 @@ func (h *Handler) ResetChoreTimer(c *gin.Context) {
 //	@Produce		json
 //	@Security		JWTKeyAuth || APIKeyAuth
 //	@Param			id	path		int						true	"Chore ID"
-//	@Success		200	{object}	map[string]model.Chore	"res: updated chore"
+//	@Success		200	{object}	map[string]chModel.Chore	"res: updated chore"
 //	@Failure		400	{object}	map[string]string		"error: Invalid ID"
 //	@Failure		401	{object}	map[string]string		"error: Authentication failed"
 //	@Failure		500	{object}	map[string]string		"error: Failed to retrieve chore | Error scheduling next due date | Error completing chore"
@@ -1473,7 +1473,7 @@ func (h *Handler) skipChore(c *gin.Context) {
 //	@Security		JWTKeyAuth || APIKeyAuth
 //	@Param			id		path		int										true	"Chore ID"
 //	@Param			dueDate	body		object{dueDate=string,updatedAt=string}	true	"Due date update request"
-//	@Success		200		{object}	map[string]model.Chore					"res: updated chore"
+//	@Success		200		{object}	map[string]chModel.Chore					"res: updated chore"
 //	@Failure		400		{object}	map[string]string						"error: Invalid ID | Invalid request | Invalid date"
 //	@Failure		401		{object}	map[string]string						"error: Authentication failed"
 //	@Failure		403		{object}	map[string]string						"error: You cannot edit this chore"
@@ -1713,7 +1713,7 @@ func (h *Handler) UnarchiveChore(c *gin.Context) {
 //	@Param			id				path		int									true	"Chore ID"
 //	@Param			completedDate	query		string								false	"Completion date in RFC3339 format (defaults to now)"
 //	@Param			completion		body		object{note=string,completedBy=int}	false	"Completion details"
-//	@Success		200				{object}	map[string]model.Chore				"res: updated chore"
+//	@Success		200				{object}	map[string]chModel.Chore				"res: updated chore"
 //	@Failure		400				{object}	map[string]string					"error: Invalid ID | Invalid date | User is not assigned to chore | Chore is out of completion window"
 //	@Failure		401				{object}	map[string]string					"error: Authentication failed"
 //	@Failure		403				{object}	map[string]string					"error: You are not allowed to complete this action"
@@ -1988,7 +1988,7 @@ func authorizeChoreCompletionForUser(h *Handler, c *gin.Context, currentUser *uM
 //	@Produce		json
 //	@Security		JWTKeyAuth || APIKeyAuth
 //	@Param			id	path		int								true	"Chore ID"
-//	@Success		200	{object}	map[string][]model.ChoreHistory	"res: array of chore history entries"
+//	@Success		200	{object}	map[string][]chModel.ChoreHistory	"res: array of chore history entries"
 //	@Failure		400	{object}	map[string]string				"error: Invalid ID"
 //	@Failure		500	{object}	map[string]string				"error: Failed to fetch chore history"
 //	@Router			/chores/{id}/history [get]
@@ -2075,7 +2075,7 @@ func (h *Handler) GetChoreDetail(c *gin.Context) {
 //	@Param			id			path		int														true	"Chore ID"
 //	@Param			history_id	path		int														true	"History ID"
 //	@Param			history		body		object{performedAt=string,dueDate=string,notes=string}	true	"History modification request"
-//	@Success		200			{object}	map[string]model.ChoreHistory							"res: updated history entry"
+//	@Success		200			{object}	map[string]chModel.ChoreHistory							"res: updated history entry"
 //	@Failure		400			{object}	map[string]string										"error: Invalid Chore ID | Invalid History ID | Invalid request"
 //	@Failure		401			{object}	map[string]string										"error: Authentication failed"
 //	@Failure		403			{object}	map[string]string										"error: You are not allowed to modify this history"
@@ -2267,7 +2267,7 @@ func (h *Handler) updatePriority(c *gin.Context) {
 //	@Security		JWTKeyAuth || APIKeyAuth
 //	@Param			limit	query		int								false	"Number of days to retrieve history (default: 7)"
 //	@Param			members	query		boolean							false	"Include other circle members' history"
-//	@Success		200		{object}	map[string][]model.ChoreHistory	"res: array of chore history entries"
+//	@Success		200		{object}	map[string][]chModel.ChoreHistory	"res: array of chore history entries"
 //	@Failure		400		{object}	map[string]string				"error: Invalid duration"
 //	@Failure		401		{object}	map[string]string				"error: Authentication failed"
 //	@Failure		500		{object}	map[string]string				"error: Failed to fetch user's chore history"
@@ -2867,7 +2867,7 @@ func (h *Handler) DeleteTimeSession(c *gin.Context) {
 //	@Produce		json
 //	@Security		JWTKeyAuth || APIKeyAuth
 //	@Param			id	path		int						true	"Chore ID"
-//	@Success		200	{object}	map[string]model.Chore	"res: updated chore"
+//	@Success		200	{object}	map[string]chModel.Chore	"res: updated chore"
 //	@Failure		400	{object}	map[string]string		"error: Invalid ID | Chore is not pending approval"
 //	@Failure		401	{object}	map[string]string		"error: Authentication failed"
 //	@Failure		403	{object}	map[string]string		"error: Only admins can approve chores"

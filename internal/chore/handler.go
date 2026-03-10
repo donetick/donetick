@@ -416,7 +416,7 @@ func (h *Handler) createChore(c *gin.Context) {
 //	@Security		JWTKeyAuth
 //	@Security		APIKeyAuth
 //	@Param			chore	body		chModel.ChoreReq	true	"Chore update request"
-//	@Success		200		{object}	map[string]string	"message: Chore added successfully"
+//	@Success		200		{object}	map[string]string	"message: Chore updated successfully"
 //	@Failure		400		{object}	map[string]string	"error: Invalid request format | Invalid date | Assignee not found in circle | Assigned to not found in assignees"
 //	@Failure		401		{object}	map[string]string	"error: Authentication failed"
 //	@Failure		403		{object}	map[string]string	"error: You cannot edit this chore"
@@ -727,7 +727,7 @@ func (h *Handler) editChore(c *gin.Context) {
 	}
 
 	c.JSON(200, gin.H{
-		"message": "Chore added successfully",
+		"message": "Chore updated successfully",
 	})
 }
 

@@ -42,14 +42,14 @@ func (h *Handler) RegisterDeviceToken(c *gin.Context) {
 	log := logging.FromContext(c)
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
+		c.JSON(http.StatusUnauthorized, "User not found")
 		return
 	}
 
 	var req RegisterDeviceTokenRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		log.Error("Invalid request payload", "error", err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request payload"})
+		c.JSON(http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 
@@ -74,7 +74,7 @@ func (h *Handler) RegisterDeviceToken(c *gin.Context) {
 			return
 		}
 
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to register device token"})
+		c.JSON(http.StatusInternalServerError, "Failed to register device token")
 		return
 	}
 
@@ -91,20 +91,20 @@ func (h *Handler) UnregisterDeviceToken(c *gin.Context) {
 	log := logging.FromContext(c)
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
+		c.JSON(http.StatusUnauthorized, "User not found")
 		return
 	}
 
 	var req UnregisterDeviceTokenRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		log.Error("Invalid request payload", "error", err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request payload"})
+		c.JSON(http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 
 	// Must provide either deviceId or token
 	if req.DeviceID == "" && req.Token == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Either deviceId or token must be provided"})
+		c.JSON(http.StatusBadRequest, "Either deviceId or token must be provided")
 		return
 	}
 
@@ -117,7 +117,7 @@ func (h *Handler) UnregisterDeviceToken(c *gin.Context) {
 
 	if err != nil {
 		log.Error("Failed to unregister device token", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to unregister device token"})
+		c.JSON(http.StatusInternalServerError, "Failed to unregister device token")
 		return
 	}
 
@@ -130,7 +130,7 @@ func (h *Handler) GetDeviceTokens(c *gin.Context) {
 	log := logging.FromContext(c)
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
+		c.JSON(http.StatusUnauthorized, "User not found")
 		return
 	}
 
@@ -148,7 +148,7 @@ func (h *Handler) GetDeviceTokens(c *gin.Context) {
 
 	if err != nil {
 		log.Error("Failed to retrieve device tokens", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve device tokens"})
+		c.JSON(http.StatusInternalServerError, "Failed to retrieve device tokens")
 		return
 	}
 
@@ -160,19 +160,19 @@ func (h *Handler) UpdateDeviceActivity(c *gin.Context) {
 	log := logging.FromContext(c)
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
+		c.JSON(http.StatusUnauthorized, "User not found")
 		return
 	}
 
 	deviceID := c.Param("deviceId")
 	if deviceID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Device ID is required"})
+		c.JSON(http.StatusBadRequest, "Device ID is required")
 		return
 	}
 
 	if err := h.deviceRepo.UpdateDeviceTokenActivity(c, currentUser.ID, deviceID); err != nil {
 		log.Error("Failed to update device activity", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update device activity"})
+		c.JSON(http.StatusInternalServerError, "Failed to update device activity")
 		return
 	}
 
@@ -184,14 +184,14 @@ func (h *Handler) GetDeviceCount(c *gin.Context) {
 	log := logging.FromContext(c)
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
+		c.JSON(http.StatusUnauthorized, "User not found")
 		return
 	}
 
 	count, err := h.deviceRepo.GetActiveDeviceCount(c, currentUser.ID)
 	if err != nil {
 		log.Error("Failed to get device count", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get device count"})
+		c.JSON(http.StatusInternalServerError, "Failed to get device count")
 		return
 	}
 
@@ -206,7 +206,7 @@ func (h *Handler) CleanupInactiveTokens(c *gin.Context) {
 	log := logging.FromContext(c)
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
+		c.JSON(http.StatusUnauthorized, "User not found")
 		return
 	}
 
@@ -216,13 +216,13 @@ func (h *Handler) CleanupInactiveTokens(c *gin.Context) {
 	daysStr := c.DefaultQuery("days", "30")
 	days, err := strconv.Atoi(daysStr)
 	if err != nil || days < 1 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid days parameter"})
+		c.JSON(http.StatusBadRequest, "Invalid days parameter")
 		return
 	}
 
 	if err := h.deviceRepo.CleanupInactiveTokens(c, days); err != nil {
 		log.Error("Failed to cleanup inactive tokens", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to cleanup inactive tokens"})
+		c.JSON(http.StatusInternalServerError, "Failed to cleanup inactive tokens")
 		return
 	}
 

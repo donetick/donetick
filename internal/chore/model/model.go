@@ -239,9 +239,14 @@ type ChoreReq struct {
 }
 
 func (c *Chore) IsRecurring() bool {
-	return c.FrequencyType != FrequencyTypeOnce &&
-		c.FrequencyType != FrequencyTypeNoRepeat &&
-		c.FrequencyType != FrequencyTypeTrigger
+	return c.FrequencyType == FrequencyTypeDaily ||
+		c.FrequencyType == FrequencyTypeWeekly ||
+		c.FrequencyType == FrequencyTypeMonthly ||
+		c.FrequencyType == FrequencyTypeYearly ||
+		c.FrequencyType == FrequencyTypeAdaptive ||
+		c.FrequencyType == FrequencyTypeInterval ||
+		c.FrequencyType == FrequencyTypeDayOfTheWeek ||
+		c.FrequencyType == FrequencyTypeDayOfTheMonth
 }
 
 func (c *Chore) GetDeadline() *time.Time {

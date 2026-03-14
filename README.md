@@ -87,9 +87,12 @@ Donetick is an open-source, user-friendly app designed to help you organize task
    ```bash
    docker pull donetick/donetick
    ```
-2. **Run the container:** Replace `/path/to/host/data` with your preferred data directory:
+2. **Run the container:** Replace `/path/to/host/data` and `/path/to/host/config`:
    ```bash
-   docker run -v /path/to/host/data:/donetick-data -p 2021:2021 \
+   docker run \
+     -v /path/to/host/data:/donetick-data \
+     -v /path/to/host/config:/config \
+     -p 2021:2021 \
      -e DT_ENV=selfhosted \
      -e DT_SQLITE_PATH=/donetick-data/donetick.db \
      -e TZ=Etc/UTC \  

@@ -200,12 +200,13 @@ type ChoreLabels struct {
 }
 type ChoreLiteReq struct {
 	Name        string  `json:"name" binding:"required"`
-	Description *string `json:"description"`
+	Description *string `json:"description,omitempty"`
 	ID          int     `json:"id"`
 	DueDate     string  `json:"dueDate"`
-	CreatedBy   *int    `json:"createdBy"`
+	CreatedBy   *int    `json:"createdBy,omitempty"`
 }
 
+// TODO: Give default values on requests
 type ChoreReq struct {
 	Name                 string                `json:"name" binding:"required"`
 	FrequencyType        FrequencyType         `json:"frequencyType" binding:"required"`
@@ -213,23 +214,23 @@ type ChoreReq struct {
 	DueDate              string                `json:"dueDate"`
 	Assignees            []ChoreAssignees      `json:"assignees"`
 	AssignStrategy       AssignmentStrategy    `json:"assignStrategy" binding:"required"`
-	AssignedTo           *int                  `json:"assignedTo"`
-	IsRolling            bool                  `json:"isRolling"`
-	IsActive             bool                  `json:"isActive"`
-	Frequency            int                   `json:"frequency"`
-	FrequencyMetadata    *FrequencyMetadata    `json:"frequencyMetadata"`
-	Notification         bool                  `json:"notification"`
-	NotificationMetadata *NotificationMetadata `json:"notificationMetadata"`
+	AssignedTo           *int                  `json:"assignedTo,omitempty"`
+	IsRolling            bool                  `json:"isRolling" binding:"required"`
+	IsActive             bool                  `json:"isActive" binding:"required"`
+	Frequency            int                   `json:"frequency" binding:"required"`
+	FrequencyMetadata    *FrequencyMetadata    `json:"frequencyMetadata,omitempty"`
+	Notification         bool                  `json:"notification" binding:"required"`
+	NotificationMetadata *NotificationMetadata `json:"notificationMetadata,omitempty"`
 	Labels               []string              `json:"labels"`
 	LabelsV2             *[]lModel.LabelReq    `json:"labelsV2"`
-	ThingTrigger         *tModel.ThingTrigger  `json:"thingTrigger"`
-	Points               *int                  `json:"points"`
-	CompletionWindow     *int                  `json:"completionWindow"`
-	Description          *string               `json:"description"`
-	Priority             int                   `json:"priority"`
-	SubTasks             *[]stModel.SubTask    `json:"subTasks"`
-	RequireApproval      bool                  `json:"requireApproval"`
-	IsPrivate            bool                  `json:"isPrivate"`
+	ThingTrigger         *tModel.ThingTrigger  `json:"thingTrigger,omitempty"`
+	Points               *int                  `json:"points,omitempty"`
+	CompletionWindow     *int                  `json:"completionWindow,omitempty"`
+	Description          *string               `json:"description,omitempty"`
+	Priority             int                   `json:"priority" binding:"required"`
+	SubTasks             *[]stModel.SubTask    `json:"subTasks,omitempty"`
+	RequireApproval      bool                  `json:"requireApproval" binding:"required"`
+	IsPrivate            bool                  `json:"isPrivate" binding:"required"`
 	DeadlineOffset       *int                  `json:"deadlineOffset,omitempty"`
 	ProjectID            *int                  `json:"projectId,omitempty"`
 	UpdatedAt            *time.Time            `json:"updatedAt,omitempty"` // For internal use only when syncing a chore updated offline

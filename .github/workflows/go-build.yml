@@ -24,7 +24,7 @@ jobs:
       uses: actions/setup-go@v4
       with:
         go-version: ${{ env.GOLANG_VERSION }}
-
+        
     - name: Install dependencies
       run: go mod download
 
@@ -79,5 +79,12 @@ jobs:
       run: |
         VERSION=$(git describe --tags --abbrev=0 2>/dev/null || git rev-parse HEAD)
         echo "::set-output name=version::$VERSION"
+
+    - name: Install and Generate Swagger docs
+      run: |
+        go install github.com/swaggo/swag/cmd/swag@latest
+        echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+        swag init -g docs/handler.go
+
     - name: Build
       run: go build -ldflags "-X donetick.com/core/config.Version=${{ steps.get_version.outputs.version }} -X donetick.com/core/config.Commit=$(git rev-parse HEAD) -X donetick.com/core/config.Date=$(date +%Y-%m-%d)" -v ./...

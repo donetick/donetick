@@ -32,7 +32,9 @@ server:
     - "http://localhost"
     - "capacitor://localhost"
     
-  serve_frontend: true
+  serve_frontend: false
+  serve_swagger: true
+  public_host: "" # example: https://yourpublicdomain.com
 logging:
   level: "info"
   encoding: "json"

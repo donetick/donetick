@@ -8,12 +8,12 @@
 
 version: 2
 
-# before:
-#   hooks:
-#     # You may remove this if you don't use go modules.
-#     - go mod tidy
-#     # you may remove this if you don't need go generate
-#     - go generate ./...
+before:
+  hooks:
+    # - go mod tidy
+    # Add this line to trigger Swagger generation
+    - go install github.com/swaggo/swag/cmd/swag@latest
+    - $(go env GOPATH)/bin/swag init -g docs/handler.go
 
 builds:
   - env:

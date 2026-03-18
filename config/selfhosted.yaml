@@ -31,8 +31,7 @@ server:
     - "https://localhost"
     - "http://localhost"
     - "capacitor://localhost"
-    
-  serve_frontend: false
+  serve_frontend: true
   serve_swagger: true
   public_host: "" # example: https://yourpublicdomain.com
 logging:

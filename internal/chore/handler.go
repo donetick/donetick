@@ -308,7 +308,7 @@ func (h *Handler) createChore(c *gin.Context) {
 		FrequencyType:          choreReq.FrequencyType,
 		Frequency:              choreReq.Frequency,
 		FrequencyMetadataV2:    choreReq.FrequencyMetadata,
-		DueDate:                dueDate,
+		NextDueDate:            dueDate,
 		AssignStrategy:         choreReq.AssignStrategy,
 		AssignedTo:             choreReq.AssignedTo,
 		IsRolling:              choreReq.IsRolling,
@@ -606,7 +606,7 @@ func (h *Handler) editChore(c *gin.Context) {
 		Frequency:           choreReq.Frequency,
 		FrequencyMetadataV2: choreReq.FrequencyMetadata,
 		// Assignees:         &assignees,
-		DueDate:                dueDate,
+		NextDueDate:            dueDate,
 		AssignStrategy:         choreReq.AssignStrategy,
 		AssignedTo:             choreReq.AssignedTo,
 		IsRolling:              choreReq.IsRolling,
@@ -1429,7 +1429,7 @@ func (h *Handler) skipChore(c *gin.Context) {
 		})
 		return
 	}
-	nextDueDate, err := scheduleNextDueDate(c, chore, chore.DueDate.UTC())
+	nextDueDate, err := scheduleNextDueDate(c, chore, chore.NextDueDate.UTC())
 	if err != nil {
 		c.JSON(500, gin.H{
 			"error": "Error scheduling next due date",
@@ -1820,7 +1820,7 @@ func (h *Handler) completeChore(c *gin.Context) {
 
 	// confirm that the chore in completion window:
 	if chore.CompletionWindow != nil {
-		if completedDate.UTC().Before(chore.DueDate.UTC().Add(-time.Hour * time.Duration(*chore.CompletionWindow))) {
+		if completedDate.UTC().Before(chore.NextDueDate.UTC().Add(-time.Hour * time.Duration(*chore.CompletionWindow))) {
 			c.JSON(400, gin.H{
 				"error": "Chore is out of completion window",
 			})

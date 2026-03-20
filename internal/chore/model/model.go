@@ -50,7 +50,7 @@ type Chore struct {
 	FrequencyType          FrequencyType         `json:"frequencyType" gorm:"column:frequency_type"`                        // "daily", "weekly", "monthly", "yearly", "adaptive",or "custom"
 	Frequency              int                   `json:"frequency" gorm:"column:frequency"`                                 // Number of days, weeks, months, or years between chores
 	FrequencyMetadataV2    *FrequencyMetadata    `json:"frequencyMetadata" gorm:"column:frequency_meta_v2;type:json"`       // Additional frequency information for v2 (if used)
-	DueDate                *time.Time            `json:"dueDate" gorm:"column:due_date;index"`                              // When the chore is due
+	NextDueDate            *time.Time            `json:"nextDueDate" gorm:"column:next_due_date;index"`                     // When the chore is due
 	IsRolling              bool                  `json:"isRolling" gorm:"column:is_rolling"`                                // Whether the chore is rolling
 	AssignedTo             *int                  `json:"assignedTo" gorm:"column:assigned_to"`                              // Who the chore is assigned to
 	Assignees              []ChoreAssignees      `json:"assignees" gorm:"foreignkey:ChoreID;references:ID"`                 // Assignees of the chore
@@ -234,10 +234,10 @@ type ChoreReq struct {
 }
 
 func (c *Chore) GetDeadline() *time.Time {
-	if c.DeadlineOffset == nil || c.DueDate == nil {
+	if c.DeadlineOffset == nil || c.NextDueDate == nil {
 		return nil
 	}
-	deadline := c.DueDate.Add(time.Duration(*c.DeadlineOffset) * time.Second)
+	deadline := c.NextDueDate.Add(time.Duration(*c.DeadlineOffset) * time.Second)
 	return &deadline
 }
 

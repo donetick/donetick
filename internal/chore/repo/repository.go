@@ -151,7 +151,7 @@ func (r *ChoreRepository) SetChorePendingApproval(c context.Context, chore *chMo
 				PerformedAt: completedDate,
 				CompletedBy: userID,
 				AssignedTo:  chore.AssignedTo,
-				DueDate:     chore.DueDate,
+				DueDate:     chore.NextDueDate,
 				Note:        note,
 				Status:      chModel.ChoreHistoryStatusPendingApproval,
 			}
@@ -301,7 +301,7 @@ func (r *ChoreRepository) CompleteChore(c context.Context, chore *chModel.Chore,
 				PerformedAt: completedDate,
 				CompletedBy: userID,
 				AssignedTo:  chore.AssignedTo,
-				DueDate:     chore.DueDate,
+				DueDate:     chore.NextDueDate,
 				Note:        note,
 				Status:      chModel.ChoreHistoryStatusCompleted,
 			}
@@ -377,7 +377,7 @@ func (r *ChoreRepository) SkipChore(c context.Context, chore *chModel.Chore, use
 				PerformedAt: &skippedAt,
 				CompletedBy: userID,
 				AssignedTo:  chore.AssignedTo,
-				DueDate:     chore.DueDate,
+				DueDate:     chore.NextDueDate,
 				Note:        nil,
 				Status:      chModel.ChoreHistoryStatusSkipped,
 			}
@@ -673,7 +673,7 @@ func (r *ChoreRepository) CreateTimeSession(c context.Context, chore *chModel.Ch
 			ChoreID:     chore.ID,
 			CompletedBy: userID,
 			AssignedTo:  chore.AssignedTo,
-			DueDate:     chore.DueDate,
+			DueDate:     chore.NextDueDate,
 			Status:      chModel.ChoreHistoryStatusStarted,
 		}
 

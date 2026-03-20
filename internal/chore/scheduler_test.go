@@ -189,7 +189,7 @@ func TestScheduleNextDueDateDayOfWeek(t *testing.T) {
 			name: "Days of the week - next Monday",
 			chore: chModel.Chore{
 				FrequencyType: chModel.FrequencyTypeDayOfTheWeek,
-				DueDate:       timePtr(time.Date(2025, 1, 2, 0, 12, 0, 0, location)),
+				NextDueDate:   timePtr(time.Date(2025, 1, 2, 0, 12, 0, 0, location)),
 				FrequencyMetadataV2: &chModel.FrequencyMetadata{
 					Days: []*string{jsonPtr("monday")},
 					Time: "2025-01-20T01:00:00-05:00",
@@ -274,7 +274,7 @@ func TestScheduleNextDueDateDayOfMonth(t *testing.T) {
 		{
 			name: "Day of the month - 15th of January(isRolling)(Completed before due date)",
 			chore: chModel.Chore{
-				DueDate:           timePtr(time.Date(2025, 1, 15, 18, 0, 0, 0, location)),
+				NextDueDate:       timePtr(time.Date(2025, 1, 15, 18, 0, 0, 0, location)),
 				FrequencyType:     chModel.FrequencyTypeDayOfTheMonth,
 				Frequency:         15,
 				IsRolling:         true,

@@ -18,8 +18,8 @@ func scheduleNextDueDate(ctx context.Context, chore *chModel.Chore, completedDat
 	}
 
 	var baseDate time.Time
-	if chore.DueDate != nil {
-		baseDate = chore.DueDate.UTC()
+	if chore.NextDueDate != nil {
+		baseDate = chore.NextDueDate.UTC()
 	} else {
 		baseDate = completedDate.UTC()
 	}
@@ -36,8 +36,8 @@ func scheduleNextDueDate(ctx context.Context, chore *chModel.Chore, completedDat
 			log.Warn("falling back to current time for next due date calculation")
 
 			// fallback to use the next due date time if available:
-			if chore.DueDate != nil {
-				t = chore.DueDate.UTC()
+			if chore.NextDueDate != nil {
+				t = chore.NextDueDate.UTC()
 			} else {
 				t = time.Now().UTC()
 			}
@@ -58,7 +58,7 @@ func scheduleNextDueDate(ctx context.Context, chore *chModel.Chore, completedDat
 		baseDate = baseDate.AddDate(1, 0, 0)
 	case "adaptive":
 		// TODO: Implement a more sophisticated adaptive logic
-		diff := completedDate.UTC().Sub(chore.DueDate.UTC())
+		diff := completedDate.UTC().Sub(chore.NextDueDate.UTC())
 		baseDate = completedDate.UTC().Add(diff)
 	case "interval":
 		switch *chore.FrequencyMetadataV2.Unit {
@@ -141,8 +141,8 @@ func scheduleNextDueDate(ctx context.Context, chore *chModel.Chore, completedDat
 		// when the chore is rolling. i keep forgetting so am writing a detail comment here:
 		// if task due every 15 of jan, and you completed it on the 13 of jan( before the due date ) if we schedule from due date
 		// we will go back to 15 of jan. so we need to pick the highest between the two dates specifically for day of the month
-		if chore.IsRolling && chore.DueDate != nil {
-			secondAfterDueDate := chore.DueDate.UTC().Add(time.Second)
+		if chore.IsRolling && chore.NextDueDate != nil {
+			secondAfterDueDate := chore.NextDueDate.UTC().Add(time.Second)
 			if completedDate.Before(secondAfterDueDate) {
 				baseDate = secondAfterDueDate
 			}
@@ -159,7 +159,7 @@ func scheduleNextDueDate(ctx context.Context, chore *chModel.Chore, completedDat
 		currentMonth := int(baseDate.Month())
 
 		var startFrom int
-		if chore.DueDate != nil && baseDate.Month() == chore.DueDate.Month() {
+		if chore.NextDueDate != nil && baseDate.Month() == chore.NextDueDate.Month() {
 			startFrom = 1
 		}
 
@@ -356,8 +356,8 @@ func scheduleAdaptiveNextDueDate(chore *chModel.Chore, completedDate time.Time, 
 	}, history...)
 
 	if len(history) < 2 {
-		if chore.DueDate != nil {
-			diff := completedDate.UTC().Sub(chore.DueDate.UTC())
+		if chore.NextDueDate != nil {
+			diff := completedDate.UTC().Sub(chore.NextDueDate.UTC())
 			nextDueDate := completedDate.UTC().Add(diff)
 			return &nextDueDate, nil
 		}
@@ -381,8 +381,8 @@ func scheduleAdaptiveNextDueDate(chore *chModel.Chore, completedDate time.Time, 
 
 	// If no valid history entries, fall back to default behavior
 	if totalWeight == 0 {
-		if chore.DueDate != nil {
-			diff := completedDate.UTC().Sub(chore.DueDate.UTC())
+		if chore.NextDueDate != nil {
+			diff := completedDate.UTC().Sub(chore.NextDueDate.UTC())
 			nextDueDate := completedDate.UTC().Add(diff)
 			return &nextDueDate, nil
 		}

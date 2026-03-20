@@ -49,18 +49,15 @@ type Chore struct {
 	Name                   string                `json:"name" gorm:"column:name"`                                           // Chore description
 	FrequencyType          FrequencyType         `json:"frequencyType" gorm:"column:frequency_type"`                        // "daily", "weekly", "monthly", "yearly", "adaptive",or "custom"
 	Frequency              int                   `json:"frequency" gorm:"column:frequency"`                                 // Number of days, weeks, months, or years between chores
-	FrequencyMetadata      *string               `json:"-" gorm:"column:frequency_meta"`                                    // TODO: Clean up after v0.1.39
 	FrequencyMetadataV2    *FrequencyMetadata    `json:"frequencyMetadata" gorm:"column:frequency_meta_v2;type:json"`       // Additional frequency information for v2 (if used)
-	NextDueDate            *time.Time            `json:"nextDueDate" gorm:"column:next_due_date;index"`                     // When the chore is due
+	DueDate                *time.Time            `json:"dueDate" gorm:"column:due_date;index"`                              // When the chore is due
 	IsRolling              bool                  `json:"isRolling" gorm:"column:is_rolling"`                                // Whether the chore is rolling
 	AssignedTo             *int                  `json:"assignedTo" gorm:"column:assigned_to"`                              // Who the chore is assigned to
 	Assignees              []ChoreAssignees      `json:"assignees" gorm:"foreignkey:ChoreID;references:ID"`                 // Assignees of the chore
 	AssignStrategy         AssignmentStrategy    `json:"assignStrategy" gorm:"column:assign_strategy"`                      // How the chore is assigned
 	IsActive               bool                  `json:"isActive" gorm:"column:is_active"`                                  // Whether the chore is active
 	Notification           bool                  `json:"notification" gorm:"column:notification"`                           // Whether the chore has notification
-	NotificationMetadata   *string               `json:"-" gorm:"column:notification_meta"`                                 // TODO: Clean up after v0.1.39
 	NotificationMetadataV2 *NotificationMetadata `json:"notificationMetadata" gorm:"column:notification_meta_v2;type:json"` // Additional notification information
-	Labels                 *string               `json:"labels" gorm:"column:labels"`                                       // Labels for the chore
 	LabelsV2               *[]lModel.Label       `json:"labelsV2" gorm:"many2many:chore_labels"`                            // Labels for the chore
 	CircleID               int                   `json:"circleId" gorm:"column:circle_id;index"`                            // The circle this chore is in
 	CreatedAt              time.Time             `json:"createdAt" gorm:"column:created_at"`                                // When the chore was created
@@ -208,39 +205,39 @@ type ChoreLiteReq struct {
 
 // TODO: Give default values on requests
 type ChoreReq struct {
+	ID                   int                   `json:"id"`
 	Name                 string                `json:"name" binding:"required"`
 	FrequencyType        FrequencyType         `json:"frequencyType" binding:"required"`
-	ID                   int                   `json:"id"`
-	DueDate              string                `json:"dueDate"`
-	Assignees            []ChoreAssignees      `json:"assignees"`
-	AssignStrategy       AssignmentStrategy    `json:"assignStrategy" binding:"required"`
-	AssignedTo           *int                  `json:"assignedTo,omitempty"`
-	IsRolling            bool                  `json:"isRolling" binding:"required"`
-	IsActive             bool                  `json:"isActive" binding:"required"`
 	Frequency            int                   `json:"frequency" binding:"required"`
 	FrequencyMetadata    *FrequencyMetadata    `json:"frequencyMetadata,omitempty"`
+	DueDate              string                `json:"dueDate"`
+	IsRolling            bool                  `json:"isRolling" binding:"required"`
+	AssignedTo           *int                  `json:"assignedTo,omitempty"`
+	Assignees            []ChoreAssignees      `json:"assignees"`
+	AssignStrategy       AssignmentStrategy    `json:"assignStrategy" binding:"required"`
+	IsActive             bool                  `json:"isActive" binding:"required"`
 	Notification         bool                  `json:"notification" binding:"required"`
 	NotificationMetadata *NotificationMetadata `json:"notificationMetadata,omitempty"`
 	Labels               []string              `json:"labels"`
 	LabelsV2             *[]lModel.LabelReq    `json:"labelsV2"`
-	ThingTrigger         *tModel.ThingTrigger  `json:"thingTrigger,omitempty"`
-	Points               *int                  `json:"points,omitempty"`
-	CompletionWindow     *int                  `json:"completionWindow,omitempty"`
-	Description          *string               `json:"description,omitempty"`
+	UpdatedAt            *time.Time            `json:"updatedAt,omitempty"` // For internal use only when syncing a chore updated offline
 	Priority             int                   `json:"priority" binding:"required"`
+	CompletionWindow     *int                  `json:"completionWindow,omitempty"`
+	Points               *int                  `json:"points,omitempty"`
+	Description          *string               `json:"description,omitempty"`
 	SubTasks             *[]stModel.SubTask    `json:"subTasks,omitempty"`
 	RequireApproval      bool                  `json:"requireApproval" binding:"required"`
 	IsPrivate            bool                  `json:"isPrivate" binding:"required"`
 	DeadlineOffset       *int                  `json:"deadlineOffset,omitempty"`
 	ProjectID            *int                  `json:"projectId,omitempty"`
-	UpdatedAt            *time.Time            `json:"updatedAt,omitempty"` // For internal use only when syncing a chore updated offline
+	ThingTrigger         *tModel.ThingTrigger  `json:"thingTrigger,omitempty"`
 }
 
 func (c *Chore) GetDeadline() *time.Time {
-	if c.DeadlineOffset == nil || c.NextDueDate == nil {
+	if c.DeadlineOffset == nil || c.DueDate == nil {
 		return nil
 	}
-	deadline := c.NextDueDate.Add(time.Duration(*c.DeadlineOffset) * time.Second)
+	deadline := c.DueDate.Add(time.Duration(*c.DeadlineOffset) * time.Second)
 	return &deadline
 }
 

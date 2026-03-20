@@ -23,7 +23,7 @@ func TestScheduleAdaptiveNextDueDate_WithNilPerformedAt(t *testing.T) {
 			name: "All history entries have nil PerformedAt",
 			chore: &chModel.Chore{
 				FrequencyType: chModel.FrequencyTypeAdaptive,
-				NextDueDate:   timePtr(now.Add(24 * time.Hour)),
+				DueDate:       timePtr(now.Add(24 * time.Hour)),
 			},
 			completedDate: now,
 			history: []*chModel.ChoreHistory{
@@ -53,7 +53,7 @@ func TestScheduleAdaptiveNextDueDate_WithNilPerformedAt(t *testing.T) {
 			name: "Single history entry with nil PerformedAt",
 			chore: &chModel.Chore{
 				FrequencyType: chModel.FrequencyTypeAdaptive,
-				NextDueDate:   timePtr(now.Add(24 * time.Hour)),
+				DueDate:       timePtr(now.Add(24 * time.Hour)),
 			},
 			completedDate: now,
 			history: []*chModel.ChoreHistory{
@@ -66,7 +66,7 @@ func TestScheduleAdaptiveNextDueDate_WithNilPerformedAt(t *testing.T) {
 			name: "Empty history with NextDueDate",
 			chore: &chModel.Chore{
 				FrequencyType: chModel.FrequencyTypeAdaptive,
-				NextDueDate:   timePtr(now.Add(24 * time.Hour)),
+				DueDate:       timePtr(now.Add(24 * time.Hour)),
 			},
 			completedDate: now,
 			history:       []*chModel.ChoreHistory{},
@@ -77,7 +77,7 @@ func TestScheduleAdaptiveNextDueDate_WithNilPerformedAt(t *testing.T) {
 			name: "Empty history without NextDueDate",
 			chore: &chModel.Chore{
 				FrequencyType: chModel.FrequencyTypeAdaptive,
-				NextDueDate:   nil,
+				DueDate:       nil,
 			},
 			completedDate: now,
 			history:       []*chModel.ChoreHistory{},

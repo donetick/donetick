@@ -307,18 +307,15 @@ func (h *Handler) createChore(c *gin.Context) {
 		Name:                   choreReq.Name,
 		FrequencyType:          choreReq.FrequencyType,
 		Frequency:              choreReq.Frequency,
-		FrequencyMetadata:      nil, // deprecated in favor of FrequencyMetadataV2
 		FrequencyMetadataV2:    choreReq.FrequencyMetadata,
-		NextDueDate:            dueDate,
+		DueDate:                dueDate,
 		AssignStrategy:         choreReq.AssignStrategy,
 		AssignedTo:             choreReq.AssignedTo,
 		IsRolling:              choreReq.IsRolling,
 		UpdatedBy:              currentUser.ID,
 		IsActive:               true,
 		Notification:           choreReq.Notification,
-		NotificationMetadata:   nil, // deprecated in favor of NotificationMetadataV2
 		NotificationMetadataV2: choreReq.NotificationMetadata,
-		Labels:                 nil, // deprecated in favor of LabelsV2
 		CreatedBy:              currentUser.ID,
 		CreatedAt:              time.Now().UTC(),
 		CircleID:               currentUser.CircleID,
@@ -603,18 +600,15 @@ func (h *Handler) editChore(c *gin.Context) {
 		Name:                choreReq.Name,
 		FrequencyType:       choreReq.FrequencyType,
 		Frequency:           choreReq.Frequency,
-		FrequencyMetadata:   nil, // deprecated in favor of FrequencyMetadataV2 v0.1.39
 		FrequencyMetadataV2: choreReq.FrequencyMetadata,
 		// Assignees:         &assignees,
-		NextDueDate:            dueDate,
+		DueDate:                dueDate,
 		AssignStrategy:         choreReq.AssignStrategy,
 		AssignedTo:             choreReq.AssignedTo,
 		IsRolling:              choreReq.IsRolling,
 		IsActive:               choreReq.IsActive,
 		Notification:           choreReq.Notification,
-		NotificationMetadata:   nil, // deprecated in favor of NotificationMetadataV2 v0.1.39
 		NotificationMetadataV2: choreReq.NotificationMetadata,
-		Labels:                 nil, // deprecated in favor of LabelsV2 v0.1.39
 		CircleID:               oldChore.CircleID,
 		UpdatedBy:              currentUser.ID,
 		CreatedBy:              oldChore.CreatedBy,
@@ -1431,7 +1425,7 @@ func (h *Handler) skipChore(c *gin.Context) {
 		})
 		return
 	}
-	nextDueDate, err := scheduleNextDueDate(c, chore, chore.NextDueDate.UTC())
+	nextDueDate, err := scheduleNextDueDate(c, chore, chore.DueDate.UTC())
 	if err != nil {
 		c.JSON(500, gin.H{
 			"error": "Error scheduling next due date",
@@ -1822,7 +1816,7 @@ func (h *Handler) completeChore(c *gin.Context) {
 
 	// confirm that the chore in completion window:
 	if chore.CompletionWindow != nil {
-		if completedDate.UTC().Before(chore.NextDueDate.UTC().Add(-time.Hour * time.Duration(*chore.CompletionWindow))) {
+		if completedDate.UTC().Before(chore.DueDate.UTC().Add(-time.Hour * time.Duration(*chore.CompletionWindow))) {
 			c.JSON(400, gin.H{
 				"error": "Chore is out of completion window",
 			})

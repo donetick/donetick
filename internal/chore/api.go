@@ -127,7 +127,7 @@ func (h *API) CreateChore(c *gin.Context) {
 		AssignedTo:     &createdBy,
 		Assignees:      []chModel.ChoreAssignees{{UserID: createdBy}},
 		Description:    choreRequest.Description,
-		NextDueDate:    nextDueDate,
+		DueDate:        nextDueDate,
 		CreatedAt:      time.Now().UTC(),
 	}
 
@@ -297,7 +297,7 @@ func (h *API) CompleteChore(c *gin.Context) {
 
 	// confirm that the chore in completion window:
 	if chore.CompletionWindow != nil {
-		if completedDate.Before(chore.NextDueDate.Add(time.Hour * time.Duration(*chore.CompletionWindow))) {
+		if completedDate.Before(chore.DueDate.Add(time.Hour * time.Duration(*chore.CompletionWindow))) {
 			log.Debugw("chore.api.CompleteChore chore is in completion window", "choreID", choreID, "completionWindow", chore.CompletionWindow)
 			c.JSON(400, gin.H{
 				"error": "Chore is out of completion window",

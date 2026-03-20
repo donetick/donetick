@@ -46,7 +46,7 @@ func (n *NotificationPlanner) GenerateNotifications(c context.Context, chore *ch
 		return true
 	}
 
-	if chore.NextDueDate == nil {
+	if chore.DueDate == nil {
 		return true
 	}
 
@@ -115,10 +115,10 @@ func generateNotificationsFromTemplate(chore *chModel.Chore, assignedUser *cMode
 	notifications := make([]*nModel.Notification, 0)
 
 	for _, template := range chore.NotificationMetadataV2.Templates {
-		scheduledTime, err := calculateScheduledTime(*chore.NextDueDate, template)
+		scheduledTime, err := calculateScheduledTime(*chore.DueDate, template)
 		if err != nil {
 			// Log error and fallback to due date
-			scheduledTime = *chore.NextDueDate
+			scheduledTime = *chore.DueDate
 		}
 		// don't schedule if the time already pass :
 		if scheduledTime.Before(time.Now().UTC()) {
@@ -140,7 +140,7 @@ func generateNotificationsFromTemplate(chore *chModel.Chore, assignedUser *cMode
 				"id":                chore.ID,
 				"type":              eventType,
 				"name":              chore.Name,
-				"due_date":          chore.NextDueDate,
+				"due_date":          chore.DueDate,
 				"assignee":          assignedUser.DisplayName,
 				"assignee_username": assignedUser.Username,
 			},

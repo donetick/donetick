@@ -41,7 +41,7 @@ func (h *AuthHandler) RefreshTokenHandler(c *gin.Context) {
 		var req RefreshRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "No refresh token provided",
+				"error": "Invalid request: " + err.Error(),
 			})
 			return
 		}
@@ -141,7 +141,7 @@ func (h *AuthHandler) EnhancedLoginHandler(c *gin.Context) {
 
 	if err := c.ShouldBindJSON(&loginReq); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid request format",
+			"error": "Invalid request: " + err.Error(),
 		})
 		return
 	}

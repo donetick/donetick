@@ -232,7 +232,7 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 		if err := c.ShouldBindJSON(&body); err != nil {
 			logger.Errorw("account.handler.thirdPartyAuthCallback failed to bind", "err", err)
 			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "Invalid request",
+				"error": "Invalid request: " + err.Error(),
 			})
 			return
 		}
@@ -408,7 +408,7 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 		if err := c.ShouldBindJSON(&body); err != nil {
 			logger.Errorw("account.handler.thirdPartyAuthCallback (apple) failed to bind", "err", err)
 			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "Invalid request",
+				"error": "Invalid request: " + err.Error(),
 			})
 			return
 		}
@@ -566,7 +566,7 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 		var req Request
 		if err := c.ShouldBindJSON(&req); err != nil {
 			logger.Errorw("account.handler.thirdPartyAuthCallback (oauth2) failed to bind request", "err", err)
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request: " + err.Error()})
 			return
 		}
 
@@ -727,7 +727,7 @@ func (h *Handler) resetPassword(c *gin.Context) {
 	var req ResetPasswordReq
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid request",
+			"error": "Invalid request: " + err.Error(),
 		})
 		return
 	}
@@ -798,7 +798,7 @@ func (h *Handler) updateUserPassword(c *gin.Context) {
 	if err := c.ShouldBindJSON(&body); err != nil {
 		logger.Errorw("user.handler.resetAccountPassword failed to bind", "err", err)
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid request",
+			"error": "Invalid request: " + err.Error(),
 		})
 		return
 
@@ -840,7 +840,7 @@ func (h *Handler) UpdateUserDetails(c *gin.Context) {
 	var req UpdateUserReq
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(400, gin.H{
-			"error": "Invalid request",
+			"error": "Invalid request: " + err.Error(),
 		})
 		return
 	}
@@ -886,7 +886,7 @@ func (h *Handler) CreateLongLivedToken(c *gin.Context) {
 	}
 	var req TokenRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request: " + err.Error()})
 		return
 	}
 
@@ -995,7 +995,7 @@ func (h *Handler) UpdateNotificationTarget(c *gin.Context) {
 
 	var req Request
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request: " + err.Error()})
 		return
 	}
 	if req.Type == nModel.NotificationPlatformNone {
@@ -1037,7 +1037,7 @@ func (h *Handler) updateUserPasswordLoggedInOnly(c *gin.Context) {
 	if err := c.ShouldBindJSON(&body); err != nil {
 		logger.Errorw("user.handler.resetAccountPassword failed to bind", "err", err)
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid request",
+			"error": "Invalid request: " + err.Error(),
 		})
 		return
 	}
@@ -1080,7 +1080,7 @@ func (h *Handler) setWebhook(c *gin.Context) {
 
 	var req Request
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request: " + err.Error()})
 		return
 	}
 

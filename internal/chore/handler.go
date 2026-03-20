@@ -342,7 +342,11 @@ func (h *Handler) createChore(c *gin.Context) {
 	}
 
 	if choreReq.SubTasks != nil {
-		h.stRepo.UpdateSubtask(c, createdChore.ID, nil, *choreReq.SubTasks)
+		if h.stRepo.UpdateSubtask(c, createdChore.ID, nil, *choreReq.SubTasks) != nil {
+			c.JSON(500, gin.H{
+				"error": "Error adding subtasks",
+			})
+		}
 	}
 
 	var choreAssignees []*chModel.ChoreAssignees
@@ -668,7 +672,7 @@ func (h *Handler) editChore(c *gin.Context) {
 				ToBeAdded = append(ToBeAdded, newSubTask)
 			}
 		}
-		if err := h.stRepo.UpdateSubtask(c, oldChore.ID, ToBeRemoved, ToBeAdded); err != nil {
+		if h.stRepo.UpdateSubtask(c, oldChore.ID, ToBeRemoved, ToBeAdded) != nil {
 			c.JSON(500, gin.H{
 				"error": "Error adding subtasks",
 			})

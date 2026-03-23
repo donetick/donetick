@@ -35,6 +35,8 @@ import (
 	"donetick.com/core/internal/utils"
 	"donetick.com/core/logging"
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
+	"github.com/go-playground/validator/v10"
 	"gorm.io/gorm"
 )
 
@@ -258,7 +260,8 @@ func (h *Handler) createChore(c *gin.Context) {
 	if err := c.ShouldBindJSON(&choreReq); err != nil {
 		logger.Error("Invalid request body", "error", err)
 		c.JSON(400, gin.H{
-			"error": "Invalid request format",
+			"error":   "Invalid request format",
+			"details": err.Error(),
 		})
 		return
 	}
@@ -301,39 +304,6 @@ func (h *Handler) createChore(c *gin.Context) {
 		}
 
 	}
-	// TODO: this is a great candidate to use in the validator package.
-	switch choreReq.FrequencyType {
-	case chModel.FrequencyTypeInterval:
-		if choreReq.FrequencyMetadata.Unit == nil {
-			c.JSON(400, gin.H{
-				"error": "Invalid frequency unit",
-			})
-			return
-		}
-	case chModel.FrequencyTypeDayOfTheWeek:
-		if choreReq.FrequencyMetadata.Days == nil {
-			c.JSON(400, gin.H{
-				"error": "days_of_the_week requires at least one day",
-			})
-		}
-		if choreReq.FrequencyMetadata.WeekPattern == nil {
-			c.JSON(400, gin.H{
-				"error": "days_of_the_week requires week pattern.",
-			})
-		}
-	case chModel.FrequencyTypeDayOfTheMonth:
-		if choreReq.FrequencyMetadata.Months == nil {
-			c.JSON(400, gin.H{
-				"error": "day_of_the_month requires at least one month",
-			})
-		}
-		if choreReq.Frequency <= 0 || choreReq.Frequency > 31 {
-			c.JSON(400, gin.H{
-				"error": "day_of_the_month requires frequency between 0 and 31",
-			})
-		}
-	}
-
 	createdChore := &chModel.Chore{
 
 		Name:                   choreReq.Name,
@@ -789,7 +759,7 @@ func (h *Handler) cleanUpUnreferencedFiles(ctx *gin.Context, userID int, entityT
 	return nil
 }
 
-func HandleThingAssociation(choreReq chModel.ChoreReq, savedChore *chModel.Chore, h *Handler, c *gin.Context, currentUser *uModel.User) bool {
+func HandleThingAssociation(choreReq chModel.ChoreReq, savedChore *chModel.Chore, h *Handler, c *gin.Context, currentUser *uModel.User) bool { // TODO: set to private?
 	if choreReq.ThingTrigger != nil {
 		thing, err := h.tRepo.GetThingByID(c, choreReq.ThingTrigger.ID)
 		if err != nil {
@@ -3926,6 +3896,11 @@ func getActionName(status chModel.ChoreHistoryStatus) string {
 }
 
 func Routes(router *gin.Engine, h *Handler, multiAuthMiddleware *auth.MultiAuthMiddleware) {
+
+	// Input validation
+	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
+		v.RegisterStructValidation(chModel.ChoreReqStructLevelValidation, chModel.ChoreReq{})
+	}
 
 	choresRoutes := router.Group("api/v1/chores")
 	choresRoutes.Use(multiAuthMiddleware.MiddlewareFunc())

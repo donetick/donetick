@@ -205,32 +205,31 @@ type ChoreLiteReq struct {
 
 // TODO: Give default values on requests
 type ChoreReq struct {
-	ID                   int                   `json:"id"`
-	Name                 string                `json:"name" binding:"required"`
-	FrequencyType        FrequencyType         `json:"frequencyType" binding:"required"`
-	Frequency            int                   `json:"frequency" binding:"required"`
-	FrequencyMetadata    *FrequencyMetadata    `json:"frequencyMetadata,omitempty"`
-	DueDate              string                `json:"dueDate"`
-	IsRolling            bool                  `json:"isRolling" binding:"required"`
-	AssignedTo           *int                  `json:"assignedTo,omitempty"`
-	Assignees            []ChoreAssignees      `json:"assignees"`
-	AssignStrategy       AssignmentStrategy    `json:"assignStrategy" binding:"required"`
-	IsActive             bool                  `json:"isActive" binding:"required"`
-	Notification         bool                  `json:"notification" binding:"required"`
-	NotificationMetadata *NotificationMetadata `json:"notificationMetadata,omitempty"`
-	Labels               []string              `json:"labels"`
-	LabelsV2             *[]lModel.LabelReq    `json:"labelsV2"`
-	UpdatedAt            *time.Time            `json:"updatedAt,omitempty"` // For internal use only when syncing a chore updated offline
-	Priority             int                   `json:"priority" binding:"required"`
-	CompletionWindow     *int                  `json:"completionWindow,omitempty"`
-	Points               *int                  `json:"points,omitempty"`
-	Description          *string               `json:"description,omitempty"`
-	SubTasks             *[]stModel.SubTask    `json:"subTasks,omitempty"`
-	RequireApproval      bool                  `json:"requireApproval" binding:"required"`
-	IsPrivate            bool                  `json:"isPrivate" binding:"required"`
-	DeadlineOffset       *int                  `json:"deadlineOffset,omitempty"`
-	ProjectID            *int                  `json:"projectId,omitempty"`
-	ThingTrigger         *tModel.ThingTrigger  `json:"thingTrigger,omitempty"`
+	ID                   int                   `json:"id,omitempty"`                       // Only used on editChore
+	Name                 string                `json:"name" binding:"required"`            // Used in createChore and editChore
+	FrequencyType        FrequencyType         `json:"frequencyType" binding:"required"`   // Used in createChore and editChore
+	Frequency            int                   `json:"frequency" binding:"required"`       // Used in createChore and editChore
+	FrequencyMetadata    *FrequencyMetadata    `json:"frequencyMetadata,omitempty"`        // Used in createChore and editChore
+	DueDate              string                `json:"dueDate"`                            // Used in createChore and editChore - conditionally
+	IsRolling            bool                  `json:"isRolling" binding:"required"`       // Used in createChore and editChore
+	AssignedTo           *int                  `json:"assignedTo,omitempty"`               // Used in createChore and editChore
+	Assignees            []ChoreAssignees      `json:"assignees"`                          // Used in createChore and editChore
+	AssignStrategy       AssignmentStrategy    `json:"assignStrategy" binding:"required"`  // Used in createChore and editChore
+	IsActive             bool                  `json:"isActive" binding:"required"`        // Only used on editChore
+	Notification         bool                  `json:"notification" binding:"required"`    // Used in createChore and editChore
+	NotificationMetadata *NotificationMetadata `json:"notificationMetadata,omitempty"`     // Used in createChore and editChore
+	LabelsV2             *[]lModel.LabelReq    `json:"labelsV2"`                           // Used in createChore and editChore
+	UpdatedAt            *time.Time            `json:"updatedAt,omitempty"`                // Only used on editChore  // For internal use only when syncing a chore updated offline
+	Priority             int                   `json:"priority" binding:"required"`        // Used in createChore and editChore
+	CompletionWindow     *int                  `json:"completionWindow,omitempty"`         // Used in createChore and editChore
+	Points               *int                  `json:"points,omitempty"`                   // Used in createChore and editChore no validation at place
+	Description          *string               `json:"description,omitempty"`              // Used in createChore and editChore
+	SubTasks             *[]stModel.SubTask    `json:"subTasks,omitempty"`                 // Used in createChore and editChore
+	RequireApproval      bool                  `json:"requireApproval" binding:"required"` // Used in createChore and editChore
+	IsPrivate            bool                  `json:"isPrivate" binding:"required"`       // Used in createChore and editChore
+	DeadlineOffset       *int                  `json:"deadlineOffset,omitempty"`           // Not used anywhere?
+	ProjectID            *int                  `json:"projectId,omitempty"`                // Used in createChore and editChore
+	ThingTrigger         *tModel.ThingTrigger  `json:"thingTrigger,omitempty"`             // Only used in createChore
 }
 
 func (c *Chore) GetDeadline() *time.Time {

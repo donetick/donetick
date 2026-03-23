@@ -232,7 +232,7 @@ type ChoreReq struct {
 	ThingTrigger         *tModel.ThingTrigger  `json:"thingTrigger,omitempty"`             // Only used in createChore
 }
 
-func (c *Chore) GetDeadline() *time.Time {
+func (c *Chore) GetDeadline() *time.Time { // TODO: Remove, not used anywhere
 	if c.DeadlineOffset == nil || c.NextDueDate == nil {
 		return nil
 	}
@@ -299,7 +299,7 @@ func (c *Chore) CanEdit(userID int, circleUsers []*cModel.UserCircleDetail, upda
 	return nil
 
 }
-func (c *Chore) CanView(userID int, circleUsers []*cModel.UserCircleDetail) bool {
+func (c *Chore) CanView(userID int, circleUsers []*cModel.UserCircleDetail) bool { // TODO: Remove, not used anywhere
 	// if private then only creator and assignees can view:
 	if c.IsPrivate {
 		if c.CreatedBy == userID {
@@ -321,7 +321,7 @@ func (c *Chore) CanView(userID int, circleUsers []*cModel.UserCircleDetail) bool
 	}
 	return false
 }
-func (c *Chore) CanComplete(userID int, circleUsers []*cModel.UserCircleDetail) bool {
+func (c *Chore) CanComplete(userID int, circleUsers []*cModel.UserCircleDetail) bool { // TODO: Remove, not used anywhere
 	// If using no assignee strategy, allow any circle member to complete
 	if c.AssignStrategy == AssignmentStrategyNoAssignee && (c.AssignedTo == nil || *c.AssignedTo == 0) {
 		if !c.IsPrivate {
@@ -370,6 +370,7 @@ func (c *Chore) CanComplete(userID int, circleUsers []*cModel.UserCircleDetail) 
 	return false
 }
 
+//#region driver related code
 // Implement driver.Valuer to convert the struct to JSON when saving to the database otherwise will
 // get `error converting argument $12 type: unsupported type model.NotificationMetadata,  a struct` need
 // the `Value()` and `Scan()` methods to store and retrieve the `NotificationMetadata` struct in the database as JSON.
@@ -533,3 +534,5 @@ func (t *TimeSession) Finish(userID int) {
 	t.UpdateBy = userID
 	t.UpdateAt = timeNow
 }
+
+//#endregion

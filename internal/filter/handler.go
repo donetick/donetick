@@ -133,6 +133,13 @@ func (h *Handler) createFilter(c *gin.Context) {
 		return
 	}
 
+	if err := req.Conditions.Validate(); err != nil {
+		c.JSON(400, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
+
 	// Check if filter name already exists
 	exists, err := h.fRepo.FilterNameExists(c, req.Name, currentUser.CircleID, nil)
 	if err != nil {
@@ -222,6 +229,13 @@ func (h *Handler) updateFilter(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(400, gin.H{
 			"error": "Error binding filter data",
+		})
+		return
+	}
+
+	if err := req.Conditions.Validate(); err != nil {
+		c.JSON(400, gin.H{
+			"error": err.Error(),
 		})
 		return
 	}

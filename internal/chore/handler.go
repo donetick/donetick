@@ -400,7 +400,7 @@ func (h *Handler) CreateChore(c *gin.Context) {
 		broadcaster.BroadcastChoreCreated(createdChore, &currentUser.User)
 	}
 
-	shouldReturn := HandleThingAssociation(choreReq, createdChore, h, c, &currentUser.User)
+	shouldReturn := handleThingAssociation(choreReq, createdChore, h, c, &currentUser.User)
 	if shouldReturn {
 		return
 	}
@@ -721,7 +721,7 @@ func (h *Handler) EditChore(c *gin.Context) {
 		h.tRepo.DissociateThingWithChore(c, oldChore.ThingChore.ThingID, oldChore.ID)
 
 	}
-	shouldReturn := HandleThingAssociation(choreReq, updatedChore, h, c, &currentUser.User)
+	shouldReturn := handleThingAssociation(choreReq, updatedChore, h, c, &currentUser.User)
 	if shouldReturn {
 		return
 	}
@@ -759,7 +759,7 @@ func (h *Handler) cleanUpUnreferencedFiles(ctx *gin.Context, userID int, entityT
 	return nil
 }
 
-func HandleThingAssociation(choreReq chModel.ChoreReq, savedChore *chModel.Chore, h *Handler, c *gin.Context, currentUser *uModel.User) bool { // TODO: set to private?
+func handleThingAssociation(choreReq chModel.ChoreReq, savedChore *chModel.Chore, h *Handler, c *gin.Context, currentUser *uModel.User) bool {
 	if choreReq.ThingTrigger != nil {
 		thing, err := h.tRepo.GetThingByID(c, choreReq.ThingTrigger.ID)
 		if err != nil {
@@ -3205,7 +3205,7 @@ func (h *Handler) RejectChore(c *gin.Context) {
 //	@Failure		403		{object}	map[string]string						"error: You cannot update the status of this chore"
 //	@Failure		500		{object}	map[string]string						"error: Failed to retrieve chore | Error updating chore status"
 //	@Router			/chores/{id}/status [put]
-func (h *Handler) updateChoreStatus(c *gin.Context) {
+func (h *Handler) updateChoreStatus(c *gin.Context) { // TODO: Not used in Routes
 	logger := logging.FromContext(c)
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
@@ -3309,7 +3309,7 @@ func (h *Handler) updateChoreStatus(c *gin.Context) {
 //	@Failure		403		{object}	map[string]string						"error: You cannot update the timer of this chore"
 //	@Failure		500		{object}	map[string]string						"error: Failed to retrieve chore | Error updating chore timer"
 //	@Router			/chores/{id}/timer [put]
-func (h *Handler) updateTimer(c *gin.Context) {
+func (h *Handler) updateTimer(c *gin.Context) { // TODO: Not used in Routes
 	logger := logging.FromContext(c)
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
@@ -3741,6 +3741,7 @@ func (h *Handler) sendNudgeToDevices(c context.Context, fcmTokens []string, titl
 	return nil
 }
 
+// TODO: Needs swagger
 func (h *Handler) UndoChore(c *gin.Context) {
 	logger := logging.FromContext(c)
 	currentUser, ok := auth.CurrentUser(c)

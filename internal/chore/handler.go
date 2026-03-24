@@ -426,6 +426,7 @@ func (h *Handler) editChore(c *gin.Context) {
 	// logger := logging.FromContext(c)
 	logger := logging.FromContext(c)
 	currentUser, ok := auth.CurrentUser(c)
+	now := time.Now().UTC()
 	if !ok {
 		logger.Error("Failed to get current user from authentication context")
 		c.JSON(401, gin.H{
@@ -701,6 +702,20 @@ func (h *Handler) editChore(c *gin.Context) {
 			return
 		}
 	}
+	if oldChore.NextDueDate != updatedChore.NextDueDate {
+		historyEntry := &chModel.ChoreHistory{
+			ChoreID:     oldChore.ID,
+			PerformedAt: &now,
+			CompletedBy: currentUser.ID,
+			AssignedTo:  oldChore.AssignedTo,
+			DueDate:     oldChore.NextDueDate,
+			Status:      chModel.ChoreHistoryStatusRescheduled,
+		}
+		if err := h.choreRepo.CreateChoreHistory(c, historyEntry); err != nil {
+			logging.FromContext(c).Error("Failed to create reschedule history", "error", err)
+		}
+	}
+
 	go func() {
 		h.nPlanner.GenerateNotifications(c, updatedChore)
 	}()
@@ -1559,16 +1574,29 @@ func (h *Handler) updateDueDate(c *gin.Context) {
 		c.JSON(403, gin.H{})
 		return
 	}
+	now := time.Now().UTC()
 	if err := h.choreRepo.UpdateChoreFields(c, chore.ID, map[string]interface{}{
 		"next_due_date": dueDate,
 		"updated_by":    currentUser.ID,
-		"updated_at":    time.Now().UTC(),
+		"updated_at":    now,
 	}); err != nil {
 		logging.FromContext(c).Error("Failed to update due date", "error", err)
 		c.JSON(500, gin.H{
 			"error": "Error updating due date",
 		})
 		return
+	}
+
+	historyEntry := &chModel.ChoreHistory{
+		ChoreID:     chore.ID,
+		PerformedAt: &now,
+		CompletedBy: currentUser.ID,
+		AssignedTo:  chore.AssignedTo,
+		DueDate:     chore.NextDueDate,
+		Status:      chModel.ChoreHistoryStatusRescheduled,
+	}
+	if err := h.choreRepo.CreateChoreHistory(c, historyEntry); err != nil {
+		logging.FromContext(c).Error("Failed to create reschedule history", "error", err)
 	}
 
 	// Broadcast real-time due date update event
@@ -1687,7 +1715,6 @@ func (h *Handler) UnarchiveChore(c *gin.Context) {
 		})
 		return
 	}
-
 	err = h.choreRepo.UnarchiveChore(c, id, currentUser.ID)
 
 	if err != nil {

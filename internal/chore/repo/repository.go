@@ -447,6 +447,10 @@ func (r *ChoreRepository) GetChoreHistoryByID(c context.Context, choreID int, hi
 	return &history, nil
 }
 
+func (r *ChoreRepository) CreateChoreHistory(c context.Context, history *chModel.ChoreHistory) error {
+	return r.db.WithContext(c).Create(history).Error
+}
+
 func (r *ChoreRepository) UpdateChoreHistory(c context.Context, history *chModel.ChoreHistory) error {
 	return r.db.WithContext(c).Save(history).Error
 }

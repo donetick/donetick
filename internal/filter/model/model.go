@@ -65,7 +65,7 @@ const (
 type FilterCondition struct {
 	Type     string      `json:"type" binding:"required,oneof=assignee createdBy priority status dueDate label project points"`
 	Operator string      `json:"operator"`
-	Value    interface{} `json:"value" binding:"required,max=200"`
+	Value    interface{} `json:"value" binding:"omitempty,max=200"`
 }
 
 // FilterConditions is a custom type for JSON array storage

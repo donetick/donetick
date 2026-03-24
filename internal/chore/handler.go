@@ -860,30 +860,6 @@ func (h *Handler) DeleteChore(c *gin.Context) {
 	})
 }
 
-// func (h *Handler) createChore(c *gin.Context) {
-// 	logger := logging.FromContext(c)
-// 	currentUser, ok := auth.CurrentUser(c)
-
-// 	logger.Debug("Create chore", "currentUser", currentUser)
-// 	if !ok {
-// 		c.JSON(500, gin.H{
-// 			"error": "Error getting current user",
-// 		})
-// 		return
-// 	}
-// 	id, err := h.choreRepo.CreateChore(currentUser.ID, currentUser.CircleID)
-// 	if err != nil {
-// 		c.JSON(500, gin.H{
-// 			"error": "Error creating chore",
-// 		})
-// 		return
-// 	}
-
-// 	c.JSON(200, gin.H{
-// 		"res": id,
-// 	})
-// }
-
 // UpdateAssignee godoc
 //
 //	@Summary		Update chore assignee

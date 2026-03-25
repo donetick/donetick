@@ -238,7 +238,7 @@ type ChoreReq struct {
 	FrequencyType        chModel.FrequencyType         `json:"frequencyType" binding:"required"`   // Used in createChore and editChore
 	Frequency            int                           `json:"frequency" binding:"required"`       // Used in createChore and editChore
 	FrequencyMetadata    *chModel.FrequencyMetadata    `json:"frequencyMetadata,omitempty"`        // Used in createChore and editChore
-	DueDate              string                        `json:"dueDate"`                            // Used in createChore and editChore - conditionally
+	NextDueDate          string                        `json:"nextDueDate"`                        // Used in createChore and editChore - conditionally
 	IsRolling            bool                          `json:"isRolling" binding:"required"`       // Used in createChore and editChore
 	AssignedTo           *int                          `json:"assignedTo,omitempty"`               // Used in createChore and editChore
 	Assignees            []chModel.ChoreAssignees      `json:"assignees"`                          // Used in createChore and editChore
@@ -326,8 +326,8 @@ func (h *Handler) CreateChore(c *gin.Context) {
 
 	var dueDate *time.Time
 
-	if choreReq.DueDate != "" {
-		rawDueDate, err := time.Parse(time.RFC3339, choreReq.DueDate)
+	if choreReq.NextDueDate != "" {
+		rawDueDate, err := time.Parse(time.RFC3339, choreReq.NextDueDate)
 		rawDueDate = rawDueDate.UTC()
 		dueDate = &rawDueDate
 		if err != nil {
@@ -546,8 +546,8 @@ func (h *Handler) EditChore(c *gin.Context) {
 
 	var dueDate *time.Time
 
-	if choreReq.DueDate != "" {
-		rawDueDate, err := time.Parse(time.RFC3339, choreReq.DueDate)
+	if choreReq.NextDueDate != "" {
+		rawDueDate, err := time.Parse(time.RFC3339, choreReq.NextDueDate)
 		rawDueDate = rawDueDate.UTC()
 		dueDate = &rawDueDate
 		if err != nil {
@@ -1492,8 +1492,8 @@ func (h *Handler) SkipChore(c *gin.Context) {
 // region: request models
 // TODO: Check this if UpdatedAt is necessary.
 type DueDateReq struct {
-	DueDate   *time.Time `json:"dueDate"`
-	UpdatedAt *time.Time `json:"updatedAt" binding:"required"`
+	NextDueDate *time.Time `json:"nextDueDate"`
+	UpdatedAt   *time.Time `json:"updatedAt" binding:"required"`
 }
 
 // endregion
@@ -1546,10 +1546,10 @@ func (h *Handler) UpdateDueDate(c *gin.Context) {
 
 	var dueDate *time.Time
 
-	if dueDateReq.DueDate != nil {
+	if dueDateReq.NextDueDate != nil {
 		// 1. Dereference the pointer with *
 		// 2. Call UTC() which returns a standard time.Time
-		utcTime := (*dueDateReq.DueDate).UTC()
+		utcTime := (*dueDateReq.NextDueDate).UTC()
 
 		// 3. Take the memory address of the new UTC time to create a pointer
 		dueDate = &utcTime

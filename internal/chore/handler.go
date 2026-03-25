@@ -3798,7 +3798,21 @@ func (h *Handler) sendNudgeToDevices(c context.Context, fcmTokens []string, titl
 	return nil
 }
 
-// TODO: Needs swagger
+// UndoChore godoc
+//
+//	@Summary		Undo a chore action
+//	@Description	Undoes the most recent action (completion, skip, approval submission, or rejection) performed by the current user on a chore within the last 5 minutes
+//	@Tags			chores
+//	@Accept			json
+//	@Produce		json
+//	@Security		JWTKeyAuth
+//	@Security		APIKeyAuth
+//	@Param			id	path		int						true	"Chore ID"
+//	@Success		200	{object}	map[string]interface{}	"message: Successfully undid {action} action, res: updated chore object"
+//	@Failure		400	{object}	map[string]string		"error: Invalid chore ID | No recent action found to undo | Cannot undo this type of action"
+//	@Failure		401	{object}	map[string]string		"error: Authentication failed"
+//	@Failure		500	{object}	map[string]string		"error: Failed to retrieve chore | Failed to check recent actions | Failed to undo action | Failed to restore pending approval status | Failed to retrieve updated chore"
+//	@Router			/chores/{id}/undo [post]
 func (h *Handler) UndoChore(c *gin.Context) {
 	logger := logging.FromContext(c)
 	currentUser, ok := auth.CurrentUser(c)

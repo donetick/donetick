@@ -2333,6 +2333,54 @@ paths:
       summary: Unarchive a chore
       tags:
       - chores
+  /chores/{id}/undo:
+    post:
+      consumes:
+      - application/json
+      description: Undoes the most recent action (completion, skip, approval submission,
+        or rejection) performed by the current user on a chore within the last 5 minutes
+      parameters:
+      - description: Chore ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'message: Successfully undid {action} action, res: updated
+            chore object'
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 'error: Invalid chore ID | No recent action found to undo |
+            Cannot undo this type of action'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: Authentication failed'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to retrieve chore | Failed to check recent actions
+            | Failed to undo action | Failed to restore pending approval status |
+            Failed to retrieve updated chore'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      - APIKeyAuth: []
+      summary: Undo a chore action
+      tags:
+      - chores
   /chores/archived:
     get:
       consumes:

@@ -2186,7 +2186,7 @@ func (h *Handler) ModifyHistory(c *gin.Context) {
 		})
 		return
 	}
-	//only overwrite the part of history that's necessary
+	// only overwrite the part of history that's necessary
 	if req.PerformedAt != nil {
 		history.PerformedAt = req.PerformedAt
 	}

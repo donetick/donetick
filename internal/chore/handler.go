@@ -895,9 +895,11 @@ func (h *Handler) DeleteChore(c *gin.Context) {
 }
 
 // region: request models
+// TODO: Add validation for time
+
 type AssigneeReq struct {
 	Assignee  int       `json:"assignee" binding:"required"`
-	UpdatedAt time.Time `json:"updatedAt" binding:"required"` // TODO: Add validation for time
+	UpdatedAt time.Time `json:"updatedAt" binding:"required"`
 }
 
 // endregion
@@ -1488,10 +1490,10 @@ func (h *Handler) SkipChore(c *gin.Context) {
 }
 
 // region: request models
-
+// TODO: Check this if UpdatedAt is necessary.
 type DueDateReq struct {
 	DueDate   *time.Time `json:"dueDate"`
-	UpdatedAt *time.Time `json:"updatedAt" binding:"required"` // TODO: Check this if it's necessary.
+	UpdatedAt *time.Time `json:"updatedAt" binding:"required"`
 }
 
 // endregion
@@ -1734,8 +1736,8 @@ func (h *Handler) UnarchiveChore(c *gin.Context) {
 
 type CompleteChoreReq struct {
 	Notes         *string    `json:"notes" binding:"omitempty,min=1"`
-	CompletedBy   *int       `json:"completedBy"` // the completed by only can be populated by the admin or super user
-	CompletedDate *time.Time `json:"completedTime"`
+	CompletedBy   *int       `json:"completedBy"`   // The completed by only can be populated by the admin or super user.
+	CompletedDate *time.Time `json:"completedTime"` // Completion date in RFC3339 format (defaults to now)
 }
 
 // endregion
@@ -1749,13 +1751,13 @@ type CompleteChoreReq struct {
 //	@Produce		json
 //	@Security		JWTKeyAuth
 //	@Security		APIKeyAuth
-//	@Param			id				path		int							true	"Chore ID"
-//	@Param			completion		body		CompleteChoreReq			false	"Completion details"
-//	@Success		200				{object}	map[string]chModel.Chore	"res: updated chore"
-//	@Failure		400				{object}	map[string]string			"error: Invalid ID | Invalid date | User is not assigned to chore | Chore is out of completion window"
-//	@Failure		401				{object}	map[string]string			"error: Authentication failed"
-//	@Failure		403				{object}	map[string]string			"error: You are not allowed to complete this action"
-//	@Failure		500				{object}	map[string]string			"error: Failed to retrieve chore | Error completing chore"
+//	@Param			id			path		int							true	"Chore ID"
+//	@Param			completion	body		CompleteChoreReq			false	"Completion details"
+//	@Success		200			{object}	map[string]chModel.Chore	"res: updated chore"
+//	@Failure		400			{object}	map[string]string			"error: Invalid ID | Invalid date | User is not assigned to chore | Chore is out of completion window"
+//	@Failure		401			{object}	map[string]string			"error: Authentication failed"
+//	@Failure		403			{object}	map[string]string			"error: You are not allowed to complete this action"
+//	@Failure		500			{object}	map[string]string			"error: Failed to retrieve chore | Error completing chore"
 //	@Router			/chores/{id}/do [post]
 func (h *Handler) CompleteChore(c *gin.Context) {
 

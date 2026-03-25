@@ -114,10 +114,14 @@ definitions:
   chore.CompleteChoreReq:
     properties:
       completedBy:
-        description: the completed by only can be populated by the admin or super
-          user
+        description: The completed by only can be populated by the admin or super
+          user.
         type: integer
-      note:
+      completedTime:
+        description: Completion date in RFC3339 format (defaults to now)
+        type: string
+      notes:
+        minLength: 1
         type: string
     type: object
   chore.DueDateReq:
@@ -156,7 +160,8 @@ definitions:
     type: object
   chore.RejectChoreReq:
     properties:
-      note:
+      notes:
+        minLength: 1
         type: string
     type: object
   chore.StatusUpdateReq:
@@ -1323,10 +1328,6 @@ paths:
         name: id
         required: true
         type: integer
-      - description: Completion date in RFC3339 format (defaults to now)
-        in: query
-        name: completedDate
-        type: string
       - description: Completion details
         in: body
         name: completion

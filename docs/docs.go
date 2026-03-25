@@ -855,12 +855,6 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "type": "string",
-                        "description": "Completion date in RFC3339 format (defaults to now)",
-                        "name": "completedDate",
-                        "in": "query"
-                    },
-                    {
                         "description": "Completion details",
                         "name": "completion",
                         "in": "body",
@@ -4468,11 +4462,16 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "completedBy": {
-                    "description": "the completed by only can be populated by the admin or super user",
+                    "description": "The completed by only can be populated by the admin or super user.",
                     "type": "integer"
                 },
-                "note": {
+                "completedTime": {
+                    "description": "Completion date in RFC3339 format (defaults to now)",
                     "type": "string"
+                },
+                "notes": {
+                    "type": "string",
+                    "minLength": 1
                 }
             }
         },
@@ -4531,8 +4530,9 @@ const docTemplate = `{
         "chore.RejectChoreReq": {
             "type": "object",
             "properties": {
-                "note": {
-                    "type": "string"
+                "notes": {
+                    "type": "string",
+                    "minLength": 1
                 }
             }
         },

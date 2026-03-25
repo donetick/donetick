@@ -1,5 +1,204 @@
 basePath: /api/v1
 definitions:
+  chore.AssigneeReq:
+    properties:
+      assignee:
+        type: integer
+      updatedAt:
+        type: string
+    required:
+    - assignee
+    - updatedAt
+    type: object
+  chore.ChoreReq:
+    properties:
+      assignStrategy:
+        allOf:
+        - $ref: '#/definitions/model.AssignmentStrategy'
+        description: Used in createChore and editChore
+      assignedTo:
+        description: Used in createChore and editChore
+        type: integer
+      assignees:
+        description: Used in createChore and editChore
+        items:
+          $ref: '#/definitions/model.ChoreAssignees'
+        type: array
+      completionWindow:
+        description: Used in createChore and editChore
+        type: integer
+      deadlineOffset:
+        description: Not used anywhere?
+        type: integer
+      description:
+        description: Used in createChore and editChore
+        type: string
+      dueDate:
+        description: Used in createChore and editChore - conditionally
+        type: string
+      frequency:
+        description: Used in createChore and editChore
+        type: integer
+      frequencyMetadata:
+        allOf:
+        - $ref: '#/definitions/model.FrequencyMetadata'
+        description: Used in createChore and editChore
+      frequencyType:
+        allOf:
+        - $ref: '#/definitions/model.FrequencyType'
+        description: Used in createChore and editChore
+      id:
+        description: Only used on editChore
+        type: integer
+      isActive:
+        description: Only used on editChore
+        type: boolean
+      isPrivate:
+        description: Used in createChore and editChore
+        type: boolean
+      isRolling:
+        description: Used in createChore and editChore
+        type: boolean
+      labelsV2:
+        description: Used in createChore and editChore
+        items:
+          $ref: '#/definitions/model.LabelReq'
+        type: array
+      name:
+        description: Used in createChore and editChore
+        type: string
+      notification:
+        description: Used in createChore and editChore
+        type: boolean
+      notificationMetadata:
+        allOf:
+        - $ref: '#/definitions/model.NotificationMetadata'
+        description: Used in createChore and editChore
+      points:
+        description: Used in createChore and editChore no validation at place
+        type: integer
+      priority:
+        description: Used in createChore and editChore
+        type: integer
+      projectId:
+        description: Used in createChore and editChore
+        type: integer
+      requireApproval:
+        description: Used in createChore and editChore
+        type: boolean
+      subTasks:
+        description: Used in createChore and editChore
+        items:
+          $ref: '#/definitions/model.SubTask'
+        type: array
+      thingTrigger:
+        allOf:
+        - $ref: '#/definitions/model.ThingTrigger'
+        description: Only used in createChore
+      updatedAt:
+        description: Only used on editChore  // For internal use only when syncing
+          a chore updated offline
+        type: string
+    required:
+    - assignStrategy
+    - frequency
+    - frequencyType
+    - isActive
+    - isPrivate
+    - isRolling
+    - name
+    - notification
+    - priority
+    - requireApproval
+    type: object
+  chore.CompleteChoreReq:
+    properties:
+      completedBy:
+        description: the completed by only can be populated by the admin or super
+          user
+        type: integer
+      note:
+        type: string
+    type: object
+  chore.DueDateReq:
+    properties:
+      dueDate:
+        type: string
+      updatedAt:
+        type: string
+    required:
+    - updatedAt
+    type: object
+  chore.ModifyHistoryReq:
+    properties:
+      dueDate:
+        type: string
+      notes:
+        type: string
+      performedAt:
+        type: string
+    type: object
+  chore.NudgeRequest:
+    properties:
+      all_assignees:
+        description: If true, send to all assignees; if false, send to current assignee
+        type: boolean
+      message:
+        description: Optional custom message
+        type: string
+    type: object
+  chore.PriorityReq:
+    properties:
+      priority:
+        type: integer
+    required:
+    - priority
+    type: object
+  chore.RejectChoreReq:
+    properties:
+      note:
+        type: string
+    type: object
+  chore.StatusUpdateReq:
+    properties:
+      status:
+        $ref: '#/definitions/model.Status'
+      updatedAt:
+        type: string
+    required:
+    - status
+    - updatedAt
+    type: object
+  chore.SubtaskReq:
+    properties:
+      choreId:
+        type: integer
+      completedAt:
+        type: string
+      id:
+        type: integer
+    type: object
+  chore.TimerUpdateReq:
+    properties:
+      duration:
+        type: integer
+      updatedAt:
+        type: string
+    required:
+    - duration
+    - updatedAt
+    type: object
+  chore.UpdateTimeSessionReq:
+    properties:
+      endTime:
+        type: string
+      pauseLog:
+        items:
+          $ref: '#/definitions/model.PauseLogEntry'
+        type: array
+      startTime:
+        type: string
+    type: object
   circle.Circle:
     properties:
       created_at:
@@ -162,9 +361,6 @@ definitions:
       isRolling:
         description: Whether the chore is rolling
         type: boolean
-      labels:
-        description: Labels for the chore
-        type: string
       labelsV2:
         description: Labels for the chore
         items:
@@ -279,74 +475,6 @@ definitions:
     - ChoreHistoryStatusPendingApproval
     - ChoreHistoryStatusRejected
     - ChoreHistoryStatusMissed
-  model.ChoreReq:
-    properties:
-      assignStrategy:
-        $ref: '#/definitions/model.AssignmentStrategy'
-      assignedTo:
-        type: integer
-      assignees:
-        items:
-          $ref: '#/definitions/model.ChoreAssignees'
-        type: array
-      completionWindow:
-        type: integer
-      deadlineOffset:
-        type: integer
-      description:
-        type: string
-      dueDate:
-        type: string
-      frequency:
-        type: integer
-      frequencyMetadata:
-        $ref: '#/definitions/model.FrequencyMetadata'
-      frequencyType:
-        $ref: '#/definitions/model.FrequencyType'
-      id:
-        type: integer
-      isActive:
-        type: boolean
-      isPrivate:
-        type: boolean
-      isRolling:
-        type: boolean
-      labels:
-        items:
-          type: string
-        type: array
-      labelsV2:
-        items:
-          $ref: '#/definitions/model.LabelReq'
-        type: array
-      name:
-        type: string
-      notification:
-        type: boolean
-      notificationMetadata:
-        $ref: '#/definitions/model.NotificationMetadata'
-      points:
-        type: integer
-      priority:
-        type: integer
-      projectId:
-        type: integer
-      requireApproval:
-        type: boolean
-      subTasks:
-        items:
-          $ref: '#/definitions/model.SubTask'
-        type: array
-      thingTrigger:
-        $ref: '#/definitions/model.ThingTrigger'
-      updatedAt:
-        description: For internal use only when syncing a chore updated offline
-        type: string
-    required:
-    - assignStrategy
-    - frequencyType
-    - name
-    type: object
   model.Filter:
     properties:
       circleId:
@@ -801,7 +929,7 @@ paths:
         name: chore
         required: true
         schema:
-          $ref: '#/definitions/model.ChoreReq'
+          $ref: '#/definitions/chore.ChoreReq'
       produces:
       - application/json
       responses:
@@ -848,7 +976,7 @@ paths:
         name: chore
         required: true
         schema:
-          $ref: '#/definitions/model.ChoreReq'
+          $ref: '#/definitions/chore.ChoreReq'
       produces:
       - application/json
       responses:
@@ -1099,12 +1227,7 @@ paths:
         name: assignee
         required: true
         schema:
-          properties:
-            assignee:
-              type: integer
-            updatedAt:
-              type: string
-          type: object
+          $ref: '#/definitions/chore.AssigneeReq'
       produces:
       - application/json
       responses:
@@ -1208,12 +1331,7 @@ paths:
         in: body
         name: completion
         schema:
-          properties:
-            completedBy:
-              type: integer
-            note:
-              type: string
-          type: object
+          $ref: '#/definitions/chore.CompleteChoreReq'
       produces:
       - application/json
       responses:
@@ -1270,12 +1388,7 @@ paths:
         name: dueDate
         required: true
         schema:
-          properties:
-            dueDate:
-              type: string
-            updatedAt:
-              type: string
-          type: object
+          $ref: '#/definitions/chore.DueDateReq'
       produces:
       - application/json
       responses:
@@ -1432,14 +1545,7 @@ paths:
         name: history
         required: true
         schema:
-          properties:
-            dueDate:
-              type: string
-            notes:
-              type: string
-            performedAt:
-              type: string
-          type: object
+          $ref: '#/definitions/chore.ModifyHistoryReq'
       produces:
       - application/json
       responses:
@@ -1496,12 +1602,7 @@ paths:
         name: nudge
         required: true
         schema:
-          properties:
-            all_assignees:
-              type: boolean
-            message:
-              type: string
-          type: object
+          $ref: '#/definitions/chore.NudgeRequest'
       produces:
       - application/json
       responses:
@@ -1602,10 +1703,7 @@ paths:
         name: priority
         required: true
         schema:
-          properties:
-            priority:
-              type: integer
-          type: object
+          $ref: '#/definitions/chore.PriorityReq'
       produces:
       - application/json
       responses:
@@ -1661,10 +1759,7 @@ paths:
         in: body
         name: rejection
         schema:
-          properties:
-            note:
-              type: string
-          type: object
+          $ref: '#/definitions/chore.RejectChoreReq'
       produces:
       - application/json
       responses:
@@ -1814,12 +1909,7 @@ paths:
         name: status
         required: true
         schema:
-          properties:
-            status:
-              type: string
-            updatedAt:
-              type: string
-          type: object
+          $ref: '#/definitions/chore.StatusUpdateReq'
       produces:
       - application/json
       responses:
@@ -1875,14 +1965,7 @@ paths:
         name: subtask
         required: true
         schema:
-          properties:
-            choreId:
-              type: integer
-            completedAt:
-              type: string
-            id:
-              type: integer
-          type: object
+          $ref: '#/definitions/chore.SubtaskReq'
       produces:
       - application/json
       responses:
@@ -1995,12 +2078,7 @@ paths:
         name: timer
         required: true
         schema:
-          properties:
-            duration:
-              type: integer
-            updatedAt:
-              type: string
-          type: object
+          $ref: '#/definitions/chore.TimerUpdateReq'
       produces:
       - application/json
       responses:
@@ -2118,14 +2196,7 @@ paths:
         name: session
         required: true
         schema:
-          properties:
-            endTime:
-              type: string
-            pauseLog:
-              type: array
-            startTime:
-              type: string
-          type: object
+          $ref: '#/definitions/chore.UpdateTimeSessionReq'
       produces:
       - application/json
       responses:

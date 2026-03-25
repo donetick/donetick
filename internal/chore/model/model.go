@@ -341,7 +341,7 @@ func (c *Chore) CanComplete(userID int, circleUsers []*cModel.UserCircleDetail) 
 	return false
 }
 
-//#region driver related code
+// #region driver related code
 // Implement driver.Valuer to convert the struct to JSON when saving to the database otherwise will
 // get `error converting argument $12 type: unsupported type model.NotificationMetadata,  a struct` need
 // the `Value()` and `Scan()` methods to store and retrieve the `NotificationMetadata` struct in the database as JSON.

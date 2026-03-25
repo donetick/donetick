@@ -18,6 +18,7 @@ import (
 	cRepo "donetick.com/core/internal/circle/repo"
 	dRepo "donetick.com/core/internal/device/repo"
 	"donetick.com/core/internal/events"
+	lModel "donetick.com/core/internal/label/model"
 	lRepo "donetick.com/core/internal/label/repo"
 	"donetick.com/core/internal/notifier"
 	nRepo "donetick.com/core/internal/notifier/repo"
@@ -29,6 +30,7 @@ import (
 	storageRepo "donetick.com/core/internal/storage/repo"
 	stModel "donetick.com/core/internal/subtask/model"
 	stRepo "donetick.com/core/internal/subtask/repo"
+	tModel "donetick.com/core/internal/thing/model"
 	tRepo "donetick.com/core/internal/thing/repo"
 	uModel "donetick.com/core/internal/user/model"
 	uRepo "donetick.com/core/internal/user/repo"
@@ -228,6 +230,38 @@ func (h *Handler) GetChore(c *gin.Context) {
 	})
 }
 
+// region: request models
+// TODO: Give default values on requests
+type ChoreReq struct {
+	ID                   int                           `json:"id,omitempty"`                       // Only used on editChore
+	Name                 string                        `json:"name" binding:"required"`            // Used in createChore and editChore
+	FrequencyType        chModel.FrequencyType         `json:"frequencyType" binding:"required"`   // Used in createChore and editChore
+	Frequency            int                           `json:"frequency" binding:"required"`       // Used in createChore and editChore
+	FrequencyMetadata    *chModel.FrequencyMetadata    `json:"frequencyMetadata,omitempty"`        // Used in createChore and editChore
+	DueDate              string                        `json:"dueDate"`                            // Used in createChore and editChore - conditionally
+	IsRolling            bool                          `json:"isRolling" binding:"required"`       // Used in createChore and editChore
+	AssignedTo           *int                          `json:"assignedTo,omitempty"`               // Used in createChore and editChore
+	Assignees            []chModel.ChoreAssignees      `json:"assignees"`                          // Used in createChore and editChore
+	AssignStrategy       chModel.AssignmentStrategy    `json:"assignStrategy" binding:"required"`  // Used in createChore and editChore
+	IsActive             bool                          `json:"isActive" binding:"required"`        // Only used on editChore
+	Notification         bool                          `json:"notification" binding:"required"`    // Used in createChore and editChore
+	NotificationMetadata *chModel.NotificationMetadata `json:"notificationMetadata,omitempty"`     // Used in createChore and editChore
+	LabelsV2             *[]lModel.LabelReq            `json:"labelsV2"`                           // Used in createChore and editChore
+	UpdatedAt            *time.Time                    `json:"updatedAt,omitempty"`                // Only used on editChore  // For internal use only when syncing a chore updated offline
+	Priority             int                           `json:"priority" binding:"required"`        // Used in createChore and editChore
+	CompletionWindow     *int                          `json:"completionWindow,omitempty"`         // Used in createChore and editChore
+	Points               *int                          `json:"points,omitempty"`                   // Used in createChore and editChore no validation at place
+	Description          *string                       `json:"description,omitempty"`              // Used in createChore and editChore
+	SubTasks             *[]stModel.SubTask            `json:"subTasks,omitempty"`                 // Used in createChore and editChore
+	RequireApproval      bool                          `json:"requireApproval" binding:"required"` // Used in createChore and editChore
+	IsPrivate            bool                          `json:"isPrivate" binding:"required"`       // Used in createChore and editChore
+	DeadlineOffset       *int                          `json:"deadlineOffset,omitempty"`           // Not used anywhere?
+	ProjectID            *int                          `json:"projectId,omitempty"`                // Used in createChore and editChore
+	ThingTrigger         *tModel.ThingTrigger          `json:"thingTrigger,omitempty"`             // Only used in createChore
+}
+
+// endregion
+
 // CreateChore godoc
 //
 //	@Summary		Create a new chore
@@ -237,7 +271,7 @@ func (h *Handler) GetChore(c *gin.Context) {
 //	@Produce		json
 //	@Security		JWTKeyAuth
 //	@Security		APIKeyAuth
-//	@Param			chore	body		chModel.ChoreReq	true	"Chore creation request"
+//	@Param			chore	body		ChoreReq	true	"Chore creation request"
 //	@Success		200		{object}	map[string]int		"res: created chore ID"
 //	@Failure		400		{object}	map[string]string	"error: Invalid request format | Assignee not found in circle | Invalid date"
 //	@Failure		401		{object}	map[string]string	"error: Authentication failed"
@@ -256,7 +290,7 @@ func (h *Handler) CreateChore(c *gin.Context) {
 		return
 	}
 	// Validate chore:
-	var choreReq chModel.ChoreReq
+	var choreReq ChoreReq
 	if err := c.ShouldBindJSON(&choreReq); err != nil {
 		logger.Error("Invalid request body", "error", err)
 		c.JSON(400, gin.H{
@@ -418,7 +452,7 @@ func (h *Handler) CreateChore(c *gin.Context) {
 //	@Produce		json
 //	@Security		JWTKeyAuth
 //	@Security		APIKeyAuth
-//	@Param			chore	body		chModel.ChoreReq	true	"Chore update request"
+//	@Param			chore	body		ChoreReq	true	"Chore update request"
 //	@Success		200		{object}	map[string]string	"message: Chore updated successfully"
 //	@Failure		400		{object}	map[string]string	"error: Invalid request format | Invalid date | Assignee not found in circle | Assigned to not found in assignees"
 //	@Failure		401		{object}	map[string]string	"error: Authentication failed"
@@ -437,7 +471,7 @@ func (h *Handler) EditChore(c *gin.Context) {
 		return
 	}
 
-	var choreReq chModel.ChoreReq
+	var choreReq ChoreReq
 	if err := c.ShouldBindJSON(&choreReq); err != nil {
 		logger.Error("Invalid request body", "error", err)
 		c.JSON(400, gin.H{
@@ -759,7 +793,7 @@ func (h *Handler) cleanUpUnreferencedFiles(ctx *gin.Context, userID int, entityT
 	return nil
 }
 
-func handleThingAssociation(choreReq chModel.ChoreReq, savedChore *chModel.Chore, h *Handler, c *gin.Context, currentUser *uModel.User) bool {
+func handleThingAssociation(choreReq ChoreReq, savedChore *chModel.Chore, h *Handler, c *gin.Context, currentUser *uModel.User) bool {
 	if choreReq.ThingTrigger != nil {
 		thing, err := h.tRepo.GetThingByID(c, choreReq.ThingTrigger.ID)
 		if err != nil {
@@ -860,6 +894,14 @@ func (h *Handler) DeleteChore(c *gin.Context) {
 	})
 }
 
+// region: request models
+type AssigneeReq struct {
+	Assignee  int       `json:"assignee" binding:"required"`
+	UpdatedAt time.Time `json:"updatedAt" binding:"required"`
+}
+
+// endregion
+
 // UpdateAssignee godoc
 //
 //	@Summary		Update chore assignee
@@ -870,7 +912,7 @@ func (h *Handler) DeleteChore(c *gin.Context) {
 //	@Security		JWTKeyAuth
 //	@Security		APIKeyAuth
 //	@Param			id			path		int										true	"Chore ID"
-//	@Param			assignee	body		object{assignee=int,updatedAt=string}	true	"Assignee update request"
+//	@Param			assignee	body		AssigneeReq								true	"Assignee update request"
 //	@Success		200			{object}	map[string]chModel.Chore				"res: updated chore"
 //	@Failure		400			{object}	map[string]string						"error: Invalid ID | Invalid request | Assignee not found in assignees"
 //	@Failure		401			{object}	map[string]string						"error: Authentication failed"
@@ -895,11 +937,6 @@ func (h *Handler) UpdateAssignee(c *gin.Context) {
 		})
 		return
 	}
-	type AssigneeReq struct {
-		Assignee  int       `json:"assignee" binding:"required"`
-		UpdatedAt time.Time `json:"updatedAt" binding:"required"`
-	}
-
 	var assigneeReq AssigneeReq
 	if err := c.ShouldBindJSON(&assigneeReq); err != nil {
 		logging.FromContext(c).Error("Operation failed", "error", err)
@@ -1450,6 +1487,15 @@ func (h *Handler) SkipChore(c *gin.Context) {
 	})
 }
 
+// region: request models
+
+type DueDateReq struct {
+	DueDate   *string   `json:"dueDate"`
+	UpdatedAt time.Time `json:"updatedAt" binding:"required"`
+}
+
+// endregion
+
 // UpdateDueDate godoc
 //
 //	@Summary		Update chore due date
@@ -1460,7 +1506,7 @@ func (h *Handler) SkipChore(c *gin.Context) {
 //	@Security		JWTKeyAuth
 //	@Security		APIKeyAuth
 //	@Param			id		path		int										true	"Chore ID"
-//	@Param			dueDate	body		object{dueDate=string,updatedAt=string}	true	"Due date update request"
+//	@Param			dueDate	body		DueDateReq								true	"Due date update request"
 //	@Success		200		{object}	map[string]chModel.Chore				"res: updated chore"
 //	@Failure		400		{object}	map[string]string						"error: Invalid ID | Invalid request | Invalid date"
 //	@Failure		401		{object}	map[string]string						"error: Authentication failed"
@@ -1476,11 +1522,6 @@ func (h *Handler) UpdateDueDate(c *gin.Context) {
 			"error": "Authentication failed",
 		})
 		return
-	}
-
-	type DueDateReq struct {
-		DueDate   *string   `json:"dueDate"`
-		UpdatedAt time.Time `json:"updatedAt" binding:"required"`
 	}
 
 	var dueDateReq DueDateReq
@@ -1692,6 +1733,16 @@ func (h *Handler) UnarchiveChore(c *gin.Context) {
 	})
 }
 
+// region: request models
+
+type CompleteChoreReq struct {
+	Note string `json:"note"`
+	// the completed by only can be populated by the admin or super user
+	CompletedBy *int `json:"completedBy"`
+}
+
+// endregion
+
 // CompleteChore godoc
 //
 //	@Summary		Complete a chore
@@ -1703,7 +1754,7 @@ func (h *Handler) UnarchiveChore(c *gin.Context) {
 //	@Security		APIKeyAuth
 //	@Param			id				path		int									true	"Chore ID"
 //	@Param			completedDate	query		string								false	"Completion date in RFC3339 format (defaults to now)"
-//	@Param			completion		body		object{note=string,completedBy=int}	false	"Completion details"
+//	@Param			completion		body		CompleteChoreReq					false	"Completion details"
 //	@Success		200				{object}	map[string]chModel.Chore			"res: updated chore"
 //	@Failure		400				{object}	map[string]string					"error: Invalid ID | Invalid date | User is not assigned to chore | Chore is out of completion window"
 //	@Failure		401				{object}	map[string]string					"error: Authentication failed"
@@ -1711,11 +1762,7 @@ func (h *Handler) UnarchiveChore(c *gin.Context) {
 //	@Failure		500				{object}	map[string]string					"error: Failed to retrieve chore | Error completing chore"
 //	@Router			/chores/{id}/do [post]
 func (h *Handler) CompleteChore(c *gin.Context) {
-	type CompleteChoreReq struct {
-		Note string `json:"note"`
-		// the completed by only can be populated by the admin or super user
-		CompletedBy *int `json:"completedBy"`
-	}
+
 	var req CompleteChoreReq
 	logger := logging.FromContext(c)
 
@@ -2057,6 +2104,16 @@ func (h *Handler) GetChoreDetail(c *gin.Context) {
 	})
 }
 
+// region: request models
+
+type ModifyHistoryReq struct {
+	PerformedAt *time.Time `json:"performedAt"`
+	DueDate     *time.Time `json:"dueDate"`
+	Notes       *string    `json:"notes"`
+}
+
+// endregion
+
 // ModifyHistory godoc
 //
 //	@Summary		Modify chore history entry
@@ -2068,7 +2125,7 @@ func (h *Handler) GetChoreDetail(c *gin.Context) {
 //	@Security		APIKeyAuth
 //	@Param			id			path		int														true	"Chore ID"
 //	@Param			history_id	path		int														true	"History ID"
-//	@Param			history		body		object{performedAt=string,dueDate=string,notes=string}	true	"History modification request"
+//	@Param			history		body		ModifyHistoryReq	true	"History modification request"
 //	@Success		200			{object}	map[string]chModel.ChoreHistory							"res: updated history entry"
 //	@Failure		400			{object}	map[string]string										"error: Invalid Chore ID | Invalid History ID | Invalid request"
 //	@Failure		401			{object}	map[string]string										"error: Authentication failed"
@@ -2094,11 +2151,6 @@ func (h *Handler) ModifyHistory(c *gin.Context) {
 			"error": "Invalid Chore ID",
 		})
 		return
-	}
-	type ModifyHistoryReq struct {
-		PerformedAt *time.Time `json:"performedAt"`
-		DueDate     *time.Time `json:"dueDate"`
-		Notes       *string    `json:"notes"`
 	}
 
 	var req ModifyHistoryReq
@@ -2164,6 +2216,14 @@ func (h *Handler) ModifyHistory(c *gin.Context) {
 	})
 }
 
+// region: request models
+
+type PriorityReq struct {
+	Priority *int `json:"priority" binding:"required,gt=-1,lt=5"`
+}
+
+// endregion
+
 // UpdatePriority godoc
 //
 //	@Summary		Update chore priority
@@ -2174,7 +2234,7 @@ func (h *Handler) ModifyHistory(c *gin.Context) {
 //	@Security		JWTKeyAuth
 //	@Security		APIKeyAuth
 //	@Param			id			path		int						true	"Chore ID"
-//	@Param			priority	body		object{priority=int}	true	"Priority value (0-4)"
+//	@Param			priority	body		PriorityReq	true	"Priority value (0-4)"
 //	@Success		200			{object}	map[string]string		"message: Priority updated successfully"
 //	@Failure		400			{object}	map[string]string		"error: Invalid ID | Invalid request"
 //	@Failure		401			{object}	map[string]string		"error: Authentication failed"
@@ -2182,9 +2242,6 @@ func (h *Handler) ModifyHistory(c *gin.Context) {
 //	@Failure		500			{object}	map[string]string		"error: Failed to retrieve chore | Error updating priority"
 //	@Router			/chores/{id}/priority [put]
 func (h *Handler) UpdatePriority(c *gin.Context) {
-	type PriorityReq struct {
-		Priority *int `json:"priority" binding:"required,gt=-1,lt=5"`
-	}
 
 	logger := logging.FromContext(c)
 	currentUser, ok := auth.CurrentUser(c)
@@ -2401,6 +2458,16 @@ func (h *Handler) DeleteHistory(c *gin.Context) {
 	})
 }
 
+// region: request models
+
+type SubtaskReq struct {
+	ID          int        `json:"id"`
+	ChoreID     int        `json:"choreId"`
+	CompletedAt *time.Time `json:"completedAt"`
+}
+
+// endregion
+
 // UpdateSubtaskCompletedAt godoc
 //
 //	@Summary		Update subtask completion status
@@ -2411,7 +2478,7 @@ func (h *Handler) DeleteHistory(c *gin.Context) {
 //	@Security		JWTKeyAuth
 //	@Security		APIKeyAuth
 //	@Param			id		path		int												true	"Chore ID"
-//	@Param			subtask	body		object{id=int,choreId=int,completedAt=string}	true	"Subtask completion request"
+//	@Param			subtask	body		SubtaskReq	true	"Subtask completion request"
 //	@Success		200		{object}	map[string]interface{}							"Empty success response"
 //	@Failure		400		{object}	map[string]string								"error: Invalid Chore ID | Invalid request | User is not assigned to chore"
 //	@Failure		401		{object}	map[string]string								"error: Authentication failed"
@@ -2449,12 +2516,6 @@ func (h *Handler) UpdateSubtaskCompletedAt(c *gin.Context) {
 			"error": "Invalid Chore ID",
 		})
 		return
-	}
-
-	type SubtaskReq struct {
-		ID          int        `json:"id"`
-		ChoreID     int        `json:"choreId"`
-		CompletedAt *time.Time `json:"completedAt"`
 	}
 
 	var req SubtaskReq
@@ -2621,6 +2682,16 @@ func (h *Handler) GetChoreTimeSessions(c *gin.Context) {
 	})
 }
 
+// region: request models
+
+type UpdateTimeSessionReq struct {
+	StartTime *time.Time               `json:"startTime"`
+	EndTime   *time.Time               `json:"endTime"`
+	PauseLog  *chModel.PauseLogEntries `json:"pauseLog"`
+}
+
+// endregion
+
 // UpdateTimeSession godoc
 //
 //	@Summary		Update a time session
@@ -2632,7 +2703,7 @@ func (h *Handler) GetChoreTimeSessions(c *gin.Context) {
 //	@Security		APIKeyAuth
 //	@Param			id			path		int														true	"Chore ID"
 //	@Param			session_id	path		int														true	"Session ID"
-//	@Param			session		body		object{startTime=string,endTime=string,pauseLog=array}	true	"Time session update request"
+//	@Param			session		body		UpdateTimeSessionReq	true	"Time session update request"
 //	@Success		200			{object}	map[string]model.TimeSession							"res: updated time session"
 //	@Failure		400			{object}	map[string]string										"error: Invalid chore ID | Invalid session ID | Invalid request body | Time session does not belong to the specified chore"
 //	@Failure		401			{object}	map[string]string										"error: Authentication failed"
@@ -2666,12 +2737,6 @@ func (h *Handler) UpdateTimeSession(c *gin.Context) {
 			"error": "Invalid session ID",
 		})
 		return
-	}
-
-	type UpdateTimeSessionReq struct {
-		StartTime *time.Time               `json:"startTime"`
-		EndTime   *time.Time               `json:"endTime"`
-		PauseLog  *chModel.PauseLogEntries `json:"pauseLog"`
 	}
 
 	var req UpdateTimeSessionReq
@@ -3039,6 +3104,14 @@ func (h *Handler) ApproveChore(c *gin.Context) {
 	})
 }
 
+// region: request models
+
+type RejectChoreReq struct {
+	Note string `json:"note"`
+}
+
+// endregion
+
 // RejectChore godoc
 //
 //	@Summary		Reject a chore completion
@@ -3049,7 +3122,7 @@ func (h *Handler) ApproveChore(c *gin.Context) {
 //	@Security		JWTKeyAuth
 //	@Security		APIKeyAuth
 //	@Param			id			path		int						true	"Chore ID"
-//	@Param			rejection	body		object{note=string}		false	"Rejection details"
+//	@Param			rejection	body		RejectChoreReq	false	"Rejection details"
 //	@Success		200			{object}	map[string]interface{}	"res: updated chore, message: Chore rejected successfully"
 //	@Failure		400			{object}	map[string]string		"error: Invalid ID | Chore is not pending approval"
 //	@Failure		401			{object}	map[string]string		"error: Authentication failed"
@@ -3076,9 +3149,6 @@ func (h *Handler) RejectChore(c *gin.Context) {
 		return
 	}
 
-	type RejectChoreReq struct {
-		Note string `json:"note"`
-	}
 	var req RejectChoreReq
 	_ = c.ShouldBindJSON(&req)
 
@@ -3164,6 +3234,15 @@ func (h *Handler) RejectChore(c *gin.Context) {
 	})
 }
 
+// region: request models
+
+type StatusUpdateReq struct {
+	Status    chModel.Status `json:"status" binding:"required"`
+	UpdatedAt time.Time      `json:"updatedAt" binding:"required"`
+}
+
+// endregion
+
 // UpdateChoreStatus godoc
 //
 //	@Summary		Update chore status
@@ -3174,7 +3253,7 @@ func (h *Handler) RejectChore(c *gin.Context) {
 //	@Security		JWTKeyAuth
 //	@Security		APIKeyAuth
 //	@Param			id		path		int										true	"Chore ID"
-//	@Param			status	body		object{status=string,updatedAt=string}	true	"Status update request"
+//	@Param			status	body		StatusUpdateReq	true	"Status update request"
 //	@Success		200		{object}	map[string]string						"message: Chore status updated successfully"
 //	@Failure		400		{object}	map[string]string						"error: Invalid ID | Invalid request"
 //	@Failure		401		{object}	map[string]string						"error: Authentication failed"
@@ -3199,11 +3278,6 @@ func (h *Handler) updateChoreStatus(c *gin.Context) { // TODO: Not used in Route
 			"error": "Invalid ID",
 		})
 		return
-	}
-
-	type StatusUpdateReq struct {
-		Status    chModel.Status `json:"status" binding:"required"`
-		UpdatedAt time.Time      `json:"updatedAt" binding:"required"`
 	}
 
 	var statusReq StatusUpdateReq
@@ -3268,6 +3342,15 @@ func (h *Handler) updateChoreStatus(c *gin.Context) { // TODO: Not used in Route
 	})
 }
 
+// region: request models
+
+type TimerUpdateReq struct {
+	Duration  int       `json:"duration" binding:"required"`
+	UpdatedAt time.Time `json:"updatedAt" binding:"required"`
+}
+
+// endregion
+
 // UpdateTimer godoc
 //
 //	@Summary		Update chore timer duration
@@ -3278,7 +3361,7 @@ func (h *Handler) updateChoreStatus(c *gin.Context) { // TODO: Not used in Route
 //	@Security		JWTKeyAuth
 //	@Security		APIKeyAuth
 //	@Param			id		path		int										true	"Chore ID"
-//	@Param			timer	body		object{duration=int,updatedAt=string}	true	"Timer update request"
+//	@Param			timer	body		TimerUpdateReq	true	"Timer update request"
 //	@Success		200		{object}	map[string]string						"message: Chore timer updated successfully"
 //	@Failure		400		{object}	map[string]string						"error: Invalid ID | Invalid request"
 //	@Failure		401		{object}	map[string]string						"error: Authentication failed"
@@ -3303,11 +3386,6 @@ func (h *Handler) updateTimer(c *gin.Context) { // TODO: Not used in Routes
 			"error": "Invalid ID",
 		})
 		return
-	}
-
-	type TimerUpdateReq struct {
-		Duration  int       `json:"duration" binding:"required"`
-		UpdatedAt time.Time `json:"updatedAt" binding:"required"`
 	}
 
 	var timerReq TimerUpdateReq
@@ -3519,10 +3597,13 @@ func indexOf(arr []chModel.ChoreAssignees, value int) int {
 	return -1
 }
 
+// region: request models
 type NudgeRequest struct {
 	AllAssignees bool   `json:"all_assignees"`     // If true, send to all assignees; if false, send to current assignee
 	Message      string `json:"message,omitempty"` // Optional custom message
 }
+
+// endregion
 
 // SendNudgeNotification godoc
 //
@@ -3534,7 +3615,7 @@ type NudgeRequest struct {
 //	@Security		JWTKeyAuth
 //	@Security		APIKeyAuth
 //	@Param			id		path		int												true	"Chore ID"
-//	@Param			nudge	body		object{all_assignees=boolean,message=string}	true	"Nudge request"
+//	@Param			nudge	body		NudgeRequest	true	"Nudge request"
 //	@Success		200		{object}	map[string]interface{}							"message: Nudge sent status"
 //	@Failure		400		{object}	map[string]string								"error: Invalid chore ID | Invalid request payload | Chore has no assignees | Cannot nudge yourself"
 //	@Failure		401		{object}	map[string]string								"error: Authentication failed"
@@ -3876,7 +3957,7 @@ func Routes(router *gin.Engine, h *Handler, multiAuthMiddleware *auth.MultiAuthM
 
 	// Input validation
 	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
-		v.RegisterStructValidation(chModel.ChoreReqStructLevelValidation, chModel.ChoreReq{})
+		v.RegisterStructValidation(ChoreReqStructLevelValidation, ChoreReq{})
 	}
 
 	choresRoutes := router.Group("api/v1/chores")

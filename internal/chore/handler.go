@@ -897,7 +897,7 @@ func (h *Handler) DeleteChore(c *gin.Context) {
 // region: request models
 type AssigneeReq struct {
 	Assignee  int       `json:"assignee" binding:"required"`
-	UpdatedAt time.Time `json:"updatedAt" binding:"required"`
+	UpdatedAt time.Time `json:"updatedAt" binding:"required"` // TODO: Add validation for time
 }
 
 // endregion
@@ -1490,8 +1490,8 @@ func (h *Handler) SkipChore(c *gin.Context) {
 // region: request models
 
 type DueDateReq struct {
-	DueDate   *string   `json:"dueDate"`
-	UpdatedAt time.Time `json:"updatedAt" binding:"required"`
+	DueDate   *time.Time `json:"dueDate"`
+	UpdatedAt *time.Time `json:"updatedAt" binding:"required"` // TODO: Check this if it's necessary.
 }
 
 // endregion
@@ -1544,18 +1544,15 @@ func (h *Handler) UpdateDueDate(c *gin.Context) {
 
 	var dueDate *time.Time
 
-	// Handle due date: if nil, empty string, or "null", set to nil
-	if dueDateReq.DueDate != nil && *dueDateReq.DueDate != "" && *dueDateReq.DueDate != "null" {
-		rawDueDate, err := time.Parse(time.RFC3339, *dueDateReq.DueDate)
-		if err != nil {
-			c.JSON(400, gin.H{
-				"error": "Invalid date",
-			})
-			return
-		}
-		utcDueDate := rawDueDate.UTC()
-		dueDate = &utcDueDate
+	if dueDateReq.DueDate != nil {
+		// 1. Dereference the pointer with *
+		// 2. Call UTC() which returns a standard time.Time
+		utcTime := (*dueDateReq.DueDate).UTC()
+
+		// 3. Take the memory address of the new UTC time to create a pointer
+		dueDate = &utcTime
 	}
+
 	chore, err := h.choreRepo.GetChore(c, id, currentUser.ID)
 	if err != nil {
 		logger.Error("Failed to retrieve chore", "error", err)
@@ -1572,7 +1569,7 @@ func (h *Handler) UpdateDueDate(c *gin.Context) {
 		})
 		return
 	}
-	if err := chore.CanEdit(currentUser.ID, circleUsers, &dueDateReq.UpdatedAt); err != nil {
+	if err := chore.CanEdit(currentUser.ID, circleUsers, dueDateReq.UpdatedAt); err != nil {
 		c.JSON(403, gin.H{})
 		return
 	}
@@ -1736,9 +1733,9 @@ func (h *Handler) UnarchiveChore(c *gin.Context) {
 // region: request models
 
 type CompleteChoreReq struct {
-	Note string `json:"note"`
-	// the completed by only can be populated by the admin or super user
-	CompletedBy *int `json:"completedBy"`
+	Notes         *string    `json:"notes" binding:"omitempty,min=1"`
+	CompletedBy   *int       `json:"completedBy"` // the completed by only can be populated by the admin or super user
+	CompletedDate *time.Time `json:"completedTime"`
 }
 
 // endregion
@@ -1753,7 +1750,6 @@ type CompleteChoreReq struct {
 //	@Security		JWTKeyAuth
 //	@Security		APIKeyAuth
 //	@Param			id				path		int							true	"Chore ID"
-//	@Param			completedDate	query		string						false	"Completion date in RFC3339 format (defaults to now)"
 //	@Param			completion		body		CompleteChoreReq			false	"Completion details"
 //	@Success		200				{object}	map[string]chModel.Chore	"res: updated chore"
 //	@Failure		400				{object}	map[string]string			"error: Invalid ID | Invalid date | User is not assigned to chore | Chore is out of completion window"
@@ -1789,26 +1785,20 @@ func (h *Handler) CompleteChore(c *gin.Context) {
 
 	completedBy := effectiveUser.ID
 	completeChoreID := c.Param("id")
-	var completedDate time.Time
-	rawCompletedDate := c.Query("completedDate")
-	if rawCompletedDate == "" {
-		completedDate = time.Now().UTC()
-	} else {
-		var err error
-		completedDate, err = time.Parse(time.RFC3339, rawCompletedDate)
-		if err != nil {
-			c.JSON(400, gin.H{
-				"error": "Invalid date",
-			})
-			return
-		}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		logging.FromContext(c).Error("Operation failed", "error", err)
+		c.JSON(400, gin.H{
+			"error": "Invalid request",
+		})
+		return
 	}
 
-	var additionalNotes *string
-	_ = c.ShouldBindJSON(&req)
-
-	if req.Note != "" {
-		additionalNotes = &req.Note
+	var completedDate time.Time
+	if req.CompletedDate == nil {
+		completedDate = time.Now().UTC()
+	} else {
+		completedDate = req.CompletedDate.UTC()
 	}
 
 	id, err := strconv.Atoi(completeChoreID)
@@ -1903,7 +1893,7 @@ func (h *Handler) CompleteChore(c *gin.Context) {
 	// Check if chore requires approval
 	if chore.RequireApproval {
 		// Set chore status to pending approval instead of completing
-		if err := h.choreRepo.SetChorePendingApproval(c, chore, additionalNotes, completedBy, &completedDate); err != nil {
+		if err := h.choreRepo.SetChorePendingApproval(c, chore, req.Notes, completedBy, &completedDate); err != nil {
 			c.JSON(500, gin.H{
 				"error": "Error setting chore pending approval",
 			})
@@ -1926,7 +1916,7 @@ func (h *Handler) CompleteChore(c *gin.Context) {
 				"updatedBy": actualUser.ID, // Use actual user for audit trail
 				"updatedAt": time.Now().UTC(),
 			}
-			broadcaster.BroadcastChoreUpdated(updatedChore, &effectiveUser.User, changes, additionalNotes)
+			broadcaster.BroadcastChoreUpdated(updatedChore, &effectiveUser.User, changes, req.Notes)
 		}
 
 		c.JSON(200, gin.H{
@@ -1945,7 +1935,7 @@ func (h *Handler) CompleteChore(c *gin.Context) {
 		return
 	}
 
-	if err := h.choreRepo.CompleteChore(c, chore, additionalNotes, completedBy, nextDueDate, &completedDate, nextAssignedTo, true); err != nil {
+	if err := h.choreRepo.CompleteChore(c, chore, req.Notes, completedBy, nextDueDate, &completedDate, nextAssignedTo, true); err != nil {
 		c.JSON(500, gin.H{
 			"error": "Error completing chore",
 		})
@@ -1978,7 +1968,7 @@ func (h *Handler) CompleteChore(c *gin.Context) {
 		if len(history) > 0 {
 			choreHistory = history[0]
 		}
-		broadcaster.BroadcastChoreCompleted(updatedChore, &effectiveUser.User, choreHistory, additionalNotes)
+		broadcaster.BroadcastChoreCompleted(updatedChore, &effectiveUser.User, choreHistory, req.Notes)
 	}
 
 	c.JSON(200, gin.H{
@@ -2194,6 +2184,7 @@ func (h *Handler) ModifyHistory(c *gin.Context) {
 		})
 		return
 	}
+	//only overwrite the part of history that's necessary
 	if req.PerformedAt != nil {
 		history.PerformedAt = req.PerformedAt
 	}
@@ -2548,11 +2539,7 @@ func (h *Handler) UpdateSubtaskCompletedAt(c *gin.Context) {
 		})
 		return
 	}
-	var completedAt *time.Time
-	if req.CompletedAt != nil {
-		completedAt = req.CompletedAt
-	}
-	err = h.stRepo.UpdateSubTaskStatus(c, effectiveUser.ID, req.ID, completedAt)
+	err = h.stRepo.UpdateSubTaskStatus(c, effectiveUser.ID, req.ID, req.CompletedAt)
 	if err != nil {
 		c.JSON(500, gin.H{
 			"error": "Error getting subtask",
@@ -2567,7 +2554,7 @@ func (h *Handler) UpdateSubtaskCompletedAt(c *gin.Context) {
 		broadcaster.BroadcastSubtaskUpdated(
 			choreID,
 			req.ID,
-			completedAt,
+			req.CompletedAt,
 			&effectiveUser.User,
 			chore.CircleID,
 		)
@@ -2578,7 +2565,7 @@ func (h *Handler) UpdateSubtaskCompletedAt(c *gin.Context) {
 		&stModel.SubTask{
 			ID:          req.ID,
 			ChoreID:     req.ChoreID,
-			CompletedAt: completedAt,
+			CompletedAt: req.CompletedAt,
 			CompletedBy: effectiveUser.ID,
 		},
 	)
@@ -2791,7 +2778,7 @@ func (h *Handler) UpdateTimeSession(c *gin.Context) {
 		return
 	}
 
-	// Update the session fields
+	// Update only the necessary session fields
 	if req.StartTime != nil {
 		session.StartTime = *req.StartTime
 	}
@@ -3107,7 +3094,7 @@ func (h *Handler) ApproveChore(c *gin.Context) {
 // region: request models
 
 type RejectChoreReq struct {
-	Note string `json:"note"`
+	Notes *string `json:"notes" binding:"omitempty,min=1"`
 }
 
 // endregion
@@ -3150,8 +3137,12 @@ func (h *Handler) RejectChore(c *gin.Context) {
 	}
 
 	var req RejectChoreReq
-	_ = c.ShouldBindJSON(&req)
-
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{
+			"error": "Invalid request body",
+		})
+		return
+	}
 	// Get the chore
 	chore, err := h.choreRepo.GetChore(c, id, currentUser.ID)
 	if err != nil {
@@ -3195,13 +3186,8 @@ func (h *Handler) RejectChore(c *gin.Context) {
 		return
 	}
 
-	var rejectionNote *string
-	if req.Note != "" {
-		rejectionNote = &req.Note
-	}
-
 	// Reject the chore
-	if err := h.choreRepo.RejectChore(c, id, rejectionNote); err != nil {
+	if err := h.choreRepo.RejectChore(c, id, req.Notes); err != nil {
 		c.JSON(500, gin.H{
 			"error": "Error rejecting chore",
 		})
@@ -3225,7 +3211,7 @@ func (h *Handler) RejectChore(c *gin.Context) {
 			"updatedBy": currentUser.ID,
 			"updatedAt": time.Now().UTC(),
 		}
-		broadcaster.BroadcastChoreUpdated(updatedChore, &currentUser.User, changes, rejectionNote)
+		broadcaster.BroadcastChoreUpdated(updatedChore, &currentUser.User, changes, req.Notes)
 	}
 
 	c.JSON(200, gin.H{

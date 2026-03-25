@@ -1492,8 +1492,8 @@ func (h *Handler) SkipChore(c *gin.Context) {
 // region: request models
 // TODO: Check this if UpdatedAt is necessary.
 type DueDateReq struct {
-	NextDueDate *time.Time `json:"nextDueDate"`
-	UpdatedAt   *time.Time `json:"updatedAt" binding:"required"`
+	DueDate   *time.Time `json:"dueDate"`
+	UpdatedAt *time.Time `json:"updatedAt" binding:"required"`
 }
 
 // endregion
@@ -1546,10 +1546,10 @@ func (h *Handler) UpdateDueDate(c *gin.Context) {
 
 	var dueDate *time.Time
 
-	if dueDateReq.NextDueDate != nil {
+	if dueDateReq.DueDate != nil {
 		// 1. Dereference the pointer with *
 		// 2. Call UTC() which returns a standard time.Time
-		utcTime := (*dueDateReq.NextDueDate).UTC()
+		utcTime := (*dueDateReq.DueDate).UTC()
 
 		// 3. Take the memory address of the new UTC time to create a pointer
 		dueDate = &utcTime

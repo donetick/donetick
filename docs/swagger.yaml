@@ -1,3 +1,4 @@
+basePath: /api/v1
 definitions:
   chore.AssigneeReq:
     properties:
@@ -868,6 +869,12 @@ definitions:
     type: object
 info:
   contact: {}
+  description: Donetick swagger documentation.
+  license:
+    name: GNU Affero General Public License v3.0
+    url: https://github.com/donetick/donetick/blob/main/LICENSE.md
+  title: Donetick Swagger API
+  version: "1.0"
 paths:
   /chores:
     get:
@@ -3619,4 +3626,15 @@ paths:
       summary: Update thing state
       tags:
       - things
+securityDefinitions:
+  APIKeyAuth:
+    description: donetick issued apikey
+    in: header
+    name: secretkey
+    type: apiKey
+  JWTKeyAuth:
+    description: Type "Bearer" followed by a space and JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"

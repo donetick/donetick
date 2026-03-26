@@ -1,8 +1,16 @@
 {
     "swagger": "2.0",
     "info": {
-        "contact": {}
+        "description": "Donetick swagger documentation.",
+        "title": "Donetick Swagger API",
+        "contact": {},
+        "license": {
+            "name": "GNU Affero General Public License v3.0",
+            "url": "https://github.com/donetick/donetick/blob/main/LICENSE.md"
+        },
+        "version": "1.0"
     },
+    "basePath": "/api/v1",
     "paths": {
         "/chores": {
             "get": {
@@ -5521,6 +5529,20 @@
                     "type": "string"
                 }
             }
+        }
+    },
+    "securityDefinitions": {
+        "APIKeyAuth": {
+            "description": "donetick issued apikey",
+            "type": "apiKey",
+            "name": "secretkey",
+            "in": "header"
+        },
+        "JWTKeyAuth": {
+            "description": "Type \"Bearer\" followed by a space and JWT token.",
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
         }
     }
 }

@@ -15,8 +15,6 @@ func ChoreReqStructLevelValidation(sl validator.StructLevel) {
 	validateAssignments(sl, req)        // 3. Validate Assignments
 	validateNotifications(sl, req)      // 4. Validate Notifications
 	validateConcurrencyControl(sl, req) // 5. Validate Optimistic Concurrency Control
-	validateRollingLogic(sl, req)       // 6. Validate Rolling Logic
-
 }
 
 func validateFrequencyLogic(sl validator.StructLevel, req ChoreReq) {
@@ -132,15 +130,6 @@ func validateConcurrencyControl(sl validator.StructLevel, req ChoreReq) {
 
 		if req.UpdatedAt.After(maxAllowedTime) {
 			sl.ReportError(req.UpdatedAt, "UpdatedAt", "updatedAt", "cannot_be_in_future", "")
-		}
-	}
-}
-
-func validateRollingLogic(sl validator.StructLevel, req ChoreReq) {
-	// IsRolling depends on having a set due date to calculate the shift
-	if req.IsRolling != nil && *req.IsRolling {
-		if req.NextDueDate == nil {
-			sl.ReportError(req.IsRolling, "IsRolling", "isRolling", "requires_next_due_date", "")
 		}
 	}
 }

@@ -231,33 +231,32 @@ func (h *Handler) GetChore(c *gin.Context) {
 }
 
 // region: request models
-// TODO: Give default values on requests
 type ChoreReq struct {
-	ID                   int                           `json:"id,omitempty"`                       // Only used on editChore
-	Name                 string                        `json:"name" binding:"required"`            // Used in createChore and editChore
-	FrequencyType        chModel.FrequencyType         `json:"frequencyType" binding:"required"`   // Used in createChore and editChore
-	Frequency            int                           `json:"frequency" binding:"required"`       // Used in createChore and editChore
-	FrequencyMetadata    *chModel.FrequencyMetadata    `json:"frequencyMetadata,omitempty"`        // Used in createChore and editChore
-	NextDueDate          string                        `json:"nextDueDate"`                        // Used in createChore and editChore - conditionally
-	IsRolling            bool                          `json:"isRolling" binding:"required"`       // Used in createChore and editChore
-	AssignedTo           *int                          `json:"assignedTo,omitempty"`               // Used in createChore and editChore
-	Assignees            []chModel.ChoreAssignees      `json:"assignees"`                          // Used in createChore and editChore
-	AssignStrategy       chModel.AssignmentStrategy    `json:"assignStrategy" binding:"required"`  // Used in createChore and editChore
-	IsActive             bool                          `json:"isActive" binding:"required"`        // Only used on editChore
-	Notification         bool                          `json:"notification" binding:"required"`    // Used in createChore and editChore
-	NotificationMetadata *chModel.NotificationMetadata `json:"notificationMetadata,omitempty"`     // Used in createChore and editChore
-	LabelsV2             *[]lModel.LabelReq            `json:"labelsV2"`                           // Used in createChore and editChore
-	UpdatedAt            *time.Time                    `json:"updatedAt,omitempty"`                // Only used on editChore  // For internal use only when syncing a chore updated offline
-	Priority             int                           `json:"priority" binding:"required"`        // Used in createChore and editChore
-	CompletionWindow     *int                          `json:"completionWindow,omitempty"`         // Used in createChore and editChore
-	Points               *int                          `json:"points,omitempty"`                   // Used in createChore and editChore no validation at place
-	Description          *string                       `json:"description,omitempty"`              // Used in createChore and editChore
-	SubTasks             *[]stModel.SubTask            `json:"subTasks,omitempty"`                 // Used in createChore and editChore
-	RequireApproval      bool                          `json:"requireApproval" binding:"required"` // Used in createChore and editChore
-	IsPrivate            bool                          `json:"isPrivate" binding:"required"`       // Used in createChore and editChore
-	DeadlineOffset       *int                          `json:"deadlineOffset,omitempty"`           // Not used anywhere?
-	ProjectID            *int                          `json:"projectId,omitempty"`                // Used in createChore and editChore
-	ThingTrigger         *tModel.ThingTrigger          `json:"thingTrigger,omitempty"`             // Only used in createChore
+	ID                   int                           `json:"id"`                                // no default
+	Name                 string                        `json:"name" binding:"required"`           // no default
+	FrequencyType        chModel.FrequencyType         `json:"frequencyType" binding:"required"`  // no default
+	Frequency            *int                          `json:"frequency"`                         // default to 1, keeps previous value on edit Frequency and frequencytype can conflict!
+	FrequencyMetadata    *chModel.FrequencyMetadata    `json:"frequencyMetadata"`                 // no default
+	NextDueDate          string                        `json:"nextDueDate"`                       // no default - conditionally // TODO: convert to time
+	IsRolling            *bool                         `json:"isRolling"`                         // defaults to false in create, keeps previous value on edit
+	AssignedTo           *int                          `json:"assignedTo"`                        // no defaults if it's not no_assignee we should throw input error
+	Assignees            []chModel.ChoreAssignees      `json:"assignees"`                         // if it's no_assignee we should throw input error
+	AssignStrategy       chModel.AssignmentStrategy    `json:"assignStrategy" binding:"required"` // no_assignee not compatible with assignees and assignedto
+	IsActive             *bool                         `json:"isActive"`                          // defaults to true in create, defaults to previous value
+	Notification         *bool                         `json:"notification"`                      // defaults to false in create, keeps previous version on edit
+	NotificationMetadata *chModel.NotificationMetadata `json:"notificationMetadata"`              // maybe incompatible with null notificatioN?
+	LabelsV2             *[]lModel.LabelReq            `json:"labelsV2"`                          // no default
+	UpdatedAt            *time.Time                    `json:"updatedAt"`                         // Only used on editChore  // For internal use only when syncing a chore updated offline
+	Priority             *int                          `json:"priority"`                          // defaults to 0, keeps previous value on editchore
+	CompletionWindow     *int                          `json:"completionWindow"`                  // no default
+	Points               *int                          `json:"points"`                            // no default, no validation at place
+	Description          *string                       `json:"description"`                       // no default
+	SubTasks             *[]stModel.SubTask            `json:"subTasks"`                          // no default
+	RequireApproval      *bool                         `json:"requireApproval"`                   // defaults to false, keeps previous version on edit
+	IsPrivate            bool                          `json:"isPrivate" binding:"required"`      // no default
+	DeadlineOffset       *int                          `json:"deadlineOffset"`                    // Not used anywhere?
+	ProjectID            *int                          `json:"projectId"`                         // no default
+	ThingTrigger         *tModel.ThingTrigger          `json:"thingTrigger"`                      // no default
 }
 
 // endregion
@@ -291,6 +290,7 @@ func (h *Handler) CreateChore(c *gin.Context) {
 	}
 	// Validate chore:
 	var choreReq ChoreReq
+
 	if err := c.ShouldBindJSON(&choreReq); err != nil {
 		logger.Error("Invalid request body", "error", err)
 		c.JSON(400, gin.H{
@@ -338,19 +338,22 @@ func (h *Handler) CreateChore(c *gin.Context) {
 		}
 
 	}
+
+	setCreateChoreDefaults(choreReq)
+
 	createdChore := &chModel.Chore{
 
 		Name:                   choreReq.Name,
 		FrequencyType:          choreReq.FrequencyType,
-		Frequency:              choreReq.Frequency,
+		Frequency:              *choreReq.Frequency,
 		FrequencyMetadataV2:    choreReq.FrequencyMetadata,
 		NextDueDate:            dueDate,
 		AssignStrategy:         choreReq.AssignStrategy,
 		AssignedTo:             choreReq.AssignedTo,
-		IsRolling:              choreReq.IsRolling,
+		IsRolling:              *choreReq.IsRolling,
 		UpdatedBy:              currentUser.ID,
-		IsActive:               true,
-		Notification:           choreReq.Notification,
+		IsActive:               *choreReq.IsActive,
+		Notification:           *choreReq.Notification,
 		NotificationMetadataV2: choreReq.NotificationMetadata,
 		CreatedBy:              currentUser.ID,
 		CreatedAt:              time.Now().UTC(),
@@ -358,8 +361,8 @@ func (h *Handler) CreateChore(c *gin.Context) {
 		Points:                 choreReq.Points,
 		CompletionWindow:       choreReq.CompletionWindow,
 		Description:            choreReq.Description,
-		Priority:               choreReq.Priority,
-		RequireApproval:        choreReq.RequireApproval,
+		Priority:               *choreReq.Priority,
+		RequireApproval:        *choreReq.RequireApproval,
 		IsPrivate:              choreReq.IsPrivate,
 		ProjectID:              choreReq.ProjectID,
 		// SubTasks removed to prevent duplicate creation - handled by UpdateSubtask call below
@@ -441,6 +444,32 @@ func (h *Handler) CreateChore(c *gin.Context) {
 	c.JSON(200, gin.H{
 		"res": id,
 	})
+}
+
+func setCreateChoreDefaults(choreReq ChoreReq) {
+	if choreReq.Frequency == nil {
+		*choreReq.Frequency = 1
+	}
+
+	if choreReq.IsRolling == nil {
+		*choreReq.IsRolling = false
+	}
+
+	if choreReq.IsActive == nil {
+		*choreReq.IsActive = true
+	}
+
+	if choreReq.Notification == nil {
+		*choreReq.Notification = false
+	}
+
+	if choreReq.Priority == nil {
+		*choreReq.Priority = 0
+	}
+
+	if choreReq.RequireApproval == nil {
+		*choreReq.RequireApproval = false
+	}
 }
 
 // EditChore godoc
@@ -628,26 +657,27 @@ func (h *Handler) EditChore(c *gin.Context) {
 		description = ""
 
 	}
-	if err := h.cleanUpUnreferencedFiles(c, currentUser.ID, storageModel.EntityTypeChoreDescription, choreReq.ID, description); err != nil {
+	if err := h.cleanUpUnreferencedFiles(c, currentUser.ID, storageModel.EntityTypeChoreDescription, choreReq.ID, description); err != nil { // TODO: this doesn't seem good, we clean up the request' file before adding it to the model
 		c.JSON(500, gin.H{
 			"error": "Error processing description",
 		})
 		return
 	}
 
-	updatedChore := &chModel.Chore{
-		ID:                  choreReq.ID,
-		Name:                choreReq.Name,
-		FrequencyType:       choreReq.FrequencyType,
-		Frequency:           choreReq.Frequency,
-		FrequencyMetadataV2: choreReq.FrequencyMetadata,
-		// Assignees:         &assignees,
+	setEditChoreDefaults(choreReq, oldChore)
+
+	updatedChore := &chModel.Chore{ // TODO: Assignees are missing
+		ID:                     choreReq.ID,
+		Name:                   choreReq.Name,
+		FrequencyType:          choreReq.FrequencyType,
+		Frequency:              *choreReq.Frequency,
+		FrequencyMetadataV2:    choreReq.FrequencyMetadata,
 		NextDueDate:            dueDate,
 		AssignStrategy:         choreReq.AssignStrategy,
 		AssignedTo:             choreReq.AssignedTo,
-		IsRolling:              choreReq.IsRolling,
-		IsActive:               choreReq.IsActive,
-		Notification:           choreReq.Notification,
+		IsRolling:              *choreReq.IsRolling,
+		IsActive:               *choreReq.IsActive,
+		Notification:           *choreReq.Notification,
 		NotificationMetadataV2: choreReq.NotificationMetadata,
 		CircleID:               oldChore.CircleID,
 		UpdatedBy:              currentUser.ID,
@@ -656,12 +686,13 @@ func (h *Handler) EditChore(c *gin.Context) {
 		Points:                 choreReq.Points,
 		CompletionWindow:       choreReq.CompletionWindow,
 		Description:            choreReq.Description,
-		Priority:               choreReq.Priority,
-		RequireApproval:        choreReq.RequireApproval,
+		Priority:               *choreReq.Priority,
+		RequireApproval:        *choreReq.RequireApproval,
 		IsPrivate:              choreReq.IsPrivate,
 		ProjectID:              choreReq.ProjectID,
 		Status:                 oldChore.Status,
 	}
+
 	if err := h.choreRepo.UpsertChore(c, updatedChore); err != nil {
 		c.JSON(500, gin.H{
 			"error": "Error adding chore",
@@ -763,6 +794,32 @@ func (h *Handler) EditChore(c *gin.Context) {
 	c.JSON(200, gin.H{
 		"message": "Chore updated successfully",
 	})
+}
+
+func setEditChoreDefaults(choreReq ChoreReq, oldChore *chModel.Chore) {
+	if choreReq.Frequency == nil {
+		choreReq.Frequency = &oldChore.Frequency
+	}
+
+	if choreReq.IsRolling == nil {
+		choreReq.IsRolling = &oldChore.IsRolling
+	}
+
+	if choreReq.IsActive == nil {
+		choreReq.IsActive = &oldChore.IsActive
+	}
+
+	if choreReq.Notification == nil {
+		choreReq.Notification = &oldChore.Notification
+	}
+
+	if choreReq.Priority == nil {
+		choreReq.Priority = &oldChore.Priority
+	}
+
+	if choreReq.RequireApproval == nil {
+		choreReq.RequireApproval = &oldChore.RequireApproval
+	}
 }
 
 func (h *Handler) cleanUpUnreferencedFiles(ctx *gin.Context, userID int, entityType storageModel.EntityType, entityID int, text string) error {

@@ -254,7 +254,6 @@ type ChoreReq struct {
 	SubTasks             *[]stModel.SubTask            `json:"subTasks"`                          // no default
 	RequireApproval      *bool                         `json:"requireApproval"`                   // defaults to false
 	IsPrivate            bool                          `json:"isPrivate" binding:"required"`      // no default
-	DeadlineOffset       *int                          `json:"deadlineOffset"`                    // Not used anywhere?
 	ProjectID            *int                          `json:"projectId"`                         // no default
 	ThingTrigger         *tModel.ThingTrigger          `json:"thingTrigger"`                      // no default
 }

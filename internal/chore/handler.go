@@ -235,24 +235,24 @@ type ChoreReq struct {
 	ID                   int                           `json:"id"`                                // no default
 	Name                 string                        `json:"name" binding:"required"`           // no default
 	FrequencyType        chModel.FrequencyType         `json:"frequencyType" binding:"required"`  // no default
-	Frequency            *int                          `json:"frequency"`                         // default to 1, keeps previous value on edit Frequency and frequencytype can conflict!
-	FrequencyMetadata    *chModel.FrequencyMetadata    `json:"frequencyMetadata"`                 // no default
+	Frequency            *int                          `json:"frequency"`                         // default to 1 - validator: tied to Frequency, FrequencyType?
+	FrequencyMetadata    *chModel.FrequencyMetadata    `json:"frequencyMetadata"`                 // no default - validator: tied to Frequency, FrequencyType?
 	NextDueDate          string                        `json:"nextDueDate"`                       // no default - conditionally // TODO: convert to time
-	IsRolling            *bool                         `json:"isRolling"`                         // defaults to false in create, keeps previous value on edit
-	AssignedTo           *int                          `json:"assignedTo"`                        // no defaults if it's not no_assignee we should throw input error
-	Assignees            []chModel.ChoreAssignees      `json:"assignees"`                         // if it's no_assignee we should throw input error
-	AssignStrategy       chModel.AssignmentStrategy    `json:"assignStrategy" binding:"required"` // no_assignee not compatible with assignees and assignedto
-	IsActive             *bool                         `json:"isActive"`                          // defaults to true in create, defaults to previous value
-	Notification         *bool                         `json:"notification"`                      // defaults to false in create, keeps previous version on edit
-	NotificationMetadata *chModel.NotificationMetadata `json:"notificationMetadata"`              // maybe incompatible with null notificatioN?
-	LabelsV2             *[]lModel.LabelReq            `json:"labelsV2"`                          // no default
+	IsRolling            *bool                         `json:"isRolling"`                         // defaults to false - validator: tied to frequency?
+	AssignedTo           *int                          `json:"assignedTo"`                        // no default - validator: if it's no_assignee we should throw input error
+	Assignees            []chModel.ChoreAssignees      `json:"assignees"`                         // no default - validator: if it's no_assignee we should throw input error
+	AssignStrategy       chModel.AssignmentStrategy    `json:"assignStrategy" binding:"required"` // no default - validator: no_assignee not compatible with assignees and assignedto
+	IsActive             *bool                         `json:"isActive"`                          // defaults to true
+	Notification         *bool                         `json:"notification"`                      // defaults to false - validator: tied to notificationmetadata?
+	NotificationMetadata *chModel.NotificationMetadata `json:"notificationMetadata"`              // no default - validator: maybe incompatible with null notification?
+	LabelsV2             *[]lModel.LabelReq            `json:"labelsV2"`                          // no default -
 	UpdatedAt            *time.Time                    `json:"updatedAt"`                         // Only used on editChore  // For internal use only when syncing a chore updated offline
-	Priority             *int                          `json:"priority"`                          // defaults to 0, keeps previous value on editchore
-	CompletionWindow     *int                          `json:"completionWindow"`                  // no default
-	Points               *int                          `json:"points"`                            // no default, no validation at place
+	Priority             *int                          `json:"priority"`                          // defaults to 0 - validator: keep it between 0 and 5?
+	CompletionWindow     *int                          `json:"completionWindow"`                  // no default - validator: can conflict with frequency time? complex issue
+	Points               *int                          `json:"points"`                            // no default - validator: UI only supports positive
 	Description          *string                       `json:"description"`                       // no default
 	SubTasks             *[]stModel.SubTask            `json:"subTasks"`                          // no default
-	RequireApproval      *bool                         `json:"requireApproval"`                   // defaults to false, keeps previous version on edit
+	RequireApproval      *bool                         `json:"requireApproval"`                   // defaults to false
 	IsPrivate            bool                          `json:"isPrivate" binding:"required"`      // no default
 	DeadlineOffset       *int                          `json:"deadlineOffset"`                    // Not used anywhere?
 	ProjectID            *int                          `json:"projectId"`                         // no default

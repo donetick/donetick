@@ -110,19 +110,17 @@ func validateNotifications(sl validator.StructLevel, req ChoreReq) {
 
 		if !hasNotificationMetadata {
 			sl.ReportError(req.NotificationMetadata, "NotificationMetadata", "notificationMetadata", "required_when_notifications_enabled", "")
-		} else {
+		} else if req.NotificationMetadata.CircleGroup {
 			// CircleGroupID is only required if CircleGroup is toggled ON
-			if req.NotificationMetadata.CircleGroup {
-				if req.NotificationMetadata.CircleGroupID == nil || *req.NotificationMetadata.CircleGroupID <= 0 {
-					sl.ReportError(req.NotificationMetadata.CircleGroupID, "CircleGroupID", "circleGroupID", "required_with_circle_group", "")
-				}
+
+			if req.NotificationMetadata.CircleGroupID == nil || *req.NotificationMetadata.CircleGroupID <= 0 {
+				sl.ReportError(req.NotificationMetadata.CircleGroupID, "CircleGroupID", "circleGroupID", "required_with_circle_group", "")
 			}
+
 		}
-	} else {
+	} else if hasNotificationMetadata {
 		// If notifications are disabled (or nil), ensure the client isn't sending useless metadata
-		if hasNotificationMetadata {
-			sl.ReportError(req.NotificationMetadata, "NotificationMetadata", "notificationMetadata", "forbidden_when_notifications_disabled", "")
-		}
+		sl.ReportError(req.NotificationMetadata, "NotificationMetadata", "notificationMetadata", "forbidden_when_notifications_disabled", "")
 	}
 }
 

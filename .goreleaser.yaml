@@ -13,7 +13,8 @@ before:
     # - go mod tidy
     # Add this line to trigger Swagger generation
     - go install github.com/swaggo/swag/cmd/swag@latest
-    - $(go env GOPATH)/bin/swag init -g docs/handler.go
+    - sh -c '$(go env GOPATH)/bin/swag init -g docs/handler.go'
+
 
 builds:
   - env:

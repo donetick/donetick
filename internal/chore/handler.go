@@ -232,30 +232,30 @@ func (h *Handler) GetChore(c *gin.Context) {
 
 // region: request models
 type ChoreReq struct {
-	ID                   int                           `json:"id"`                                // no default
-	Name                 string                        `json:"name" binding:"required"`           // no default
-	FrequencyType        chModel.FrequencyType         `json:"frequencyType" binding:"required"`  // no default
-	Frequency            *int                          `json:"frequency"`                         // default to 1 - validator: tied to Frequency, FrequencyType?
-	FrequencyMetadata    *chModel.FrequencyMetadata    `json:"frequencyMetadata"`                 // no default - validator: tied to Frequency, FrequencyType?
-	NextDueDate          *time.Time                    `json:"nextDueDate"`                       // no default  //Document the RFC requirement
-	IsRolling            *bool                         `json:"isRolling"`                         // defaults to false - validator: tied to frequency?
-	AssignedTo           *int                          `json:"assignedTo"`                        // no default - validator: if it's no_assignee we should throw input error
-	Assignees            []chModel.ChoreAssignees      `json:"assignees"`                         // no default - validator: if it's no_assignee we should throw input error
-	AssignStrategy       chModel.AssignmentStrategy    `json:"assignStrategy" binding:"required"` // no default - validator: no_assignee not compatible with assignees and assignedto
-	IsActive             *bool                         `json:"isActive"`                          // defaults to true
-	Notification         *bool                         `json:"notification"`                      // defaults to false - validator: tied to notificationmetadata?
-	NotificationMetadata *chModel.NotificationMetadata `json:"notificationMetadata"`              // no default - validator: maybe incompatible with null notification?
-	LabelsV2             *[]lModel.LabelReq            `json:"labelsV2"`                          // no default -
-	UpdatedAt            *time.Time                    `json:"updatedAt"`                         // Only used on editChore  // For internal use only when syncing a chore updated offline
-	Priority             *int                          `json:"priority"`                          // defaults to 0 - validator: keep it between 0 and 5?
-	CompletionWindow     *int                          `json:"completionWindow"`                  // no default - validator: can conflict with frequency time? complex issue
-	Points               *int                          `json:"points"`                            // no default - validator: UI only supports positive
-	Description          *string                       `json:"description"`                       // no default
-	SubTasks             *[]stModel.SubTask            `json:"subTasks"`                          // no default
-	RequireApproval      *bool                         `json:"requireApproval"`                   // defaults to false
-	IsPrivate            *bool                         `json:"isPrivate" binding:"required"`      // no default
-	ProjectID            *int                          `json:"projectId"`                         // no default
-	ThingTrigger         *tModel.ThingTrigger          `json:"thingTrigger"`                      // no default
+	ID                   int                           `json:"id"`                                                                                                                                                   //
+	Name                 string                        `json:"name" binding:"required"`                                                                                                                              //
+	FrequencyType        chModel.FrequencyType         `json:"frequencyType" binding:"required,oneof=once daily weekly monthly yearly adaptive interval days_of_the_week day_of_the_month trigger no_repeat"`        //
+	Frequency            *int                          `json:"frequency" binding:"omitempty,min=1"`                                                                                                                  //
+	FrequencyMetadata    *chModel.FrequencyMetadata    `json:"frequencyMetadata"`                                                                                                                                    //
+	NextDueDate          *time.Time                    `json:"nextDueDate"`                                                                                                                                          // TODO: Document the RFC requirement
+	IsRolling            *bool                         `json:"isRolling"`                                                                                                                                            //
+	AssignedTo           *int                          `json:"assignedTo"`                                                                                                                                           //
+	Assignees            []chModel.ChoreAssignees      `json:"assignees"`                                                                                                                                            //
+	AssignStrategy       chModel.AssignmentStrategy    `json:"assignStrategy" binding:"required,oneof=no_assignee least_assigned least_completed random keep_last_assigned random_except_last_assigned round_robin"` //
+	IsActive             *bool                         `json:"isActive"`                                                                                                                                             //
+	Notification         *bool                         `json:"notification"`                                                                                                                                         //
+	NotificationMetadata *chModel.NotificationMetadata `json:"notificationMetadata"`                                                                                                                                 //
+	LabelsV2             *[]lModel.LabelReq            `json:"labelsV2"`                                                                                                                                             //
+	UpdatedAt            *time.Time                    `json:"updatedAt"`                                                                                                                                            // Only used on editChore  // For internal use only when syncing a chore updated offline
+	Priority             *int                          `json:"priority" binding:"omitempty,min=0,max=5"`                                                                                                             //
+	CompletionWindow     *int                          `json:"completionWindow" binding:"omitempty,min=0"`                                                                                                           //
+	Points               *int                          `json:"points" binding:"omitempty,min=0"`                                                                                                                     //
+	Description          *string                       `json:"description"`                                                                                                                                          //
+	SubTasks             *[]stModel.SubTask            `json:"subTasks"`                                                                                                                                             //
+	RequireApproval      *bool                         `json:"requireApproval"`                                                                                                                                      //
+	IsPrivate            *bool                         `json:"isPrivate" binding:"required"`                                                                                                                         //
+	ProjectID            *int                          `json:"projectId" binding:"omitempty,min=0"`                                                                                                                  //
+	ThingTrigger         *tModel.ThingTrigger          `json:"thingTrigger"`                                                                                                                                         //
 }
 
 // endregion
@@ -275,7 +275,7 @@ type ChoreReq struct {
 //	@Failure		401		{object}	map[string]string	"error: Authentication failed"
 //	@Failure		500		{object}	map[string]string	"error: Failed to create chore | Error adding labels | Error adding chore assignees"
 //	@Router			/chores [post]
-func (h *Handler) CreateChore(c *gin.Context) {
+func (h *Handler) CreateChore(c *gin.Context) { // TODO: ADD SUBTASK SUPPORT!
 	logger := logging.FromContext(c)
 	currentUser, ok := auth.CurrentUser(c)
 

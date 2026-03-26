@@ -74,7 +74,7 @@ type Chore struct {
 	RequireApproval        bool                  `json:"requireApproval" gorm:"column:require_approval"`                    // Whether chore completion requires admin approval
 	IsPrivate              bool                  `json:"isPrivate" gorm:"column:is_private;default:false"`                  // Whether the chore is private
 	ProjectID              *int                  `json:"projectId,omitempty" gorm:"column:project_id;index"`                // The project this chore belongs to
-	Project                *pModel.Project       `json:"project,omitempty" gorm:"foreignkey:ProjectID;references:ID"`       // Project relationship
+	Project                *pModel.Project       `json:"project,omitempty" gorm:"foreignkey:ProjectID;references:ID"`       // Project relationship // TODO: This is never used
 }
 
 type Status int8
@@ -120,10 +120,10 @@ const (
 type FrequencyMetadata struct {
 	Days        []*string    `json:"days,omitempty"`
 	Months      []*string    `json:"months,omitempty"`
-	Unit        *string      `json:"unit,omitempty"`
+	Unit        *string      `json:"unit" binding:"omitempty,oneof=hours days weeks months years"`
 	Time        string       `json:"time,omitempty"`
-	Timezone    string       `json:"timezone,omitempty"`
-	WeekPattern *Weekpattern `json:"weekPattern,omitempty"`
+	Timezone    string       `json:"timezone" binding:"omitempty,timezone"`
+	WeekPattern *Weekpattern `json:"weekPattern" binding:"omitempty,oneof=every_week week_of_month week_of_quarter"`
 	WeekNumbers []int        `json:"weekNumbers,omitempty"` // DEPRECATED: use Occurrences instead
 	Occurrences []*int       `json:"occurrences,omitempty"` // e.g. ["1","3","last"] for 1st, 3rd, and last occurrence of the day
 }
@@ -239,6 +239,7 @@ func (c *Chore) CanEdit(userID int, circleUsers []*cModel.UserCircleDetail, upda
 		}
 	}
 
+	// TODO: remove this, moved to validator
 	cooldown := time.Second * 30
 	if updatedAt != nil {
 		// if the chore was updated after the user fetched it for editing, then do not allow editing

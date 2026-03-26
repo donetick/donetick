@@ -237,7 +237,7 @@ type ChoreReq struct {
 	FrequencyType        chModel.FrequencyType         `json:"frequencyType" binding:"required"`  // no default
 	Frequency            *int                          `json:"frequency"`                         // default to 1 - validator: tied to Frequency, FrequencyType?
 	FrequencyMetadata    *chModel.FrequencyMetadata    `json:"frequencyMetadata"`                 // no default - validator: tied to Frequency, FrequencyType?
-	NextDueDate          string                        `json:"nextDueDate"`                       // no default - conditionally // TODO: convert to time
+	NextDueDate          *time.Time                    `json:"nextDueDate"`                       // no default - conditionally // TODO: convert to time
 	IsRolling            *bool                         `json:"isRolling"`                         // defaults to false - validator: tied to frequency?
 	AssignedTo           *int                          `json:"assignedTo"`                        // no default - validator: if it's no_assignee we should throw input error
 	Assignees            []chModel.ChoreAssignees      `json:"assignees"`                         // no default - validator: if it's no_assignee we should throw input error
@@ -324,18 +324,8 @@ func (h *Handler) CreateChore(c *gin.Context) {
 	// Remove the auto-assignment logic - if no assignee then keep no assignee
 
 	var dueDate *time.Time
-
-	if choreReq.NextDueDate != "" {
-		rawDueDate, err := time.Parse(time.RFC3339, choreReq.NextDueDate)
-		rawDueDate = rawDueDate.UTC()
-		dueDate = &rawDueDate
-		if err != nil {
-			c.JSON(400, gin.H{
-				"error": "Invalid date",
-			})
-			return
-		}
-
+	if choreReq.NextDueDate != nil {
+		*dueDate = choreReq.NextDueDate.UTC()
 	}
 
 	setCreateChoreDefaults(choreReq)

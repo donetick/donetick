@@ -121,7 +121,7 @@ type FrequencyMetadata struct {
 	Days        []*string    `json:"days,omitempty"`
 	Months      []*string    `json:"months,omitempty"`
 	Unit        *string      `json:"unit" binding:"omitempty,oneof=hours days weeks months years"`
-	Time        string       `json:"time,omitempty"`
+	Time        string       `json:"time" binding:"omitempty,datetime=2006-01-02T15:04:05Z07:00"`
 	Timezone    string       `json:"timezone" binding:"omitempty,timezone"`
 	WeekPattern *Weekpattern `json:"weekPattern" binding:"omitempty,oneof=every_week week_of_month week_of_quarter"`
 	WeekNumbers []int        `json:"weekNumbers,omitempty"` // DEPRECATED: use Occurrences instead
@@ -142,7 +142,7 @@ type NotificationMetadata struct {
 	Nagging       bool                    `json:"nagging,omitempty"`
 	PreDue        bool                    `json:"predue,omitempty"`
 	CircleGroup   bool                    `json:"circleGroup,omitempty"`
-	CircleGroupID *int64                  `json:"circleGroupID,omitempty"`
+	CircleGroupID *int64                  `json:"circleGroupID" binding:"required_with=CircleGroup,omitempty,gt=0"`
 	Templates     []*NotificationTemplate `json:"templates,omitempty" validate:"max=5"` // Template for notification
 }
 

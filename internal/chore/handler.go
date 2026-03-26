@@ -232,30 +232,30 @@ func (h *Handler) GetChore(c *gin.Context) {
 
 // region: request models
 type ChoreReq struct {
-	ID                   int                           `json:"id"`                                                                                                                                                   //
-	Name                 string                        `json:"name" binding:"required"`                                                                                                                              //
-	FrequencyType        chModel.FrequencyType         `json:"frequencyType" binding:"required,oneof=once daily weekly monthly yearly adaptive interval days_of_the_week day_of_the_month trigger no_repeat"`        //
-	Frequency            *int                          `json:"frequency" binding:"omitempty,min=1"`                                                                                                                  //
-	FrequencyMetadata    *chModel.FrequencyMetadata    `json:"frequencyMetadata"`                                                                                                                                    //
-	NextDueDate          *time.Time                    `json:"nextDueDate" binding:"required_with=IsRolling"`                                                                                                        // TODO: Document the RFC requirement
-	IsRolling            *bool                         `json:"isRolling"`                                                                                                                                            //
-	AssignedTo           *int                          `json:"assignedTo"`                                                                                                                                           //
-	Assignees            []chModel.ChoreAssignees      `json:"assignees"`                                                                                                                                            //
-	AssignStrategy       chModel.AssignmentStrategy    `json:"assignStrategy" binding:"required,oneof=no_assignee least_assigned least_completed random keep_last_assigned random_except_last_assigned round_robin"` //
-	IsActive             *bool                         `json:"isActive"`                                                                                                                                             //
-	Notification         *bool                         `json:"notification"`                                                                                                                                         //
-	NotificationMetadata *chModel.NotificationMetadata `json:"notificationMetadata"`                                                                                                                                 //
-	LabelsV2             *[]lModel.LabelReq            `json:"labelsV2"`                                                                                                                                             //
-	UpdatedAt            *time.Time                    `json:"updatedAt"`                                                                                                                                            // Only used on editChore  // For internal use only when syncing a chore updated offline
-	Priority             *int                          `json:"priority" binding:"omitempty,min=0,max=5"`                                                                                                             //
-	CompletionWindow     *int                          `json:"completionWindow" binding:"omitempty,min=0"`                                                                                                           //
-	Points               *int                          `json:"points" binding:"omitempty,min=0"`                                                                                                                     //
-	Description          *string                       `json:"description"`                                                                                                                                          //
-	SubTasks             *[]stModel.SubTask            `json:"subTasks"`                                                                                                                                             //
-	RequireApproval      *bool                         `json:"requireApproval"`                                                                                                                                      //
-	IsPrivate            *bool                         `json:"isPrivate" binding:"required"`                                                                                                                         //
-	ProjectID            *int                          `json:"projectId" binding:"omitempty,min=0"`                                                                                                                  //
-	ThingTrigger         *tModel.ThingTrigger          `json:"thingTrigger"`                                                                                                                                         //
+	ID                   int                           `json:"id"`
+	Name                 string                        `json:"name" binding:"required"`
+	FrequencyType        chModel.FrequencyType         `json:"frequencyType" binding:"required,oneof=once daily weekly monthly yearly adaptive interval days_of_the_week day_of_the_month trigger no_repeat"`
+	Frequency            *int                          `json:"frequency" binding:"omitempty,gt=0"`
+	FrequencyMetadata    *chModel.FrequencyMetadata    `json:"frequencyMetadata"`
+	NextDueDate          *time.Time                    `json:"nextDueDate" binding:"required_with=IsRolling"` // TODO: Document the RFC requirement
+	IsRolling            *bool                         `json:"isRolling"`
+	AssignedTo           *int                          `json:"assignedTo" binding:"omitempty,gt=0"`
+	Assignees            []chModel.ChoreAssignees      `json:"assignees" binding:"dive"`
+	AssignStrategy       chModel.AssignmentStrategy    `json:"assignStrategy" binding:"required,oneof=no_assignee least_assigned least_completed random keep_last_assigned random_except_last_assigned round_robin"`
+	IsActive             *bool                         `json:"isActive"`
+	Notification         *bool                         `json:"notification"`
+	NotificationMetadata *chModel.NotificationMetadata `json:"notificationMetadata"`
+	LabelsV2             *[]lModel.LabelReq            `json:"labelsV2" binding:"omitempty,dive,unique=LabelID"`
+	UpdatedAt            *time.Time                    `json:"updatedAt"` // Only used on editChore  // For internal use only when syncing a chore updated offline
+	Priority             *int                          `json:"priority" binding:"omitempty,gte=0,lte=5"`
+	CompletionWindow     *int                          `json:"completionWindow" binding:"omitempty,min=0"`
+	Points               *int                          `json:"points" binding:"omitempty,gte=0"`
+	Description          *string                       `json:"description"`
+	SubTasks             *[]stModel.SubTask            `json:"subTasks" binding:"omitempty,dive"`
+	RequireApproval      *bool                         `json:"requireApproval"`
+	IsPrivate            bool                          `json:"isPrivate" binding:"required"`
+	ProjectID            *int                          `json:"projectId" binding:"omitempty,gt=0"`
+	ThingTrigger         *tModel.ThingTrigger          `json:"thingTrigger"`
 }
 
 // endregion
@@ -353,7 +353,7 @@ func (h *Handler) CreateChore(c *gin.Context) { // TODO: ADD SUBTASK SUPPORT!
 		Description:            choreReq.Description,
 		Priority:               *choreReq.Priority,
 		RequireApproval:        *choreReq.RequireApproval,
-		IsPrivate:              *choreReq.IsPrivate,
+		IsPrivate:              choreReq.IsPrivate,
 		ProjectID:              choreReq.ProjectID,
 		// SubTasks removed to prevent duplicate creation - handled by UpdateSubtask call below
 		// it's need custom logic to handle subtask creation as we send negative ids sometimes when we creating parent child releationship
@@ -676,7 +676,7 @@ func (h *Handler) EditChore(c *gin.Context) {
 		Description:            choreReq.Description,
 		Priority:               *choreReq.Priority,
 		RequireApproval:        *choreReq.RequireApproval,
-		IsPrivate:              *choreReq.IsPrivate,
+		IsPrivate:              choreReq.IsPrivate,
 		ProjectID:              choreReq.ProjectID,
 		Status:                 oldChore.Status,
 	}

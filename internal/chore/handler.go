@@ -1586,11 +1586,7 @@ func (h *Handler) UpdateDueDate(c *gin.Context) {
 	var dueDate *time.Time
 
 	if dueDateReq.DueDate != nil {
-		// 1. Dereference the pointer with *
-		// 2. Call UTC() which returns a standard time.Time
-		utcTime := (*dueDateReq.DueDate).UTC()
-
-		// 3. Take the memory address of the new UTC time to create a pointer
+		utcTime := dueDateReq.DueDate.UTC()
 		dueDate = &utcTime
 	}
 

@@ -253,7 +253,7 @@ type ChoreReq struct {
 	Description          *string                       `json:"description"`                       // no default
 	SubTasks             *[]stModel.SubTask            `json:"subTasks"`                          // no default
 	RequireApproval      *bool                         `json:"requireApproval"`                   // defaults to false
-	IsPrivate            bool                          `json:"isPrivate" binding:"required"`      // no default
+	IsPrivate            *bool                         `json:"isPrivate" binding:"required"`      // no default
 	ProjectID            *int                          `json:"projectId"`                         // no default
 	ThingTrigger         *tModel.ThingTrigger          `json:"thingTrigger"`                      // no default
 }
@@ -329,7 +329,7 @@ func (h *Handler) CreateChore(c *gin.Context) {
 		dueDate = &utcDate
 	}
 
-	setCreateChoreDefaults(choreReq)
+	setCreateChoreDefaults(&choreReq)
 
 	createdChore := &chModel.Chore{
 
@@ -353,7 +353,7 @@ func (h *Handler) CreateChore(c *gin.Context) {
 		Description:            choreReq.Description,
 		Priority:               *choreReq.Priority,
 		RequireApproval:        *choreReq.RequireApproval,
-		IsPrivate:              choreReq.IsPrivate,
+		IsPrivate:              *choreReq.IsPrivate,
 		ProjectID:              choreReq.ProjectID,
 		// SubTasks removed to prevent duplicate creation - handled by UpdateSubtask call below
 		// it's need custom logic to handle subtask creation as we send negative ids sometimes when we creating parent child releationship
@@ -436,29 +436,35 @@ func (h *Handler) CreateChore(c *gin.Context) {
 	})
 }
 
-func setCreateChoreDefaults(choreReq ChoreReq) {
+func setCreateChoreDefaults(choreReq *ChoreReq) {
 	if choreReq.Frequency == nil {
-		*choreReq.Frequency = 1
+		val := 1
+		choreReq.Frequency = &val
 	}
 
 	if choreReq.IsRolling == nil {
-		*choreReq.IsRolling = false
+		val := false
+		choreReq.IsRolling = &val
 	}
 
 	if choreReq.IsActive == nil {
-		*choreReq.IsActive = true
+		val := true
+		choreReq.IsActive = &val
 	}
 
 	if choreReq.Notification == nil {
-		*choreReq.Notification = false
+		val := false
+		choreReq.Notification = &val
 	}
 
 	if choreReq.Priority == nil {
-		*choreReq.Priority = 0
+		val := 0
+		choreReq.Priority = &val
 	}
 
 	if choreReq.RequireApproval == nil {
-		*choreReq.RequireApproval = false
+		val := false
+		choreReq.RequireApproval = &val
 	}
 }
 
@@ -646,7 +652,7 @@ func (h *Handler) EditChore(c *gin.Context) {
 		dueDate = oldChore.NextDueDate
 	}
 
-	setEditChoreDefaults(choreReq, oldChore)
+	setEditChoreDefaults(&choreReq, oldChore)
 
 	updatedChore := &chModel.Chore{ // TODO: Assignees are missing
 		ID:                     choreReq.ID,
@@ -670,7 +676,7 @@ func (h *Handler) EditChore(c *gin.Context) {
 		Description:            choreReq.Description,
 		Priority:               *choreReq.Priority,
 		RequireApproval:        *choreReq.RequireApproval,
-		IsPrivate:              choreReq.IsPrivate,
+		IsPrivate:              *choreReq.IsPrivate,
 		ProjectID:              choreReq.ProjectID,
 		Status:                 oldChore.Status,
 	}
@@ -778,7 +784,7 @@ func (h *Handler) EditChore(c *gin.Context) {
 	})
 }
 
-func setEditChoreDefaults(choreReq ChoreReq, oldChore *chModel.Chore) {
+func setEditChoreDefaults(choreReq *ChoreReq, oldChore *chModel.Chore) {
 	if choreReq.Frequency == nil {
 		choreReq.Frequency = &oldChore.Frequency
 	}

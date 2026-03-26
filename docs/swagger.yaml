@@ -1,4 +1,3 @@
-basePath: /api/v1
 definitions:
   chore.AssigneeReq:
     properties:
@@ -15,101 +14,96 @@ definitions:
       assignStrategy:
         allOf:
         - $ref: '#/definitions/model.AssignmentStrategy'
-        description: Used in createChore and editChore
+        description: 'no default - validator: no_assignee not compatible with assignees
+          and assignedto'
       assignedTo:
-        description: Used in createChore and editChore
+        description: 'no default - validator: if it''s no_assignee we should throw
+          input error'
         type: integer
       assignees:
-        description: Used in createChore and editChore
+        description: 'no default - validator: if it''s no_assignee we should throw
+          input error'
         items:
           $ref: '#/definitions/model.ChoreAssignees'
         type: array
       completionWindow:
-        description: Used in createChore and editChore
-        type: integer
-      deadlineOffset:
-        description: Not used anywhere?
+        description: 'no default - validator: can conflict with frequency time? complex
+          issue'
         type: integer
       description:
-        description: Used in createChore and editChore
-        type: string
-      dueDate:
-        description: Used in createChore and editChore - conditionally
+        description: no default
         type: string
       frequency:
-        description: Used in createChore and editChore
+        description: 'default to 1 - validator: tied to Frequency, FrequencyType?'
         type: integer
       frequencyMetadata:
         allOf:
         - $ref: '#/definitions/model.FrequencyMetadata'
-        description: Used in createChore and editChore
+        description: 'no default - validator: tied to Frequency, FrequencyType?'
       frequencyType:
         allOf:
         - $ref: '#/definitions/model.FrequencyType'
-        description: Used in createChore and editChore
+        description: no default
       id:
-        description: Only used on editChore
+        description: no default
         type: integer
       isActive:
-        description: Only used on editChore
+        description: defaults to true
         type: boolean
       isPrivate:
-        description: Used in createChore and editChore
+        description: no default
         type: boolean
       isRolling:
-        description: Used in createChore and editChore
+        description: 'defaults to false - validator: tied to frequency?'
         type: boolean
       labelsV2:
-        description: Used in createChore and editChore
+        description: no default -
         items:
           $ref: '#/definitions/model.LabelReq'
         type: array
       name:
-        description: Used in createChore and editChore
+        description: no default
+        type: string
+      nextDueDate:
+        description: 'no default - conditionally // TODO: convert to time'
         type: string
       notification:
-        description: Used in createChore and editChore
+        description: 'defaults to false - validator: tied to notificationmetadata?'
         type: boolean
       notificationMetadata:
         allOf:
         - $ref: '#/definitions/model.NotificationMetadata'
-        description: Used in createChore and editChore
+        description: 'no default - validator: maybe incompatible with null notification?'
       points:
-        description: Used in createChore and editChore no validation at place
+        description: 'no default - validator: UI only supports positive'
         type: integer
       priority:
-        description: Used in createChore and editChore
+        description: 'defaults to 0 - validator: keep it between 0 and 5?'
         type: integer
       projectId:
-        description: Used in createChore and editChore
+        description: no default
         type: integer
       requireApproval:
-        description: Used in createChore and editChore
+        description: defaults to false
         type: boolean
       subTasks:
-        description: Used in createChore and editChore
+        description: no default
         items:
           $ref: '#/definitions/model.SubTask'
         type: array
       thingTrigger:
         allOf:
         - $ref: '#/definitions/model.ThingTrigger'
-        description: Only used in createChore
+        description: no default
       updatedAt:
         description: Only used on editChore  // For internal use only when syncing
           a chore updated offline
         type: string
     required:
     - assignStrategy
-    - frequency
     - frequencyType
-    - isActive
     - isPrivate
-    - isRolling
     - name
-    - notification
-    - priority
-    - requireApproval
     type: object
   chore.CompleteChoreReq:
     properties:
@@ -337,9 +331,6 @@ definitions:
         type: string
       createdBy:
         description: Who created the chore
-        type: integer
-      deadlineOffset:
-        description: Seconds after NextDueDate when chore deadline is reached
         type: integer
       description:
         description: Description of the chore
@@ -877,12 +868,6 @@ definitions:
     type: object
 info:
   contact: {}
-  description: Donetick swagger documentation.
-  license:
-    name: GNU Affero General Public License v3.0
-    url: https://github.com/donetick/donetick/blob/main/LICENSE.md
-  title: Donetick Swagger API
-  version: "1.0"
 paths:
   /chores:
     get:
@@ -3634,15 +3619,4 @@ paths:
       summary: Update thing state
       tags:
       - things
-securityDefinitions:
-  APIKeyAuth:
-    description: donetick issued apikey
-    in: header
-    name: secretkey
-    type: apiKey
-  JWTKeyAuth:
-    description: Type "Bearer" followed by a space and JWT token.
-    in: header
-    name: Authorization
-    type: apiKey
 swagger: "2.0"

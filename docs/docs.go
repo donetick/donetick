@@ -10,10 +10,6 @@ const docTemplate = `{
         "description": "{{escape .Description}}",
         "title": "{{.Title}}",
         "contact": {},
-        "license": {
-            "name": "GNU Affero General Public License v3.0",
-            "url": "https://github.com/donetick/donetick/blob/main/LICENSE.md"
-        },
         "version": "{{.Version}}"
     },
     "host": "{{.Host}}",
@@ -4316,19 +4312,13 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "assignStrategy",
-                "frequency",
                 "frequencyType",
-                "isActive",
                 "isPrivate",
-                "isRolling",
-                "name",
-                "notification",
-                "priority",
-                "requireApproval"
+                "name"
             ],
             "properties": {
                 "assignStrategy": {
-                    "description": "Used in createChore and editChore",
+                    "description": "no default - validator: no_assignee not compatible with assignees and assignedto",
                     "allOf": [
                         {
                             "$ref": "#/definitions/model.AssignmentStrategy"
@@ -4336,38 +4326,30 @@ const docTemplate = `{
                     ]
                 },
                 "assignedTo": {
-                    "description": "Used in createChore and editChore",
+                    "description": "no default - validator: if it's no_assignee we should throw input error",
                     "type": "integer"
                 },
                 "assignees": {
-                    "description": "Used in createChore and editChore",
+                    "description": "no default - validator: if it's no_assignee we should throw input error",
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/model.ChoreAssignees"
                     }
                 },
                 "completionWindow": {
-                    "description": "Used in createChore and editChore",
-                    "type": "integer"
-                },
-                "deadlineOffset": {
-                    "description": "Not used anywhere?",
+                    "description": "no default - validator: can conflict with frequency time? complex issue",
                     "type": "integer"
                 },
                 "description": {
-                    "description": "Used in createChore and editChore",
-                    "type": "string"
-                },
-                "dueDate": {
-                    "description": "Used in createChore and editChore - conditionally",
+                    "description": "no default",
                     "type": "string"
                 },
                 "frequency": {
-                    "description": "Used in createChore and editChore",
+                    "description": "default to 1 - validator: tied to Frequency, FrequencyType?",
                     "type": "integer"
                 },
                 "frequencyMetadata": {
-                    "description": "Used in createChore and editChore",
+                    "description": "no default - validator: tied to Frequency, FrequencyType?",
                     "allOf": [
                         {
                             "$ref": "#/definitions/model.FrequencyMetadata"
@@ -4375,7 +4357,7 @@ const docTemplate = `{
                     ]
                 },
                 "frequencyType": {
-                    "description": "Used in createChore and editChore",
+                    "description": "no default",
                     "allOf": [
                         {
                             "$ref": "#/definitions/model.FrequencyType"
@@ -4383,38 +4365,42 @@ const docTemplate = `{
                     ]
                 },
                 "id": {
-                    "description": "Only used on editChore",
+                    "description": "no default",
                     "type": "integer"
                 },
                 "isActive": {
-                    "description": "Only used on editChore",
+                    "description": "defaults to true",
                     "type": "boolean"
                 },
                 "isPrivate": {
-                    "description": "Used in createChore and editChore",
+                    "description": "no default",
                     "type": "boolean"
                 },
                 "isRolling": {
-                    "description": "Used in createChore and editChore",
+                    "description": "defaults to false - validator: tied to frequency?",
                     "type": "boolean"
                 },
                 "labelsV2": {
-                    "description": "Used in createChore and editChore",
+                    "description": "no default -",
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/model.LabelReq"
                     }
                 },
                 "name": {
-                    "description": "Used in createChore and editChore",
+                    "description": "no default",
+                    "type": "string"
+                },
+                "nextDueDate": {
+                    "description": "no default - conditionally // TODO: convert to time",
                     "type": "string"
                 },
                 "notification": {
-                    "description": "Used in createChore and editChore",
+                    "description": "defaults to false - validator: tied to notificationmetadata?",
                     "type": "boolean"
                 },
                 "notificationMetadata": {
-                    "description": "Used in createChore and editChore",
+                    "description": "no default - validator: maybe incompatible with null notification?",
                     "allOf": [
                         {
                             "$ref": "#/definitions/model.NotificationMetadata"
@@ -4422,30 +4408,30 @@ const docTemplate = `{
                     ]
                 },
                 "points": {
-                    "description": "Used in createChore and editChore no validation at place",
+                    "description": "no default - validator: UI only supports positive",
                     "type": "integer"
                 },
                 "priority": {
-                    "description": "Used in createChore and editChore",
+                    "description": "defaults to 0 - validator: keep it between 0 and 5?",
                     "type": "integer"
                 },
                 "projectId": {
-                    "description": "Used in createChore and editChore",
+                    "description": "no default",
                     "type": "integer"
                 },
                 "requireApproval": {
-                    "description": "Used in createChore and editChore",
+                    "description": "defaults to false",
                     "type": "boolean"
                 },
                 "subTasks": {
-                    "description": "Used in createChore and editChore",
+                    "description": "no default",
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/model.SubTask"
                     }
                 },
                 "thingTrigger": {
-                    "description": "Only used in createChore",
+                    "description": "no default",
                     "allOf": [
                         {
                             "$ref": "#/definitions/model.ThingTrigger"
@@ -4779,10 +4765,6 @@ const docTemplate = `{
                 },
                 "createdBy": {
                     "description": "Who created the chore",
-                    "type": "integer"
-                },
-                "deadlineOffset": {
-                    "description": "Seconds after NextDueDate when chore deadline is reached",
                     "type": "integer"
                 },
                 "description": {
@@ -5551,31 +5533,17 @@ const docTemplate = `{
                 }
             }
         }
-    },
-    "securityDefinitions": {
-        "APIKeyAuth": {
-            "description": "donetick issued apikey",
-            "type": "apiKey",
-            "name": "secretkey",
-            "in": "header"
-        },
-        "JWTKeyAuth": {
-            "description": "Type \"Bearer\" followed by a space and JWT token.",
-            "type": "apiKey",
-            "name": "Authorization",
-            "in": "header"
-        }
     }
 }`
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
-	Version:          "1.0",
+	Version:          "",
 	Host:             "",
-	BasePath:         "/api/v1",
+	BasePath:         "",
 	Schemes:          []string{},
-	Title:            "Donetick Swagger API",
-	Description:      "Donetick swagger documentation.",
+	Title:            "",
+	Description:      "",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

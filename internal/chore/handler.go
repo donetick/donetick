@@ -237,7 +237,7 @@ type ChoreReq struct {
 	FrequencyType        chModel.FrequencyType         `json:"frequencyType" binding:"required"`  // no default
 	Frequency            *int                          `json:"frequency"`                         // default to 1 - validator: tied to Frequency, FrequencyType?
 	FrequencyMetadata    *chModel.FrequencyMetadata    `json:"frequencyMetadata"`                 // no default - validator: tied to Frequency, FrequencyType?
-	NextDueDate          *time.Time                    `json:"nextDueDate"`                       // no default - conditionally // TODO: convert to time
+	NextDueDate          *time.Time                    `json:"nextDueDate"`                       // no default  //Document the RFC requirement
 	IsRolling            *bool                         `json:"isRolling"`                         // defaults to false - validator: tied to frequency?
 	AssignedTo           *int                          `json:"assignedTo"`                        // no default - validator: if it's no_assignee we should throw input error
 	Assignees            []chModel.ChoreAssignees      `json:"assignees"`                         // no default - validator: if it's no_assignee we should throw input error
@@ -325,7 +325,8 @@ func (h *Handler) CreateChore(c *gin.Context) {
 
 	var dueDate *time.Time
 	if choreReq.NextDueDate != nil {
-		*dueDate = choreReq.NextDueDate.UTC()
+		utcDate := choreReq.NextDueDate.UTC()
+		dueDate = &utcDate
 	}
 
 	setCreateChoreDefaults(choreReq)
@@ -562,21 +563,6 @@ func (h *Handler) EditChore(c *gin.Context) {
 		}
 	}
 
-	var dueDate *time.Time
-
-	if choreReq.NextDueDate != "" {
-		rawDueDate, err := time.Parse(time.RFC3339, choreReq.NextDueDate)
-		rawDueDate = rawDueDate.UTC()
-		dueDate = &rawDueDate
-		if err != nil {
-			c.JSON(400, gin.H{
-				"error": "Invalid date",
-			})
-			return
-		}
-
-	}
-
 	//  validate assignedTo part of the assignees:
 	if choreReq.AssignedTo != nil {
 		assigneeFound := false
@@ -651,6 +637,13 @@ func (h *Handler) EditChore(c *gin.Context) {
 			"error": "Error processing description",
 		})
 		return
+	}
+	var dueDate *time.Time
+	if choreReq.NextDueDate != nil {
+		utcDate := choreReq.NextDueDate.UTC()
+		dueDate = &utcDate
+	} else {
+		dueDate = oldChore.NextDueDate
 	}
 
 	setEditChoreDefaults(choreReq, oldChore)

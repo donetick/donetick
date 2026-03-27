@@ -4,6 +4,7 @@ import (
 	"embed"
 	"io/fs"
 	"net/http"
+	"strings"
 
 	"donetick.com/core/config"
 	"github.com/gin-gonic/gin"
@@ -44,6 +45,12 @@ func staticMiddleware(root string) gin.HandlerFunc {
 		if err != nil {
 			c.Next()
 			return
+		}
+		// Cache-busted assets (filenames contain content hashes) can be
+		// cached indefinitely. Other files like index.html must not be
+		// cached so that updates are picked up immediately.
+		if strings.HasPrefix(c.Request.URL.Path, "/assets/") {
+			c.Header("Cache-Control", "public, max-age=31536000, immutable")
 		}
 		fileServer.ServeHTTP(c.Writer, c.Request)
 

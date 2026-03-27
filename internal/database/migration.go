@@ -13,6 +13,7 @@ import (
 	chModel "donetick.com/core/internal/chore/model"
 	cModel "donetick.com/core/internal/circle/model"
 	filterModel "donetick.com/core/internal/filter/model"
+	lModel "donetick.com/core/internal/label/model"
 	nModel "donetick.com/core/internal/notifier/model"
 	pModel "donetick.com/core/internal/points"
 	projModel "donetick.com/core/internal/project/model"
@@ -48,7 +49,7 @@ func Migration(db *gorm.DB) error {
 		tModel.ThingHistory{},
 		uModel.APIToken{},
 		uModel.UserNotificationTarget{},
-		chModel.Label{},
+		lModel.Label{},
 		chModel.ChoreLabels{},
 		projModel.Project{},
 		filterModel.Filter{},

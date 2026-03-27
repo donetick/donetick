@@ -16,6 +16,7 @@ type IdentityProviderUserInfo struct {
 	Identifier  string
 	DisplayName string
 	Email       string
+	Picture     string
 }
 
 type IdentityProvider struct {
@@ -30,7 +31,7 @@ func NewIdentityProvider(cfg *config.Config) *IdentityProvider {
 	return &IdentityProvider{config: &cfg.OAuth2Config, isEnabled: true}
 }
 
-func (i *IdentityProvider) ExchangeToken(ctx context.Context, code string) (string, error) {
+func (i *IdentityProvider) ExchangeToken(ctx context.Context, code string, redirectURL string) (string, error) {
 	if !i.isEnabled {
 		return "", errors.New("identity provider is not enabled")
 	}
@@ -39,10 +40,16 @@ func (i *IdentityProvider) ExchangeToken(ctx context.Context, code string) (stri
 		return "", errors.New("authorization code is empty")
 	}
 
+	// Use provided redirect URL if given, otherwise fall back to config
+	redirect := i.config.RedirectURL
+	if len(redirectURL) > 0 && redirectURL != "" {
+		redirect = redirectURL
+	}
+
 	conf := &oauth2.Config{
 		ClientID:     i.config.ClientID,
 		ClientSecret: i.config.ClientSecret,
-		RedirectURL:  i.config.RedirectURL,
+		RedirectURL:  redirect,
 		Scopes:       i.config.Scopes,
 		Endpoint: oauth2.Endpoint{
 			AuthURL:  i.config.AuthURL,
@@ -53,14 +60,16 @@ func (i *IdentityProvider) ExchangeToken(ctx context.Context, code string) (stri
 	token, err := conf.Exchange(ctx, code)
 	if err != nil {
 		// Enhanced error handling for OAuth2 errors
-		if strings.Contains(err.Error(), "invalid_grant") {
+		switch {
+		case strings.Contains(err.Error(), "invalid_grant"):
 			return "", errors.New("oauth2: invalid_grant - The authorization code is invalid, expired, revoked, or does not match the redirect URI")
-		} else if strings.Contains(err.Error(), "invalid_client") {
+		case strings.Contains(err.Error(), "invalid_client"):
 			return "", errors.New("oauth2: invalid_client - Client authentication failed")
-		} else if strings.Contains(err.Error(), "invalid_request") {
+		case strings.Contains(err.Error(), "invalid_request"):
 			return "", errors.New("oauth2: invalid_request - The request is missing a required parameter or is otherwise malformed")
+		default:
+			return "", err
 		}
-		return "", err
 	}
 
 	accessToken, ok := token.AccessToken, token.Valid()
@@ -105,5 +114,28 @@ func (i *IdentityProvider) GetUserInfo(ctx context.Context, accessToken string) 
 	if val, ok := claims["email"]; ok {
 		userInfo.Email = val.(string)
 	}
+	if val, ok := claims["picture"]; ok {
+		pictureURL := val.(string)
+		isValid := isPictureURLValid(pictureURL)
+		if isValid {
+			userInfo.Picture = pictureURL
+		}
+	}
 	return &userInfo, nil
+}
+
+// Check if the provided URL is reachable and returns a valid image
+func isPictureURLValid(url string) bool {
+	resp, err := http.Get(url)
+	if err != nil {
+		return false
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return false
+	}
+
+	contentType := resp.Header.Get("Content-Type")
+	return strings.HasPrefix(contentType, "image/")
 }

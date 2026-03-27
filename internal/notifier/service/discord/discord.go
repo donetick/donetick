@@ -59,7 +59,7 @@ func (dn *DiscordNotifier) sendMessage(c context.Context, webhookURL string, mes
 	payload := map[string]string{"content": message}
 	jsonData, err := json.Marshal(payload)
 	if err != nil {
-		log.Error("Error marshalling JSON:", err)
+		log.Error("Error marshaling JSON:", err)
 		return err
 	}
 

@@ -61,7 +61,7 @@ type Chore struct {
 	NotificationMetadata   *string               `json:"-" gorm:"column:notification_meta"`                                 // TODO: Clean up after v0.1.39
 	NotificationMetadataV2 *NotificationMetadata `json:"notificationMetadata" gorm:"column:notification_meta_v2;type:json"` // Additional notification information
 	Labels                 *string               `json:"labels" gorm:"column:labels"`                                       // Labels for the chore
-	LabelsV2               *[]Label              `json:"labelsV2" gorm:"many2many:chore_labels"`                            // Labels for the chore
+	LabelsV2               *[]lModel.Label       `json:"labelsV2" gorm:"many2many:chore_labels"`                            // Labels for the chore
 	CircleID               int                   `json:"circleId" gorm:"column:circle_id;index"`                            // The circle this chore is in
 	CreatedAt              time.Time             `json:"createdAt" gorm:"column:created_at"`                                // When the chore was created
 	UpdatedAt              time.Time             `json:"updatedAt" gorm:"column:updated_at"`                                // When the chore was last updated
@@ -192,19 +192,11 @@ type ChoreDetail struct {
 	IsActive            bool               `json:"isActive" gorm:"column:is_active"`
 }
 
-type Label struct {
-	ID        int    `json:"id" gorm:"primary_key"`
-	Name      string `json:"name" gorm:"column:name"`
-	Color     string `json:"color" gorm:"column:color"`
-	CircleID  *int   `json:"-" gorm:"column:circle_id"`
-	CreatedBy int    `json:"created_by" gorm:"column:created_by"`
-}
-
 type ChoreLabels struct {
 	ChoreID int `json:"choreId" gorm:"primaryKey;autoIncrement:false;not null"`
 	LabelID int `json:"labelId" gorm:"primaryKey;autoIncrement:false;not null"`
 	UserID  int `json:"userId" gorm:"primaryKey;autoIncrement:false;not null"`
-	Label   Label
+	Label   lModel.Label
 }
 type ChoreLiteReq struct {
 	Name        string  `json:"name" binding:"required"`
@@ -216,7 +208,7 @@ type ChoreLiteReq struct {
 
 type ChoreReq struct {
 	Name                 string                `json:"name" binding:"required"`
-	FrequencyType        FrequencyType         `json:"frequencyType"`
+	FrequencyType        FrequencyType         `json:"frequencyType" binding:"required"`
 	ID                   int                   `json:"id"`
 	DueDate              string                `json:"dueDate"`
 	Assignees            []ChoreAssignees      `json:"assignees"`
@@ -288,12 +280,14 @@ func (c *Chore) CanEdit(userID int, circleUsers []*cModel.UserCircleDetail, upda
 			break
 		}
 	}
+
+	cooldown := time.Second * 30
 	if updatedAt != nil {
 		// if the chore was updated after the user fetched it for editing, then do not allow editing
 		if c.UpdatedAt.After(*updatedAt) {
 			// this means the chore was modified by someone
 			choreCanModified = false
-		} else if updatedAt.After(time.Now()) {
+		} else if updatedAt.After(time.Now().UTC().Add(cooldown)) {
 			// if the updatedAt is in the future, then do not allow editing
 			choreCanModified = false
 			return errors.New("updatedAt is in the future and cannot be used to edit the chore")
@@ -340,11 +334,9 @@ func (c *Chore) CanComplete(userID int, circleUsers []*cModel.UserCircleDetail) 
 					return true
 				}
 			}
-		} else {
+		} else if c.CreatedBy == userID {
 			// For private chores with no assignee, only creator can complete
-			if c.CreatedBy == userID {
-				return true
-			}
+			return true
 		}
 		return false
 	}
@@ -433,12 +425,14 @@ func (f *FrequencyMetadata) Scan(value interface{}) error {
 		return nil
 	}
 
-	bytes, ok := value.([]byte)
-	if !ok {
-		return errors.New("type assertion to []byte failed")
+	switch v := value.(type) {
+	case []byte:
+		return json.Unmarshal(v, f)
+	case string:
+		return json.Unmarshal([]byte(v), f)
+	default:
+		return errors.New("type assertion to []byte or string failed")
 	}
-
-	return json.Unmarshal(bytes, f)
 }
 
 type TimeSession struct {
@@ -496,7 +490,7 @@ func (p *PauseLogEntries) Scan(value interface{}) error {
 	}
 }
 
-func (t *TimeSession) Start(UserID int) {
+func (t *TimeSession) Start(userID int) {
 	timeNow := time.Now().UTC()
 	t.Status = TimeSessionStatusActive
 	if t.StartTime.IsZero() {
@@ -505,13 +499,13 @@ func (t *TimeSession) Start(UserID int) {
 
 	t.PauseLog = append(t.PauseLog, &PauseLogEntry{
 		StartTime: timeNow,
-		UpdateBy:  UserID,
+		UpdateBy:  userID,
 	})
-	t.UpdateBy = UserID
+	t.UpdateBy = userID
 	t.UpdateAt = timeNow
 }
 
-func (t *TimeSession) Pause(UserID int) {
+func (t *TimeSession) Pause(userID int) {
 	timeNow := time.Now().UTC()
 	duration := 0
 	if t.Status == TimeSessionStatusActive {
@@ -524,11 +518,11 @@ func (t *TimeSession) Pause(UserID int) {
 		t.PauseLog[len(t.PauseLog)-1].Duration = duration
 		t.Duration += duration
 	}
-	t.UpdateBy = UserID
+	t.UpdateBy = userID
 	t.UpdateAt = timeNow
 }
 
-func (t *TimeSession) Finish(UserID int) {
+func (t *TimeSession) Finish(userID int) {
 	timeNow := time.Now().UTC()
 	t.Status = TimeSessionStatusCompleted
 	if len(t.PauseLog) > 0 && t.PauseLog[len(t.PauseLog)-1].EndTime == nil {
@@ -539,6 +533,6 @@ func (t *TimeSession) Finish(UserID int) {
 		t.Duration += duration
 	}
 	t.EndTime = &timeNow
-	t.UpdateBy = UserID
+	t.UpdateBy = userID
 	t.UpdateAt = timeNow
 }

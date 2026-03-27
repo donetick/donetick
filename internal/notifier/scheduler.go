@@ -60,7 +60,7 @@ func (s *Scheduler) cleanupSentNotifications(c context.Context) (time.Duration, 
 
 func (s *Scheduler) loadAndSendNotificationJob(c context.Context) (time.Duration, error) {
 	log := logging.FromContext(c)
-	startTime := time.Now()
+	startTime := time.Now().UTC()
 	getAllPendingNotifications, err := s.notificationRepo.GetPendingNotification(c, time.Minute*900)
 	log.Debug("Getting pending notifications", " count ", len(getAllPendingNotifications))
 
@@ -89,7 +89,7 @@ func (s *Scheduler) loadAndSendNotificationJob(c context.Context) (time.Duration
 func (s *Scheduler) runScheduler(c context.Context, jobName string, job func(c context.Context) (time.Duration, error), interval time.Duration) {
 
 	for {
-		logging.FromContext(c).Debug("Scheduler running ", jobName, " time", time.Now().String())
+		logging.FromContext(c).Debug("Scheduler running ", jobName, " time", time.Now().UTC().String())
 
 		select {
 		case <-s.stopChan:

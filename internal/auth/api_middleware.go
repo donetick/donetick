@@ -41,7 +41,7 @@ func APITokenMiddleware(userRepo *uRepo.UserRepository) gin.HandlerFunc {
 
 // OptionalMFAMiddleware provides optional MFA verification for API endpoints
 // This middleware checks for an optional MFA code in headers for enhanced security
-func OptionalMFAMiddleware(userRepo *uRepo.UserRepository) gin.HandlerFunc {
+func OptionalMFAMiddleware(userRepo *uRepo.UserRepository, mfaService *mfa.MFAService) gin.HandlerFunc {
 	return gin.HandlerFunc(func(c *gin.Context) {
 		logger := logging.FromContext(c)
 
@@ -61,7 +61,6 @@ func OptionalMFAMiddleware(userRepo *uRepo.UserRepository) gin.HandlerFunc {
 		// Check if user has MFA enabled and if an MFA code is provided
 		mfaCode := c.GetHeader("X-MFA-Code")
 		if userDetails.MFAEnabled && mfaCode != "" {
-			mfaService := mfa.NewMFAService("Donetick")
 			valid, newUsedCodes, err := mfaService.IsCodeValid(
 				userDetails.MFASecret,
 				userDetails.MFABackupCodes,

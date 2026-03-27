@@ -25,11 +25,11 @@ type TokenService struct {
 
 // TokenResponse represents the response containing both access and refresh tokens
 type TokenResponse struct {
-	AccessToken         string    `json:"access_token"`
-	RefreshToken        string    `json:"refresh_token"`
-	AccessTokenExpiry   time.Time `json:"access_token_expiry"`
-	RefreshTokenExpiry  time.Time `json:"refresh_token_expiry"`
-	TokenType           string    `json:"token_type"`
+	AccessToken        string    `json:"access_token"`
+	RefreshToken       string    `json:"refresh_token"`
+	AccessTokenExpiry  time.Time `json:"access_token_expiry"`
+	RefreshTokenExpiry time.Time `json:"refresh_token_expiry"`
+	TokenType          string    `json:"token_type"`
 
 	// Legacy fields for backward compatibility
 	Token  string    `json:"token"`  // Same as access_token
@@ -192,6 +192,11 @@ func (s *TokenService) RevokeToken(ctx context.Context, refreshToken string) err
 // RevokeAllUserTokens revokes all tokens for a user (logout from all devices)
 func (s *TokenService) RevokeAllUserTokens(ctx context.Context, userID int) error {
 	return s.userRepo.RevokeAllUserSessions(ctx, userID)
+}
+
+// RefreshTokenExpiry returns the configured refresh token expiry duration
+func (s *TokenService) RefreshTokenExpiry() time.Duration {
+	return s.refreshTokenExpiry
 }
 
 // generateRefreshToken creates a cryptographically secure random token

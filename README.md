@@ -87,11 +87,20 @@ Donetick is an open-source, user-friendly app designed to help you organize task
    ```bash
    docker pull donetick/donetick
    ```
-2. **Run the container:** Replace `/path/to/host/data` with your preferred data directory:
+2. **Run the container:** Replace `/path/to/host/data` and `/path/to/host/config`:
    ```bash
-   docker run -v /path/to/host/data:/donetick-data -p 2021:2021 \
+   docker run \
+     -v /path/to/host/data:/donetick-data \
+     -v /path/to/host/config:/config \
+     -p 2021:2021 \
      -e DT_ENV=selfhosted \
-     -e DT_SQLITE_PATH=/donetick-data/donetick.db -e TZ=Etc/UTC \
+     -e DT_SQLITE_PATH=/donetick-data/donetick.db \
+     -e TZ=Etc/UTC \  
+     --health-cmd "wget --no-verbose --tries=1 --spider http://localhost:2021/api/v1/health || exit 1" \
+     --health-start-period 1m \
+     --health-timeout 5s \
+     --health-interval 1m \
+     --health-retries 3 \
      donetick/donetick
    ```
 
@@ -112,6 +121,12 @@ services:
       - DT_ENV=selfhosted
       - DT_SQLITE_PATH=/donetick-data/donetick.db
       - TZ=Etc/UTC
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider http://localhost:2021/api/v1/health || exit 1
+      start_period: 1m
+      timeout: 5s
+      interval: 1m
+      retries: 3
       
 ```
 
@@ -151,6 +166,11 @@ services:
    ```bash
    npm run build-selfhosted
    ```
+5. If you want to work on the frontend you can run:
+   ```bash
+   npm start
+   ```
+
 
 ### Build the application
 
@@ -171,7 +191,8 @@ services:
    rm -rf ./frontend/dist
    cp -r ../donetick-frontend/dist ./frontend
    ```
-5. Run the app locally:
+5. Set a valid JWT secret in `config/selfhosted.yaml`. It must be a 32 characters long string.
+6. Run the app locally:
    ```bash
    go run .
    ```
@@ -195,11 +216,31 @@ services:
 
 Contributions are welcome! If you want to work on something that is not listed as an issue, please open a [Discussion](https://github.com/donetick/donetick/discussions) first to ensure it aligns with our goals and to avoid any unnecessary effort!
 
+## Code Formatting and Linting
+
+We use `golangci-lint` and `ruleguard` for linting and formatting. CI enforces lint checks on all pull requests.
+
+To run lint checks locally, install the pinned version:
+```
+go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.64.8
+go install github.com/quasilyte/go-ruleguard/cmd/ruleguard@v0.4.5
+```
+
+Run lint checks:
+```
+golangci-lint run
+```
+
+Apply safe fixes:
+```
+golangci-lint run --fix
+```
+
 ---
 
 ## License
 
-This project is licensed under the **AGPLv3**. See the [LICENSE](LICENSE) file for more details.
+This project is licensed under the **AGPLv3**. See the [LICENSE](LICENSE.md) file for more details.
 
 ---
 

@@ -75,7 +75,7 @@ func (r *SubTasksRepository) UpdateSubtask(c context.Context, choreId int, toBeR
 				}
 			}
 
-			tempToRealIdMap := make(map[int]int) //temporary frontend ID -> real database ID
+			tempToRealIdMap := make(map[int]int) // temporary frontend ID -> real database ID
 			for tempId, insertedSubtask := range tempIdObjectMap {
 
 				tempToRealIdMap[tempId] = insertedSubtask.ID

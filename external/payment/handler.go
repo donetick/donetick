@@ -89,8 +89,6 @@ func (h *Handler) CreateSubscription(c *gin.Context) {
 	})
 
 	c.JSON(http.StatusOK, gin.H{"sessionURL": session.URL})
-	return
-
 }
 
 func (h *Handler) CancelSubscription(c *gin.Context) {
@@ -121,7 +119,7 @@ func (h *Handler) CancelSubscription(c *gin.Context) {
 		}
 
 		// Update unified subscription table
-		if subscription.CancelAtPeriodEnd == true {
+		if subscription.CancelAtPeriodEnd {
 			sub.Status = "cancelled"
 			if err := h.subscriptionDB.UpdateSubscription(c, sub); err != nil {
 				logger.Errorw("payment.handler.CancelSubscription failed to update subscription status", "err", err)

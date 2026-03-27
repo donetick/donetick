@@ -30,7 +30,8 @@ server:
   cors_allow_origins:
     - "http://localhost:5173"
     - "http://localhost:7926"
-  serve_frontend: false
+  serve_frontend: true
+  serve_swagger: true
 logging:
   level: "debug"
   encoding: "console"
@@ -43,7 +44,8 @@ email:
   host: 
   port: 
   key: 
-  email:  
+  email:
+  user:  
   appHost:  
 mfa:
   session_timeout: 10m

@@ -45,7 +45,8 @@ email:
   port: 
   key: 
   email:
-  user:  
+  # Optional username if your email server requires a username instead of email.
+  username: 
   appHost:  
 mfa:
   session_timeout: 10m

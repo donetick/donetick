@@ -169,6 +169,7 @@ type FCMConfig struct {
 }
 type EmailConfig struct {
 	Email    string `mapstructure:"email"`
+	// Optional username if your email server requires a username instead of email.
 	Username string `mapstructure:"username"`
 	Key      string `mapstructure:"key"`
 	Host     string `mapstructure:"host"`

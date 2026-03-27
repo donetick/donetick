@@ -47,7 +47,8 @@ email:
   port: 
   key: 
   email:
-  user: # optional, will be filled with email.email if not set.  
+  # Optional username if your email server requires a username instead of email.
+  username: 
   appHost:  
 oauth2:
   client_id: 

@@ -846,7 +846,7 @@ func (h *Handler) UpdateUserDetails(c *gin.Context) {
 	}
 	// update non-nil fields:
 	if req.DisplayName != nil {
-		user.DisplayName = *req.DisplayName
+		user.DisplayName = html.EscapeString(*req.DisplayName)
 	}
 	if req.ChatID != nil {
 		user.ChatID = *req.ChatID

@@ -8,10 +8,11 @@ import (
 )
 
 type Resource struct {
-	Idp        identityProvider `json:"identity_provider" binding:"omitempty"`
-	MinVersion string           `json:"min_version" binding:"omitempty"`
-	APIVersion string           `json:"api_version" binding:"omitempty"`
-	APICommit  string           `json:"api_commit" binding:"omitempty"`
+	Idp                    identityProvider `json:"identity_provider" binding:"omitempty"`
+	MinVersion             string           `json:"min_version" binding:"omitempty"`
+	APIVersion             string           `json:"api_version" binding:"omitempty"`
+	APICommit              string           `json:"api_commit" binding:"omitempty"`
+	IsUserCreationDisabled bool             `json:"is_user_creation_disabled"`
 }
 type identityProvider struct {
 	Auth_url  string `json:"auth_url" binding:"omitempty"`
@@ -36,9 +37,10 @@ func (h *Handler) getResource(c *gin.Context) {
 			Client_ID: h.config.OAuth2Config.ClientID,
 			Name:      h.config.OAuth2Config.Name,
 		},
-		MinVersion: h.config.MinVersion,
-		APIVersion: h.config.Info.Version,
-		APICommit:  h.config.Info.Commit,
+		MinVersion:             h.config.MinVersion,
+		APIVersion:             h.config.Info.Version,
+		APICommit:              h.config.Info.Commit,
+		IsUserCreationDisabled: h.config.IsUserCreationDisabled,
 	})
 }
 

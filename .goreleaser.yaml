@@ -54,6 +54,11 @@ archives:
 release:
   prerelease: auto  # Auto-detect pre-releases based on semver (e.g., v1.0.0-beta.1)
   draft: false
+  header: |
+    {{ if .Prerelease -}}
+    > [!WARNING]
+    > This release is intended for testing purposes only. Please do not use it with production data, as frequent updates and architectural changes may occur between pre-release versions.
+    {{ end -}}
 
 changelog:
   sort: asc

@@ -4,6 +4,7 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"time"
 )
 
@@ -28,6 +29,8 @@ const (
 	// Common operators
 	OperatorIs    ConditionOperator = "is"
 	OperatorIsNot ConditionOperator = "isNot"
+	OperatorOr    ConditionOperator = "or"
+	OperatorAnd   ConditionOperator = "and"
 
 	// Comparison operators (for priority, points)
 	OperatorEquals             ConditionOperator = "equals"
@@ -61,11 +64,33 @@ const (
 	LogicalOperatorOR  LogicalOperator = "OR"
 )
 
+// noValueOperators are operators that don't require a value field
+var noValueOperators = map[ConditionOperator]bool{
+	OperatorIsOverdue:      true,
+	OperatorIsDueToday:     true,
+	OperatorIsDueTomorrow:  true,
+	OperatorIsDueThisWeek:  true,
+	OperatorIsDueThisMonth: true,
+	OperatorHasNoDueDate:   true,
+	OperatorHasDueDate:     true,
+}
+
 // FilterCondition represents a single condition in a filter
 type FilterCondition struct {
 	Type     string      `json:"type" binding:"required,oneof=assignee createdBy priority status dueDate label project points"`
-	Operator string      `json:"operator"`
-	Value    interface{} `json:"value" binding:"required,max=200"`
+	Operator string      `json:"operator" binding:"required"`
+	Value    interface{} `json:"value"`
+}
+
+func (fc FilterCondition) Validate() error {
+	op := ConditionOperator(fc.Operator)
+	if noValueOperators[op] {
+		return nil
+	}
+	if fc.Value == nil {
+		return fmt.Errorf("condition type %q with operator %q requires a value", fc.Type, fc.Operator)
+	}
+	return nil
 }
 
 // FilterConditions is a custom type for JSON array storage
@@ -84,6 +109,16 @@ func (fc *FilterConditions) Scan(value interface{}) error {
 	}
 
 	return json.Unmarshal(bytes, fc)
+}
+
+// Validate checks all conditions are valid
+func (fcs FilterConditions) Validate() error {
+	for i, fc := range fcs {
+		if err := fc.Validate(); err != nil {
+			return fmt.Errorf("condition[%d]: %w", i, err)
+		}
+	}
+	return nil
 }
 
 // Value implements the driver.Valuer interface

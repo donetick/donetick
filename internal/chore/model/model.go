@@ -115,6 +115,7 @@ const (
 	ChoreHistoryStatusPendingApproval ChoreHistoryStatus = 3
 	ChoreHistoryStatusRejected        ChoreHistoryStatus = 4
 	ChoreHistoryStatusMissed          ChoreHistoryStatus = 5
+	ChoreHistoryStatusRescheduled     ChoreHistoryStatus = 6
 )
 
 type FrequencyMetadata struct {

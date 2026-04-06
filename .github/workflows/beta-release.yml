@@ -2,7 +2,7 @@ name: Scheduled Beta Release
 
 on:
   schedule:
-    - cron: '0 2 * * *'     # Daily at 02:00 UTC
+    - cron: '0 4  * * *'     # Daily at 04:00 UTC
   workflow_dispatch:         # Allow manual trigger
 
 permissions:

@@ -238,22 +238,22 @@ type ChoreReq struct {
 	Frequency            *int                          `json:"frequency" binding:"omitempty,gt=0"`
 	FrequencyMetadata    *chModel.FrequencyMetadata    `json:"frequencyMetadata"`
 	NextDueDate          *time.Time                    `json:"nextDueDate" binding:"required_with=IsRolling"` // TODO: Document the RFC requirement
-	IsRolling            *bool                         `json:"isRolling"`
+	IsRolling            bool                          `json:"isRolling"`
 	AssignedTo           *int                          `json:"assignedTo" binding:"omitempty,gt=0"`
 	Assignees            []chModel.ChoreAssignees      `json:"assignees" binding:"dive"`
 	AssignStrategy       chModel.AssignmentStrategy    `json:"assignStrategy" binding:"required,oneof=no_assignee least_assigned least_completed random keep_last_assigned random_except_last_assigned round_robin"`
-	IsActive             *bool                         `json:"isActive"`
-	Notification         *bool                         `json:"notification"`
+	IsActive             bool                          `json:"isActive"`
+	Notification         bool                          `json:"notification"`
 	NotificationMetadata *chModel.NotificationMetadata `json:"notificationMetadata"`
 	LabelsV2             *[]lModel.LabelReq            `json:"labelsV2" binding:"omitempty,dive,unique=LabelID"`
 	UpdatedAt            *time.Time                    `json:"updatedAt"` // Only used on editChore  // For internal use only when syncing a chore updated offline
 	Priority             *int                          `json:"priority" binding:"omitempty,gte=0,lte=5"`
 	CompletionWindow     *int                          `json:"completionWindow" binding:"omitempty,min=0"`
 	Points               *int                          `json:"points" binding:"omitempty,gte=0"`
-	Description          *string                       `json:"description"`
+	Description          *string                       `json:"description" binding:"omitempty"`
 	SubTasks             *[]stModel.SubTask            `json:"subTasks" binding:"omitempty,dive"`
-	RequireApproval      *bool                         `json:"requireApproval"`
-	IsPrivate            bool                          `json:"isPrivate" binding:"required"`
+	RequireApproval      bool                          `json:"requireApproval" binding:"omitempty"`
+	IsPrivate            *bool                         `json:"isPrivate" binding:"required"`
 	ProjectID            *int                          `json:"projectId" binding:"omitempty,gt=0"`
 	ThingTrigger         *tModel.ThingTrigger          `json:"thingTrigger"`
 }
@@ -340,10 +340,10 @@ func (h *Handler) CreateChore(c *gin.Context) { // TODO: ADD SUBTASK SUPPORT!
 		NextDueDate:            dueDate,
 		AssignStrategy:         choreReq.AssignStrategy,
 		AssignedTo:             choreReq.AssignedTo,
-		IsRolling:              *choreReq.IsRolling,
+		IsRolling:              choreReq.IsRolling,
 		UpdatedBy:              currentUser.ID,
-		IsActive:               *choreReq.IsActive,
-		Notification:           *choreReq.Notification,
+		IsActive:               choreReq.IsActive,
+		Notification:           choreReq.Notification,
 		NotificationMetadataV2: choreReq.NotificationMetadata,
 		CreatedBy:              currentUser.ID,
 		CreatedAt:              time.Now().UTC(),
@@ -352,8 +352,8 @@ func (h *Handler) CreateChore(c *gin.Context) { // TODO: ADD SUBTASK SUPPORT!
 		CompletionWindow:       choreReq.CompletionWindow,
 		Description:            choreReq.Description,
 		Priority:               *choreReq.Priority,
-		RequireApproval:        *choreReq.RequireApproval,
-		IsPrivate:              choreReq.IsPrivate,
+		RequireApproval:        choreReq.RequireApproval,
+		IsPrivate:              *choreReq.IsPrivate,
 		ProjectID:              choreReq.ProjectID,
 		// SubTasks removed to prevent duplicate creation - handled by UpdateSubtask call below
 		// it's need custom logic to handle subtask creation as we send negative ids sometimes when we creating parent child releationship
@@ -442,29 +442,9 @@ func setCreateChoreDefaults(choreReq *ChoreReq) {
 		choreReq.Frequency = &val
 	}
 
-	if choreReq.IsRolling == nil {
-		val := false
-		choreReq.IsRolling = &val
-	}
-
-	if choreReq.IsActive == nil {
-		val := true
-		choreReq.IsActive = &val
-	}
-
-	if choreReq.Notification == nil {
-		val := false
-		choreReq.Notification = &val
-	}
-
 	if choreReq.Priority == nil {
 		val := 0
 		choreReq.Priority = &val
-	}
-
-	if choreReq.RequireApproval == nil {
-		val := false
-		choreReq.RequireApproval = &val
 	}
 }
 
@@ -664,9 +644,9 @@ func (h *Handler) EditChore(c *gin.Context) {
 		NextDueDate:            dueDate,
 		AssignStrategy:         choreReq.AssignStrategy,
 		AssignedTo:             choreReq.AssignedTo,
-		IsRolling:              *choreReq.IsRolling,
-		IsActive:               *choreReq.IsActive,
-		Notification:           *choreReq.Notification,
+		IsRolling:              choreReq.IsRolling,
+		IsActive:               choreReq.IsActive,
+		Notification:           choreReq.Notification,
 		NotificationMetadataV2: choreReq.NotificationMetadata,
 		CircleID:               oldChore.CircleID,
 		UpdatedBy:              currentUser.ID,
@@ -676,8 +656,8 @@ func (h *Handler) EditChore(c *gin.Context) {
 		CompletionWindow:       choreReq.CompletionWindow,
 		Description:            choreReq.Description,
 		Priority:               *choreReq.Priority,
-		RequireApproval:        *choreReq.RequireApproval,
-		IsPrivate:              choreReq.IsPrivate,
+		RequireApproval:        choreReq.RequireApproval,
+		IsPrivate:              *choreReq.IsPrivate,
 		ProjectID:              choreReq.ProjectID,
 		Status:                 oldChore.Status,
 	}
@@ -804,24 +784,8 @@ func setEditChoreDefaults(choreReq *ChoreReq, oldChore *chModel.Chore) {
 		choreReq.Frequency = &oldChore.Frequency
 	}
 
-	if choreReq.IsRolling == nil {
-		choreReq.IsRolling = &oldChore.IsRolling
-	}
-
-	if choreReq.IsActive == nil {
-		choreReq.IsActive = &oldChore.IsActive
-	}
-
-	if choreReq.Notification == nil {
-		choreReq.Notification = &oldChore.Notification
-	}
-
 	if choreReq.Priority == nil {
 		choreReq.Priority = &oldChore.Priority
-	}
-
-	if choreReq.RequireApproval == nil {
-		choreReq.RequireApproval = &oldChore.RequireApproval
 	}
 }
 

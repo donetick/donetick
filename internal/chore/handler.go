@@ -375,6 +375,7 @@ func (h *Handler) CreateChore(c *gin.Context) { // TODO: ADD SUBTASK SUPPORT!
 			c.JSON(500, gin.H{
 				"error": "Error adding subtasks",
 			})
+			return
 		}
 	}
 

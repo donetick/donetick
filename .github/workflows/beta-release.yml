@@ -18,11 +18,10 @@ jobs:
         with:
           fetch-depth: 0  # Full history needed to inspect tags and commits
 
-
       - name: Determine and push beta tag
         id: tag
         env:
-          GH_TOKEN: ${{ secrets.RELEASE_PAT }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git fetch --tags
 

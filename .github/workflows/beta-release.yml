@@ -17,11 +17,12 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0  # Full history needed to inspect tags and commits
+          token: ${{ secrets.RELEASE_PAT }}
 
       - name: Determine and push beta tag
         id: tag
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.RELEASE_PAT }}
         run: |
           git fetch --tags
 

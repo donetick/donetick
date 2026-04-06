@@ -15,87 +15,82 @@ definitions:
       assignStrategy:
         allOf:
         - $ref: '#/definitions/model.AssignmentStrategy'
-        description: 'no default - validator: no_assignee not compatible with assignees
-          and assignedto'
+        enum:
+        - no_assignee
+        - least_assigned
+        - least_completed
+        - random
+        - keep_last_assigned
+        - random_except_last_assigned
+        - round_robin
       assignedTo:
-        description: 'no default - validator: if it''s no_assignee we should throw
-          input error'
         type: integer
       assignees:
-        description: 'no default - validator: if it''s no_assignee we should throw
-          input error'
         items:
           $ref: '#/definitions/model.ChoreAssignees'
         type: array
       completionWindow:
-        description: 'no default - validator: can conflict with frequency time? complex
-          issue'
+        minimum: 0
         type: integer
       description:
-        description: no default
         type: string
       frequency:
-        description: 'default to 1 - validator: tied to Frequency, FrequencyType?'
         type: integer
       frequencyMetadata:
-        allOf:
-        - $ref: '#/definitions/model.FrequencyMetadata'
-        description: 'no default - validator: tied to Frequency, FrequencyType?'
+        $ref: '#/definitions/model.FrequencyMetadata'
       frequencyType:
         allOf:
         - $ref: '#/definitions/model.FrequencyType'
-        description: no default
+        enum:
+        - once
+        - daily
+        - weekly
+        - monthly
+        - yearly
+        - adaptive
+        - interval
+        - days_of_the_week
+        - day_of_the_month
+        - trigger
+        - no_repeat
       id:
-        description: no default
         type: integer
       isActive:
-        description: defaults to true
         type: boolean
       isPrivate:
-        description: no default
         type: boolean
       isRolling:
-        description: 'defaults to false - validator: tied to frequency?'
         type: boolean
       labelsV2:
-        description: no default -
         items:
           $ref: '#/definitions/model.LabelReq'
         type: array
       name:
-        description: no default
         type: string
       nextDueDate:
-        description: 'no default - conditionally // TODO: convert to time'
+        description: 'TODO: Document the RFC requirement'
         type: string
       notification:
-        description: 'defaults to false - validator: tied to notificationmetadata?'
         type: boolean
       notificationMetadata:
-        allOf:
-        - $ref: '#/definitions/model.NotificationMetadata'
-        description: 'no default - validator: maybe incompatible with null notification?'
+        $ref: '#/definitions/model.NotificationMetadata'
       points:
-        description: 'no default - validator: UI only supports positive'
+        minimum: 0
         type: integer
       priority:
-        description: 'defaults to 0 - validator: keep it between 0 and 5?'
+        maximum: 5
+        minimum: 0
         type: integer
       projectId:
-        description: no default
         type: integer
       requireApproval:
-        description: defaults to false
         type: boolean
       subTasks:
-        description: no default
         items:
           $ref: '#/definitions/model.SubTask'
         type: array
       thingTrigger:
-        allOf:
-        - $ref: '#/definitions/model.ThingTrigger'
-        description: no default
+        $ref: '#/definitions/model.ThingTrigger'
       updatedAt:
         description: Only used on editChore  // For internal use only when syncing
           a chore updated offline
@@ -384,7 +379,7 @@ definitions:
       project:
         allOf:
         - $ref: '#/definitions/model.Project'
-        description: Project relationship
+        description: 'Project relationship // TODO: This is never used'
       projectId:
         description: The project this chore belongs to
         type: integer
@@ -463,6 +458,7 @@ definitions:
     - 3
     - 4
     - 5
+    - 6
     format: int32
     type: integer
     x-enum-varnames:
@@ -472,6 +468,7 @@ definitions:
     - ChoreHistoryStatusPendingApproval
     - ChoreHistoryStatusRejected
     - ChoreHistoryStatusMissed
+    - ChoreHistoryStatusRescheduled
   model.Filter:
     properties:
       circleId:
@@ -518,8 +515,8 @@ definitions:
         type: string
       value: {}
     required:
+    - operator
     - type
-    - value
     type: object
   model.FilterReq:
     properties:
@@ -574,6 +571,12 @@ definitions:
       timezone:
         type: string
       unit:
+        enum:
+        - hours
+        - days
+        - weeks
+        - months
+        - years
         type: string
       weekNumbers:
         description: 'DEPRECATED: use Occurrences instead'
@@ -581,7 +584,12 @@ definitions:
           type: integer
         type: array
       weekPattern:
-        $ref: '#/definitions/model.Weekpattern'
+        allOf:
+        - $ref: '#/definitions/model.Weekpattern'
+        enum:
+        - every_week
+        - week_of_month
+        - week_of_quarter
     type: object
   model.FrequencyType:
     enum:

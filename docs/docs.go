@@ -4322,7 +4322,15 @@ const docTemplate = `{
             ],
             "properties": {
                 "assignStrategy": {
-                    "description": "no default - validator: no_assignee not compatible with assignees and assignedto",
+                    "enum": [
+                        "no_assignee",
+                        "least_assigned",
+                        "least_completed",
+                        "random",
+                        "keep_last_assigned",
+                        "random_except_last_assigned",
+                        "round_robin"
+                    ],
                     "allOf": [
                         {
                             "$ref": "#/definitions/model.AssignmentStrategy"
@@ -4330,38 +4338,41 @@ const docTemplate = `{
                     ]
                 },
                 "assignedTo": {
-                    "description": "no default - validator: if it's no_assignee we should throw input error",
                     "type": "integer"
                 },
                 "assignees": {
-                    "description": "no default - validator: if it's no_assignee we should throw input error",
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/model.ChoreAssignees"
                     }
                 },
                 "completionWindow": {
-                    "description": "no default - validator: can conflict with frequency time? complex issue",
-                    "type": "integer"
+                    "type": "integer",
+                    "minimum": 0
                 },
                 "description": {
-                    "description": "no default",
                     "type": "string"
                 },
                 "frequency": {
-                    "description": "default to 1 - validator: tied to Frequency, FrequencyType?",
                     "type": "integer"
                 },
                 "frequencyMetadata": {
-                    "description": "no default - validator: tied to Frequency, FrequencyType?",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/model.FrequencyMetadata"
-                        }
-                    ]
+                    "$ref": "#/definitions/model.FrequencyMetadata"
                 },
                 "frequencyType": {
-                    "description": "no default",
+                    "enum": [
+                        "once",
+                        "daily",
+                        "weekly",
+                        "monthly",
+                        "yearly",
+                        "adaptive",
+                        "interval",
+                        "days_of_the_week",
+                        "day_of_the_month",
+                        "trigger",
+                        "no_repeat"
+                    ],
                     "allOf": [
                         {
                             "$ref": "#/definitions/model.FrequencyType"
@@ -4369,78 +4380,59 @@ const docTemplate = `{
                     ]
                 },
                 "id": {
-                    "description": "no default",
                     "type": "integer"
                 },
                 "isActive": {
-                    "description": "defaults to true",
                     "type": "boolean"
                 },
                 "isPrivate": {
-                    "description": "no default",
                     "type": "boolean"
                 },
                 "isRolling": {
-                    "description": "defaults to false - validator: tied to frequency?",
                     "type": "boolean"
                 },
                 "labelsV2": {
-                    "description": "no default -",
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/model.LabelReq"
                     }
                 },
                 "name": {
-                    "description": "no default",
                     "type": "string"
                 },
                 "nextDueDate": {
-                    "description": "no default - conditionally // TODO: convert to time",
+                    "description": "TODO: Document the RFC requirement",
                     "type": "string"
                 },
                 "notification": {
-                    "description": "defaults to false - validator: tied to notificationmetadata?",
                     "type": "boolean"
                 },
                 "notificationMetadata": {
-                    "description": "no default - validator: maybe incompatible with null notification?",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/model.NotificationMetadata"
-                        }
-                    ]
+                    "$ref": "#/definitions/model.NotificationMetadata"
                 },
                 "points": {
-                    "description": "no default - validator: UI only supports positive",
-                    "type": "integer"
+                    "type": "integer",
+                    "minimum": 0
                 },
                 "priority": {
-                    "description": "defaults to 0 - validator: keep it between 0 and 5?",
-                    "type": "integer"
+                    "type": "integer",
+                    "maximum": 5,
+                    "minimum": 0
                 },
                 "projectId": {
-                    "description": "no default",
                     "type": "integer"
                 },
                 "requireApproval": {
-                    "description": "defaults to false",
                     "type": "boolean"
                 },
                 "subTasks": {
-                    "description": "no default",
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/model.SubTask"
                     }
                 },
                 "thingTrigger": {
-                    "description": "no default",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/model.ThingTrigger"
-                        }
-                    ]
+                    "$ref": "#/definitions/model.ThingTrigger"
                 },
                 "updatedAt": {
                     "description": "Only used on editChore  // For internal use only when syncing a chore updated offline",
@@ -4845,7 +4837,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "project": {
-                    "description": "Project relationship",
+                    "description": "Project relationship // TODO: This is never used",
                     "allOf": [
                         {
                             "$ref": "#/definitions/model.Project"
@@ -4963,7 +4955,8 @@ const docTemplate = `{
                 2,
                 3,
                 4,
-                5
+                5,
+                6
             ],
             "x-enum-varnames": [
                 "ChoreHistoryStatusStarted",
@@ -4971,7 +4964,8 @@ const docTemplate = `{
                 "ChoreHistoryStatusSkipped",
                 "ChoreHistoryStatusPendingApproval",
                 "ChoreHistoryStatusRejected",
-                "ChoreHistoryStatusMissed"
+                "ChoreHistoryStatusMissed",
+                "ChoreHistoryStatusRescheduled"
             ]
         },
         "model.Filter": {
@@ -5021,8 +5015,8 @@ const docTemplate = `{
         "model.FilterCondition": {
             "type": "object",
             "required": [
-                "type",
-                "value"
+                "operator",
+                "type"
             ],
             "properties": {
                 "operator": {
@@ -5120,7 +5114,14 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "unit": {
-                    "type": "string"
+                    "type": "string",
+                    "enum": [
+                        "hours",
+                        "days",
+                        "weeks",
+                        "months",
+                        "years"
+                    ]
                 },
                 "weekNumbers": {
                     "description": "DEPRECATED: use Occurrences instead",
@@ -5130,7 +5131,16 @@ const docTemplate = `{
                     }
                 },
                 "weekPattern": {
-                    "$ref": "#/definitions/model.Weekpattern"
+                    "enum": [
+                        "every_week",
+                        "week_of_month",
+                        "week_of_quarter"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.Weekpattern"
+                        }
+                    ]
                 }
             }
         },

@@ -61,8 +61,4 @@ release:
     {{ end -}}
 
 changelog:
-  sort: asc
-  filters:
-    exclude:
-      - "^docs:"
-      - "^test:"
+  use: github

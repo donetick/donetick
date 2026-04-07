@@ -1767,10 +1767,11 @@ func (h *Handler) UnarchiveChore(c *gin.Context) {
 
 // region: request models
 
-type CompleteChoreReq struct {
+type CompleteChoreReq struct { // TODO: Remove "Note" in future.
 	Notes         *string    `json:"notes" binding:"omitempty,min=1"`
-	CompletedBy   *int       `json:"completedBy"`   // The completed by only can be populated by the admin or super user.
-	CompletedDate *time.Time `json:"completedTime"` // Completion date in RFC3339 format (defaults to now)
+	Note          *string    `json:"note" binding:"omitempty,min=1"` // This is going to be deprecated in future release, use "Notes" instead.
+	CompletedBy   *int       `json:"completedBy"`                    // The completed by only can be populated by the admin or super user.
+	CompletedDate *time.Time `json:"completedTime"`                  // Completion date in RFC3339 format (defaults to now).
 }
 
 // endregion
@@ -1924,11 +1925,19 @@ func (h *Handler) CompleteChore(c *gin.Context) {
 		})
 		return
 	}
+	var note *string
+
+	if req.Notes != nil {
+		note = req.Notes
+	}
+	if req.Note != nil {
+		note = req.Note
+	}
 
 	// Check if chore requires approval
 	if chore.RequireApproval {
 		// Set chore status to pending approval instead of completing
-		if err := h.choreRepo.SetChorePendingApproval(c, chore, req.Notes, completedBy, &completedDate); err != nil {
+		if err := h.choreRepo.SetChorePendingApproval(c, chore, note, completedBy, &completedDate); err != nil {
 			c.JSON(500, gin.H{
 				"error": "Error setting chore pending approval",
 			})
@@ -1951,7 +1960,7 @@ func (h *Handler) CompleteChore(c *gin.Context) {
 				"updatedBy": actualUser.ID, // Use actual user for audit trail
 				"updatedAt": time.Now().UTC(),
 			}
-			broadcaster.BroadcastChoreUpdated(updatedChore, &effectiveUser.User, changes, req.Notes)
+			broadcaster.BroadcastChoreUpdated(updatedChore, &effectiveUser.User, changes, note)
 		}
 
 		c.JSON(200, gin.H{
@@ -1970,7 +1979,7 @@ func (h *Handler) CompleteChore(c *gin.Context) {
 		return
 	}
 
-	if err := h.choreRepo.CompleteChore(c, chore, req.Notes, completedBy, nextDueDate, &completedDate, nextAssignedTo, true); err != nil {
+	if err := h.choreRepo.CompleteChore(c, chore, note, completedBy, nextDueDate, &completedDate, nextAssignedTo, true); err != nil {
 		c.JSON(500, gin.H{
 			"error": "Error completing chore",
 		})
@@ -2003,7 +2012,7 @@ func (h *Handler) CompleteChore(c *gin.Context) {
 		if len(history) > 0 {
 			choreHistory = history[0]
 		}
-		broadcaster.BroadcastChoreCompleted(updatedChore, &effectiveUser.User, choreHistory, req.Notes)
+		broadcaster.BroadcastChoreCompleted(updatedChore, &effectiveUser.User, choreHistory, note)
 	}
 
 	c.JSON(200, gin.H{
@@ -3128,8 +3137,9 @@ func (h *Handler) ApproveChore(c *gin.Context) {
 
 // region: request models
 
-type RejectChoreReq struct {
+type RejectChoreReq struct { // TODO: Remove "Note" in future.
 	Notes *string `json:"notes" binding:"omitempty,min=1"`
+	Note  *string `json:"note" binding:"omitempty,min=1"` // This is going to be deprecated in future release, use "Notes" instead.
 }
 
 // endregion
@@ -3222,7 +3232,16 @@ func (h *Handler) RejectChore(c *gin.Context) {
 	}
 
 	// Reject the chore
-	if err := h.choreRepo.RejectChore(c, id, req.Notes); err != nil {
+	var note *string
+
+	if req.Notes != nil {
+		note = req.Notes
+	}
+	if req.Note != nil {
+		note = req.Note
+	}
+
+	if err := h.choreRepo.RejectChore(c, id, note); err != nil {
 		c.JSON(500, gin.H{
 			"error": "Error rejecting chore",
 		})
@@ -3246,7 +3265,7 @@ func (h *Handler) RejectChore(c *gin.Context) {
 			"updatedBy": currentUser.ID,
 			"updatedAt": time.Now().UTC(),
 		}
-		broadcaster.BroadcastChoreUpdated(updatedChore, &currentUser.User, changes, req.Notes)
+		broadcaster.BroadcastChoreUpdated(updatedChore, &currentUser.User, changes, note)
 	}
 
 	c.JSON(200, gin.H{

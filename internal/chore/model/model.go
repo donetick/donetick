@@ -74,7 +74,7 @@ type Chore struct {
 	RequireApproval        bool                  `json:"requireApproval" gorm:"column:require_approval"`                    // Whether chore completion requires admin approval
 	IsPrivate              bool                  `json:"isPrivate" gorm:"column:is_private;default:false"`                  // Whether the chore is private
 	ProjectID              *int                  `json:"projectId,omitempty" gorm:"column:project_id;index"`                // The project this chore belongs to
-	Project                *pModel.Project       `json:"project,omitempty" gorm:"foreignkey:ProjectID;references:ID"`       // Project relationship // TODO: This is never used
+	Project                *pModel.Project       `json:"project,omitempty" gorm:"foreignkey:ProjectID;references:ID"`       // Project relationship
 }
 
 type Status int8
@@ -240,7 +240,7 @@ func (c *Chore) CanEdit(userID int, circleUsers []*cModel.UserCircleDetail, upda
 		}
 	}
 
-	// TODO: remove this, moved to validator
+	// TODO: Remove this, moved to validator
 	cooldown := time.Second * 30
 	if updatedAt != nil {
 		// if the chore was updated after the user fetched it for editing, then do not allow editing
@@ -262,7 +262,7 @@ func (c *Chore) CanEdit(userID int, circleUsers []*cModel.UserCircleDetail, upda
 	return nil
 
 }
-func (c *Chore) CanView(userID int, circleUsers []*cModel.UserCircleDetail) bool { // TODO: Remove, not used anywhere
+func (c *Chore) CanView(userID int, circleUsers []*cModel.UserCircleDetail) bool {
 	// if private then only creator and assignees can view:
 	if c.IsPrivate {
 		if c.CreatedBy == userID {
@@ -284,7 +284,7 @@ func (c *Chore) CanView(userID int, circleUsers []*cModel.UserCircleDetail) bool
 	}
 	return false
 }
-func (c *Chore) CanComplete(userID int, circleUsers []*cModel.UserCircleDetail) bool { // TODO: Remove, not used anywhere
+func (c *Chore) CanComplete(userID int, circleUsers []*cModel.UserCircleDetail) bool {
 	// If using no assignee strategy, allow any circle member to complete
 	if c.AssignStrategy == AssignmentStrategyNoAssignee && (c.AssignedTo == nil || *c.AssignedTo == 0) {
 		if !c.IsPrivate {

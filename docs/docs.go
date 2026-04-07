@@ -789,7 +789,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "res: detailed chore information",
+                        "description": "res: detailed chore information\" //TODO: Add response model",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -1284,7 +1284,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "message: Nudge sent status",
+                        "description": "message: Nudge sent status\" //TODO: Add response model",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -1352,7 +1352,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "res: {duration, status, timerUpdatedAt}",
+                        "description": "res: {duration, status, timerUpdatedAt}\" //TODO: Add response model",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -1525,7 +1525,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "res: updated chore, message: Chore rejected successfully",
+                        "description": "res: updated chore, message: Chore rejected successfully\" //TODO: Add response model",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -1672,7 +1672,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "res: {timerUpdatedAt, status, duration}",
+                        "description": "res: {timerUpdatedAt, status, duration}\" //TODO: Add response model",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -1846,7 +1846,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Empty success response",
+                        "description": "Empty success response\" //TODO: Add response model",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -2097,7 +2097,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "res: {timerUpdatedAt, status, duration}",
+                        "description": "res: {timerUpdatedAt, status, duration}\" //TODO: Add response model",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -2423,7 +2423,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "message: Successfully undid {action} action, res: updated chore object",
+                        "description": "message: Successfully undid {action} action, res: updated chore object\" //TODO: Add response model",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -4401,7 +4401,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "nextDueDate": {
-                    "description": "TODO: Document the RFC requirement",
+                    "description": "Next due date in RFC3339 format",
                     "type": "string"
                 },
                 "notification": {
@@ -4435,7 +4435,6 @@ const docTemplate = `{
                     "$ref": "#/definitions/model.ThingTrigger"
                 },
                 "updatedAt": {
-                    "description": "Only used on editChore  // For internal use only when syncing a chore updated offline",
                     "type": "string"
                 }
             }
@@ -4448,8 +4447,13 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "completedTime": {
-                    "description": "Completion date in RFC3339 format (defaults to now)",
+                    "description": "Completion date in RFC3339 format (defaults to now).",
                     "type": "string"
+                },
+                "note": {
+                    "description": "This is going to be deprecated in future release, use \"Notes\" instead.",
+                    "type": "string",
+                    "minLength": 1
                 },
                 "notes": {
                     "type": "string",
@@ -4512,6 +4516,11 @@ const docTemplate = `{
         "chore.RejectChoreReq": {
             "type": "object",
             "properties": {
+                "note": {
+                    "description": "This is going to be deprecated in future release, use \"Notes\" instead.",
+                    "type": "string",
+                    "minLength": 1
+                },
                 "notes": {
                     "type": "string",
                     "minLength": 1
@@ -4837,7 +4846,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "project": {
-                    "description": "Project relationship // TODO: This is never used",
+                    "description": "Project relationship",
                     "allOf": [
                         {
                             "$ref": "#/definitions/model.Project"

@@ -275,7 +275,7 @@ type ChoreReq struct {
 //	@Failure		401		{object}	map[string]string	"error: Authentication failed"
 //	@Failure		500		{object}	map[string]string	"error: Failed to create chore | Error adding labels | Error adding chore assignees"
 //	@Router			/chores [post]
-func (h *Handler) CreateChore(c *gin.Context) { // TODO: ADD SUBTASK SUPPORT!
+func (h *Handler) CreateChore(c *gin.Context) {
 	logger := logging.FromContext(c)
 	currentUser, ok := auth.CurrentUser(c)
 

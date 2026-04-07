@@ -88,7 +88,7 @@ func validateAssignments(sl validator.StructLevel, req ChoreReq) {
 func validateNotifications(sl validator.StructLevel, req ChoreReq) {
 	hasNotificationMetadata := req.NotificationMetadata != nil
 
-	if req.Notification == true {
+	if req.Notification {
 		// Notifications are invalid for 'trigger' frequency types
 		if req.FrequencyType == chModel.FrequencyTypeTrigger {
 			sl.ReportError(req.Notification, "Notification", "notification", "forbidden_with_trigger_frequency", "")

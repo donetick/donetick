@@ -139,7 +139,7 @@ func (h *API) CreateChore(c *gin.Context) {
 	}
 
 	// Fetch the created chore with all relations
-	createdChore, err := h.choreRepo.GetChore(c, id, user.ID)
+	createdChore, err := h.choreRepo.GetChore(c, id, user.ID, user.CircleID)
 	if err != nil {
 		log.Errorw("chore.api.CreateChore failed to fetch created chore", "error", err)
 		c.JSON(500, gin.H{"error": "Error fetching created chore"})
@@ -171,7 +171,7 @@ func (h *API) UpdateChore(c *gin.Context) {
 	}
 
 	// Get existing chore
-	existingChore, err := h.choreRepo.GetChore(c, choreID, user.ID)
+	existingChore, err := h.choreRepo.GetChore(c, choreID, user.ID, user.CircleID)
 	if err != nil {
 		log.Errorw("chore.api.UpdateChore failed to get chore", "error", err)
 		c.JSON(404, gin.H{"error": "Chore not found"})
@@ -238,7 +238,7 @@ func (h *API) UpdateChore(c *gin.Context) {
 	}
 
 	// Fetch the updated chore
-	updatedChore, err := h.choreRepo.GetChore(c, choreID, user.ID)
+	updatedChore, err := h.choreRepo.GetChore(c, choreID, user.ID, user.CircleID)
 	if err != nil {
 		log.Errorw("chore.api.UpdateChore failed to fetch updated chore", "error", err)
 		c.JSON(500, gin.H{"error": "Error fetching updated chore"})
@@ -269,7 +269,7 @@ func (h *API) CompleteChore(c *gin.Context) {
 		log.Debugw("chore.api.CompleteChore completedBy is set", "completedBy", completedBy)
 		performer = completedBy
 	}
-	chore, err := h.choreRepo.GetChore(c, choreID, currentUser.ID)
+	chore, err := h.choreRepo.GetChore(c, choreID, currentUser.ID, currentUser.CircleID)
 	if err != nil {
 		log.Errorw("chore.api.CompleteChore failed to get chore", "error", err)
 		c.JSON(500, gin.H{
@@ -362,7 +362,7 @@ func (h *API) CompleteChore(c *gin.Context) {
 		h.stRepo.ResetSubtasksCompletion(c, chore.ID)
 	}
 
-	updatedChore, err := h.choreRepo.GetChore(c, choreID, currentUser.ID)
+	updatedChore, err := h.choreRepo.GetChore(c, choreID, currentUser.ID, currentUser.CircleID)
 	if err != nil {
 		c.JSON(500, gin.H{
 			"error": "Error getting chore",
@@ -397,7 +397,7 @@ func (h *API) DeleteChore(c *gin.Context) {
 		return
 	}
 	currentUser := auth.MustCurrentUser(c)
-	chore, err := h.choreRepo.GetChore(c, choreID, currentUser.ID)
+	chore, err := h.choreRepo.GetChore(c, choreID, currentUser.ID, currentUser.CircleID)
 	if err != nil {
 		c.JSON(404, gin.H{"error": "Chore not found"})
 		return

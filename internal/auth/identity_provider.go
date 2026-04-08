@@ -17,6 +17,7 @@ type IdentityProviderUserInfo struct {
 	DisplayName string
 	Email       string
 	Picture     string
+	Groups      []string
 }
 
 type IdentityProvider struct {
@@ -119,6 +120,15 @@ func (i *IdentityProvider) GetUserInfo(ctx context.Context, accessToken string) 
 		isValid := isPictureURLValid(pictureURL)
 		if isValid {
 			userInfo.Picture = pictureURL
+		}
+	}
+	if val, ok := claims["groups"]; ok {
+		if groups, ok := val.([]interface{}); ok {
+			for _, g := range groups {
+				if s, ok := g.(string); ok {
+					userInfo.Groups = append(userInfo.Groups, s)
+				}
+			}
 		}
 	}
 	return &userInfo, nil

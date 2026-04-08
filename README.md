@@ -212,6 +212,43 @@ services:
 
 ---
 
+## Single-Circle Instance Mode & OIDC Group-Based Roles
+
+These features are designed for self-hosted single-household deployments where circle management should be hidden from end users and roles should be managed via your OIDC identity provider.
+
+### Environment Variables
+
+| Variable | Type | Default | Description |
+|---|---|---|---|
+| `DT_SINGLE_CIRCLE_INSTANCE` | bool | `false` | Hides circle-management UI and disables join/leave/delete-member/accept-request endpoints. New OIDC users are added to a shared household circle (ID 1) instead of getting a personal circle. |
+| `DT_OAUTH2_ADMIN_GROUPS` | comma-separated strings | *(empty)* | OIDC group names that grant the `admin` role. |
+| `DT_OAUTH2_MANAGER_GROUPS` | comma-separated strings | *(empty)* | OIDC group names that grant the `manager` role. |
+
+### Role Resolution Rules
+
+Role sync runs **on every OIDC login** (not just first-time user creation), so your IdP is the source of truth. Removing someone from the admin group in your IdP will demote them on their next login.
+
+- If user is in any **admin group** -> `admin` (admin takes priority over manager)
+- Else if user is in any **manager group** -> `manager`
+- Else -> `member`
+- If **neither** `DT_OAUTH2_ADMIN_GROUPS` **nor** `DT_OAUTH2_MANAGER_GROUPS` is configured, roles are not modified at all (preserves existing behavior).
+
+Group matching is **exact-string and case-sensitive**.
+
+### Example: Authentik Configuration
+
+1. Create groups in Authentik (e.g., `donetick-admins`, `donetick-managers`).
+2. Ensure your Authentik OAuth2 provider includes the `groups` scope and that the `groups` claim is returned in the userinfo endpoint.
+3. Set the environment variables:
+   ```yaml
+   environment:
+     - DT_SINGLE_CIRCLE_INSTANCE=true
+     - DT_OAUTH2_ADMIN_GROUPS=donetick-admins
+     - DT_OAUTH2_MANAGER_GROUPS=donetick-managers
+   ```
+
+---
+
 ## Contributing
 
 Contributions are welcome! If you want to work on something that is not listed as an issue, please open a [Discussion](https://github.com/donetick/donetick/discussions) first to ensure it aligns with our goals and to avoid any unnecessary effort!

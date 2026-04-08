@@ -13,6 +13,7 @@ type Resource struct {
 	APIVersion             string           `json:"api_version" binding:"omitempty"`
 	APICommit              string           `json:"api_commit" binding:"omitempty"`
 	IsUserCreationDisabled bool             `json:"is_user_creation_disabled"`
+	SingleCircleInstance   bool             `json:"single_circle_instance"`
 }
 type identityProvider struct {
 	Auth_url  string `json:"auth_url" binding:"omitempty"`
@@ -41,6 +42,7 @@ func (h *Handler) getResource(c *gin.Context) {
 		APIVersion:             h.config.Info.Version,
 		APICommit:              h.config.Info.Commit,
 		IsUserCreationDisabled: h.config.IsUserCreationDisabled,
+		SingleCircleInstance:   h.config.SingleCircleInstance,
 	})
 }
 

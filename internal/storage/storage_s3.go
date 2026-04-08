@@ -34,6 +34,7 @@ func NewS3Storage(config *config.Config) (*S3Storage, error) {
 			config.Storage.SecretKey,
 			"",
 		),
+		S3ForcePathStyle: aws.Bool(config.Storage.PathStyle),
 	})
 	if err != nil {
 		return nil, err

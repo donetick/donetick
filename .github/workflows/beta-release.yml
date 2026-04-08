@@ -1,10 +1,13 @@
 name: Scheduled Beta Release
 
 on:
+  schedule:
+    - cron: '0 4  * * *'     # Daily at 04:00 UTC
   workflow_dispatch:         # Allow manual trigger
 
 permissions:
   contents: write
+  actions: write
 
 jobs:
   beta-release:
@@ -18,6 +21,8 @@ jobs:
 
       - name: Determine and push beta tag
         id: tag
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git fetch --tags
 
@@ -35,13 +40,20 @@ jobs:
           if [ -z "$LAST_RELEASE" ]; then
             echo "No previous release found. Proceeding with first beta."
             NEW_COMMITS=1
+            FRONTEND_NEW=0
           else
             NEW_COMMITS=$(git rev-list "${LAST_RELEASE}..HEAD" --count)
-            echo "New commits since ${LAST_RELEASE}: ${NEW_COMMITS}"
+            echo "New backend commits since ${LAST_RELEASE}: ${NEW_COMMITS}"
+
+            # Check frontend repo for new commits since last release tag date
+            LAST_RELEASE_DATE=$(git log -1 --format=%aI "$LAST_RELEASE")
+            echo "Last release date: $LAST_RELEASE_DATE"
+            FRONTEND_NEW=$(gh api "repos/donetick/frontend/commits?sha=main&since=${LAST_RELEASE_DATE}&per_page=1" --jq 'length')
+            echo "New frontend commits since ${LAST_RELEASE}: ${FRONTEND_NEW}"
           fi
 
-          if [ "$NEW_COMMITS" -eq "0" ]; then
-            echo "No new commits — skipping beta release."
+          if [ "$NEW_COMMITS" -eq "0" ] && [ "${FRONTEND_NEW:-0}" -eq "0" ]; then
+            echo "No new commits in backend or frontend — skipping beta release."
             echo "should_release=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -79,6 +91,9 @@ jobs:
           git tag "$NEW_TAG"
           git push origin "$NEW_TAG"
 
+          # Explicitly trigger go-release.yml (tag push won't trigger other workflows from Actions)
+          gh workflow run go-release.yml --repo ${{ github.repository }} -f tag="$NEW_TAG"
+
       - name: Summary
         if: steps.tag.outputs.should_release == 'true'
-        run: echo "Beta tag ${{ steps.tag.outputs.new_tag }} pushed — go-release.yml will handle the rest."
+        run: echo "Beta tag ${{ steps.tag.outputs.new_tag }} pushed and go-release.yml triggered."

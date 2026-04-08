@@ -7,13 +7,26 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to release (e.g. v1.0.0-beta.1)'
+        required: false
+        type: string
+
 jobs:
   build:
     runs-on: ubuntu-latest
     name: Build and Push Docker Image
     steps:
+      - name: Resolve release tag
+        id: resolve
+        run: echo "tag=${{ inputs.tag || github.ref_name }}" >> $GITHUB_OUTPUT
+
       - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.resolve.outputs.tag }}
       - name: Checkout Frontend
         uses: actions/checkout@v4
         with:
@@ -72,7 +85,7 @@ jobs:
       - name: Extract Docker tags
         id: meta
         run: |
-          VERSION=${{ github.ref_name }}
+          VERSION=${{ steps.resolve.outputs.tag }}
           DOCKER_USER=${{ secrets.DOCKER_USERNAME }}
 
           # Check if this is a pre-release (contains -, like v1.0.0-beta.1)
@@ -94,4 +107,4 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           build-args: |
-            VERSION=${{ github.ref_name }}
+            VERSION=${{ steps.resolve.outputs.tag }}

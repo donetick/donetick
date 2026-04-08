@@ -203,7 +203,7 @@ func (h *Handler) GetChore(c *gin.Context) {
 		return
 	}
 
-	chore, err := h.choreRepo.GetChore(c, id, currentUser.ID)
+	chore, err := h.choreRepo.GetChore(c, id, currentUser.ID, currentUser.CircleID)
 	if err != nil {
 		logger.Error("Failed to retrieve chore", "error", err, "choreID", id, "userID", currentUser.ID)
 		c.JSON(500, gin.H{
@@ -571,7 +571,7 @@ func (h *Handler) EditChore(c *gin.Context) {
 	}
 
 	// Remove the auto-assignment logic - if no assignee then keep no assignee
-	oldChore, err := h.choreRepo.GetChore(c, choreReq.ID, currentUser.ID)
+	oldChore, err := h.choreRepo.GetChore(c, choreReq.ID, currentUser.ID, currentUser.CircleID)
 
 	if err != nil {
 		logger.Error("Failed to retrieve chore", "error", err)
@@ -891,7 +891,7 @@ func (h *Handler) DeleteChore(c *gin.Context) {
 	}
 
 	// Get chore details before deletion for real-time event
-	chore, err := h.choreRepo.GetChore(c, id, currentUser.ID)
+	chore, err := h.choreRepo.GetChore(c, id, currentUser.ID, currentUser.CircleID)
 	if err != nil {
 		logger.Error("Failed to retrieve chore", "error", err)
 		c.JSON(500, gin.H{
@@ -974,7 +974,7 @@ func (h *Handler) UpdateAssignee(c *gin.Context) {
 		})
 		return
 	}
-	chore, err := h.choreRepo.GetChore(c, id, currentUser.ID)
+	chore, err := h.choreRepo.GetChore(c, id, currentUser.ID, currentUser.CircleID)
 	if err != nil {
 		logger.Error("Failed to retrieve chore", "error", err)
 		c.JSON(500, gin.H{
@@ -1027,7 +1027,7 @@ func (h *Handler) UpdateAssignee(c *gin.Context) {
 
 	// Broadcast real-time assignee update event
 	if h.realTimeService != nil {
-		updatedChore, err := h.choreRepo.GetChore(c, id, currentUser.ID)
+		updatedChore, err := h.choreRepo.GetChore(c, id, currentUser.ID, currentUser.CircleID)
 		if err == nil {
 			broadcaster := h.realTimeService.GetEventBroadcaster()
 			changes := map[string]interface{}{
@@ -1094,7 +1094,7 @@ func (h *Handler) StartChore(c *gin.Context) {
 		effectiveUser = actualUser
 	}
 
-	chore, err := h.choreRepo.GetChore(c, id, effectiveUser.ID)
+	chore, err := h.choreRepo.GetChore(c, id, effectiveUser.ID, actualUser.CircleID)
 	if err != nil {
 		logger.Error("Failed to retrieve chore", "error", err)
 		c.JSON(500, gin.H{
@@ -1226,7 +1226,7 @@ func (h *Handler) PauseChore(c *gin.Context) {
 		effectiveUser = actualUser
 	}
 
-	chore, err := h.choreRepo.GetChore(c, id, effectiveUser.ID)
+	chore, err := h.choreRepo.GetChore(c, id, effectiveUser.ID, actualUser.CircleID)
 	if err != nil {
 		logger.Error("Failed to retrieve chore", "error", err)
 		c.JSON(500, gin.H{
@@ -1330,7 +1330,7 @@ func (h *Handler) ResetChoreTimer(c *gin.Context) {
 		return
 	}
 
-	chore, err := h.choreRepo.GetChore(c, id, currentUser.ID)
+	chore, err := h.choreRepo.GetChore(c, id, currentUser.ID, currentUser.CircleID)
 	if err != nil {
 		logger.Error("Failed to retrieve chore", "error", err)
 		c.JSON(500, gin.H{
@@ -1465,7 +1465,7 @@ func (h *Handler) SkipChore(c *gin.Context) {
 		effectiveUser = actualUser
 	}
 
-	chore, err := h.choreRepo.GetChore(c, id, effectiveUser.ID)
+	chore, err := h.choreRepo.GetChore(c, id, effectiveUser.ID, actualUser.CircleID)
 	if err != nil {
 		logger.Error("Failed to retrieve chore", "error", err)
 		c.JSON(500, gin.H{
@@ -1489,7 +1489,7 @@ func (h *Handler) SkipChore(c *gin.Context) {
 		return
 	}
 
-	updatedChore, err := h.choreRepo.GetChore(c, id, effectiveUser.ID)
+	updatedChore, err := h.choreRepo.GetChore(c, id, effectiveUser.ID, actualUser.CircleID)
 	if err != nil {
 		logger.Error("Failed to retrieve chore", "error", err)
 		c.JSON(500, gin.H{
@@ -1577,8 +1577,7 @@ func (h *Handler) UpdateDueDate(c *gin.Context) {
 		utcTime := dueDateReq.DueDate.UTC()
 		dueDate = &utcTime
 	}
-
-	chore, err := h.choreRepo.GetChore(c, id, currentUser.ID)
+	chore, err := h.choreRepo.GetChore(c, id, currentUser.ID, currentUser.CircleID)
 	if err != nil {
 		logger.Error("Failed to retrieve chore", "error", err)
 		c.JSON(500, gin.H{
@@ -1625,7 +1624,7 @@ func (h *Handler) UpdateDueDate(c *gin.Context) {
 
 	// Broadcast real-time due date update event
 	if h.realTimeService != nil {
-		updatedChore, err := h.choreRepo.GetChore(c, chore.ID, currentUser.ID)
+		updatedChore, err := h.choreRepo.GetChore(c, chore.ID, currentUser.ID, currentUser.CircleID)
 		if err == nil {
 			broadcaster := h.realTimeService.GetEventBroadcaster()
 			changes := map[string]interface{}{
@@ -1688,7 +1687,7 @@ func (h *Handler) ArchiveChore(c *gin.Context) {
 
 	// Broadcast real-time chore archive event
 	if h.realTimeService != nil {
-		updatedChore, err := h.choreRepo.GetChore(c, id, currentUser.ID)
+		updatedChore, err := h.choreRepo.GetChore(c, id, currentUser.ID, currentUser.CircleID)
 		if err == nil {
 			broadcaster := h.realTimeService.GetEventBroadcaster()
 			changes := map[string]interface{}{
@@ -1750,7 +1749,7 @@ func (h *Handler) UnarchiveChore(c *gin.Context) {
 
 	// Broadcast real-time chore unarchive event
 	if h.realTimeService != nil {
-		updatedChore, err := h.choreRepo.GetChore(c, id, currentUser.ID)
+		updatedChore, err := h.choreRepo.GetChore(c, id, currentUser.ID, currentUser.CircleID)
 		if err == nil {
 			broadcaster := h.realTimeService.GetEventBroadcaster()
 			changes := map[string]interface{}{
@@ -1846,7 +1845,7 @@ func (h *Handler) CompleteChore(c *gin.Context) {
 		})
 		return
 	}
-	chore, err := h.choreRepo.GetChore(c, id, effectiveUser.ID)
+	chore, err := h.choreRepo.GetChore(c, id, effectiveUser.ID, actualUser.CircleID)
 	if err != nil {
 		logger.Error("Failed to retrieve chore", "error", err)
 		c.JSON(500, gin.H{
@@ -1946,7 +1945,7 @@ func (h *Handler) CompleteChore(c *gin.Context) {
 			return
 		}
 
-		updatedChore, err := h.choreRepo.GetChore(c, id, effectiveUser.ID)
+		updatedChore, err := h.choreRepo.GetChore(c, id, effectiveUser.ID, actualUser.CircleID)
 		if err != nil {
 			c.JSON(500, gin.H{
 				"error": "Error getting chore",
@@ -1987,7 +1986,7 @@ func (h *Handler) CompleteChore(c *gin.Context) {
 		})
 		return
 	}
-	updatedChore, err := h.choreRepo.GetChore(c, id, effectiveUser.ID)
+	updatedChore, err := h.choreRepo.GetChore(c, id, effectiveUser.ID, actualUser.CircleID)
 	if err != nil {
 		logger.Error("Failed to retrieve chore", "error", err)
 		c.JSON(500, gin.H{
@@ -2309,7 +2308,7 @@ func (h *Handler) UpdatePriority(c *gin.Context) {
 	}
 
 	// config user can edit:
-	chore, err := h.choreRepo.GetChore(c, id, currentUser.ID)
+	chore, err := h.choreRepo.GetChore(c, id, currentUser.ID, currentUser.CircleID)
 	if err != nil {
 		logger.Error("Failed to retrieve chore", "error", err)
 		c.JSON(500, gin.H{
@@ -2451,7 +2450,7 @@ func (h *Handler) DeleteHistory(c *gin.Context) {
 		return
 	}
 
-	chore, err := h.choreRepo.GetChore(c, choreID, currentUser.ID)
+	chore, err := h.choreRepo.GetChore(c, choreID, currentUser.ID, currentUser.CircleID)
 	if err != nil {
 		logger.Error("Failed to retrieve chore", "error", err)
 		c.JSON(500, gin.H{
@@ -2563,7 +2562,7 @@ func (h *Handler) UpdateSubtaskCompletedAt(c *gin.Context) {
 		})
 		return
 	}
-	chore, err := h.choreRepo.GetChore(c, choreID, effectiveUser.ID)
+	chore, err := h.choreRepo.GetChore(c, choreID, effectiveUser.ID, actualUser.CircleID)
 	if err != nil {
 		logger.Error("Failed to retrieve chore", "error", err)
 		c.JSON(500, gin.H{
@@ -2658,7 +2657,7 @@ func (h *Handler) GetChoreTimeSessions(c *gin.Context) {
 	}
 
 	// First, get the chore to check authorization
-	chore, err := h.choreRepo.GetChore(c, id, currentUser.ID)
+	chore, err := h.choreRepo.GetChore(c, id, currentUser.ID, currentUser.CircleID)
 	if err != nil {
 		logger.Error("Failed to retrieve chore", "error", err)
 		c.JSON(500, gin.H{
@@ -2781,7 +2780,7 @@ func (h *Handler) UpdateTimeSession(c *gin.Context) {
 	}
 
 	// First, get the chore to check authorization
-	chore, err := h.choreRepo.GetChore(c, choreID, currentUser.ID)
+	chore, err := h.choreRepo.GetChore(c, choreID, currentUser.ID, currentUser.CircleID)
 	if err != nil {
 		logger.Error("Failed to retrieve chore", "error", err)
 		c.JSON(500, gin.H{
@@ -2897,7 +2896,7 @@ func (h *Handler) DeleteTimeSession(c *gin.Context) {
 	}
 
 	// First, get the chore to check authorization
-	chore, err := h.choreRepo.GetChore(c, choreID, currentUser.ID)
+	chore, err := h.choreRepo.GetChore(c, choreID, currentUser.ID, currentUser.CircleID)
 	if err != nil {
 		logger.Error("Failed to retrieve chore", "error", err)
 		c.JSON(500, gin.H{
@@ -2994,7 +2993,7 @@ func (h *Handler) ApproveChore(c *gin.Context) {
 	}
 
 	// Get the chore
-	chore, err := h.choreRepo.GetChore(c, id, currentUser.ID)
+	chore, err := h.choreRepo.GetChore(c, id, currentUser.ID, currentUser.CircleID)
 	if err != nil {
 		logger.Error("Failed to retrieve chore", "error", err)
 		c.JSON(500, gin.H{
@@ -3109,7 +3108,7 @@ func (h *Handler) ApproveChore(c *gin.Context) {
 		return
 	}
 
-	updatedChore, err := h.choreRepo.GetChore(c, id, currentUser.ID)
+	updatedChore, err := h.choreRepo.GetChore(c, id, currentUser.ID, currentUser.CircleID)
 	if err != nil {
 		logger.Error("Failed to retrieve chore", "error", err)
 		c.JSON(500, gin.H{
@@ -3191,7 +3190,7 @@ func (h *Handler) RejectChore(c *gin.Context) {
 		return
 	}
 	// Get the chore
-	chore, err := h.choreRepo.GetChore(c, id, currentUser.ID)
+	chore, err := h.choreRepo.GetChore(c, id, currentUser.ID, currentUser.CircleID)
 	if err != nil {
 		logger.Error("Failed to retrieve chore", "error", err)
 		c.JSON(500, gin.H{
@@ -3250,7 +3249,7 @@ func (h *Handler) RejectChore(c *gin.Context) {
 		return
 	}
 
-	updatedChore, err := h.choreRepo.GetChore(c, id, currentUser.ID)
+	updatedChore, err := h.choreRepo.GetChore(c, id, currentUser.ID, currentUser.CircleID)
 	if err != nil {
 		logger.Error("Failed to retrieve chore", "error", err)
 		c.JSON(500, gin.H{
@@ -3330,7 +3329,7 @@ func (h *Handler) updateChoreStatus(c *gin.Context) { // TODO: Not used in Route
 		return
 	}
 
-	chore, err := h.choreRepo.GetChore(c, id, currentUser.ID)
+	chore, err := h.choreRepo.GetChore(c, id, currentUser.ID, currentUser.CircleID)
 	if err != nil {
 		logger.Error("Failed to retrieve chore", "error", err)
 		c.JSON(500, gin.H{
@@ -3367,7 +3366,7 @@ func (h *Handler) updateChoreStatus(c *gin.Context) { // TODO: Not used in Route
 
 	// Broadcast real-time chore status update event
 	if h.realTimeService != nil {
-		updatedChore, err := h.choreRepo.GetChore(c, id, currentUser.ID)
+		updatedChore, err := h.choreRepo.GetChore(c, id, currentUser.ID, currentUser.CircleID)
 		if err == nil {
 			broadcaster := h.realTimeService.GetEventBroadcaster()
 			changes := map[string]interface{}{
@@ -3438,7 +3437,7 @@ func (h *Handler) updateTimer(c *gin.Context) { // TODO: Not used in Routes
 		return
 	}
 
-	chore, err := h.choreRepo.GetChore(c, id, currentUser.ID)
+	chore, err := h.choreRepo.GetChore(c, id, currentUser.ID, currentUser.CircleID)
 	if err != nil {
 		logger.Error("Failed to retrieve chore", "error", err)
 		c.JSON(500, gin.H{
@@ -3475,7 +3474,7 @@ func (h *Handler) updateTimer(c *gin.Context) { // TODO: Not used in Routes
 
 	// Broadcast real-time chore timer update event
 	if h.realTimeService != nil {
-		updatedChore, err := h.choreRepo.GetChore(c, id, currentUser.ID)
+		updatedChore, err := h.choreRepo.GetChore(c, id, currentUser.ID, currentUser.CircleID)
 		if err == nil {
 			broadcaster := h.realTimeService.GetEventBroadcaster()
 			changes := map[string]interface{}{
@@ -3688,7 +3687,7 @@ func (h *Handler) SendNudgeNotification(c *gin.Context) {
 	}
 
 	// Get chore with assignees
-	chore, err := h.choreRepo.GetChore(c, choreID, currentUser.ID)
+	chore, err := h.choreRepo.GetChore(c, choreID, currentUser.ID, currentUser.CircleID)
 	if err != nil {
 		log.Error("Chore not found or access denied", "error", err, "choreID", choreID)
 		c.JSON(http.StatusNotFound, gin.H{"error": "Chore not found"})
@@ -3876,7 +3875,7 @@ func (h *Handler) UndoChore(c *gin.Context) {
 	}
 
 	// Check if user can access this chore
-	chore, err := h.choreRepo.GetChore(c, choreID, currentUser.ID)
+	chore, err := h.choreRepo.GetChore(c, choreID, currentUser.ID, currentUser.CircleID)
 	if err != nil {
 		logger.Error("Failed to retrieve chore", "error", err)
 		c.JSON(500, gin.H{
@@ -3965,7 +3964,7 @@ func (h *Handler) UndoChore(c *gin.Context) {
 	}
 
 	// Get updated chore
-	updatedChore, err := h.choreRepo.GetChore(c, choreID, currentUser.ID)
+	updatedChore, err := h.choreRepo.GetChore(c, choreID, currentUser.ID, currentUser.CircleID)
 	if err != nil {
 		logger.Error("Failed to retrieve updated chore", "error", err)
 		c.JSON(500, gin.H{

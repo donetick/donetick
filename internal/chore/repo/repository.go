@@ -50,7 +50,7 @@ func (r *ChoreRepository) CreateChore(c context.Context, chore *chModel.Chore) (
 	return chore.ID, nil
 }
 
-func (r *ChoreRepository) GetChore(c context.Context, choreID int, userID int) (*chModel.Chore, error) {
+func (r *ChoreRepository) GetChore(c context.Context, choreID int, userID int, circleID int) (*chModel.Chore, error) {
 	var chore chModel.Chore
 	query := r.db.WithContext(c).Model(&chModel.Chore{}).
 		Preload("SubTasks", "chore_id = ?", choreID).
@@ -58,7 +58,7 @@ func (r *ChoreRepository) GetChore(c context.Context, choreID int, userID int) (
 		Preload("ThingChore").
 		Preload("LabelsV2").
 		Joins("LEFT JOIN chore_assignees ON chores.id = chore_assignees.chore_id AND chore_assignees.user_id = ?", userID).
-		Where("chores.id = ? AND ((chores.is_private = false) OR (chores.is_private = true AND (chores.created_by = ? OR chore_assignees.user_id = ?)))", choreID, userID, userID)
+		Where("chores.id = ? AND chores.circle_id = ? AND ((chores.is_private = false) OR (chores.is_private = true AND (chores.created_by = ? OR chore_assignees.user_id = ?)))", choreID, circleID, userID, userID)
 
 	if err := query.First(&chore).Error; err != nil {
 		return nil, err

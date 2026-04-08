@@ -14,6 +14,7 @@ import (
 
 type IdentityProviderUserInfo struct {
 	Identifier  string
+	Username    string
 	DisplayName string
 	Email       string
 	Picture     string
@@ -107,6 +108,9 @@ func (i *IdentityProvider) GetUserInfo(ctx context.Context, accessToken string) 
 	userInfo := IdentityProviderUserInfo{}
 	if val, ok := claims["sub"]; ok {
 		userInfo.Identifier = val.(string)
+	}
+	if val, ok := claims["preferred_username"]; ok {
+		userInfo.Username, _ = val.(string)
 	}
 	if val, ok := claims["name"]; ok {
 		userInfo.DisplayName = val.(string)

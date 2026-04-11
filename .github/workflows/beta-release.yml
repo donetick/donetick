@@ -45,8 +45,14 @@ jobs:
             NEW_COMMITS=$(git rev-list "${LAST_RELEASE}..HEAD" --count)
             echo "New backend commits since ${LAST_RELEASE}: ${NEW_COMMITS}"
 
-            # Check frontend repo for new commits since last release tag date
-            LAST_RELEASE_DATE=$(git log -1 --format=%aI "$LAST_RELEASE")
+            # Check frontend repo for new commits since last release was published.
+            # Use the GitHub release publish date (not the commit date, which is fixed
+            # and causes the workflow to fire every day even with no new commits).
+            LAST_RELEASE_DATE=$(gh release view "$LAST_RELEASE" --json publishedAt --jq '.publishedAt' 2>/dev/null)
+            if [ -z "$LAST_RELEASE_DATE" ]; then
+              # Fallback for tags that have no GitHub release yet
+              LAST_RELEASE_DATE=$(git log -1 --format=%aI "$LAST_RELEASE")
+            fi
             echo "Last release date: $LAST_RELEASE_DATE"
             FRONTEND_NEW=$(gh api "repos/donetick/frontend/commits?sha=main&since=${LAST_RELEASE_DATE}&per_page=1" --jq 'length')
             echo "New frontend commits since ${LAST_RELEASE}: ${FRONTEND_NEW}"

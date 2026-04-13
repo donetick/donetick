@@ -65,7 +65,7 @@ func (h *Handler) createLabel(c *gin.Context) {
 	var req LabelReq
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(400, gin.H{
-			"error": "Error binding label",
+			"error": "Invalid request: " + err.Error(),
 		})
 		return
 	}
@@ -100,7 +100,7 @@ func (h *Handler) updateLabel(c *gin.Context) {
 	var req UpdateLabelReq
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(400, gin.H{
-			"error": "Error binding label",
+			"error": "Invalid request: " + err.Error(),
 		})
 		return
 	}

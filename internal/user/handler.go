@@ -612,8 +612,15 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Password encoding failed"})
 				return
 			}
+			// Prefer the OIDC `preferred_username` claim for the username;
+			// fall back to email so the unique column stays non-empty when
+			// the provider doesn't supply one.
+			username := claims.Username
+			if username == "" {
+				username = claims.Email
+			}
 			account := &uModel.User{
-				Username:    claims.Email,
+				Username:    username,
 				Email:       claims.Email,
 				Password:    encodedPassword,
 				Image:       claims.Picture,

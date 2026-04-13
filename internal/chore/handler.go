@@ -2036,6 +2036,16 @@ func authorizeChoreCompletionForUser(h *Handler, c *gin.Context, currentUser *uM
 //	@Failure		500	{object}	map[string]string					"error: Failed to fetch chore history"
 //	@Router			/chores/{id}/history [get]
 func (h *Handler) GetChoreHistory(c *gin.Context) {
+	logger := logging.FromContext(c)
+	currentUser, ok := auth.CurrentUser(c)
+	if !ok {
+		logger.Error("Failed to get current user from authentication context")
+		c.JSON(401, gin.H{
+			"error": "Authentication failed",
+		})
+		return
+	}
+
 	rawID := c.Param("id")
 	id, err := strconv.Atoi(rawID)
 	if err != nil {
@@ -2045,9 +2055,33 @@ func (h *Handler) GetChoreHistory(c *gin.Context) {
 		return
 	}
 
+	// Verify the chore belongs to the user's circle before returning history
+	chore, err := h.choreRepo.GetChore(c, id, currentUser.ID, currentUser.CircleID)
+	if err != nil {
+		logger.Errorw("Failed to fetch chore", "error", err, "choreID", id, "userID", currentUser.ID)
+		c.JSON(500, gin.H{
+			"error": "Failed to retrieve chore",
+		})
+		return
+	}
+
+	circleUsers, err := h.circleRepo.GetCircleUsers(c, currentUser.CircleID)
+	if err != nil {
+		logger.Error("Failed to retrieve circle users", "error", err)
+		c.JSON(500, gin.H{"error": "Failed to retrieve circle users"})
+		return
+	}
+
+	if !chore.CanView(currentUser.ID, circleUsers) {
+		c.JSON(403, gin.H{
+			"error": "You are not allowed to view this chore's history",
+		})
+		return
+	}
+
 	choreHistory, err := h.choreRepo.GetChoreHistory(c, id)
 	if err != nil {
-		logging.FromContext(c).Errorw("Failed to fetch chore history", "error", err, "choreID", id)
+		logger.Errorw("Failed to fetch chore history", "error", err, "choreID", id)
 		c.JSON(500, gin.H{
 			"error": "Failed to fetch chore history",
 		})
@@ -2165,6 +2199,15 @@ func (h *Handler) ModifyHistory(c *gin.Context) {
 	if err != nil {
 		c.JSON(400, gin.H{
 			"error": "Invalid History ID",
+		})
+		return
+	}
+
+	// Verify the chore belongs to the user's circle before accessing history
+	if _, err := h.choreRepo.GetChore(c, choreID, currentUser.ID, currentUser.CircleID); err != nil {
+		logger.Error("Failed to retrieve chore", "error", err, "choreID", choreID, "userID", currentUser.ID)
+		c.JSON(500, gin.H{
+			"error": "Failed to retrieve chore",
 		})
 		return
 	}

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"time"
 
 	"donetick.com/core/config"
 	"github.com/aws/aws-sdk-go/aws"
@@ -21,9 +22,9 @@ type S3Storage struct {
 	Key      string
 }
 
-const (
-	VALID_FOR = 1000 * 365 * 24 * 60 * 60 // 1000 years
-)
+// VALID_FOR is the lifetime of a presigned URL. AWS SigV4 caps presigned
+// URL expiration at 7 days, so this is the maximum we can ask for.
+const VALID_FOR = 7 * 24 * time.Hour
 
 func NewS3Storage(config *config.Config) (*S3Storage, error) {
 	sess, err := session.NewSession(&aws.Config{

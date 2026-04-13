@@ -37,6 +37,7 @@ COPY --from=builder /usr/src/app/config /config
 
 # Set environment variables
 ENV DT_ENV="selfhosted"
+ENV DT_SQLITE_PATH="/donetick-data/donetick.db"
 
 # Expose the application port
 EXPOSE 2021

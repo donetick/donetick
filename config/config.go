@@ -65,6 +65,12 @@ type StorageConfig struct {
 	MaxUserStorage int    `mapstructure:"max_user_storage" yaml:"max_user_storage"`
 	MaxFileSize    int64  `mapstructure:"max_file_size" yaml:"max_file_size"`
 	PublicHost     string `mapstructure:"public_host" yaml:"public_host"`
+	// PathStyle forces path-style S3 addressing (endpoint/bucket/key)
+	// instead of the default virtual-hosted style (bucket.endpoint/key).
+	// Required for S3-compatible backends like MinIO that don't expose
+	// a DNS wildcard at `*.<endpoint-host>`, as well as for plain HTTP
+	// endpoints without matching TLS wildcard certs.
+	PathStyle bool `mapstructure:"path_style" yaml:"path_style"`
 }
 type DonetickCloudConfig struct {
 	GoogleClientID        string `mapstructure:"google_client_id" yaml:"google_client_id"`

@@ -66,9 +66,13 @@ func (r *ChoreRepository) GetChore(c context.Context, choreID int, userID int, c
 	return &chore, nil
 }
 
-func (r *ChoreRepository) GetChores(c context.Context, circleID int, userID int, includeArchived bool) ([]*chModel.Chore, error) {
+func (r *ChoreRepository) GetChores(c context.Context, circleID int, userID int, includeArchived bool, includeSubtasks bool) ([]*chModel.Chore, error) {
 	var chores []*chModel.Chore
-	query := r.db.WithContext(c).Preload("Assignees").Preload("LabelsV2").Joins("left join chore_assignees on chores.id = chore_assignees.chore_id").Where("chores.circle_id = ? AND ((chores.is_private = false) OR (chores.is_private = true AND (chores.created_by = ? OR chore_assignees.user_id = ?)))", circleID, userID, userID).Group("chores.id").Order("next_due_date asc")
+	query := r.db.WithContext(c).Preload("Assignees").Preload("LabelsV2")
+	if includeSubtasks {
+		query = query.Preload("SubTasks")
+	}
+	query = query.Joins("left join chore_assignees on chores.id = chore_assignees.chore_id").Where("chores.circle_id = ? AND ((chores.is_private = false) OR (chores.is_private = true AND (chores.created_by = ? OR chore_assignees.user_id = ?)))", circleID, userID, userID).Group("chores.id").Order("next_due_date asc")
 	if !includeArchived {
 		query = query.Where("chores.is_active = ?", true)
 	}

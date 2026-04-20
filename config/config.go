@@ -45,6 +45,7 @@ type Config struct {
 	FCM                    FCMConfig           `mapstructure:"fcm" yaml:"fcm"`
 	FeatureLimits          FeatureLimitsConfig `mapstructure:"feature_limits" yaml:"feature_limits"`
 	Storage                StorageConfig       `mapstructure:"storage" yaml:"storage"`
+	SingleCircleInstance   bool                `mapstructure:"single_circle_instance" yaml:"single_circle_instance"`
 	Info                   Info
 }
 
@@ -177,14 +178,16 @@ type EmailConfig struct {
 }
 
 type OAuth2Config struct {
-	ClientID     string   `mapstructure:"client_id" yaml:"client_id"`
-	ClientSecret string   `mapstructure:"client_secret" yaml:"client_secret"`
-	RedirectURL  string   `mapstructure:"redirect_url" yaml:"redirect_url"`
-	Scopes       []string `mapstructure:"scopes" yaml:"scopes"`
-	AuthURL      string   `mapstructure:"auth_url" yaml:"auth_url"`
-	TokenURL     string   `mapstructure:"token_url" yaml:"token_url"`
-	UserInfoURL  string   `mapstructure:"user_info_url" yaml:"user_info_url"`
-	Name         string   `mapstructure:"name" yaml:"name"`
+	ClientID      string   `mapstructure:"client_id" yaml:"client_id"`
+	ClientSecret  string   `mapstructure:"client_secret" yaml:"client_secret"`
+	RedirectURL   string   `mapstructure:"redirect_url" yaml:"redirect_url"`
+	Scopes        []string `mapstructure:"scopes" yaml:"scopes"`
+	AuthURL       string   `mapstructure:"auth_url" yaml:"auth_url"`
+	TokenURL      string   `mapstructure:"token_url" yaml:"token_url"`
+	UserInfoURL   string   `mapstructure:"user_info_url" yaml:"user_info_url"`
+	Name          string   `mapstructure:"name" yaml:"name"`
+	AdminGroups   []string `mapstructure:"admin_groups" yaml:"admin_groups"`
+	ManagerGroups []string `mapstructure:"manager_groups" yaml:"manager_groups"`
 }
 
 type WebhookConfig struct {

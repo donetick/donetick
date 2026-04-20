@@ -50,6 +50,8 @@ type Handler struct {
 	mfaService             *mfa.MFAService
 	maxSubaccounts         int
 	plusMaxSubaccounts     int
+	oauth2Config           config.OAuth2Config
+	singleCircleInstance   bool
 }
 
 func NewHandler(ur *uRepo.UserRepository, cr *cRepo.CircleRepository,
@@ -77,6 +79,8 @@ func NewHandler(ur *uRepo.UserRepository, cr *cRepo.CircleRepository,
 		mfaService:             mfaService,
 		maxSubaccounts:         config.FeatureLimits.MaxSubaccounts,
 		plusMaxSubaccounts:     config.FeatureLimits.PlusMaxSubaccounts,
+		oauth2Config:           config.OAuth2Config,
+		singleCircleInstance:   config.SingleCircleInstance,
 	}
 }
 
@@ -212,6 +216,30 @@ func (h *Handler) GetUserProfile(c *gin.Context) {
 	c.JSON(200, gin.H{
 		"res": user,
 	})
+}
+
+func (h *Handler) syncOIDCRole(c *gin.Context, userID, circleID int, groups []string) {
+	logger := logging.FromContext(c)
+	resolvedRole, active := auth.ResolveRoleFromGroups(groups, h.oauth2Config.AdminGroups, h.oauth2Config.ManagerGroups)
+	if !active {
+		return
+	}
+
+	currentRole, err := h.circleRepo.GetUserCircleRole(c, circleID, userID)
+	if err != nil {
+		logger.Warnw("OIDC role sync: failed to get current role", "userID", userID, "circleID", circleID, "err", err)
+		return
+	}
+
+	if currentRole == cModel.Role(resolvedRole) {
+		return
+	}
+
+	if err := h.circleRepo.ChangeUserRole(c, circleID, userID, resolvedRole); err != nil {
+		logger.Errorw("OIDC role sync: failed to update role", "userID", userID, "circleID", circleID, "resolvedRole", resolvedRole, "err", err)
+		return
+	}
+	logger.Infow("OIDC role sync", "userID", userID, "circleID", circleID, "oldRole", currentRole, "newRole", resolvedRole, "groups", groups)
 }
 
 func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
@@ -628,35 +656,73 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 				return
 
 			}
-			// Create Circle for the user:
-			userCircle, err := h.circleRepo.CreateCircle(c, &cModel.Circle{
-				Name:       claims.DisplayName + "'s circle",
-				CreatedAt:  time.Now().UTC(),
-				UpdatedAt:  time.Now().UTC(),
-				InviteCode: utils.GenerateInviteCode(c),
-			})
+			var circleID int
+			if h.singleCircleInstance {
+				// In single-circle mode, add user to the shared household circle (ID 1).
+				// Create it if it doesn't exist yet (first user bootstraps the circle).
+				sharedCircle, err := h.circleRepo.GetCircleByID(c, 1)
+				if err != nil {
+					sharedCircle, err = h.circleRepo.CreateCircle(c, &cModel.Circle{
+						Name:       "Home",
+						CreatedAt:  time.Now().UTC(),
+						UpdatedAt:  time.Now().UTC(),
+						InviteCode: utils.GenerateInviteCode(c),
+					})
+					if err != nil {
+						c.JSON(500, gin.H{"error": "Error creating shared circle"})
+						return
+					}
+				}
+				circleID = sharedCircle.ID
 
-			if err != nil {
-				c.JSON(500, gin.H{
-					"error": "Error creating circle",
+				// Resolve role from OIDC groups; default to member if no match or no config.
+				role := cModel.UserRole(cModel.RoleMember)
+				if resolvedRole, active := auth.ResolveRoleFromGroups(claims.Groups, h.oauth2Config.AdminGroups, h.oauth2Config.ManagerGroups); active {
+					role = cModel.UserRole(resolvedRole)
+				}
+
+				if err := h.circleRepo.AddUserToCircle(c, &cModel.UserCircle{
+					UserID:    createdUser.ID,
+					CircleID:  circleID,
+					Role:      role,
+					IsActive:  true,
+					CreatedAt: time.Now().UTC(),
+					UpdatedAt: time.Now().UTC(),
+				}); err != nil {
+					c.JSON(500, gin.H{"error": "Error adding user to circle"})
+					return
+				}
+			} else {
+				// Default: create a personal circle for the new user.
+				userCircle, err := h.circleRepo.CreateCircle(c, &cModel.Circle{
+					Name:       claims.DisplayName + "'s circle",
+					CreatedAt:  time.Now().UTC(),
+					UpdatedAt:  time.Now().UTC(),
+					InviteCode: utils.GenerateInviteCode(c),
 				})
-				return
+				if err != nil {
+					c.JSON(500, gin.H{"error": "Error creating circle"})
+					return
+				}
+				circleID = userCircle.ID
+
+				if err := h.circleRepo.AddUserToCircle(c, &cModel.UserCircle{
+					UserID:    createdUser.ID,
+					CircleID:  circleID,
+					Role:      "admin",
+					IsActive:  true,
+					CreatedAt: time.Now().UTC(),
+					UpdatedAt: time.Now().UTC(),
+				}); err != nil {
+					c.JSON(500, gin.H{"error": "Error adding user to circle"})
+					return
+				}
+
+				// Sync role from OIDC groups if configured (may demote from admin).
+				h.syncOIDCRole(c, createdUser.ID, circleID, claims.Groups)
 			}
 
-			if err := h.circleRepo.AddUserToCircle(c, &cModel.UserCircle{
-				UserID:    createdUser.ID,
-				CircleID:  userCircle.ID,
-				Role:      "admin",
-				IsActive:  true,
-				CreatedAt: time.Now().UTC(),
-				UpdatedAt: time.Now().UTC(),
-			}); err != nil {
-				c.JSON(500, gin.H{
-					"error": "Error adding user to circle",
-				})
-				return
-			}
-			createdUser.CircleID = userCircle.ID
+			createdUser.CircleID = circleID
 			if err := h.userRepo.UpdateUser(c, createdUser); err != nil {
 				c.JSON(500, gin.H{
 					"error": "Error updating user",
@@ -704,6 +770,8 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 				logger.Warn("Failed to update profile image", "userID", acc.ID, "err", err)
 			}
 		}
+		// Sync role from OIDC groups on every login (IdP is source of truth).
+		h.syncOIDCRole(c, acc.ID, acc.CircleID, claims.Groups)
 		// Generate tokens including refresh token:
 		tokenResponse, err := h.tokenService.GenerateTokens(c.Request.Context(), acc)
 		if err != nil {

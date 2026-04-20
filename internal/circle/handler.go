@@ -27,6 +27,7 @@ type Handler struct {
 	isDonetickDotCom     bool
 	maxCircleMembers     int
 	plusMaxCircleMembers int
+	singleCircleInstance bool
 }
 
 func NewHandler(cr *cRepo.CircleRepository, ur *uRepo.UserRepository, c *chRepo.ChoreRepository, pr *pRepo.PointsRepository,
@@ -39,6 +40,7 @@ func NewHandler(cr *cRepo.CircleRepository, ur *uRepo.UserRepository, c *chRepo.
 		isDonetickDotCom:     config.IsDoneTickDotCom,
 		maxCircleMembers:     config.FeatureLimits.MaxCircleMembers,
 		plusMaxCircleMembers: config.FeatureLimits.PlusCircleMaxMembers,
+		singleCircleInstance: config.SingleCircleInstance,
 	}
 }
 
@@ -784,12 +786,15 @@ func Routes(router *gin.Engine, h *Handler, multiAuthMiddleware *auth.MultiAuthM
 	{
 		circleRoutes.GET("/members", h.GetCircleMembers)
 		circleRoutes.GET("/members/requests", h.GetPendingCircleMembers)
-		circleRoutes.PUT("/members/requests/accept", h.AcceptJoinRequest)
 		circleRoutes.PUT("/members/role", h.ChangeMemberRole)
 		circleRoutes.GET("/", h.GetUserCircles)
-		circleRoutes.POST("/join", h.JoinCircle)
-		circleRoutes.DELETE("/leave", h.LeaveCircle)
-		circleRoutes.DELETE("/:id/members/delete", h.DeleteCircleMember)
 		circleRoutes.POST("/:id/members/points/redeem", h.RedeemPoints)
+
+		if !h.singleCircleInstance {
+			circleRoutes.PUT("/members/requests/accept", h.AcceptJoinRequest)
+			circleRoutes.POST("/join", h.JoinCircle)
+			circleRoutes.DELETE("/leave", h.LeaveCircle)
+			circleRoutes.DELETE("/:id/members/delete", h.DeleteCircleMember)
+		}
 	}
 }

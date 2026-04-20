@@ -92,6 +92,12 @@ func (r *CircleRepository) ChangeUserRole(c context.Context, circleID, userID in
 	return r.db.WithContext(c).Model(&cModel.UserCircle{}).Where("circle_id = ? AND user_id = ?", circleID, userID).Update("role", role).Error
 }
 
+func (r *CircleRepository) GetUserCircleRole(c context.Context, circleID, userID int) (cModel.Role, error) {
+	var role cModel.Role
+	err := r.db.WithContext(c).Model(&cModel.UserCircle{}).Select("role").Where("circle_id = ? AND user_id = ?", circleID, userID).Scan(&role).Error
+	return role, err
+}
+
 func (r *CircleRepository) GetCircleByInviteCode(c context.Context, inviteCode string) (*cModel.Circle, error) {
 	var circle cModel.Circle
 	if err := r.db.WithContext(c).Where("invite_code = ?", inviteCode).First(&circle).Error; err != nil {

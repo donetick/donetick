@@ -114,7 +114,7 @@ func (h *Handler) GetCalendarURL(c *gin.Context) {
 //	@Tags			chores
 //	@Produce		text/calendar
 //	@Param			token	path		string	true	"Calendar token (obtained from /chores/calendar/url)"
-//	@Success		200		{string}	string	"iCal calendar data"
+//	@Success		200		{string}	string	"iCal calendar data (VTODO)"
 //	@Failure		403		{string}	string	"Invalid calendar token"
 //	@Failure		500		{string}	string	"Failed to generate calendar"
 //	@Router			/chores/calendar/{token} [get]
@@ -176,22 +176,14 @@ func buildICalFeed(chores []*chModel.Chore, calendarName string, userTimezone st
 			continue
 		}
 
-		b.WriteString("BEGIN:VEVENT\r\n")
+		b.WriteString("BEGIN:VTODO\r\n")
 
 		uid := fmt.Sprintf("chore-%d@donetick", ch.ID)
 		b.WriteString(foldLine(fmt.Sprintf("UID:%s", uid)))
 		b.WriteString(fmt.Sprintf("DTSTAMP:%s\r\n", dtstamp))
 
-		dtstart := ch.NextDueDate.UTC().Format("20060102T150405Z")
-		b.WriteString(fmt.Sprintf("DTSTART:%s\r\n", dtstart))
-
-		// Use completion window (hours) as event duration, default 1 hour
-		duration := time.Hour
-		if ch.CompletionWindow != nil && *ch.CompletionWindow > 0 {
-			duration = time.Duration(*ch.CompletionWindow) * time.Hour
-		}
-		dtend := ch.NextDueDate.Add(duration).UTC().Format("20060102T150405Z")
-		b.WriteString(fmt.Sprintf("DTEND:%s\r\n", dtend))
+		due := ch.NextDueDate.UTC().Format("20060102T150405Z")
+		b.WriteString(fmt.Sprintf("DUE:%s\r\n", due))
 
 		b.WriteString(foldLine(fmt.Sprintf("SUMMARY:%s", escapeICalText(ch.Name))))
 
@@ -213,7 +205,7 @@ func buildICalFeed(chores []*chModel.Chore, calendarName string, userTimezone st
 		}
 
 		b.WriteString(fmt.Sprintf("LAST-MODIFIED:%s\r\n", ch.UpdatedAt.UTC().Format("20060102T150405Z")))
-		b.WriteString("END:VEVENT\r\n")
+		b.WriteString("END:VTODO\r\n")
 	}
 
 	b.WriteString("END:VCALENDAR\r\n")

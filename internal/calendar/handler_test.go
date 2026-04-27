@@ -260,8 +260,8 @@ func TestBuildICalFeed_Empty(t *testing.T) {
     if !strings.Contains(result, "PRODID:") {
         t.Error("missing PRODID")
     }
-    if strings.Contains(result, "BEGIN:VEVENT") {
-        t.Error("should not contain VEVENT for empty chore list")
+    if strings.Contains(result, "BEGIN:VTODO") {
+        t.Error("should not contain VTODO for empty chore list")
     }
     if !strings.Contains(result, "X-WR-CALNAME:Donetick - Test User") {
         t.Error("missing calendar name")
@@ -282,8 +282,8 @@ func TestBuildICalFeed_SkipsChoresWithoutDueDate(t *testing.T) {
 
     result := buildICalFeed(chores, "Test", "")
 
-    if strings.Contains(result, "BEGIN:VEVENT") {
-        t.Error("should not contain VEVENT for chore without due date")
+    if strings.Contains(result, "BEGIN:VTODO") {
+        t.Error("should not contain VTODO for chore without due date")
     }
 }
 
@@ -313,10 +313,10 @@ func TestBuildICalFeed_BasicChore(t *testing.T) {
         name     string
         contains string
     }{
-        {"VEVENT start", "BEGIN:VEVENT"},
-        {"VEVENT end", "END:VEVENT"},
+        {"VTODO start", "BEGIN:VTODO"},
+        {"VTODO end", "END:VTODO"},
         {"UID", "UID:chore-42@donetick"},
-        {"DTSTART", "DTSTART:20250615T100000Z"},
+        {"DUE", "DUE:20250615T100000Z"},
         {"SUMMARY", "SUMMARY:Kitchen Cleaning"},
         {"PRIORITY", "PRIORITY:3"},
         {"STATUS", "STATUS:NEEDS-ACTION"},
@@ -340,28 +340,7 @@ func TestBuildICalFeed_BasicChore(t *testing.T) {
     }
 }
 
-func TestBuildICalFeed_CompletionWindow(t *testing.T) {
-    dueDate := time.Date(2025, 6, 15, 10, 0, 0, 0, time.UTC)
-    window := 3 // 3 hours
-
-    chores := []*chModel.Chore{
-        {
-            ID:               1,
-            Name:             "Test",
-            NextDueDate:      &dueDate,
-            CompletionWindow: &window,
-        },
-    }
-
-    result := buildICalFeed(chores, "Test", "")
-
-    // DTEND should be 3 hours after DTSTART
-    if !strings.Contains(result, "DTEND:20250615T130000Z") {
-        t.Errorf("expected DTEND 3 hours after start, got:\n%s", result)
-    }
-}
-
-func TestBuildICalFeed_DefaultDuration(t *testing.T) {
+func TestBuildICalFeed_DueDate(t *testing.T) {
     dueDate := time.Date(2025, 6, 15, 10, 0, 0, 0, time.UTC)
 
     chores := []*chModel.Chore{
@@ -374,9 +353,15 @@ func TestBuildICalFeed_DefaultDuration(t *testing.T) {
 
     result := buildICalFeed(chores, "Test", "")
 
-    // Default duration is 1 hour
-    if !strings.Contains(result, "DTEND:20250615T110000Z") {
-        t.Errorf("expected DTEND 1 hour after start (default), got:\n%s", result)
+    if !strings.Contains(result, "DUE:20250615T100000Z") {
+        t.Errorf("expected DUE property, got:\n%s", result)
+    }
+    // VTODO should not have DTSTART or DTEND
+    if strings.Contains(result, "DTSTART:") {
+        t.Error("VTODO should not contain DTSTART")
+    }
+    if strings.Contains(result, "DTEND:") {
+        t.Error("VTODO should not contain DTEND")
     }
 }
 
@@ -452,9 +437,9 @@ func TestBuildICalFeed_MultipleChores(t *testing.T) {
 
     result := buildICalFeed(chores, "Test", "")
 
-    eventCount := strings.Count(result, "BEGIN:VEVENT")
-    if eventCount != 2 {
-        t.Errorf("expected 2 VEVENTs, got %d", eventCount)
+    todoCount := strings.Count(result, "BEGIN:VTODO")
+    if todoCount != 2 {
+        t.Errorf("expected 2 VTODOs, got %d", todoCount)
     }
 
     if !strings.Contains(result, "chore-1@donetick") {
@@ -476,6 +461,11 @@ func TestBuildICalFeed_CRLFLineEndings(t *testing.T) {
     }
 
     result := buildICalFeed(chores, "Test", "")
+
+    // Should use VTODO, not VEVENT
+    if strings.Contains(result, "VEVENT") {
+        t.Error("should use VTODO, not VEVENT")
+    }
 
     // Every line should end with \r\n (RFC 5545 requirement)
     lines := strings.Split(result, "\r\n")

@@ -24,6 +24,7 @@ type PollingHandler struct {
 	config          *config.Config
 	logger          *zap.SugaredLogger
 	// Rate limiting for SSE connections
+	AllowedOrigins map[string]bool
 	sseConnections map[string]time.Time // userID:IP -> last connection time
 	sseMutex       sync.RWMutex
 }
@@ -39,6 +40,11 @@ func NewPollingHandler(
 		authMiddleware:  authMiddleware,
 		config:          config,
 		sseConnections:  make(map[string]time.Time),
+		AllowedOrigins:  make(map[string]bool),
+	}
+
+	for _, origin := range config.Server.CorsAllowOrigins {
+		h.AllowedOrigins[origin] = true
 	}
 
 	// Start periodic cleanup of stale connections
@@ -198,11 +204,8 @@ func (h *PollingHandler) setSSEHeaders(c *gin.Context) {
 
 	// CORS headers for cross-origin requests from frontend
 	origin := c.GetHeader("Origin")
-	if origin == "http://localhost:5173" || origin == "http://localhost:3000" || origin == "http://localhost" || origin == "https://localhost" {
+	if h.AllowedOrigins[origin] {
 		c.Header("Access-Control-Allow-Origin", origin)
-	} else {
-		// Fallback for other development origins
-		c.Header("Access-Control-Allow-Origin", "*")
 	}
 
 	c.Header("Access-Control-Allow-Headers", "Authorization, Cache-Control, Content-Type, Accept, Sec-Ch-Ua, Sec-Ch-Ua-Mobile, Sec-Ch-Ua-Platform")

@@ -48,7 +48,7 @@ jobs:
             # Check frontend repo for new commits since last release was published.
             # Use the GitHub release publish date (not the commit date, which is fixed
             # and causes the workflow to fire every day even with no new commits).
-            LAST_RELEASE_DATE=$(gh release view "$LAST_RELEASE" --json publishedAt --jq '.publishedAt' 2>/dev/null)
+            LAST_RELEASE_DATE=$(gh release view "$LAST_RELEASE" --json publishedAt --jq '.publishedAt' 2>/dev/null || true)
             if [ -z "$LAST_RELEASE_DATE" ]; then
               # Fallback for tags that have no GitHub release yet
               LAST_RELEASE_DATE=$(git log -1 --format=%aI "$LAST_RELEASE")

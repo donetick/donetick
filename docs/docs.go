@@ -108,7 +108,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.ChoreReq"
+                            "$ref": "#/definitions/chore.ChoreReq"
                         }
                     }
                 ],
@@ -187,7 +187,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.ChoreReq"
+                            "$ref": "#/definitions/chore.ChoreReq"
                         }
                     }
                 ],
@@ -704,15 +704,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "object",
-                            "properties": {
-                                "assignee": {
-                                    "type": "integer"
-                                },
-                                "updatedAt": {
-                                    "type": "string"
-                                }
-                            }
+                            "$ref": "#/definitions/chore.AssigneeReq"
                         }
                     }
                 ],
@@ -797,7 +789,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "res: detailed chore information",
+                        "description": "res: detailed chore information\" //TODO: Add response model",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -863,25 +855,11 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "type": "string",
-                        "description": "Completion date in RFC3339 format (defaults to now)",
-                        "name": "completedDate",
-                        "in": "query"
-                    },
-                    {
                         "description": "Completion details",
                         "name": "completion",
                         "in": "body",
                         "schema": {
-                            "type": "object",
-                            "properties": {
-                                "completedBy": {
-                                    "type": "integer"
-                                },
-                                "note": {
-                                    "type": "string"
-                                }
-                            }
+                            "$ref": "#/definitions/chore.CompleteChoreReq"
                         }
                     }
                 ],
@@ -969,15 +947,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "object",
-                            "properties": {
-                                "dueDate": {
-                                    "type": "string"
-                                },
-                                "updatedAt": {
-                                    "type": "string"
-                                }
-                            }
+                            "$ref": "#/definitions/chore.DueDateReq"
                         }
                     }
                 ],
@@ -1136,18 +1106,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "object",
-                            "properties": {
-                                "dueDate": {
-                                    "type": "string"
-                                },
-                                "notes": {
-                                    "type": "string"
-                                },
-                                "performedAt": {
-                                    "type": "string"
-                                }
-                            }
+                            "$ref": "#/definitions/chore.ModifyHistoryReq"
                         }
                     }
                 ],
@@ -1319,21 +1278,13 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "object",
-                            "properties": {
-                                "all_assignees": {
-                                    "type": "boolean"
-                                },
-                                "message": {
-                                    "type": "string"
-                                }
-                            }
+                            "$ref": "#/definitions/chore.NudgeRequest"
                         }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "message: Nudge sent status",
+                        "description": "message: Nudge sent status\" //TODO: Add response model",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -1401,7 +1352,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "res: {duration, status, timerUpdatedAt}",
+                        "description": "res: {duration, status, timerUpdatedAt}\" //TODO: Add response model",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -1481,12 +1432,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "object",
-                            "properties": {
-                                "priority": {
-                                    "type": "integer"
-                                }
-                            }
+                            "$ref": "#/definitions/chore.PriorityReq"
                         }
                     }
                 ],
@@ -1573,18 +1519,13 @@ const docTemplate = `{
                         "name": "rejection",
                         "in": "body",
                         "schema": {
-                            "type": "object",
-                            "properties": {
-                                "note": {
-                                    "type": "string"
-                                }
-                            }
+                            "$ref": "#/definitions/chore.RejectChoreReq"
                         }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "res: updated chore, message: Chore rejected successfully",
+                        "description": "res: updated chore, message: Chore rejected successfully\" //TODO: Add response model",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -1731,7 +1672,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "res: {timerUpdatedAt, status, duration}",
+                        "description": "res: {timerUpdatedAt, status, duration}\" //TODO: Add response model",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -1811,15 +1752,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "object",
-                            "properties": {
-                                "status": {
-                                    "type": "string"
-                                },
-                                "updatedAt": {
-                                    "type": "string"
-                                }
-                            }
+                            "$ref": "#/definitions/chore.StatusUpdateReq"
                         }
                     }
                 ],
@@ -1907,24 +1840,13 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "object",
-                            "properties": {
-                                "choreId": {
-                                    "type": "integer"
-                                },
-                                "completedAt": {
-                                    "type": "string"
-                                },
-                                "id": {
-                                    "type": "integer"
-                                }
-                            }
+                            "$ref": "#/definitions/chore.SubtaskReq"
                         }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Empty success response",
+                        "description": "Empty success response\" //TODO: Add response model",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -2090,15 +2012,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "object",
-                            "properties": {
-                                "duration": {
-                                    "type": "integer"
-                                },
-                                "updatedAt": {
-                                    "type": "string"
-                                }
-                            }
+                            "$ref": "#/definitions/chore.TimerUpdateReq"
                         }
                     }
                 ],
@@ -2183,7 +2097,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "res: {timerUpdatedAt, status, duration}",
+                        "description": "res: {timerUpdatedAt, status, duration}\" //TODO: Add response model",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -2270,18 +2184,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "object",
-                            "properties": {
-                                "endTime": {
-                                    "type": "string"
-                                },
-                                "pauseLog": {
-                                    "type": "array"
-                                },
-                                "startTime": {
-                                    "type": "string"
-                                }
-                            }
+                            "$ref": "#/definitions/chore.UpdateTimeSessionReq"
                         }
                     }
                 ],
@@ -2478,6 +2381,74 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "error: Error unarchiving chore",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/chores/{id}/undo": {
+            "post": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
+                    }
+                ],
+                "description": "Undoes the most recent action (completion, skip, approval submission, or rejection) performed by the current user on a chore within the last 5 minutes",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "chores"
+                ],
+                "summary": "Undo a chore action",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Chore ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "message: Successfully undid {action} action, res: updated chore object\" //TODO: Add response model",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "error: Invalid chore ID | No recent action found to undo | Cannot undo this type of action",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "error: Authentication failed",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Failed to retrieve chore | Failed to check recent actions | Failed to undo action | Failed to restore pending approval status | Failed to retrieve updated chore",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -4326,6 +4297,297 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "chore.AssigneeReq": {
+            "type": "object",
+            "required": [
+                "assignee",
+                "updatedAt"
+            ],
+            "properties": {
+                "assignee": {
+                    "type": "integer"
+                },
+                "updatedAt": {
+                    "type": "string"
+                }
+            }
+        },
+        "chore.ChoreReq": {
+            "type": "object",
+            "required": [
+                "assignStrategy",
+                "frequencyType",
+                "isPrivate",
+                "name"
+            ],
+            "properties": {
+                "assignStrategy": {
+                    "enum": [
+                        "no_assignee",
+                        "least_assigned",
+                        "least_completed",
+                        "random",
+                        "keep_last_assigned",
+                        "random_except_last_assigned",
+                        "round_robin"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.AssignmentStrategy"
+                        }
+                    ]
+                },
+                "assignedTo": {
+                    "type": "integer"
+                },
+                "assignees": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.ChoreAssignees"
+                    }
+                },
+                "completionWindow": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "description": {
+                    "type": "string"
+                },
+                "frequency": {
+                    "type": "integer"
+                },
+                "frequencyMetadata": {
+                    "$ref": "#/definitions/model.FrequencyMetadata"
+                },
+                "frequencyType": {
+                    "enum": [
+                        "once",
+                        "daily",
+                        "weekly",
+                        "monthly",
+                        "yearly",
+                        "adaptive",
+                        "interval",
+                        "days_of_the_week",
+                        "day_of_the_month",
+                        "trigger",
+                        "no_repeat"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.FrequencyType"
+                        }
+                    ]
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "isActive": {
+                    "type": "boolean"
+                },
+                "isPrivate": {
+                    "type": "boolean"
+                },
+                "isRolling": {
+                    "type": "boolean"
+                },
+                "labelsV2": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.LabelReq"
+                    }
+                },
+                "name": {
+                    "type": "string"
+                },
+                "nextDueDate": {
+                    "description": "Next due date in RFC3339 format",
+                    "type": "string"
+                },
+                "notification": {
+                    "type": "boolean"
+                },
+                "notificationMetadata": {
+                    "$ref": "#/definitions/model.NotificationMetadata"
+                },
+                "points": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "priority": {
+                    "type": "integer",
+                    "maximum": 5,
+                    "minimum": 0
+                },
+                "projectId": {
+                    "type": "integer"
+                },
+                "requireApproval": {
+                    "type": "boolean"
+                },
+                "subTasks": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.SubTask"
+                    }
+                },
+                "thingTrigger": {
+                    "$ref": "#/definitions/model.ThingTrigger"
+                },
+                "updatedAt": {
+                    "type": "string"
+                }
+            }
+        },
+        "chore.CompleteChoreReq": {
+            "type": "object",
+            "properties": {
+                "completedBy": {
+                    "description": "The completed by only can be populated by the admin or super user.",
+                    "type": "integer"
+                },
+                "completedTime": {
+                    "description": "Completion date in RFC3339 format (defaults to now).",
+                    "type": "string"
+                },
+                "note": {
+                    "description": "This is going to be deprecated in future release, use \"Notes\" instead.",
+                    "type": "string",
+                    "minLength": 1
+                },
+                "notes": {
+                    "type": "string",
+                    "minLength": 1
+                }
+            }
+        },
+        "chore.DueDateReq": {
+            "type": "object",
+            "required": [
+                "updatedAt"
+            ],
+            "properties": {
+                "dueDate": {
+                    "type": "string"
+                },
+                "updatedAt": {
+                    "type": "string"
+                }
+            }
+        },
+        "chore.ModifyHistoryReq": {
+            "type": "object",
+            "properties": {
+                "dueDate": {
+                    "type": "string"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "performedAt": {
+                    "type": "string"
+                }
+            }
+        },
+        "chore.NudgeRequest": {
+            "type": "object",
+            "properties": {
+                "all_assignees": {
+                    "description": "If true, send to all assignees; if false, send to current assignee",
+                    "type": "boolean"
+                },
+                "message": {
+                    "description": "Optional custom message",
+                    "type": "string"
+                }
+            }
+        },
+        "chore.PriorityReq": {
+            "type": "object",
+            "required": [
+                "priority"
+            ],
+            "properties": {
+                "priority": {
+                    "type": "integer"
+                }
+            }
+        },
+        "chore.RejectChoreReq": {
+            "type": "object",
+            "properties": {
+                "note": {
+                    "description": "This is going to be deprecated in future release, use \"Notes\" instead.",
+                    "type": "string",
+                    "minLength": 1
+                },
+                "notes": {
+                    "type": "string",
+                    "minLength": 1
+                }
+            }
+        },
+        "chore.StatusUpdateReq": {
+            "type": "object",
+            "required": [
+                "status",
+                "updatedAt"
+            ],
+            "properties": {
+                "status": {
+                    "$ref": "#/definitions/model.Status"
+                },
+                "updatedAt": {
+                    "type": "string"
+                }
+            }
+        },
+        "chore.SubtaskReq": {
+            "type": "object",
+            "properties": {
+                "choreId": {
+                    "type": "integer"
+                },
+                "completedAt": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "chore.TimerUpdateReq": {
+            "type": "object",
+            "required": [
+                "duration",
+                "updatedAt"
+            ],
+            "properties": {
+                "duration": {
+                    "type": "integer"
+                },
+                "updatedAt": {
+                    "type": "string"
+                }
+            }
+        },
+        "chore.UpdateTimeSessionReq": {
+            "type": "object",
+            "properties": {
+                "endTime": {
+                    "type": "string"
+                },
+                "pauseLog": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.PauseLogEntry"
+                    }
+                },
+                "startTime": {
+                    "type": "string"
+                }
+            }
+        },
         "circle.Circle": {
             "type": "object",
             "properties": {
@@ -4510,10 +4772,6 @@ const docTemplate = `{
                     "description": "Who created the chore",
                     "type": "integer"
                 },
-                "deadlineOffset": {
-                    "description": "Seconds after NextDueDate when chore deadline is reached",
-                    "type": "integer"
-                },
                 "description": {
                     "description": "Description of the chore",
                     "type": "string"
@@ -4552,10 +4810,6 @@ const docTemplate = `{
                 "isRolling": {
                     "description": "Whether the chore is rolling",
                     "type": "boolean"
-                },
-                "labels": {
-                    "description": "Labels for the chore",
-                    "type": "string"
                 },
                 "labelsV2": {
                     "description": "Labels for the chore",
@@ -4710,7 +4964,8 @@ const docTemplate = `{
                 2,
                 3,
                 4,
-                5
+                5,
+                6
             ],
             "x-enum-varnames": [
                 "ChoreHistoryStatusStarted",
@@ -4718,109 +4973,9 @@ const docTemplate = `{
                 "ChoreHistoryStatusSkipped",
                 "ChoreHistoryStatusPendingApproval",
                 "ChoreHistoryStatusRejected",
-                "ChoreHistoryStatusMissed"
+                "ChoreHistoryStatusMissed",
+                "ChoreHistoryStatusRescheduled"
             ]
-        },
-        "model.ChoreReq": {
-            "type": "object",
-            "required": [
-                "assignStrategy",
-                "frequencyType",
-                "name"
-            ],
-            "properties": {
-                "assignStrategy": {
-                    "$ref": "#/definitions/model.AssignmentStrategy"
-                },
-                "assignedTo": {
-                    "type": "integer"
-                },
-                "assignees": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/model.ChoreAssignees"
-                    }
-                },
-                "completionWindow": {
-                    "type": "integer"
-                },
-                "deadlineOffset": {
-                    "type": "integer"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "dueDate": {
-                    "type": "string"
-                },
-                "frequency": {
-                    "type": "integer"
-                },
-                "frequencyMetadata": {
-                    "$ref": "#/definitions/model.FrequencyMetadata"
-                },
-                "frequencyType": {
-                    "$ref": "#/definitions/model.FrequencyType"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "isActive": {
-                    "type": "boolean"
-                },
-                "isPrivate": {
-                    "type": "boolean"
-                },
-                "isRolling": {
-                    "type": "boolean"
-                },
-                "labels": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "labelsV2": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/model.LabelReq"
-                    }
-                },
-                "name": {
-                    "type": "string"
-                },
-                "notification": {
-                    "type": "boolean"
-                },
-                "notificationMetadata": {
-                    "$ref": "#/definitions/model.NotificationMetadata"
-                },
-                "points": {
-                    "type": "integer"
-                },
-                "priority": {
-                    "type": "integer"
-                },
-                "projectId": {
-                    "type": "integer"
-                },
-                "requireApproval": {
-                    "type": "boolean"
-                },
-                "subTasks": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/model.SubTask"
-                    }
-                },
-                "thingTrigger": {
-                    "$ref": "#/definitions/model.ThingTrigger"
-                },
-                "updatedAt": {
-                    "description": "For internal use only when syncing a chore updated offline",
-                    "type": "string"
-                }
-            }
         },
         "model.Filter": {
             "type": "object",
@@ -4869,8 +5024,8 @@ const docTemplate = `{
         "model.FilterCondition": {
             "type": "object",
             "required": [
-                "type",
-                "value"
+                "operator",
+                "type"
             ],
             "properties": {
                 "operator": {
@@ -4968,7 +5123,14 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "unit": {
-                    "type": "string"
+                    "type": "string",
+                    "enum": [
+                        "hours",
+                        "days",
+                        "weeks",
+                        "months",
+                        "years"
+                    ]
                 },
                 "weekNumbers": {
                     "description": "DEPRECATED: use Occurrences instead",
@@ -4978,7 +5140,16 @@ const docTemplate = `{
                     }
                 },
                 "weekPattern": {
-                    "$ref": "#/definitions/model.Weekpattern"
+                    "enum": [
+                        "every_week",
+                        "week_of_month",
+                        "week_of_quarter"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.Weekpattern"
+                        }
+                    ]
                 }
             }
         },

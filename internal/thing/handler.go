@@ -339,13 +339,13 @@ func (h *Handler) GetThingHistory(c *gin.Context) {
 //	@Produce		json
 //	@Security		JWTKeyAuth
 //	@Security		APIKeyAuth
-//	@Param			id	path		int						true	"Thing ID"
-//	@Success		200	{object}	nil						"empty response on success"
-//	@Failure		400	{object}	map[string]string		"error: Invalid thing id"
-//	@Failure		401	{object}	map[string]string		"error: Unauthorized"
-//	@Failure		403	{object}	map[string]string		"error: Forbidden"
-//	@Failure		405	{object}	map[string]string		"error: Unable to delete thing with associated tasks"
-//	@Failure		500	{object}	map[string]string		"error: Unable to find thing | Unable to find tasks linked to this thing | Failed to delete thing"
+//	@Param			id	path		int					true	"Thing ID"
+//	@Success		200	{object}	nil					"empty response on success"
+//	@Failure		400	{object}	map[string]string	"error: Invalid thing id"
+//	@Failure		401	{object}	map[string]string	"error: Unauthorized"
+//	@Failure		403	{object}	map[string]string	"error: Forbidden"
+//	@Failure		405	{object}	map[string]string	"error: Unable to delete thing with associated tasks"
+//	@Failure		500	{object}	map[string]string	"error: Unable to find thing | Unable to find tasks linked to this thing | Failed to delete thing"
 //	@Router			/things/{id} [delete]
 func (h *Handler) DeleteThing(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)

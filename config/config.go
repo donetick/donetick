@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -323,7 +324,20 @@ func LoadConfig() *Config {
 	if err != nil {
 		var configNotFoundError viper.ConfigFileNotFoundError
 		if errors.As(err, &configNotFoundError) {
-			fmt.Printf("Config file not found, using defaults and environment variables")
+			if os.Getenv("DT_ENV") == "selfhosted" {
+				fmt.Println("Config file not found, generating default config...")
+				if writeErr := generateDefaultConfigFile("./config"); writeErr != nil {
+					fmt.Printf("Warning: could not write default config: %v\n", writeErr)
+					fmt.Println("Continuing with defaults and environment variables")
+				} else {
+					// Re-read the newly written config
+					if readErr := viper.ReadInConfig(); readErr != nil {
+						fmt.Printf("Warning: could not read generated config: %v\n", readErr)
+					}
+				}
+			} else {
+				fmt.Println("Config file not found, using defaults and environment variables")
+			}
 		} else {
 			fmt.Printf("Error reading config file: %v", err)
 			panic(err)
@@ -410,6 +424,101 @@ func validateJWTSecret(secret string) error {
 		fmt.Printf("\n❌ Application will not start with weak JWT secrets for security reasons.\n\n")
 		panic("Weak JWT secret detected - application startup aborted for security")
 	}
+	return nil
+}
+
+// generateDefaultConfigFile writes a default selfhosted.yaml to the given directory.
+// This persists the generated JWT secret so it survives restarts.
+func generateDefaultConfigFile(configDir string) error {
+	secret, err := generateSecureSecret()
+	if err != nil {
+		return fmt.Errorf("generate JWT secret: %w", err)
+	}
+
+	configContent := fmt.Sprintf(`name: "selfhosted"
+is_done_tick_dot_com: false
+is_user_creation_disabled: false
+telegram:
+  token: ""
+pushover:
+  token: ""
+database:
+  type: "sqlite"
+  migration: true
+  # these are only required for postgres
+  host: "secret"
+  port: 5432
+  user: "secret"
+  password: "secret"
+  name: "secret"
+jwt:
+  secret: "%s"
+  session_time: 168h # 7 days
+  max_refresh: 1440h # 60 days
+server:
+  port: 2021
+  read_timeout: 10s
+  write_timeout: 10s
+  rate_period: 60s
+  rate_limit: 300
+  cors_allow_origins:
+    - "http://localhost:5173"
+    - "http://localhost:7926"
+    # the below are required for the android app to work
+    - "https://localhost"
+    - "http://localhost"
+    - "capacitor://localhost"
+  serve_frontend: true
+logging:
+  level: "info"
+  encoding: "json"
+  development: false
+scheduler_jobs:
+  due_job: 30m
+  overdue_job: 3h
+  pre_due_job: 3h
+email:
+  host:
+  port:
+  key:
+  email:
+  user: # optional, will be filled with email.email if not set.
+  appHost:
+oauth2:
+  client_id:
+  client_secret:
+  auth_url:
+  token_url:
+  user_info_url:
+  redirect_url:
+  name:
+# Real-time configuration
+realtime:
+  enabled: true
+  sse_enabled: true
+  heartbeat_interval: 60s
+  connection_timeout: 120s
+  max_connections: 1000
+  max_connections_per_user: 5
+  event_queue_size: 2048
+  cleanup_interval: 2m
+  stale_threshold: 5m
+  enable_compression: true
+  enable_stats: true
+  allowed_origins:
+    - "*"
+`, secret)
+
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		return fmt.Errorf("create config dir: %w", err)
+	}
+
+	configPath := filepath.Join(configDir, "selfhosted.yaml")
+	if err := os.WriteFile(configPath, []byte(configContent), 0600); err != nil {
+		return fmt.Errorf("write config file: %w", err)
+	}
+
+	fmt.Printf("Generated default config at %s\n", configPath)
 	return nil
 }
 

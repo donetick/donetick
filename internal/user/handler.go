@@ -26,6 +26,7 @@ import (
 	"donetick.com/core/logging"
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	limiter "github.com/ulule/limiter/v3"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/oauth2/v1"
@@ -96,6 +97,10 @@ func (h *Handler) GetAllUsers() gin.HandlerFunc {
 				"error": "Error getting users",
 			})
 			return
+		}
+
+		for i := range users {
+			users[i].Image = h.signer.SignIfLocal(users[i].Image)
 		}
 
 		c.JSON(200, gin.H{
@@ -209,6 +214,7 @@ func (h *Handler) GetUserProfile(c *gin.Context) {
 		})
 		return
 	}
+	user.Image = h.signer.SignIfLocal(user.Image)
 	c.JSON(200, gin.H{
 		"res": user,
 	})
@@ -1136,12 +1142,10 @@ func (h *Handler) updateProfilePhoto(c *gin.Context) {
 		return
 	}
 
-	// Generate a unique filename using the current timestamp and a random string
-
-	hashFromUserName := sha256.Sum256([]byte(currentUser.Username))
-	// use the first 8 bytes of the hash as a unique identifier
-	id := fmt.Sprintf("%x", hashFromUserName[:20])
-	filename := fmt.Sprintf("profiles/%s%s", id, fileExtension)
+	// Use a random UUID for the filename so the path is not guessable from
+	// the username — this matters when the bucket is configured for public
+	// reads (storage.public_read: true) and the URL is served unsigned.
+	filename := fmt.Sprintf("profiles/%s%s", uuid.New().String(), fileExtension)
 
 	openedFile, err := file.Open()
 	if err != nil {
@@ -1156,17 +1160,29 @@ func (h *Handler) updateProfilePhoto(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save file"})
 		return
 	}
-	signedFileName, err := h.signer.Sign(filename)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to sign URL"})
-		return
+
+	// Clean up the previous profile photo (if it was a locally-stored file,
+	// not an OIDC `picture` claim URL) so re-uploads don't accumulate orphans.
+	if prev := currentUser.Image; prev != "" &&
+		!strings.HasPrefix(prev, "http://") &&
+		!strings.HasPrefix(prev, "https://") {
+		if derr := h.storage.Delete(c, []string{prev}); derr != nil {
+			logging.FromContext(c).Warnw("Failed to delete previous profile photo", "path", prev, "error", derr)
+		}
 	}
-	err = h.userRepo.UpdateUserImage(c, currentUser.ID, signedFileName)
+
+	// Store the raw storage path; URLs are minted on demand via
+	// URLSignerS3.SignIfLocal when the user is returned via
+	// GetUserProfile / users listing. In signed mode, SigV4 caps URL
+	// lifetime at 7 days, so persisting a pre-signed URL would leave
+	// stale references in the DB.
+	err = h.userRepo.UpdateUserImage(c, currentUser.ID, filename)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update profile photo"})
 		return
 	}
-	// create signed URL for the file:
+	// Return a fresh URL (signed or public depending on config) so the
+	// client can display the upload immediately.
 	signedURL, err := h.signer.Sign(filename)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to sign URL"})

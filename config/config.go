@@ -65,6 +65,11 @@ type StorageConfig struct {
 	MaxUserStorage int    `mapstructure:"max_user_storage" yaml:"max_user_storage"`
 	MaxFileSize    int64  `mapstructure:"max_file_size" yaml:"max_file_size"`
 	PublicHost     string `mapstructure:"public_host" yaml:"public_host"`
+	// PublicRead returns unsigned URLs instead of SigV4 presigned URLs.
+	// The bucket/prefix must be configured for public anonymous reads
+	// (e.g. via a bucket policy). Intended for self-hosted deployments
+	// that don't want the 7-day presigned URL ceiling.
+	PublicRead bool `mapstructure:"public_read" yaml:"public_read"`
 }
 type DonetickCloudConfig struct {
 	GoogleClientID        string `mapstructure:"google_client_id" yaml:"google_client_id"`

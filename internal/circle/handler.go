@@ -13,6 +13,7 @@ import (
 	cModel "donetick.com/core/internal/circle/model"
 	cRepo "donetick.com/core/internal/circle/repo"
 	pRepo "donetick.com/core/internal/points/repo"
+	"donetick.com/core/internal/storage"
 	uModel "donetick.com/core/internal/user/model"
 	uRepo "donetick.com/core/internal/user/repo"
 	"donetick.com/core/logging"
@@ -24,18 +25,20 @@ type Handler struct {
 	userRepo             *uRepo.UserRepository
 	choreRepo            *chRepo.ChoreRepository
 	pointRepo            *pRepo.PointsRepository
+	signer               *storage.URLSignerS3
 	isDonetickDotCom     bool
 	maxCircleMembers     int
 	plusMaxCircleMembers int
 }
 
 func NewHandler(cr *cRepo.CircleRepository, ur *uRepo.UserRepository, c *chRepo.ChoreRepository, pr *pRepo.PointsRepository,
-	config *config.Config) *Handler {
+	signer *storage.URLSignerS3, config *config.Config) *Handler {
 	return &Handler{
 		circleRepo:           cr,
 		userRepo:             ur,
 		choreRepo:            c,
 		pointRepo:            pr,
+		signer:               signer,
 		isDonetickDotCom:     config.IsDoneTickDotCom,
 		maxCircleMembers:     config.FeatureLimits.MaxCircleMembers,
 		plusMaxCircleMembers: config.FeatureLimits.PlusCircleMaxMembers,
@@ -75,6 +78,10 @@ func (h *Handler) GetCircleMembers(c *gin.Context) {
 			"error": "Error getting circle members",
 		})
 		return
+	}
+
+	for i := range members {
+		members[i].Image = h.signer.SignIfLocal(members[i].Image)
 	}
 
 	c.JSON(200, gin.H{
@@ -426,6 +433,10 @@ func (h *Handler) GetPendingCircleMembers(c *gin.Context) {
 			"error": "Error getting pending circle members",
 		})
 		return
+	}
+
+	for i := range members {
+		members[i].Image = h.signer.SignIfLocal(members[i].Image)
 	}
 
 	c.JSON(200, gin.H{

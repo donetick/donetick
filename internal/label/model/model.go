@@ -9,5 +9,5 @@ type Label struct {
 }
 
 type LabelReq struct {
-	LabelID int `json:"id" binding:"required"`
+	LabelID int `json:"id" binding:"required,gt=0"`
 }

@@ -1,5 +1,207 @@
 basePath: /api/v1
 definitions:
+  chore.AssigneeReq:
+    properties:
+      assignee:
+        type: integer
+      updatedAt:
+        type: string
+    required:
+    - assignee
+    - updatedAt
+    type: object
+  chore.ChoreReq:
+    properties:
+      assignStrategy:
+        allOf:
+        - $ref: '#/definitions/model.AssignmentStrategy'
+        enum:
+        - no_assignee
+        - least_assigned
+        - least_completed
+        - random
+        - keep_last_assigned
+        - random_except_last_assigned
+        - round_robin
+      assignedTo:
+        type: integer
+      assignees:
+        items:
+          $ref: '#/definitions/model.ChoreAssignees'
+        type: array
+      completionWindow:
+        minimum: 0
+        type: integer
+      description:
+        type: string
+      frequency:
+        type: integer
+      frequencyMetadata:
+        $ref: '#/definitions/model.FrequencyMetadata'
+      frequencyType:
+        allOf:
+        - $ref: '#/definitions/model.FrequencyType'
+        enum:
+        - once
+        - daily
+        - weekly
+        - monthly
+        - yearly
+        - adaptive
+        - interval
+        - days_of_the_week
+        - day_of_the_month
+        - trigger
+        - no_repeat
+      id:
+        type: integer
+      isActive:
+        type: boolean
+      isPrivate:
+        type: boolean
+      isRolling:
+        type: boolean
+      labelsV2:
+        items:
+          $ref: '#/definitions/model.LabelReq'
+        type: array
+      name:
+        type: string
+      nextDueDate:
+        description: Next due date in RFC3339 format
+        type: string
+      notification:
+        type: boolean
+      notificationMetadata:
+        $ref: '#/definitions/model.NotificationMetadata'
+      points:
+        minimum: 0
+        type: integer
+      priority:
+        maximum: 5
+        minimum: 0
+        type: integer
+      projectId:
+        type: integer
+      requireApproval:
+        type: boolean
+      subTasks:
+        items:
+          $ref: '#/definitions/model.SubTask'
+        type: array
+      thingTrigger:
+        $ref: '#/definitions/model.ThingTrigger'
+      updatedAt:
+        type: string
+    required:
+    - assignStrategy
+    - frequencyType
+    - isPrivate
+    - name
+    type: object
+  chore.CompleteChoreReq:
+    properties:
+      completedBy:
+        description: The completed by only can be populated by the admin or super
+          user.
+        type: integer
+      completedTime:
+        description: Completion date in RFC3339 format (defaults to now).
+        type: string
+      note:
+        description: This is going to be deprecated in future release, use "Notes"
+          instead.
+        minLength: 1
+        type: string
+      notes:
+        minLength: 1
+        type: string
+    type: object
+  chore.DueDateReq:
+    properties:
+      dueDate:
+        type: string
+      updatedAt:
+        type: string
+    required:
+    - updatedAt
+    type: object
+  chore.ModifyHistoryReq:
+    properties:
+      dueDate:
+        type: string
+      notes:
+        type: string
+      performedAt:
+        type: string
+    type: object
+  chore.NudgeRequest:
+    properties:
+      all_assignees:
+        description: If true, send to all assignees; if false, send to current assignee
+        type: boolean
+      message:
+        description: Optional custom message
+        type: string
+    type: object
+  chore.PriorityReq:
+    properties:
+      priority:
+        type: integer
+    required:
+    - priority
+    type: object
+  chore.RejectChoreReq:
+    properties:
+      note:
+        description: This is going to be deprecated in future release, use "Notes"
+          instead.
+        minLength: 1
+        type: string
+      notes:
+        minLength: 1
+        type: string
+    type: object
+  chore.StatusUpdateReq:
+    properties:
+      status:
+        $ref: '#/definitions/model.Status'
+      updatedAt:
+        type: string
+    required:
+    - status
+    - updatedAt
+    type: object
+  chore.SubtaskReq:
+    properties:
+      choreId:
+        type: integer
+      completedAt:
+        type: string
+      id:
+        type: integer
+    type: object
+  chore.TimerUpdateReq:
+    properties:
+      duration:
+        type: integer
+      updatedAt:
+        type: string
+    required:
+    - duration
+    - updatedAt
+    type: object
+  chore.UpdateTimeSessionReq:
+    properties:
+      endTime:
+        type: string
+      pauseLog:
+        items:
+          $ref: '#/definitions/model.PauseLogEntry'
+        type: array
+      startTime:
+        type: string
+    type: object
   circle.Circle:
     properties:
       created_at:
@@ -134,9 +336,6 @@ definitions:
       createdBy:
         description: Who created the chore
         type: integer
-      deadlineOffset:
-        description: Seconds after NextDueDate when chore deadline is reached
-        type: integer
       description:
         description: Description of the chore
         type: string
@@ -162,9 +361,6 @@ definitions:
       isRolling:
         description: Whether the chore is rolling
         type: boolean
-      labels:
-        description: Labels for the chore
-        type: string
       labelsV2:
         description: Labels for the chore
         items:
@@ -270,6 +466,7 @@ definitions:
     - 3
     - 4
     - 5
+    - 6
     format: int32
     type: integer
     x-enum-varnames:
@@ -279,74 +476,7 @@ definitions:
     - ChoreHistoryStatusPendingApproval
     - ChoreHistoryStatusRejected
     - ChoreHistoryStatusMissed
-  model.ChoreReq:
-    properties:
-      assignStrategy:
-        $ref: '#/definitions/model.AssignmentStrategy'
-      assignedTo:
-        type: integer
-      assignees:
-        items:
-          $ref: '#/definitions/model.ChoreAssignees'
-        type: array
-      completionWindow:
-        type: integer
-      deadlineOffset:
-        type: integer
-      description:
-        type: string
-      dueDate:
-        type: string
-      frequency:
-        type: integer
-      frequencyMetadata:
-        $ref: '#/definitions/model.FrequencyMetadata'
-      frequencyType:
-        $ref: '#/definitions/model.FrequencyType'
-      id:
-        type: integer
-      isActive:
-        type: boolean
-      isPrivate:
-        type: boolean
-      isRolling:
-        type: boolean
-      labels:
-        items:
-          type: string
-        type: array
-      labelsV2:
-        items:
-          $ref: '#/definitions/model.LabelReq'
-        type: array
-      name:
-        type: string
-      notification:
-        type: boolean
-      notificationMetadata:
-        $ref: '#/definitions/model.NotificationMetadata'
-      points:
-        type: integer
-      priority:
-        type: integer
-      projectId:
-        type: integer
-      requireApproval:
-        type: boolean
-      subTasks:
-        items:
-          $ref: '#/definitions/model.SubTask'
-        type: array
-      thingTrigger:
-        $ref: '#/definitions/model.ThingTrigger'
-      updatedAt:
-        description: For internal use only when syncing a chore updated offline
-        type: string
-    required:
-    - assignStrategy
-    - frequencyType
-    - name
-    type: object
+    - ChoreHistoryStatusRescheduled
   model.Filter:
     properties:
       circleId:
@@ -393,8 +523,8 @@ definitions:
         type: string
       value: {}
     required:
+    - operator
     - type
-    - value
     type: object
   model.FilterReq:
     properties:
@@ -449,6 +579,12 @@ definitions:
       timezone:
         type: string
       unit:
+        enum:
+        - hours
+        - days
+        - weeks
+        - months
+        - years
         type: string
       weekNumbers:
         description: 'DEPRECATED: use Occurrences instead'
@@ -456,7 +592,12 @@ definitions:
           type: integer
         type: array
       weekPattern:
-        $ref: '#/definitions/model.Weekpattern'
+        allOf:
+        - $ref: '#/definitions/model.Weekpattern'
+        enum:
+        - every_week
+        - week_of_month
+        - week_of_quarter
     type: object
   model.FrequencyType:
     enum:
@@ -801,7 +942,7 @@ paths:
         name: chore
         required: true
         schema:
-          $ref: '#/definitions/model.ChoreReq'
+          $ref: '#/definitions/chore.ChoreReq'
       produces:
       - application/json
       responses:
@@ -848,7 +989,7 @@ paths:
         name: chore
         required: true
         schema:
-          $ref: '#/definitions/model.ChoreReq'
+          $ref: '#/definitions/chore.ChoreReq'
       produces:
       - application/json
       responses:
@@ -1099,12 +1240,7 @@ paths:
         name: assignee
         required: true
         schema:
-          properties:
-            assignee:
-              type: integer
-            updatedAt:
-              type: string
-          type: object
+          $ref: '#/definitions/chore.AssigneeReq'
       produces:
       - application/json
       responses:
@@ -1160,7 +1296,7 @@ paths:
       - application/json
       responses:
         "200":
-          description: 'res: detailed chore information'
+          description: 'res: detailed chore information" //TODO: Add response model'
           schema:
             additionalProperties: true
             type: object
@@ -1200,20 +1336,11 @@ paths:
         name: id
         required: true
         type: integer
-      - description: Completion date in RFC3339 format (defaults to now)
-        in: query
-        name: completedDate
-        type: string
       - description: Completion details
         in: body
         name: completion
         schema:
-          properties:
-            completedBy:
-              type: integer
-            note:
-              type: string
-          type: object
+          $ref: '#/definitions/chore.CompleteChoreReq'
       produces:
       - application/json
       responses:
@@ -1270,12 +1397,7 @@ paths:
         name: dueDate
         required: true
         schema:
-          properties:
-            dueDate:
-              type: string
-            updatedAt:
-              type: string
-          type: object
+          $ref: '#/definitions/chore.DueDateReq'
       produces:
       - application/json
       responses:
@@ -1432,14 +1554,7 @@ paths:
         name: history
         required: true
         schema:
-          properties:
-            dueDate:
-              type: string
-            notes:
-              type: string
-            performedAt:
-              type: string
-          type: object
+          $ref: '#/definitions/chore.ModifyHistoryReq'
       produces:
       - application/json
       responses:
@@ -1496,17 +1611,12 @@ paths:
         name: nudge
         required: true
         schema:
-          properties:
-            all_assignees:
-              type: boolean
-            message:
-              type: string
-          type: object
+          $ref: '#/definitions/chore.NudgeRequest'
       produces:
       - application/json
       responses:
         "200":
-          description: 'message: Nudge sent status'
+          description: 'message: Nudge sent status" //TODO: Add response model'
           schema:
             additionalProperties: true
             type: object
@@ -1550,7 +1660,8 @@ paths:
       - application/json
       responses:
         "200":
-          description: 'res: {duration, status, timerUpdatedAt}'
+          description: 'res: {duration, status, timerUpdatedAt}" //TODO: Add response
+            model'
           schema:
             additionalProperties: true
             type: object
@@ -1602,10 +1713,7 @@ paths:
         name: priority
         required: true
         schema:
-          properties:
-            priority:
-              type: integer
-          type: object
+          $ref: '#/definitions/chore.PriorityReq'
       produces:
       - application/json
       responses:
@@ -1661,15 +1769,13 @@ paths:
         in: body
         name: rejection
         schema:
-          properties:
-            note:
-              type: string
-          type: object
+          $ref: '#/definitions/chore.RejectChoreReq'
       produces:
       - application/json
       responses:
         "200":
-          description: 'res: updated chore, message: Chore rejected successfully'
+          description: 'res: updated chore, message: Chore rejected successfully"
+            //TODO: Add response model'
           schema:
             additionalProperties: true
             type: object
@@ -1764,7 +1870,8 @@ paths:
       - application/json
       responses:
         "200":
-          description: 'res: {timerUpdatedAt, status, duration}'
+          description: 'res: {timerUpdatedAt, status, duration}" //TODO: Add response
+            model'
           schema:
             additionalProperties: true
             type: object
@@ -1814,12 +1921,7 @@ paths:
         name: status
         required: true
         schema:
-          properties:
-            status:
-              type: string
-            updatedAt:
-              type: string
-          type: object
+          $ref: '#/definitions/chore.StatusUpdateReq'
       produces:
       - application/json
       responses:
@@ -1875,19 +1977,12 @@ paths:
         name: subtask
         required: true
         schema:
-          properties:
-            choreId:
-              type: integer
-            completedAt:
-              type: string
-            id:
-              type: integer
-          type: object
+          $ref: '#/definitions/chore.SubtaskReq'
       produces:
       - application/json
       responses:
         "200":
-          description: Empty success response
+          description: 'Empty success response" //TODO: Add response model'
           schema:
             additionalProperties: true
             type: object
@@ -1995,12 +2090,7 @@ paths:
         name: timer
         required: true
         schema:
-          properties:
-            duration:
-              type: integer
-            updatedAt:
-              type: string
-          type: object
+          $ref: '#/definitions/chore.TimerUpdateReq'
       produces:
       - application/json
       responses:
@@ -2118,14 +2208,7 @@ paths:
         name: session
         required: true
         schema:
-          properties:
-            endTime:
-              type: string
-            pauseLog:
-              type: array
-            startTime:
-              type: string
-          type: object
+          $ref: '#/definitions/chore.UpdateTimeSessionReq'
       produces:
       - application/json
       responses:
@@ -2183,7 +2266,8 @@ paths:
       - application/json
       responses:
         "200":
-          description: 'res: {timerUpdatedAt, status, duration}'
+          description: 'res: {timerUpdatedAt, status, duration}" //TODO: Add response
+            model'
           schema:
             additionalProperties: true
             type: object
@@ -2260,6 +2344,54 @@ paths:
       - JWTKeyAuth: []
       - APIKeyAuth: []
       summary: Unarchive a chore
+      tags:
+      - chores
+  /chores/{id}/undo:
+    post:
+      consumes:
+      - application/json
+      description: Undoes the most recent action (completion, skip, approval submission,
+        or rejection) performed by the current user on a chore within the last 5 minutes
+      parameters:
+      - description: Chore ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'message: Successfully undid {action} action, res: updated
+            chore object" //TODO: Add response model'
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 'error: Invalid chore ID | No recent action found to undo |
+            Cannot undo this type of action'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: Authentication failed'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to retrieve chore | Failed to check recent actions
+            | Failed to undo action | Failed to restore pending approval status |
+            Failed to retrieve updated chore'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      - APIKeyAuth: []
+      summary: Undo a chore action
       tags:
       - chores
   /chores/archived:

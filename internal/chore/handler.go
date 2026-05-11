@@ -1099,7 +1099,7 @@ func (h *Handler) startChore(c *gin.Context) {
 			})
 			return
 		}
-		h.choreRepo.UpdateChoreStatus(c, chore.ID, chModel.ChoreStatusInProgress)
+		h.choreRepo.UpdateChoreStatus(c, chore.ID, chModel.ChoreStatusInProgress, chore.CircleID)
 	case chModel.ChoreStatusPaused:
 		session, err = h.choreRepo.GetActiveTimeSession(c, chore.ID)
 		if err != nil {
@@ -1117,7 +1117,7 @@ func (h *Handler) startChore(c *gin.Context) {
 				return
 			}
 		}
-		h.choreRepo.UpdateChoreStatus(c, chore.ID, chModel.ChoreStatusInProgress)
+		h.choreRepo.UpdateChoreStatus(c, chore.ID, chModel.ChoreStatusInProgress, chore.CircleID)
 
 	default:
 		c.JSON(400, gin.H{
@@ -1242,7 +1242,7 @@ func (h *Handler) pauseChore(c *gin.Context) {
 		})
 		return
 	}
-	h.choreRepo.UpdateChoreStatus(c, chore.ID, chModel.ChoreStatusPaused)
+	h.choreRepo.UpdateChoreStatus(c, chore.ID, chModel.ChoreStatusPaused, chore.CircleID)
 	if h.realTimeService != nil {
 		chore.Status = chModel.ChoreStatusPaused
 		broadcaster := h.realTimeService.GetEventBroadcaster()
@@ -1364,7 +1364,7 @@ func (h *Handler) ResetChoreTimer(c *gin.Context) {
 	}
 
 	// Update chore status to in progress
-	h.choreRepo.UpdateChoreStatus(c, chore.ID, chModel.ChoreStatusInProgress)
+	h.choreRepo.UpdateChoreStatus(c, chore.ID, chModel.ChoreStatusInProgress, chore.CircleID)
 
 	// Broadcast the change via real-time service
 	if h.realTimeService != nil {
@@ -1653,7 +1653,7 @@ func (h *Handler) archiveChore(c *gin.Context) {
 		return
 	}
 
-	err = h.choreRepo.ArchiveChore(c, id, currentUser.ID)
+	err = h.choreRepo.ArchiveChore(c, id, currentUser.ID, currentUser.CircleID)
 
 	if err != nil {
 		c.JSON(500, gin.H{
@@ -1715,7 +1715,7 @@ func (h *Handler) UnarchiveChore(c *gin.Context) {
 		})
 		return
 	}
-	err = h.choreRepo.UnarchiveChore(c, id, currentUser.ID)
+	err = h.choreRepo.UnarchiveChore(c, id, currentUser.ID, currentUser.CircleID)
 
 	if err != nil {
 		c.JSON(500, gin.H{
@@ -2333,7 +2333,7 @@ func (h *Handler) updatePriority(c *gin.Context) {
 		return
 	}
 
-	if err := h.choreRepo.UpdateChorePriority(c, currentUser.ID, id, *priorityReq.Priority); err != nil {
+	if err := h.choreRepo.UpdateChorePriority(c, currentUser.ID, id, *priorityReq.Priority, chore.CircleID); err != nil {
 		logger.Error("Failed to update priority", "error", err)
 		c.JSON(500, gin.H{
 			"error": "Error updating priority",
@@ -2944,7 +2944,7 @@ func (h *Handler) DeleteTimeSession(c *gin.Context) {
 		return
 	}
 	if chore.Status == chModel.ChoreStatusInProgress || chore.Status == chModel.ChoreStatusPaused {
-		h.choreRepo.UpdateChoreStatus(c, choreID, chModel.ChoreStatusNoStatus)
+		h.choreRepo.UpdateChoreStatus(c, choreID, chModel.ChoreStatusNoStatus, chore.CircleID)
 		c.JSON(200, gin.H{
 			"message": "Time session deleted successfully",
 		})
@@ -3225,7 +3225,7 @@ func (h *Handler) rejectChore(c *gin.Context) {
 	}
 
 	// Reject the chore
-	if err := h.choreRepo.RejectChore(c, id, rejectionNote); err != nil {
+	if err := h.choreRepo.RejectChore(c, id, currentUser.CircleID, rejectionNote); err != nil {
 		c.JSON(500, gin.H{
 			"error": "Error rejecting chore",
 		})
@@ -3898,7 +3898,7 @@ func (h *Handler) undoChore(c *gin.Context) {
 	}
 
 	// Perform the undo
-	err = h.choreRepo.UndoChoreAction(c, choreID, lastAction.ID, previousAssignedTo, previousDueDate)
+	err = h.choreRepo.UndoChoreAction(c, choreID, lastAction.ID, currentUser.CircleID, previousAssignedTo, previousDueDate)
 	if err != nil {
 		logger.Error("Failed to undo chore action", "error", err)
 		c.JSON(500, gin.H{

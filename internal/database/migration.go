@@ -21,6 +21,7 @@ import (
 	stModel "donetick.com/core/internal/subtask/model"
 	tModel "donetick.com/core/internal/thing/model"
 	uModel "donetick.com/core/internal/user/model" // Pure go SQLite driver, checkout https://github.com/glebarez/sqlite for details
+	syncModel "donetick.com/core/internal/sync/model"
 	"donetick.com/core/migrations"
 )
 
@@ -60,6 +61,8 @@ func Migration(db *gorm.DB) error {
 		storageModel.StorageUsage{},
 		chModel.TimeSession{},
 		uModel.UserDeviceToken{},
+		syncModel.SyncCursor{},
+		syncModel.Tombstone{},
 	); err != nil {
 		return err
 	}

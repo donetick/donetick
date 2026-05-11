@@ -79,6 +79,7 @@ type Chore struct {
 	DeadlineOffset         *int                  `json:"deadlineOffset,omitempty" gorm:"column:deadline_offset"`      // Seconds after NextDueDate when chore deadline is reached
 	ProjectID              *int                  `json:"projectId,omitempty" gorm:"column:project_id;index"`          // The project this chore belongs to
 	Project                *pModel.Project       `json:"project,omitempty" gorm:"foreignkey:ProjectID;references:ID"` // Project relationship
+	SyncVersion            int64                 `json:"syncVersion" gorm:"column:sync_version;not null;default:0;index"`
 }
 
 type Status int8
@@ -103,11 +104,12 @@ type ChoreHistory struct {
 	AssignedTo  *int               `json:"assignedTo" gorm:"column:assigned_to"`              // Who the chore was assigned to
 	Note        *string            `json:"notes" gorm:"column:notes"`                         // Notes about the chore
 	DueDate     *time.Time         `json:"dueDate" gorm:"column:due_date"`                    // When the chore was due
-	UpdatedAt   *time.Time         `json:"updatedAt" gorm:"column:updated_at"`                // When the record was last updated
-	CreatedAt   time.Time          `json:"createdAt" gorm:"column:created_at;autoCreateTime"` // When the record was created
+	UpdatedAt   *time.Time         `json:"updatedAt" gorm:"column:updated_at"`                            // When the record was last updated
+	CreatedAt   time.Time          `json:"createdAt" gorm:"column:created_at;autoCreateTime;<-:create"` // When the record was created (immutable after insert)
 	Status      ChoreHistoryStatus `json:"status" gorm:"column:status"`                       // Status of the chore (1=completed, 2=skipped)
 	Points      *int               `json:"points,omitempty" gorm:"column:points"`             // Points for completing the chore
 	Duration    *int               `json:"duration,omitempty" gorm:"<-:false;-:migration"`    // Duration in seconds calculated from query (read-only, no DB column)
+	SyncVersion int64              `json:"syncVersion" gorm:"column:sync_version;not null;default:0"`
 }
 
 type ChoreHistoryStatus int8

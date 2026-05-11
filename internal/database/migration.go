@@ -19,9 +19,9 @@ import (
 	projModel "donetick.com/core/internal/project/model"
 	storageModel "donetick.com/core/internal/storage/model"
 	stModel "donetick.com/core/internal/subtask/model"
+	syncModel "donetick.com/core/internal/sync/model"
 	tModel "donetick.com/core/internal/thing/model"
 	uModel "donetick.com/core/internal/user/model" // Pure go SQLite driver, checkout https://github.com/glebarez/sqlite for details
-	syncModel "donetick.com/core/internal/sync/model"
 	"donetick.com/core/migrations"
 )
 

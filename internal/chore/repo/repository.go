@@ -209,6 +209,7 @@ func (r *ChoreRepository) SetChorePendingApproval(c context.Context, chore *chMo
 			return err
 		}
 
+		ch.SyncVersion = nextVersion
 		if err := tx.Save(ch).Error; err != nil {
 			return err
 		}
@@ -267,6 +268,7 @@ func (r *ChoreRepository) ApproveChore(c context.Context, chore *chModel.Chore, 
 
 		// Update status to completed
 		history.Status = chModel.ChoreHistoryStatusCompleted
+		history.SyncVersion = nextVersion
 
 		// Update UserCircle Points if applicable
 		if applyPoints && chore.Points != nil && *chore.Points > 0 {
@@ -316,6 +318,7 @@ func (r *ChoreRepository) RejectChore(c context.Context, choreID int, circleID i
 
 		// Update status to rejected
 		history.Status = chModel.ChoreHistoryStatusRejected
+		history.SyncVersion = nextVersion
 
 		// Save the updated history
 		if err := tx.Save(&history).Error; err != nil {
@@ -386,6 +389,7 @@ func (r *ChoreRepository) CompleteChore(c context.Context, chore *chModel.Chore,
 				return err
 			}
 		}
+		ch.SyncVersion = nextVersion
 		// Perform the update operation once, using the prepared updates map.
 		if err := tx.Model(&chModel.Chore{}).Where("id = ?", chore.ID).Updates(choreUpdates).Error; err != nil {
 			return err
@@ -460,6 +464,7 @@ func (r *ChoreRepository) SkipChore(c context.Context, chore *chModel.Chore, use
 			return err
 		}
 
+		ch.SyncVersion = nextVersion
 		// Perform the update operation once, using the prepared updates map.
 		if err := tx.Model(&chModel.Chore{}).Where("id = ?", chore.ID).Updates(choreUpdates).Error; err != nil {
 			return err
@@ -546,7 +551,11 @@ func (r *ChoreRepository) UpdateLatestChoreHistory(c context.Context, choreID in
 	return nil
 }
 
-func (r *ChoreRepository) DeleteChoreHistory(c context.Context, historyID int) error {
+func (r *ChoreRepository) DeleteChoreHistory(c context.Context, historyID int, circleID int) error {
+	nextVersion, err := r.nextSyncVersion(c, circleID)
+	if err != nil {
+		return err
+	}
 	// create transaction and delete all the chore timer assiociated with the chore history then delete the chore history
 	return r.db.WithContext(c).Transaction(func(tx *gorm.DB) error {
 		if err := tx.WithContext(c).Where("chore_history_id = ?", historyID).Delete(&chModel.TimeSession{}).Error; err != nil {
@@ -556,9 +565,14 @@ func (r *ChoreRepository) DeleteChoreHistory(c context.Context, historyID int) e
 		if err := tx.WithContext(c).Delete(&chModel.ChoreHistory{}, historyID).Error; err != nil {
 			return fmt.Errorf("failed to delete chore history: %w", err)
 		}
-		return nil
+		// Record tombstone so clients can remove it during sync
+		return tx.WithContext(c).Create(&syncModel.Tombstone{
+			CircleID:    circleID,
+			EntityType:  syncModel.EntityTypeChoreHistory,
+			EntityID:    historyID,
+			SyncVersion: nextVersion,
+		}).Error
 	})
-
 }
 
 func (r *ChoreRepository) UpdateChoreAssignees(c context.Context, assignees []*chModel.ChoreAssignees) error {
@@ -899,15 +913,35 @@ func (r *ChoreRepository) GetChoreChangesSince(c context.Context, circleID int, 
 }
 
 // GetTombstonesSince returns tombstones for a given circle and entity type with sync_version > since.
-func (r *ChoreRepository) GetTombstonesSince(c context.Context, circleID int, entityType syncModel.EntityType, since int64) ([]*syncModel.Tombstone, error) {
+func (r *ChoreRepository) GetTombstonesSince(c context.Context, circleID int, entityType syncModel.EntityType, since int64, limit int) ([]*syncModel.Tombstone, error) {
 	var tombstones []*syncModel.Tombstone
-	if err := r.db.WithContext(c).
+	query := r.db.WithContext(c).
 		Where("circle_id = ? AND entity_type = ? AND sync_version > ?", circleID, entityType, since).
-		Order("sync_version asc").
-		Find(&tombstones).Error; err != nil {
+		Order("sync_version asc")
+	if limit > 0 {
+		query = query.Limit(limit)
+	}
+	if err := query.Find(&tombstones).Error; err != nil {
 		return nil, err
 	}
 	return tombstones, nil
+}
+
+// GetChoreHistoryChangesSince returns chore history records for a circle with sync_version > since.
+func (r *ChoreRepository) GetChoreHistoryChangesSince(c context.Context, circleID int, since int64, limit int) ([]*chModel.ChoreHistory, error) {
+	var histories []*chModel.ChoreHistory
+	if err := r.db.WithContext(c).
+		Table("chore_histories").
+		Select("chore_histories.*, time_sessions.duration").
+		Joins("JOIN chores ON chores.id = chore_histories.chore_id").
+		Joins("LEFT JOIN time_sessions ON time_sessions.chore_history_id = chore_histories.id").
+		Where("chores.circle_id = ? AND chore_histories.sync_version > ?", circleID, since).
+		Order("chore_histories.sync_version asc").
+		Limit(limit).
+		Find(&histories).Error; err != nil {
+		return nil, err
+	}
+	return histories, nil
 }
 
 // GetUserLastChoreAction gets the user's most recent action on a chore (within time limit)

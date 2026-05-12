@@ -2483,7 +2483,7 @@ func (h *Handler) DeleteHistory(c *gin.Context) {
 		return
 	}
 
-	if err := h.choreRepo.DeleteChoreHistory(c, historyID); err != nil {
+	if err := h.choreRepo.DeleteChoreHistory(c, historyID, currentUser.CircleID); err != nil {
 		c.JSON(500, gin.H{
 			"error": "Error deleting history",
 		})

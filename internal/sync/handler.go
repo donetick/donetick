@@ -32,39 +32,104 @@ func (h *SyncHandler) getChanges(c *gin.Context) {
 		return
 	}
 
-	// Fetch one extra to determine hasMore
+	// Fetch one extra from each stream to determine if there are more changes.
 	chores, err := h.choreRepo.GetChoreChangesSince(c, circleID, since, defaultSyncLimit+1)
 	if err != nil {
 		c.JSON(500, gin.H{"error": "Failed to fetch changes"})
 		return
 	}
 
-	hasMore := len(chores) > defaultSyncLimit
-	if hasMore {
+	hasMoreChores := len(chores) > defaultSyncLimit
+	if hasMoreChores {
 		chores = chores[:defaultSyncLimit]
 	}
 
-	var cursor int64
-	if len(chores) > 0 {
-		cursor = chores[len(chores)-1].SyncVersion
-	} else {
-		cursor = since
-	}
-
-	tombstones, err := h.choreRepo.GetTombstonesSince(c, circleID, syncModel.EntityTypeChore, since)
+	choreTombstones, err := h.choreRepo.GetTombstonesSince(c, circleID, syncModel.EntityTypeChore, since, defaultSyncLimit+1)
 	if err != nil {
 		c.JSON(500, gin.H{"error": "Failed to fetch deletions"})
 		return
 	}
+	hasMoreChoreTombstones := len(choreTombstones) > defaultSyncLimit
+	if hasMoreChoreTombstones {
+		choreTombstones = choreTombstones[:defaultSyncLimit]
+	}
+	deletedChoreIDs := make([]int, 0, len(choreTombstones))
+	for _, t := range choreTombstones {
+		deletedChoreIDs = append(deletedChoreIDs, t.EntityID)
+	}
 
-	deletedIDs := make([]int, 0, len(tombstones))
-	for _, t := range tombstones {
-		deletedIDs = append(deletedIDs, t.EntityID)
+	histories, err := h.choreRepo.GetChoreHistoryChangesSince(c, circleID, since, defaultSyncLimit+1)
+	if err != nil {
+		c.JSON(500, gin.H{"error": "Failed to fetch history changes"})
+		return
+	}
+	hasMoreHistories := len(histories) > defaultSyncLimit
+	if hasMoreHistories {
+		histories = histories[:defaultSyncLimit]
+	}
+
+	historyTombstones, err := h.choreRepo.GetTombstonesSince(c, circleID, syncModel.EntityTypeChoreHistory, since, defaultSyncLimit+1)
+	if err != nil {
+		c.JSON(500, gin.H{"error": "Failed to fetch history deletions"})
+		return
+	}
+	hasMoreHistoryTombstones := len(historyTombstones) > defaultSyncLimit
+	if hasMoreHistoryTombstones {
+		historyTombstones = historyTombstones[:defaultSyncLimit]
+	}
+	deletedHistoryIDs := make([]int, 0, len(historyTombstones))
+	for _, t := range historyTombstones {
+		deletedHistoryIDs = append(deletedHistoryIDs, t.EntityID)
+	}
+
+	hasMore := hasMoreChores || hasMoreHistories || hasMoreChoreTombstones || hasMoreHistoryTombstones
+
+	cursor := since
+	hasAny := false
+	minLast := int64(0)
+
+	if len(chores) > 0 {
+		last := chores[len(chores)-1].SyncVersion
+		if !hasAny || last < minLast {
+			minLast = last
+		}
+		hasAny = true
+	}
+	if len(histories) > 0 {
+		last := histories[len(histories)-1].SyncVersion
+		if !hasAny || last < minLast {
+			minLast = last
+		}
+		hasAny = true
+	}
+	if len(choreTombstones) > 0 {
+		last := choreTombstones[len(choreTombstones)-1].SyncVersion
+		if !hasAny || last < minLast {
+			minLast = last
+		}
+		hasAny = true
+	}
+	if len(historyTombstones) > 0 {
+		last := historyTombstones[len(historyTombstones)-1].SyncVersion
+		if !hasAny || last < minLast {
+			minLast = last
+		}
+		hasAny = true
+	}
+
+	if hasAny {
+		cursor = minLast
 	}
 
 	c.JSON(200, gin.H{
-		"changes":  gin.H{"chores": chores},
-		"deletions": gin.H{"chores": deletedIDs},
+		"changes": gin.H{
+			"chores":         chores,
+			"choreHistories": histories,
+		},
+		"deletions": gin.H{
+			"chores":         deletedChoreIDs,
+			"choreHistories": deletedHistoryIDs,
+		},
 		"cursor":  cursor,
 		"hasMore": hasMore,
 	})

@@ -789,7 +789,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "res: detailed chore information\" //TODO: Add response model",
+                        "description": "res: detailed chore information",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -1284,7 +1284,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "message: Nudge sent status\" //TODO: Add response model",
+                        "description": "message: Nudge sent status",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -1352,7 +1352,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "res: {duration, status, timerUpdatedAt}\" //TODO: Add response model",
+                        "description": "res: {duration, status, timerUpdatedAt}",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -1525,7 +1525,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "res: updated chore, message: Chore rejected successfully\" //TODO: Add response model",
+                        "description": "res: updated chore, message: Chore rejected successfully",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -1672,7 +1672,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "res: {timerUpdatedAt, status, duration}\" //TODO: Add response model",
+                        "description": "res: {timerUpdatedAt, status, duration}",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -1846,7 +1846,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Empty success response\" //TODO: Add response model",
+                        "description": "Empty success response",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -2097,7 +2097,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "res: {timerUpdatedAt, status, duration}\" //TODO: Add response model",
+                        "description": "res: {timerUpdatedAt, status, duration}",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -2423,7 +2423,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "message: Successfully undid {action} action, res: updated chore object\" //TODO: Add response model",
+                        "description": "message: Successfully undid {action} action, res: updated chore object",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true

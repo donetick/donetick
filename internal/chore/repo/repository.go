@@ -854,10 +854,14 @@ func (r *ChoreRepository) ArchiveChore(c context.Context, choreID int, userID in
 	if err != nil {
 		return err
 	}
-	return r.db.WithContext(c).Model(&chModel.Chore{}).Where("id = ? AND created_by = ?", choreID, userID).Updates(map[string]interface{}{
+	result := r.db.WithContext(c).Model(&chModel.Chore{}).Where("id = ? AND created_by = ? AND circle_id = ?", choreID, userID, circleID).Updates(map[string]interface{}{
 		"is_active":    false,
 		"sync_version": nextVersion,
-	}).Error
+	})
+	if result.RowsAffected == 0 {
+		return errors.New("chore not found or not authorized")
+	}
+	return result.Error
 }
 
 func (r *ChoreRepository) UnarchiveChore(c context.Context, choreID int, userID int, circleID int) error {
@@ -865,10 +869,14 @@ func (r *ChoreRepository) UnarchiveChore(c context.Context, choreID int, userID 
 	if err != nil {
 		return err
 	}
-	return r.db.WithContext(c).Model(&chModel.Chore{}).Where("id = ? AND created_by = ?", choreID, userID).Updates(map[string]interface{}{
+	result := r.db.WithContext(c).Model(&chModel.Chore{}).Where("id = ? AND created_by = ? AND circle_id = ?", choreID, userID, circleID).Updates(map[string]interface{}{
 		"is_active":    true,
 		"sync_version": nextVersion,
-	}).Error
+	})
+	if result.RowsAffected == 0 {
+		return errors.New("chore not found or not authorized")
+	}
+	return result.Error
 }
 
 func (r *ChoreRepository) GetChoresHistoryByUserID(c context.Context, userID int, circleID int, days int, includeCircle bool) ([]*chModel.ChoreHistory, error) {
@@ -901,7 +909,7 @@ func (r *ChoreRepository) UpdateChoreStatus(c context.Context, choreID int, stat
 	if err != nil {
 		return err
 	}
-	return r.db.WithContext(c).Model(&chModel.Chore{}).Where("id = ?", choreID).Updates(map[string]interface{}{
+	return r.db.WithContext(c).Model(&chModel.Chore{}).Where("id = ? AND circle_id = ?", choreID, circleID).Updates(map[string]interface{}{
 		"status":       status,
 		"sync_version": nextVersion,
 	}).Error
@@ -1047,25 +1055,6 @@ func (r *ChoreRepository) GetTombstonesSince(c context.Context, circleID int, en
 		return nil, err
 	}
 	return tombstones, nil
-}
-
-// GetChoreHistoryChangesSince is deprecated. Use GetChoresHistoryByCircle with syncOptions instead.
-// Kept for backward compatibility but should not be used in new code.
-// WARNING: This method does NOT apply privacy filters, leaking private chore histories to all circle members.
-func (r *ChoreRepository) GetChoreHistoryChangesSince(c context.Context, circleID int, since int64, limit int) ([]*chModel.ChoreHistory, error) {
-	var histories []*chModel.ChoreHistory
-	if err := r.db.WithContext(c).
-		Table("chore_histories").
-		Select("chore_histories.*, time_sessions.duration").
-		Joins("JOIN chores ON chores.id = chore_histories.chore_id").
-		Joins("LEFT JOIN time_sessions ON time_sessions.chore_history_id = chore_histories.id").
-		Where("chores.circle_id = ? AND chore_histories.sync_version > ?", circleID, since).
-		Order("chore_histories.sync_version asc").
-		Limit(limit).
-		Find(&histories).Error; err != nil {
-		return nil, err
-	}
-	return histories, nil
 }
 
 // GetChoresHistoryByCircle retrieves chore histories for a circle, respecting privacy and optionally filtered by sync version.

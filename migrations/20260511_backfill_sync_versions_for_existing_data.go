@@ -96,53 +96,83 @@ func (m BackfillSyncVersionsForExistingData20260511) Up(ctx context.Context, db 
 
 			currentVersion := maxInt64(maxChoreVersion, maxHistoryVersion, maxTombstoneVersion, maxCursorVersion)
 
-			var choreIDs []idRow
+			// Batch update chores with sync_version = 0 using window functions
+			var choreCount int64
 			if err := tx.Raw(`
-				SELECT id
-				FROM chores
-				WHERE circle_id = ? AND sync_version = 0
-				ORDER BY created_at ASC, id ASC
-			`, circle.CircleID).Scan(&choreIDs).Error; err != nil {
+				SELECT COUNT(*) FROM chores WHERE circle_id = ? AND sync_version = 0
+			`, circle.CircleID).Scan(&choreCount).Error; err != nil {
 				return err
 			}
-			for _, chore := range choreIDs {
-				currentVersion++
-				if err := tx.Table("chores").Where("id = ?", chore.ID).Update("sync_version", currentVersion).Error; err != nil {
+
+			if choreCount > 0 {
+				if err := tx.Exec(`
+					WITH numbered_chores AS (
+						SELECT id, ROW_NUMBER() OVER (ORDER BY created_at ASC, id ASC) AS rn
+						FROM chores
+						WHERE circle_id = ? AND sync_version = 0
+					)
+					UPDATE chores
+					SET sync_version = ? + nc.rn
+					FROM numbered_chores nc
+					WHERE chores.id = nc.id
+				`, circle.CircleID, currentVersion).Error; err != nil {
 					return err
 				}
+				currentVersion += choreCount
 			}
 
-			var historyIDs []idRow
+			// Batch update chore histories with sync_version = 0 using window functions
+			var historyCount int64
 			if err := tx.Raw(`
-				SELECT chore_histories.id
+				SELECT COUNT(chore_histories.id)
 				FROM chore_histories
 				JOIN chores ON chores.id = chore_histories.chore_id
 				WHERE chores.circle_id = ? AND chore_histories.sync_version = 0
-				ORDER BY chore_histories.created_at ASC, chore_histories.id ASC
-			`, circle.CircleID).Scan(&historyIDs).Error; err != nil {
+			`, circle.CircleID).Scan(&historyCount).Error; err != nil {
 				return err
-			}
-			for _, history := range historyIDs {
-				currentVersion++
-				if err := tx.Table("chore_histories").Where("id = ?", history.ID).Update("sync_version", currentVersion).Error; err != nil {
-					return err
-				}
 			}
 
-			var tombstoneIDs []idRow
-			if err := tx.Raw(`
-				SELECT id
-				FROM tombstones
-				WHERE circle_id = ? AND sync_version = 0
-				ORDER BY id ASC
-			`, circle.CircleID).Scan(&tombstoneIDs).Error; err != nil {
-				return err
-			}
-			for _, tombstone := range tombstoneIDs {
-				currentVersion++
-				if err := tx.Table("tombstones").Where("id = ?", tombstone.ID).Update("sync_version", currentVersion).Error; err != nil {
+			if historyCount > 0 {
+				if err := tx.Exec(`
+					WITH numbered_histories AS (
+						SELECT chore_histories.id, ROW_NUMBER() OVER (ORDER BY chore_histories.created_at ASC, chore_histories.id ASC) AS rn
+						FROM chore_histories
+						JOIN chores ON chores.id = chore_histories.chore_id
+						WHERE chores.circle_id = ? AND chore_histories.sync_version = 0
+					)
+					UPDATE chore_histories
+					SET sync_version = ? + nh.rn
+					FROM numbered_histories nh
+					WHERE chore_histories.id = nh.id
+				`, circle.CircleID, currentVersion).Error; err != nil {
 					return err
 				}
+				currentVersion += historyCount
+			}
+
+			// Batch update tombstones with sync_version = 0 using window functions
+			var tombstoneCount int64
+			if err := tx.Raw(`
+				SELECT COUNT(*) FROM tombstones WHERE circle_id = ? AND sync_version = 0
+			`, circle.CircleID).Scan(&tombstoneCount).Error; err != nil {
+				return err
+			}
+
+			if tombstoneCount > 0 {
+				if err := tx.Exec(`
+					WITH numbered_tombstones AS (
+						SELECT id, ROW_NUMBER() OVER (ORDER BY id ASC) AS rn
+						FROM tombstones
+						WHERE circle_id = ? AND sync_version = 0
+					)
+					UPDATE tombstones
+					SET sync_version = ? + nt.rn
+					FROM numbered_tombstones nt
+					WHERE tombstones.id = nt.id
+				`, circle.CircleID, currentVersion).Error; err != nil {
+					return err
+				}
+				currentVersion += tombstoneCount
 			}
 
 			if err := tx.Exec(`
@@ -158,12 +188,12 @@ func (m BackfillSyncVersionsForExistingData20260511) Up(ctx context.Context, db 
 				return err
 			}
 
-			totalChoresUpdated += len(choreIDs)
-			totalHistoriesUpdated += len(historyIDs)
-			totalTombstonesUpdated += len(tombstoneIDs)
+			totalChoresUpdated += int(choreCount)
+			totalHistoriesUpdated += int(historyCount)
+			totalTombstonesUpdated += int(tombstoneCount)
 
-			if len(choreIDs)+len(historyIDs)+len(tombstoneIDs) > 0 {
-				log.Infof("Sync backfill circle=%d chores=%d histories=%d tombstones=%d maxVersion=%d", circle.CircleID, len(choreIDs), len(historyIDs), len(tombstoneIDs), currentVersion)
+			if choreCount+historyCount+tombstoneCount > 0 {
+				log.Infof("Sync backfill circle=%d chores=%d histories=%d tombstones=%d maxVersion=%d", circle.CircleID, choreCount, historyCount, tombstoneCount, currentVersion)
 			}
 
 			return nil

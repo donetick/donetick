@@ -1126,7 +1126,12 @@ func (h *Handler) StartChore(c *gin.Context) {
 			})
 			return
 		}
-		h.choreRepo.UpdateChoreStatus(c, chore.ID, chModel.ChoreStatusInProgress, chore.CircleID)
+		if err := h.choreRepo.UpdateChoreStatus(c, chore.ID, chModel.ChoreStatusInProgress, chore.CircleID); err != nil {
+			c.JSON(500, gin.H{
+				"error": "Error updating chore status",
+			})
+			return
+		}
 	case chModel.ChoreStatusPaused:
 		session, err = h.choreRepo.GetActiveTimeSession(c, chore.ID)
 		if err != nil {
@@ -1144,7 +1149,12 @@ func (h *Handler) StartChore(c *gin.Context) {
 				return
 			}
 		}
-		h.choreRepo.UpdateChoreStatus(c, chore.ID, chModel.ChoreStatusInProgress, chore.CircleID)
+		if err := h.choreRepo.UpdateChoreStatus(c, chore.ID, chModel.ChoreStatusInProgress, chore.CircleID); err != nil {
+			c.JSON(500, gin.H{
+				"error": "Error updating chore status",
+			})
+			return
+		}
 
 	default:
 		c.JSON(400, gin.H{
@@ -1269,7 +1279,12 @@ func (h *Handler) PauseChore(c *gin.Context) {
 		})
 		return
 	}
-	h.choreRepo.UpdateChoreStatus(c, chore.ID, chModel.ChoreStatusPaused, chore.CircleID)
+	if err := h.choreRepo.UpdateChoreStatus(c, chore.ID, chModel.ChoreStatusPaused, chore.CircleID); err != nil {
+		c.JSON(500, gin.H{
+			"error": "Error updating chore status",
+		})
+		return
+	}
 	if h.realTimeService != nil {
 		chore.Status = chModel.ChoreStatusPaused
 		broadcaster := h.realTimeService.GetEventBroadcaster()
@@ -1391,7 +1406,12 @@ func (h *Handler) ResetChoreTimer(c *gin.Context) {
 	}
 
 	// Update chore status to in progress
-	h.choreRepo.UpdateChoreStatus(c, chore.ID, chModel.ChoreStatusInProgress, chore.CircleID)
+	if err := h.choreRepo.UpdateChoreStatus(c, chore.ID, chModel.ChoreStatusInProgress, chore.CircleID); err != nil {
+		c.JSON(500, gin.H{
+			"error": "Error updating chore status",
+		})
+		return
+	}
 
 	// Broadcast the change via real-time service
 	if h.realTimeService != nil {
@@ -2990,7 +3010,12 @@ func (h *Handler) DeleteTimeSession(c *gin.Context) {
 		return
 	}
 	if chore.Status == chModel.ChoreStatusInProgress || chore.Status == chModel.ChoreStatusPaused {
-		h.choreRepo.UpdateChoreStatus(c, choreID, chModel.ChoreStatusNoStatus, chore.CircleID)
+		if err := h.choreRepo.UpdateChoreStatus(c, choreID, chModel.ChoreStatusNoStatus, chore.CircleID); err != nil {
+			c.JSON(500, gin.H{
+				"error": "Error updating chore status",
+			})
+			return
+		}
 		c.JSON(200, gin.H{
 			"message": "Time session deleted successfully",
 		})
@@ -3284,7 +3309,6 @@ func (h *Handler) RejectChore(c *gin.Context) {
 	if req.Note != nil {
 		note = req.Note
 	}
-
 
 	// Reject the chore
 	if err := h.choreRepo.RejectChore(c, id, currentUser.CircleID, note); err != nil {

@@ -9,6 +9,8 @@ import (
 	config "donetick.com/core/config"
 	chModel "donetick.com/core/internal/chore/model"
 	cModel "donetick.com/core/internal/circle/model"
+	storageModel "donetick.com/core/internal/storage/model"
+	stModel "donetick.com/core/internal/subtask/model"
 	syncModel "donetick.com/core/internal/sync/model"
 	"donetick.com/core/logging"
 	"gorm.io/gorm"
@@ -23,9 +25,9 @@ func NewChoreRepository(db *gorm.DB, cfg *config.Config) *ChoreRepository {
 	return &ChoreRepository{db: db, dbType: cfg.Database.Type}
 }
 
-func (r *ChoreRepository) nextSyncVersion(ctx context.Context, circleID int) (int64, error) {
+func (r *ChoreRepository) nextSyncVersionWithDB(ctx context.Context, db *gorm.DB, circleID int) (int64, error) {
 	var version int64
-	err := r.db.WithContext(ctx).Raw(`
+	err := db.WithContext(ctx).Raw(`
 		INSERT INTO sync_cursors (circle_id, entity_type, max_version)
 		VALUES (?, ?, 1)
 		ON CONFLICT (circle_id, entity_type) DO UPDATE SET max_version = sync_cursors.max_version + 1
@@ -35,16 +37,14 @@ func (r *ChoreRepository) nextSyncVersion(ctx context.Context, circleID int) (in
 	return version, err
 }
 
+func (r *ChoreRepository) nextSyncVersion(ctx context.Context, circleID int) (int64, error) {
+	return r.nextSyncVersionWithDB(ctx, r.db, circleID)
+}
+
 func (r *ChoreRepository) insertTombstone(ctx context.Context, tx *gorm.DB, circleID int, entityID int) error {
 	// Use tx (not r.db) so the version increment and tombstone insert are atomic.
-	var version int64
-	if err := tx.WithContext(ctx).Raw(`
-		INSERT INTO sync_cursors (circle_id, entity_type, max_version)
-		VALUES (?, ?, 1)
-		ON CONFLICT (circle_id, entity_type) DO UPDATE SET max_version = sync_cursors.max_version + 1
-		RETURNING max_version`,
-		circleID, syncModel.EntityTypeChore,
-	).Scan(&version).Error; err != nil {
+	version, err := r.nextSyncVersionWithDB(ctx, tx, circleID)
+	if err != nil {
 		return err
 	}
 	return tx.WithContext(ctx).Create(&syncModel.Tombstone{
@@ -68,7 +68,7 @@ func (r *ChoreRepository) UpdateChorePriority(c context.Context, userID int, cho
 	if err != nil {
 		return err
 	}
-	result := r.db.WithContext(c).Model(&chModel.Chore{}).Where("id = ?", choreID).Updates(map[string]interface{}{
+	result := r.db.WithContext(c).Model(&chModel.Chore{}).Where("id = ? AND circle_id = ?", choreID, circleID).Updates(map[string]interface{}{
 		"priority":     priority,
 		"sync_version": nextVersion,
 	})
@@ -107,12 +107,19 @@ func (r *ChoreRepository) nextSyncVersionRange(ctx context.Context, circleID int
 
 func (r *ChoreRepository) UpdateChores(c context.Context, chores []*chModel.Chore) error {
 	if len(chores) > 0 {
-		startVersion, err := r.nextSyncVersionRange(c, chores[0].CircleID, len(chores))
-		if err != nil {
-			return err
-		}
+		circleIndexes := make(map[int][]int)
 		for i, ch := range chores {
-			ch.SyncVersion = startVersion + int64(i)
+			circleIndexes[ch.CircleID] = append(circleIndexes[ch.CircleID], i)
+		}
+
+		for circleID, indexes := range circleIndexes {
+			startVersion, err := r.nextSyncVersionRange(c, circleID, len(indexes))
+			if err != nil {
+				return err
+			}
+			for offset, idx := range indexes {
+				chores[idx].SyncVersion = startVersion + int64(offset)
+			}
 		}
 	}
 	return r.db.WithContext(c).Save(&chores).Error
@@ -171,9 +178,35 @@ func (r *ChoreRepository) DeleteChore(c context.Context, id int) error {
 		return err
 	}
 	return r.db.WithContext(c).Transaction(func(tx *gorm.DB) error {
+		// Delete all chore assignees
+		if err := tx.Where("chore_id = ?", id).Delete(&chModel.ChoreAssignees{}).Error; err != nil {
+			return err
+		}
+		// Delete all time sessions
+		if err := tx.Where("chore_id = ?", id).Delete(&chModel.TimeSession{}).Error; err != nil {
+			return err
+		}
+		// Delete all chore histories
+		if err := tx.Where("chore_id = ?", id).Delete(&chModel.ChoreHistory{}).Error; err != nil {
+			return err
+		}
+		// Delete all subtasks
+		if err := tx.Where("chore_id = ?", id).Delete(&stModel.SubTask{}).Error; err != nil {
+			return err
+		}
+		// Delete all chore labels
+		if err := tx.Where("chore_id = ?", id).Delete(&chModel.ChoreLabels{}).Error; err != nil {
+			return err
+		}
+		// Delete all storage files associated with the chore
+		if err := tx.Where("entity_type = ? AND entity_id = ?", storageModel.EntityTypeChoreDescription, id).Delete(&storageModel.StorageFile{}).Error; err != nil {
+			return err
+		}
+		// Delete the chore itself
 		if err := tx.Delete(&chModel.Chore{}, id).Error; err != nil {
 			return err
 		}
+		// Record tombstone so clients can remove it during sync
 		return r.insertTombstone(c, tx, chore.CircleID, id)
 	})
 }
@@ -549,14 +582,50 @@ func (r *ChoreRepository) GetChoreHistoryByID(c context.Context, choreID int, hi
 }
 
 func (r *ChoreRepository) CreateChoreHistory(c context.Context, history *chModel.ChoreHistory) error {
+	// Get the circle_id from the associated chore
+	var chore chModel.Chore
+	if err := r.db.WithContext(c).Select("circle_id").First(&chore, history.ChoreID).Error; err != nil {
+		return fmt.Errorf("failed to get chore for history creation: %w", err)
+	}
+
+	// Allocate sync version for this history
+	nextVersion, err := r.nextSyncVersion(c, chore.CircleID)
+	if err != nil {
+		return fmt.Errorf("failed to allocate sync version: %w", err)
+	}
+
+	history.SyncVersion = nextVersion
 	return r.db.WithContext(c).Create(history).Error
 }
 
 func (r *ChoreRepository) UpdateChoreHistory(c context.Context, history *chModel.ChoreHistory) error {
+	// Get the circle_id from the associated chore
+	var chore chModel.Chore
+	if err := r.db.WithContext(c).Select("circle_id").First(&chore, history.ChoreID).Error; err != nil {
+		return fmt.Errorf("failed to get chore for history update: %w", err)
+	}
+
+	// Every history update must get a fresh sync version so it is visible to sync clients.
+	nextVersion, err := r.nextSyncVersion(c, chore.CircleID)
+	if err != nil {
+		return fmt.Errorf("failed to allocate sync version: %w", err)
+	}
+	history.SyncVersion = nextVersion
+
 	return r.db.WithContext(c).Save(history).Error
 }
 
 func (r *ChoreRepository) UpdateLatestChoreHistory(c context.Context, choreID int, updates map[string]interface{}) error {
+	var chore chModel.Chore
+	if err := r.db.WithContext(c).Select("circle_id").First(&chore, choreID).Error; err != nil {
+		return fmt.Errorf("failed to get chore for latest history update: %w", err)
+	}
+	nextVersion, err := r.nextSyncVersion(c, chore.CircleID)
+	if err != nil {
+		return fmt.Errorf("failed to allocate sync version: %w", err)
+	}
+	updates["sync_version"] = nextVersion
+
 	// get the latest chore history for the given chore ID
 	var latestHistory chModel.ChoreHistory
 	if err := r.db.WithContext(c).Where("chore_id = ?", choreID).Order("created_at desc").First(&latestHistory).Error; err != nil {
@@ -573,12 +642,14 @@ func (r *ChoreRepository) UpdateLatestChoreHistory(c context.Context, choreID in
 }
 
 func (r *ChoreRepository) DeleteChoreHistory(c context.Context, historyID int, circleID int) error {
-	nextVersion, err := r.nextSyncVersion(c, circleID)
-	if err != nil {
-		return err
-	}
-	// create transaction and delete all the chore timer assiociated with the chore history then delete the chore history
+	// create transaction and delete all the chore timer associated with the chore history then delete the chore history
 	return r.db.WithContext(c).Transaction(func(tx *gorm.DB) error {
+		// Allocate next sync version within the transaction for atomicity
+		nextVersion, err := r.nextSyncVersionWithDB(c, tx, circleID)
+		if err != nil {
+			return err
+		}
+
 		if err := tx.WithContext(c).Where("chore_history_id = ?", historyID).Delete(&chModel.TimeSession{}).Error; err != nil {
 			return fmt.Errorf("failed to delete chore time sessions: %w", err)
 		}

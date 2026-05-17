@@ -115,7 +115,7 @@ func (h *Handler) GetChores(c *gin.Context) {
 		includeArchived = true
 	}
 
-	chores, err := h.choreRepo.GetChores(c, u.CircleID, u.ID, includeArchived)
+	chores, err := h.choreRepo.GetChores(c, u.CircleID, u.ID, includeArchived, nil)
 	if err != nil {
 		logger.Error("Failed to retrieve chores", "error", err, "userID", u.ID, "circleID", u.CircleID, "includeArchived", includeArchived)
 		c.JSON(500, gin.H{

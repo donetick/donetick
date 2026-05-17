@@ -21,8 +21,24 @@ type ChoreRepository struct {
 	dbType string
 }
 
+// SyncOptions configures sync-aware queries for chores and histories.
+// When SyncVersion is nil, the query is NOT filtered by sync version (normal operation).
+// When SyncVersion is set, the query returns only records with sync_version > *SyncVersion, in ascending order.
+type SyncOptions struct {
+	SyncVersion *int64 // nil = no sync filtering; pointer = filter by version
+	Limit       int    // Number of records to fetch (used with sync filtering)
+}
+
 func NewChoreRepository(db *gorm.DB, cfg *config.Config) *ChoreRepository {
 	return &ChoreRepository{db: db, dbType: cfg.Database.Type}
+}
+
+// privacyPredicate returns the WHERE clause that enforces chore visibility rules.
+// A chore is visible to a user if:
+//   - It is not private, OR
+//   - It is private AND (the user created it OR the user is assigned to it)
+func privacyPredicate(userID int) string {
+	return fmt.Sprintf(`((chores.is_private = false) OR (chores.is_private = true AND (chores.created_by = %d OR chore_assignees.user_id = %d)))`, userID, userID)
 }
 
 func (r *ChoreRepository) nextSyncVersionWithDB(ctx context.Context, db *gorm.DB, circleID int) (int64, error) {
@@ -152,13 +168,34 @@ func (r *ChoreRepository) GetChore(c context.Context, choreID int, userID int, c
 	return &chore, nil
 }
 
-func (r *ChoreRepository) GetChores(c context.Context, circleID int, userID int, includeArchived bool) ([]*chModel.Chore, error) {
+// GetChores retrieves chores for a user in a circle, respecting privacy and optionally filtered by sync version.
+// If syncOptions is nil or syncOptions.SyncVersion is nil, returns all visible chores ordered by next_due_date.
+// If syncOptions.SyncVersion is set, returns only chores with sync_version > *SyncVersion, ordered by sync_version.
+func (r *ChoreRepository) GetChores(c context.Context, circleID int, userID int, includeArchived bool, syncOptions *SyncOptions) ([]*chModel.Chore, error) {
 	var chores []*chModel.Chore
-	query := r.db.WithContext(c).Preload("Assignees").Preload("LabelsV2").Joins("left join chore_assignees on chores.id = chore_assignees.chore_id").Where("chores.circle_id = ? AND ((chores.is_private = false) OR (chores.is_private = true AND (chores.created_by = ? OR chore_assignees.user_id = ?)))", circleID, userID, userID).Group("chores.id").Order("next_due_date asc")
+
+	query := r.db.WithContext(c).
+		Preload("Assignees").
+		Preload("LabelsV2").
+		Joins("left join chore_assignees on chores.id = chore_assignees.chore_id").
+		Where("chores.circle_id = ? AND "+privacyPredicate(userID), circleID).
+		Group("chores.id")
+
 	if !includeArchived {
 		query = query.Where("chores.is_active = ?", true)
 	}
-	if err := query.Find(&chores, "circle_id = ?", circleID).Error; err != nil {
+
+	// Sync-specific filtering if provided.
+	if syncOptions != nil && syncOptions.SyncVersion != nil {
+		query = query.Where("chores.sync_version > ?", *syncOptions.SyncVersion).
+			Order("chores.sync_version asc").
+			Limit(syncOptions.Limit + 1)
+	} else {
+		// Normal ordering when not syncing.
+		query = query.Order("next_due_date asc")
+	}
+
+	if err := query.Find(&chores).Error; err != nil {
 		return nil, err
 	}
 	return chores, nil
@@ -166,7 +203,15 @@ func (r *ChoreRepository) GetChores(c context.Context, circleID int, userID int,
 
 func (r *ChoreRepository) GetArchivedChores(c context.Context, circleID int, userID int) ([]*chModel.Chore, error) {
 	var chores []*chModel.Chore
-	if err := r.db.WithContext(c).Preload("Assignees").Preload("LabelsV2").Joins("left join chore_assignees on chores.id = chore_assignees.chore_id").Where("chores.circle_id = ? AND ((chores.is_private = false) OR (chores.is_private = true AND (chores.created_by = ? OR chore_assignees.user_id = ?)))", circleID, userID, userID).Group("chores.id").Order("next_due_date asc").Find(&chores, "circle_id = ? AND is_active = ?", circleID, false).Error; err != nil {
+	if err := r.db.WithContext(c).
+		Preload("Assignees").
+		Preload("LabelsV2").
+		Joins("left join chore_assignees on chores.id = chore_assignees.chore_id").
+		Where("chores.circle_id = ? AND "+privacyPredicate(userID), circleID).
+		Where("is_active = ?", false).
+		Group("chores.id").
+		Order("next_due_date asc").
+		Find(&chores).Error; err != nil {
 		return nil, err
 	}
 	return chores, nil
@@ -989,21 +1034,6 @@ func (r *ChoreRepository) DeleteTimeSession(c context.Context, sessionID int, ch
 
 }
 
-// GetChoreChangesSince returns all chores (including soft-deleted) with sync_version > since, scoped to a circle.
-func (r *ChoreRepository) GetChoreChangesSince(c context.Context, circleID int, since int64, limit int) ([]*chModel.Chore, error) {
-	var chores []*chModel.Chore
-	if err := r.db.WithContext(c).
-		Preload("Assignees").
-		Preload("LabelsV2").
-		Where("circle_id = ? AND sync_version > ?", circleID, since).
-		Order("sync_version asc").
-		Limit(limit).
-		Find(&chores).Error; err != nil {
-		return nil, err
-	}
-	return chores, nil
-}
-
 // GetTombstonesSince returns tombstones for a given circle and entity type with sync_version > since.
 func (r *ChoreRepository) GetTombstonesSince(c context.Context, circleID int, entityType syncModel.EntityType, since int64, limit int) ([]*syncModel.Tombstone, error) {
 	var tombstones []*syncModel.Tombstone
@@ -1019,7 +1049,9 @@ func (r *ChoreRepository) GetTombstonesSince(c context.Context, circleID int, en
 	return tombstones, nil
 }
 
-// GetChoreHistoryChangesSince returns chore history records for a circle with sync_version > since.
+// GetChoreHistoryChangesSince is deprecated. Use GetChoresHistoryByCircle with syncOptions instead.
+// Kept for backward compatibility but should not be used in new code.
+// WARNING: This method does NOT apply privacy filters, leaking private chore histories to all circle members.
 func (r *ChoreRepository) GetChoreHistoryChangesSince(c context.Context, circleID int, since int64, limit int) ([]*chModel.ChoreHistory, error) {
 	var histories []*chModel.ChoreHistory
 	if err := r.db.WithContext(c).
@@ -1031,6 +1063,38 @@ func (r *ChoreRepository) GetChoreHistoryChangesSince(c context.Context, circleI
 		Order("chore_histories.sync_version asc").
 		Limit(limit).
 		Find(&histories).Error; err != nil {
+		return nil, err
+	}
+	return histories, nil
+}
+
+// GetChoresHistoryByCircle retrieves chore histories for a circle, respecting privacy and optionally filtered by sync version.
+// A history is visible if the user can see the associated chore (privacy rules apply).
+// If syncOptions is nil or syncOptions.SyncVersion is nil, returns all visible histories ordered by performed_at DESC.
+// If syncOptions.SyncVersion is set, returns only histories with sync_version > *SyncVersion, ordered by sync_version ASC.
+func (r *ChoreRepository) GetChoresHistoryByCircle(c context.Context, circleID int, userID int, syncOptions *SyncOptions) ([]*chModel.ChoreHistory, error) {
+	var histories []*chModel.ChoreHistory
+
+	query := r.db.WithContext(c).
+		Table("chore_histories").
+		Select("chore_histories.*, time_sessions.duration").
+		Joins("JOIN chores ON chores.id = chore_histories.chore_id").
+		Joins("LEFT JOIN time_sessions ON time_sessions.chore_history_id = chore_histories.id").
+		Joins("LEFT JOIN chore_assignees ON chores.id = chore_assignees.chore_id AND chore_assignees.user_id = ?", userID).
+		Where("chores.circle_id = ?", circleID).
+		Where(privacyPredicate(userID))
+
+	// Sync-specific filtering if provided.
+	if syncOptions != nil && syncOptions.SyncVersion != nil {
+		query = query.Where("chore_histories.sync_version > ?", *syncOptions.SyncVersion).
+			Order("chore_histories.sync_version asc").
+			Limit(syncOptions.Limit + 1)
+	} else {
+		// Normal ordering when not syncing.
+		query = query.Order("chore_histories.performed_at desc, chore_histories.updated_at desc")
+	}
+
+	if err := query.Find(&histories).Error; err != nil {
 		return nil, err
 	}
 	return histories, nil

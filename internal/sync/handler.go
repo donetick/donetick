@@ -24,6 +24,7 @@ func NewHandler(cr *chRepo.ChoreRepository) *SyncHandler {
 func (h *SyncHandler) getChanges(c *gin.Context) {
 	currentUser := auth.MustCurrentUser(c)
 	circleID := currentUser.CircleID
+	userID := currentUser.ID
 
 	sinceStr := c.DefaultQuery("since", "0")
 	since, err := strconv.ParseInt(sinceStr, 10, 64)
@@ -33,7 +34,12 @@ func (h *SyncHandler) getChanges(c *gin.Context) {
 	}
 
 	// Fetch one extra from each stream to determine if there are more changes.
-	chores, err := h.choreRepo.GetChoreChangesSince(c, circleID, since, defaultSyncLimit+1)
+	// Use sync-aware GetChores with privacy filtering.
+	syncOpts := &chRepo.SyncOptions{
+		SyncVersion: &since,
+		Limit:       defaultSyncLimit,
+	}
+	chores, err := h.choreRepo.GetChores(c, circleID, userID, true, syncOpts)
 	if err != nil {
 		c.JSON(500, gin.H{"error": "Failed to fetch changes"})
 		return
@@ -58,7 +64,8 @@ func (h *SyncHandler) getChanges(c *gin.Context) {
 		deletedChoreIDs = append(deletedChoreIDs, t.EntityID)
 	}
 
-	histories, err := h.choreRepo.GetChoreHistoryChangesSince(c, circleID, since, defaultSyncLimit+1)
+	// Use sync-aware GetChoresHistoryByCircle with privacy filtering.
+	histories, err := h.choreRepo.GetChoresHistoryByCircle(c, circleID, userID, syncOpts)
 	if err != nil {
 		c.JSON(500, gin.H{"error": "Failed to fetch history changes"})
 		return

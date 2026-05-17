@@ -36,8 +36,15 @@ func (r *ChoreRepository) nextSyncVersion(ctx context.Context, circleID int) (in
 }
 
 func (r *ChoreRepository) insertTombstone(ctx context.Context, tx *gorm.DB, circleID int, entityID int) error {
-	version, err := r.nextSyncVersion(ctx, circleID)
-	if err != nil {
+	// Use tx (not r.db) so the version increment and tombstone insert are atomic.
+	var version int64
+	if err := tx.WithContext(ctx).Raw(`
+		INSERT INTO sync_cursors (circle_id, entity_type, max_version)
+		VALUES (?, ?, 1)
+		ON CONFLICT (circle_id, entity_type) DO UPDATE SET max_version = sync_cursors.max_version + 1
+		RETURNING max_version`,
+		circleID, syncModel.EntityTypeChore,
+	).Scan(&version).Error; err != nil {
 		return err
 	}
 	return tx.WithContext(ctx).Create(&syncModel.Tombstone{
@@ -84,14 +91,28 @@ func (r *ChoreRepository) UpdateChoreFields(ctx context.Context, choreID int, fi
 	return r.db.WithContext(ctx).Model(&chModel.Chore{}).Where("id = ?", choreID).Updates(fields).Error
 }
 
+// nextSyncVersionRange atomically reserves a contiguous block of `count` sync
+// versions for a circle and returns the first (lowest) version in the range.
+func (r *ChoreRepository) nextSyncVersionRange(ctx context.Context, circleID int, count int) (int64, error) {
+	var endVersion int64
+	err := r.db.WithContext(ctx).Raw(`
+		INSERT INTO sync_cursors (circle_id, entity_type, max_version)
+		VALUES (?, ?, ?)
+		ON CONFLICT (circle_id, entity_type) DO UPDATE SET max_version = sync_cursors.max_version + ?
+		RETURNING max_version`,
+		circleID, syncModel.EntityTypeChore, count, count,
+	).Scan(&endVersion).Error
+	return endVersion - int64(count) + 1, err
+}
+
 func (r *ChoreRepository) UpdateChores(c context.Context, chores []*chModel.Chore) error {
 	if len(chores) > 0 {
-		nextVersion, err := r.nextSyncVersion(c, chores[0].CircleID)
+		startVersion, err := r.nextSyncVersionRange(c, chores[0].CircleID, len(chores))
 		if err != nil {
 			return err
 		}
 		for i, ch := range chores {
-			ch.SyncVersion = nextVersion + int64(i)
+			ch.SyncVersion = startVersion + int64(i)
 		}
 	}
 	return r.db.WithContext(c).Save(&chores).Error

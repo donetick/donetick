@@ -84,41 +84,71 @@ func (h *SyncHandler) getChanges(c *gin.Context) {
 
 	hasMore := hasMoreChores || hasMoreHistories || hasMoreChoreTombstones || hasMoreHistoryTombstones
 
+	// Compute the next cursor:
+	// - If any stream was truncated (hasMore* == true), the cursor is the minimum
+	//   last sync_version among truncated streams — we must not skip their unsent items.
+	// - If all streams are fully drained, the cursor advances to the maximum last
+	//   sync_version across all streams, so the next request truly starts fresh.
 	cursor := since
-	hasAny := false
-	minLast := int64(0)
-
-	if len(chores) > 0 {
-		last := chores[len(chores)-1].SyncVersion
-		if !hasAny || last < minLast {
-			minLast = last
+	if hasMore {
+		first := true
+		minTruncated := int64(0)
+		if hasMoreChores && len(chores) > 0 {
+			v := chores[len(chores)-1].SyncVersion
+			if first || v < minTruncated {
+				minTruncated = v
+				first = false
+			}
 		}
-		hasAny = true
-	}
-	if len(histories) > 0 {
-		last := histories[len(histories)-1].SyncVersion
-		if !hasAny || last < minLast {
-			minLast = last
+		if hasMoreHistories && len(histories) > 0 {
+			v := histories[len(histories)-1].SyncVersion
+			if first || v < minTruncated {
+				minTruncated = v
+				first = false
+			}
 		}
-		hasAny = true
-	}
-	if len(choreTombstones) > 0 {
-		last := choreTombstones[len(choreTombstones)-1].SyncVersion
-		if !hasAny || last < minLast {
-			minLast = last
+		if hasMoreChoreTombstones && len(choreTombstones) > 0 {
+			v := choreTombstones[len(choreTombstones)-1].SyncVersion
+			if first || v < minTruncated {
+				minTruncated = v
+				first = false
+			}
 		}
-		hasAny = true
-	}
-	if len(historyTombstones) > 0 {
-		last := historyTombstones[len(historyTombstones)-1].SyncVersion
-		if !hasAny || last < minLast {
-			minLast = last
+		if hasMoreHistoryTombstones && len(historyTombstones) > 0 {
+			v := historyTombstones[len(historyTombstones)-1].SyncVersion
+			if first || v < minTruncated {
+				minTruncated = v
+				first = false
+			}
 		}
-		hasAny = true
-	}
-
-	if hasAny {
-		cursor = minLast
+		if !first {
+			cursor = minTruncated
+		}
+	} else {
+		// All streams fully drained — advance to the max version seen.
+		hasAny := false
+		maxAll := int64(0)
+		updateMax := func(v int64) {
+			if v > 0 && (!hasAny || v > maxAll) {
+				maxAll = v
+				hasAny = true
+			}
+		}
+		if len(chores) > 0 {
+			updateMax(chores[len(chores)-1].SyncVersion)
+		}
+		if len(histories) > 0 {
+			updateMax(histories[len(histories)-1].SyncVersion)
+		}
+		if len(choreTombstones) > 0 {
+			updateMax(choreTombstones[len(choreTombstones)-1].SyncVersion)
+		}
+		if len(historyTombstones) > 0 {
+			updateMax(historyTombstones[len(historyTombstones)-1].SyncVersion)
+		}
+		if hasAny {
+			cursor = maxAll
+		}
 	}
 
 	c.JSON(200, gin.H{

@@ -10,7 +10,8 @@ type SyncCursor struct {
 type EntityType int8
 
 const (
-	EntityTypeChore EntityType = 1
+	EntityTypeChore        EntityType = 1
+	EntityTypeChoreHistory EntityType = 2
 )
 
 type Tombstone struct {

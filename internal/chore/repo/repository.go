@@ -261,7 +261,7 @@ func (r *ChoreRepository) SoftDelete(c context.Context, id int, userID int, circ
 	if err != nil {
 		return err
 	}
-	return r.db.WithContext(c).Model(&chModel.Chore{}).Where("id = ? AND created_by = ?", id, userID).Updates(map[string]interface{}{
+	return r.db.WithContext(c).Model(&chModel.Chore{}).Where("id = ? AND created_by = ? AND circle_id = ?", id, userID, circleID).Updates(map[string]interface{}{
 		"is_active":    false,
 		"sync_version": nextVersion,
 	}).Error

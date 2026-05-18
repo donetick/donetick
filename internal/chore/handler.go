@@ -238,17 +238,17 @@ type ChoreReq struct {
 	Name                 string                        `json:"name" binding:"required"`
 	FrequencyType        chModel.FrequencyType         `json:"frequencyType" binding:"required,oneof=once daily weekly monthly yearly adaptive interval days_of_the_week day_of_the_month trigger no_repeat"`
 	Frequency            *int                          `json:"frequency" binding:"omitempty,gt=0"`
-	FrequencyMetadata    *chModel.FrequencyMetadata    `json:"frequencyMetadata"`
-	NextDueDate          *time.Time                    `json:"nextDueDate" binding:"required_with=IsRolling"` // Next due date in RFC3339 format
+	FrequencyMetadata    *chModel.FrequencyMetadata    `json:"frequencyMetadata,omitempty"`
+	NextDueDate          *time.Time                    `json:"nextDueDate" binding:"omitempty,required_with=IsRolling"` // Next due date in RFC3339 format
 	IsRolling            bool                          `json:"isRolling"`
 	AssignedTo           *int                          `json:"assignedTo" binding:"omitempty,gt=0"`
 	Assignees            []chModel.ChoreAssignees      `json:"assignees" binding:"dive"`
 	AssignStrategy       chModel.AssignmentStrategy    `json:"assignStrategy" binding:"required,oneof=no_assignee least_assigned least_completed random keep_last_assigned random_except_last_assigned round_robin"`
 	IsActive             bool                          `json:"isActive"`
 	Notification         bool                          `json:"notification"`
-	NotificationMetadata *chModel.NotificationMetadata `json:"notificationMetadata"`
-	LabelsV2             *[]lModel.LabelReq            `json:"labelsV2" binding:"omitempty,dive,unique=LabelID"`
-	UpdatedAt            *time.Time                    `json:"updatedAt"`
+	NotificationMetadata *chModel.NotificationMetadata `json:"notificationMetadata,omitempty"`
+	LabelsV2             *[]lModel.LabelReq            `json:"labelsV2" binding:"omitempty,dive"`
+	UpdatedAt            *time.Time                    `json:"updatedAt,omitempty"`
 	Priority             *int                          `json:"priority" binding:"omitempty,gte=0,lte=5"`
 	CompletionWindow     *int                          `json:"completionWindow" binding:"omitempty,min=0"`
 	Points               *int                          `json:"points" binding:"omitempty,gte=0"`
@@ -257,7 +257,7 @@ type ChoreReq struct {
 	RequireApproval      bool                          `json:"requireApproval" binding:"omitempty"`
 	IsPrivate            *bool                         `json:"isPrivate" binding:"required"`
 	ProjectID            *int                          `json:"projectId" binding:"omitempty,gt=0"`
-	ThingTrigger         *tModel.ThingTrigger          `json:"thingTrigger"`
+	ThingTrigger         *tModel.ThingTrigger          `json:"thingTrigger,omitempty"`
 }
 
 // endregion

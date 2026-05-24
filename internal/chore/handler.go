@@ -332,6 +332,10 @@ func (h *Handler) CreateChore(c *gin.Context) {
 	}
 
 	warnings := setCreateChoreDefaults(&choreReq)
+	if !choreReq.Notification && choreReq.NotificationMetadata != nil {
+		warnings = append(warnings, "notificationMetadata provided while notification is false; ignoring metadata")
+		choreReq.NotificationMetadata = nil
+	}
 
 	createdChore := &chModel.Chore{
 

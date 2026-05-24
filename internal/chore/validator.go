@@ -105,7 +105,7 @@ func validateNotifications(sl validator.StructLevel, req ChoreReq) {
 			sl.ReportError(req.NotificationMetadata, "NotificationMetadata", "notificationMetadata", "required_when_notifications_enabled", "")
 		}
 	} else if hasNotificationMetadata {
-		// If notifications are disabled (or nil), ensure the client isn't sending unused metadata
+		// TODO(v0.1.78+): Re-enable strict validation once all clients stop sending notificationMetadata when notification is false.
 		// sl.ReportError(req.NotificationMetadata, "NotificationMetadata", "notificationMetadata", "forbidden_when_notifications_disabled", "")
 	}
 }

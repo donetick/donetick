@@ -399,7 +399,7 @@ func (r *ChoreRepository) RejectChore(c context.Context, choreID int, circleID i
 	}
 	return r.db.WithContext(c).Transaction(func(tx *gorm.DB) error {
 		// Reset chore status to normal
-		if err := tx.Model(&chModel.Chore{}).Where("id = ?", choreID).Updates(map[string]interface{}{
+		if err := tx.Model(&chModel.Chore{}).Where("id = ? AND circle_id = ?", choreID, circleID).Updates(map[string]interface{}{
 			"status":       chModel.ChoreStatusNoStatus,
 			"sync_version": nextVersion,
 		}).Error; err != nil {
@@ -514,7 +514,7 @@ func (r *ChoreRepository) CompleteChore(c context.Context, chore *chModel.Chore,
 	return err
 }
 
-func (r *ChoreRepository) SkipChore(c context.Context, chore *chModel.Chore, userID int, dueDate *time.Time, nextAssignedTo *int) error {
+func (r *ChoreRepository) SkipChore(c context.Context, chore *chModel.Chore, userID int, dueDate *time.Time, nextAssignedTo *int, skippedAt *time.Time) error {
 	nextVersion, err := r.nextSyncVersion(c, chore.CircleID)
 	if err != nil {
 		return err
@@ -539,12 +539,15 @@ func (r *ChoreRepository) SkipChore(c context.Context, chore *chModel.Chore, use
 			First(&existingHistory).Error
 
 		var ch *chModel.ChoreHistory
-		skippedAt := time.Now().UTC()
+		effectiveSkippedAt := time.Now().UTC()
+		if skippedAt != nil {
+			effectiveSkippedAt = skippedAt.UTC()
+		}
 
 		switch {
 		case err == nil && existingHistory.PerformedAt != nil:
 			// Update existing history record
-			existingHistory.PerformedAt = &skippedAt
+			existingHistory.PerformedAt = &effectiveSkippedAt
 			existingHistory.Note = nil
 			existingHistory.Status = chModel.ChoreHistoryStatusSkipped
 			ch = &existingHistory
@@ -552,7 +555,7 @@ func (r *ChoreRepository) SkipChore(c context.Context, chore *chModel.Chore, use
 			// Create a new chore history record for the skipped chore
 			ch = &chModel.ChoreHistory{
 				ChoreID:     chore.ID,
-				PerformedAt: &skippedAt,
+				PerformedAt: &effectiveSkippedAt,
 				CompletedBy: userID,
 				AssignedTo:  chore.AssignedTo,
 				DueDate:     chore.NextDueDate,
@@ -812,6 +815,7 @@ func (r *ChoreRepository) GetChoreDetailByID(c context.Context, choreID int, cir
 		chores.completion_window,
 		chores.status,
 		chores.is_active,
+		chores.sync_version,
 		CAST(MAX(time_sessions.duration) AS INTEGER) as duration,
 		time_sessions.start_time as start_time,
 		time_sessions.updated_at as timer_updated_at,
@@ -904,15 +908,16 @@ func (r *ChoreRepository) GetChoresHistoryByUserID(c context.Context, userID int
 	return chores, nil
 }
 
-func (r *ChoreRepository) UpdateChoreStatus(c context.Context, choreID int, status chModel.Status, circleID int) error {
+func (r *ChoreRepository) UpdateChoreStatus(c context.Context, choreID int, status chModel.Status, circleID int) (int64, error) {
 	nextVersion, err := r.nextSyncVersion(c, circleID)
 	if err != nil {
-		return err
+		return 0, err
 	}
-	return r.db.WithContext(c).Model(&chModel.Chore{}).Where("id = ? AND circle_id = ?", choreID, circleID).Updates(map[string]interface{}{
+	result := r.db.WithContext(c).Model(&chModel.Chore{}).Where("id = ? AND circle_id = ?", choreID, circleID).Updates(map[string]interface{}{
 		"status":       status,
 		"sync_version": nextVersion,
-	}).Error
+	})
+	return nextVersion, result.Error
 }
 
 func (r *ChoreRepository) GetActiveTimeSession(c context.Context, choreID int) (*chModel.TimeSession, error) {

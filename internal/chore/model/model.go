@@ -188,6 +188,7 @@ type ChoreDetail struct {
 	TimerUpdatedAt      *time.Time         `json:"timerUpdatedAt" gorm:"column:timer_updated_at"` // When the chore was last started
 	ProjectID           *int               `json:"projectId,omitempty" gorm:"column:project_id"`
 	IsActive            bool               `json:"isActive" gorm:"column:is_active"`
+	SyncVersion         int64              `json:"syncVersion" gorm:"column:sync_version"`
 }
 
 type ChoreLabels struct {

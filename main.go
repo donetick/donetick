@@ -44,6 +44,7 @@ import (
 	"donetick.com/core/internal/storage"
 	storageRepo "donetick.com/core/internal/storage/repo"
 	spRepo "donetick.com/core/internal/subtask/repo"
+	dsync "donetick.com/core/internal/sync"
 	"donetick.com/core/internal/thing"
 	tRepo "donetick.com/core/internal/thing/repo"
 	"donetick.com/core/internal/user"
@@ -158,6 +159,9 @@ func main() {
 		fx.Provide(payment.NewWebhook),
 		fx.Provide(chore.NewAPI),
 
+		// Sync:
+		fx.Provide(dsync.NewHandler),
+
 		// Frontend
 		fx.Provide(frontend.NewHandler),
 
@@ -203,6 +207,7 @@ func main() {
 			resource.Routes,
 			// backup.Routes,
 
+			dsync.Routes,
 			realtime.Routes, // (router, rts, authMiddleware, pollingHandler)
 
 			func(r *gin.Engine) {},

@@ -11,9 +11,15 @@ import (
 func ChoreReqStructLevelValidation(sl validator.StructLevel) {
 	req := sl.Current().Interface().(ChoreReq)
 
-	validateFrequencyLogic(sl, req)     // 1. Validate Frequency Logic
-	validateAssignments(sl, req)        // 2. Validate Assignments
-	validateNotifications(sl, req)      // 3. Validate Notifications
+	if req.FrequencyMetadata != nil || req.Frequency != nil {
+		validateFrequencyLogic(sl, req) // 1. Validate Frequency Logic
+	}
+	if req.AssignStrategy != "" || req.AssignedTo != nil || len(req.Assignees) > 0 {
+		validateAssignments(sl, req) // 2. Validate Assignments
+	}
+	if req.Notification || req.NotificationMetadata != nil {
+		validateNotifications(sl, req) // 3. Validate Notifications
+	}
 	validateConcurrencyControl(sl, req) // 4. Validate Optimistic Concurrency Control
 }
 
@@ -99,8 +105,8 @@ func validateNotifications(sl validator.StructLevel, req ChoreReq) {
 			sl.ReportError(req.NotificationMetadata, "NotificationMetadata", "notificationMetadata", "required_when_notifications_enabled", "")
 		}
 	} else if hasNotificationMetadata {
-		// If notifications are disabled (or nil), ensure the client isn't sending unused metadata
-		sl.ReportError(req.NotificationMetadata, "NotificationMetadata", "notificationMetadata", "forbidden_when_notifications_disabled", "")
+		// TODO(v0.1.78+): Re-enable strict validation once all clients stop sending notificationMetadata when notification is false.
+		// sl.ReportError(req.NotificationMetadata, "NotificationMetadata", "notificationMetadata", "forbidden_when_notifications_disabled", "")
 	}
 }
 

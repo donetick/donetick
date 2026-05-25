@@ -244,7 +244,7 @@ type ChoreReq struct {
 	AssignedTo           *int                          `json:"assignedTo" binding:"omitempty,gt=0"`
 	Assignees            []chModel.ChoreAssignees      `json:"assignees" binding:"dive"`
 	AssignStrategy       chModel.AssignmentStrategy    `json:"assignStrategy" binding:"required,oneof=no_assignee least_assigned least_completed random keep_last_assigned random_except_last_assigned round_robin"`
-	IsActive             bool                          `json:"isActive"`
+	IsActive             *bool                         `json:"isActive" binding:"omitempty"`
 	Notification         bool                          `json:"notification"`
 	NotificationMetadata *chModel.NotificationMetadata `json:"notificationMetadata"`
 	LabelsV2             *[]lModel.LabelReq            `json:"labelsV2" binding:"omitempty,dive,unique=LabelID"`
@@ -255,7 +255,7 @@ type ChoreReq struct {
 	Description          *string                       `json:"description" binding:"omitempty"`
 	SubTasks             *[]stModel.SubTask            `json:"subTasks" binding:"omitempty,dive"`
 	RequireApproval      bool                          `json:"requireApproval" binding:"omitempty"`
-	IsPrivate            *bool                         `json:"isPrivate" binding:"required"`
+	IsPrivate            *bool                         `json:"isPrivate" binding:"omitempty"`
 	ProjectID            *int                          `json:"projectId" binding:"omitempty,gt=0"`
 	ThingTrigger         *tModel.ThingTrigger          `json:"thingTrigger"`
 }
@@ -331,6 +331,12 @@ func (h *Handler) CreateChore(c *gin.Context) {
 		dueDate = &utcDate
 	}
 
+	warnings := setCreateChoreDefaults(&choreReq)
+	if !choreReq.Notification && choreReq.NotificationMetadata != nil {
+		warnings = append(warnings, "notificationMetadata provided while notification is false; ignoring metadata")
+		choreReq.NotificationMetadata = nil
+	}
+
 	setCreateChoreDefaults(&choreReq)
 
 	createdChore := &chModel.Chore{
@@ -344,7 +350,7 @@ func (h *Handler) CreateChore(c *gin.Context) {
 		AssignedTo:             choreReq.AssignedTo,
 		IsRolling:              choreReq.IsRolling,
 		UpdatedBy:              currentUser.ID,
-		IsActive:               choreReq.IsActive,
+		IsActive:               *choreReq.IsActive,
 		Notification:           choreReq.Notification,
 		NotificationMetadataV2: choreReq.NotificationMetadata,
 		CreatedBy:              currentUser.ID,
@@ -434,9 +440,42 @@ func (h *Handler) CreateChore(c *gin.Context) {
 	if shouldReturn {
 		return
 	}
-	c.JSON(200, gin.H{
-		"res": id,
-	})
+	response := gin.H{"res": id}
+	if len(warnings) > 0 {
+		response["warnings"] = warnings
+	}
+
+	c.JSON(200, response)
+}
+
+func setCreateChoreDefaults(choreReq *ChoreReq) []string {
+	warnings := []string{}
+
+	if choreReq.Frequency == nil {
+		val := 1
+		choreReq.Frequency = &val
+		warnings = append(warnings, "frequency not provided, defaulting to 1")
+	}
+
+	if choreReq.Priority == nil {
+		val := 0
+		choreReq.Priority = &val
+		warnings = append(warnings, "priority not provided, defaulting to 0")
+	}
+
+	if choreReq.IsActive == nil {
+		val := true
+		choreReq.IsActive = &val
+		warnings = append(warnings, "isActive not provided, defaulting to true")
+	}
+
+	if choreReq.IsPrivate == nil {
+		val := false
+		choreReq.IsPrivate = &val
+		warnings = append(warnings, "isPrivate not provided, defaulting to false")
+	}
+
+	return warnings
 }
 
 func setCreateChoreDefaults(choreReq *ChoreReq) {
@@ -648,7 +687,7 @@ func (h *Handler) EditChore(c *gin.Context) {
 		AssignStrategy:         choreReq.AssignStrategy,
 		AssignedTo:             choreReq.AssignedTo,
 		IsRolling:              choreReq.IsRolling,
-		IsActive:               choreReq.IsActive,
+		IsActive:               *choreReq.IsActive,
 		Notification:           choreReq.Notification,
 		NotificationMetadataV2: choreReq.NotificationMetadata,
 		CircleID:               oldChore.CircleID,
@@ -789,6 +828,14 @@ func setEditChoreDefaults(choreReq *ChoreReq, oldChore *chModel.Chore) {
 
 	if choreReq.Priority == nil {
 		choreReq.Priority = &oldChore.Priority
+	}
+
+	if choreReq.IsActive == nil {
+		choreReq.IsActive = &oldChore.IsActive
+	}
+
+	if choreReq.IsPrivate == nil {
+		choreReq.IsPrivate = &oldChore.IsPrivate
 	}
 }
 

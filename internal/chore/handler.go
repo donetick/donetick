@@ -258,7 +258,7 @@ func (h *Handler) createChore(c *gin.Context) {
 	if err := c.ShouldBindJSON(&choreReq); err != nil {
 		logger.Error("Invalid request body", "error", err)
 		c.JSON(400, gin.H{
-			"error": "Invalid request format",
+			"error": "Invalid request: " + err.Error(),
 		})
 		return
 	}
@@ -439,7 +439,7 @@ func (h *Handler) editChore(c *gin.Context) {
 	if err := c.ShouldBindJSON(&choreReq); err != nil {
 		logger.Error("Invalid request body", "error", err)
 		c.JSON(400, gin.H{
-			"error": "Invalid request format",
+			"error": "Invalid request: " + err.Error(),
 		})
 		return
 	}
@@ -943,7 +943,7 @@ func (h *Handler) updateAssignee(c *gin.Context) {
 	if err := c.ShouldBindJSON(&assigneeReq); err != nil {
 		logging.FromContext(c).Error("Operation failed", "error", err)
 		c.JSON(400, gin.H{
-			"error": "Invalid request",
+			"error": "Invalid request: " + err.Error(),
 		})
 		return
 	}
@@ -1526,7 +1526,7 @@ func (h *Handler) updateDueDate(c *gin.Context) {
 	if err := c.ShouldBindJSON(&dueDateReq); err != nil {
 		logging.FromContext(c).Error("Operation failed", "error", err)
 		c.JSON(400, gin.H{
-			"error": "Invalid request",
+			"error": "Invalid request: " + err.Error(),
 		})
 		return
 	}
@@ -2190,7 +2190,7 @@ func (h *Handler) ModifyHistory(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		logging.FromContext(c).Error("Operation failed", "error", err)
 		c.JSON(400, gin.H{
-			"error": "Invalid request",
+			"error": "Invalid request: " + err.Error(),
 		})
 		return
 	}
@@ -2294,7 +2294,7 @@ func (h *Handler) updatePriority(c *gin.Context) {
 	if err := c.ShouldBindJSON(&priorityReq); err != nil {
 		logging.FromContext(c).Error("Operation failed", "error", err)
 		c.JSON(400, gin.H{
-			"error": "Invalid request",
+			"error": "Invalid request: " + err.Error(),
 		})
 		return
 	}
@@ -2555,7 +2555,7 @@ func (h *Handler) UpdateSubtaskCompletedAt(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		logging.FromContext(c).Error("Operation failed", "error", err)
 		c.JSON(400, gin.H{
-			"error": "Invalid request",
+			"error": "Invalid request: " + err.Error(),
 		})
 		return
 	}
@@ -2771,7 +2771,7 @@ func (h *Handler) UpdateTimeSession(c *gin.Context) {
 	var req UpdateTimeSessionReq
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(400, gin.H{
-			"error": "Invalid request body",
+			"error": "Invalid request: " + err.Error(),
 		})
 		return
 	}
@@ -3303,7 +3303,7 @@ func (h *Handler) updateChoreStatus(c *gin.Context) {
 	var statusReq StatusUpdateReq
 	if err := c.ShouldBindJSON(&statusReq); err != nil {
 		c.JSON(400, gin.H{
-			"error": "Invalid request",
+			"error": "Invalid request: " + err.Error(),
 		})
 		return
 	}
@@ -3407,7 +3407,7 @@ func (h *Handler) updateTimer(c *gin.Context) {
 	var timerReq TimerUpdateReq
 	if err := c.ShouldBindJSON(&timerReq); err != nil {
 		c.JSON(400, gin.H{
-			"error": "Invalid request",
+			"error": "Invalid request: " + err.Error(),
 		})
 		return
 	}
@@ -3654,7 +3654,7 @@ func (h *Handler) sendNudgeNotification(c *gin.Context) {
 	var req NudgeRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		log.Error("Invalid request payload", "error", err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request payload"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request: " + err.Error()})
 		return
 	}
 

@@ -74,10 +74,6 @@ func (h *SyncHandler) GetChanges(c *gin.Context) {
 	if hasMoreChoreTombstones {
 		choreTombstones = choreTombstones[:defaultSyncLimit]
 	}
-	deletedChoreIDs := make([]int, 0, len(choreTombstones))
-	for _, t := range choreTombstones {
-		deletedChoreIDs = append(deletedChoreIDs, t.EntityID)
-	}
 
 	// Use sync-aware GetChoresHistoryByCircle with privacy filtering.
 	histories, err := h.choreRepo.GetChoresHistoryByCircle(c, circleID, userID, syncOpts)
@@ -99,16 +95,14 @@ func (h *SyncHandler) GetChanges(c *gin.Context) {
 	if hasMoreHistoryTombstones {
 		historyTombstones = historyTombstones[:defaultSyncLimit]
 	}
-	deletedHistoryIDs := make([]int, 0, len(historyTombstones))
-	for _, t := range historyTombstones {
-		deletedHistoryIDs = append(deletedHistoryIDs, t.EntityID)
-	}
 
 	hasMore := hasMoreChores || hasMoreHistories || hasMoreChoreTombstones || hasMoreHistoryTombstones
 
 	// Compute the next cursor:
 	// - If any stream was truncated (hasMore* == true), the cursor is the minimum
 	//   last sync_version among truncated streams — we must not skip their unsent items.
+	//   Then cap every returned stream to <= cursor so the cursor means
+	//   "everything <= cursor has been delivered".
 	// - If all streams are fully drained, the cursor advances to the maximum last
 	//   sync_version across all streams, so the next request truly starts fresh.
 	cursor := since
@@ -145,6 +139,39 @@ func (h *SyncHandler) GetChanges(c *gin.Context) {
 		}
 		if !first {
 			cursor = minTruncated
+
+			// Keep page boundary consistent across all streams.
+			cappedChores := chores[:0]
+			for _, item := range chores {
+				if item.SyncVersion <= cursor {
+					cappedChores = append(cappedChores, item)
+				}
+			}
+			chores = cappedChores
+
+			cappedHistories := histories[:0]
+			for _, item := range histories {
+				if item.SyncVersion <= cursor {
+					cappedHistories = append(cappedHistories, item)
+				}
+			}
+			histories = cappedHistories
+
+			cappedChoreTombstones := choreTombstones[:0]
+			for _, item := range choreTombstones {
+				if item.SyncVersion <= cursor {
+					cappedChoreTombstones = append(cappedChoreTombstones, item)
+				}
+			}
+			choreTombstones = cappedChoreTombstones
+
+			cappedHistoryTombstones := historyTombstones[:0]
+			for _, item := range historyTombstones {
+				if item.SyncVersion <= cursor {
+					cappedHistoryTombstones = append(cappedHistoryTombstones, item)
+				}
+			}
+			historyTombstones = cappedHistoryTombstones
 		}
 	} else {
 		// All streams fully drained — advance to the max version seen.
@@ -171,6 +198,16 @@ func (h *SyncHandler) GetChanges(c *gin.Context) {
 		if hasAny {
 			cursor = maxAll
 		}
+	}
+
+	deletedChoreIDs := make([]int, 0, len(choreTombstones))
+	for _, t := range choreTombstones {
+		deletedChoreIDs = append(deletedChoreIDs, t.EntityID)
+	}
+
+	deletedHistoryIDs := make([]int, 0, len(historyTombstones))
+	for _, t := range historyTombstones {
+		deletedHistoryIDs = append(deletedHistoryIDs, t.EntityID)
 	}
 
 	c.JSON(200, gin.H{

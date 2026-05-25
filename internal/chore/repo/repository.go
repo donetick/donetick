@@ -14,6 +14,7 @@ import (
 	syncModel "donetick.com/core/internal/sync/model"
 	"donetick.com/core/logging"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type ChoreRepository struct {
@@ -33,12 +34,17 @@ func NewChoreRepository(db *gorm.DB, cfg *config.Config) *ChoreRepository {
 	return &ChoreRepository{db: db, dbType: cfg.Database.Type}
 }
 
-// privacyPredicate returns the WHERE clause that enforces chore visibility rules.
-// A chore is visible to a user if:
+// privacyPredicate returns a GORM clause expression that enforces chore visibility
+// rules using bound parameters (no string interpolation). A chore is visible if:
 //   - It is not private, OR
 //   - It is private AND (the user created it OR the user is assigned to it)
-func privacyPredicate(userID int) string {
-	return fmt.Sprintf(`((chores.is_private = false) OR (chores.is_private = true AND (chores.created_by = %d OR chore_assignees.user_id = %d)))`, userID, userID)
+//
+// Use as: db.Where(privacyPredicate(userID))
+func privacyPredicate(userID int) clause.Expr {
+	return clause.Expr{
+		SQL:  `((chores.is_private = false) OR (chores.is_private = true AND (chores.created_by = ? OR chore_assignees.user_id = ?)))`,
+		Vars: []interface{}{userID, userID},
+	}
 }
 
 func (r *ChoreRepository) nextSyncVersionWithDB(ctx context.Context, db *gorm.DB, circleID int) (int64, error) {
@@ -178,7 +184,8 @@ func (r *ChoreRepository) GetChores(c context.Context, circleID int, userID int,
 		Preload("Assignees").
 		Preload("LabelsV2").
 		Joins("left join chore_assignees on chores.id = chore_assignees.chore_id").
-		Where("chores.circle_id = ? AND "+privacyPredicate(userID), circleID).
+		Where("chores.circle_id = ?", circleID).
+		Where(privacyPredicate(userID)).
 		Group("chores.id")
 
 	if !includeArchived {
@@ -207,7 +214,8 @@ func (r *ChoreRepository) GetArchivedChores(c context.Context, circleID int, use
 		Preload("Assignees").
 		Preload("LabelsV2").
 		Joins("left join chore_assignees on chores.id = chore_assignees.chore_id").
-		Where("chores.circle_id = ? AND "+privacyPredicate(userID), circleID).
+		Where("chores.circle_id = ?", circleID).
+		Where(privacyPredicate(userID)).
 		Where("is_active = ?", false).
 		Group("chores.id").
 		Order("next_due_date asc").
@@ -935,12 +943,17 @@ func (r *ChoreRepository) CreateTimeSession(c context.Context, chore *chModel.Ch
 	log := logging.FromContext(c)
 	var timeSession *chModel.TimeSession
 	err := r.db.WithContext(c).Transaction(func(tx *gorm.DB) error {
+		syncVersion, err := r.nextSyncVersionWithDB(c, tx, chore.CircleID)
+		if err != nil {
+			return fmt.Errorf("failed to allocate sync version: %w", err)
+		}
 		ch := &chModel.ChoreHistory{
 			ChoreID:     chore.ID,
 			CompletedBy: userID,
 			AssignedTo:  chore.AssignedTo,
 			DueDate:     chore.NextDueDate,
 			Status:      chModel.ChoreHistoryStatusStarted,
+			SyncVersion: syncVersion,
 		}
 
 		if err := tx.Create(ch).Error; err != nil {

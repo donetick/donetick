@@ -337,8 +337,6 @@ func (h *Handler) CreateChore(c *gin.Context) {
 		choreReq.NotificationMetadata = nil
 	}
 
-	setCreateChoreDefaults(&choreReq)
-
 	createdChore := &chModel.Chore{
 
 		Name:                   choreReq.Name,
@@ -476,18 +474,6 @@ func setCreateChoreDefaults(choreReq *ChoreReq) []string {
 	}
 
 	return warnings
-}
-
-func setCreateChoreDefaults(choreReq *ChoreReq) {
-	if choreReq.Frequency == nil {
-		val := 1
-		choreReq.Frequency = &val
-	}
-
-	if choreReq.Priority == nil {
-		val := 0
-		choreReq.Priority = &val
-	}
 }
 
 // EditChore godoc

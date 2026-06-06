@@ -248,7 +248,7 @@ type ChoreReq struct {
 	IsActive             *bool                         `json:"isActive" binding:"omitempty"`
 	Notification         bool                          `json:"notification"`
 	NotificationMetadata *chModel.NotificationMetadata `json:"notificationMetadata"`
-	LabelsV2             *[]lModel.LabelReq            `json:"labelsV2" binding:"omitempty,dive,unique=LabelID"`
+	LabelsV2             *[]lModel.LabelReq            `json:"labelsV2" binding:"omitempty,unique=LabelID,dive"`
 	UpdatedAt            *time.Time                    `json:"updatedAt"`
 	Priority             *int                          `json:"priority" binding:"omitempty,gte=0,lte=5"`
 	CompletionWindow     *int                          `json:"completionWindow" binding:"omitempty,min=0"`
@@ -1020,7 +1020,8 @@ func (h *Handler) DeleteChore(c *gin.Context) {
 		return
 	}
 
-	if err := h.choreRepo.DeleteChore(c, id); err != nil {
+	deletedSyncVersion, err := h.choreRepo.DeleteChore(c, id)
+	if err != nil {
 		logger.Error("Failed to delete chore", "error", err, "choreID", id, "userID", currentUser.ID)
 		c.JSON(500, gin.H{
 			"error": "Failed to delete chore",
@@ -1033,11 +1034,12 @@ func (h *Handler) DeleteChore(c *gin.Context) {
 	// Broadcast real-time chore deletion event
 	if h.realTimeService != nil {
 		broadcaster := h.realTimeService.GetEventBroadcaster()
-		broadcaster.BroadcastChoreDeleted(chore.ID, chore.Name, chore.CircleID, &currentUser.User)
+		broadcaster.BroadcastChoreDeleted(chore.ID, chore.Name, chore.CircleID, &currentUser.User, deletedSyncVersion)
 	}
 
 	c.JSON(200, gin.H{
-		"message": "Chore deleted successfully",
+		"message":     "Chore deleted successfully",
+		"syncVersion": deletedSyncVersion,
 	})
 }
 
@@ -2862,6 +2864,7 @@ func (h *Handler) UpdateSubtaskCompletedAt(c *gin.Context) {
 			req.CompletedAt,
 			&effectiveUser.User,
 			chore.CircleID,
+			chore.SyncVersion,
 		)
 
 	}

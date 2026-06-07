@@ -1446,7 +1446,12 @@ func (h *Handler) skipChore(c *gin.Context) {
 		})
 		return
 	}
-	nextDueDate, err := scheduleNextDueDate(c, chore, chore.NextDueDate.UTC())
+	completedDate := time.Now().UTC()
+	if chore.NextDueDate != nil {
+		completedDate = chore.NextDueDate.UTC()
+	}
+
+	nextDueDate, err := scheduleNextDueDate(c, chore, completedDate)
 	if err != nil {
 		c.JSON(500, gin.H{
 			"error": "Error scheduling next due date",

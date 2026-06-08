@@ -1673,7 +1673,20 @@ func (h *Handler) SkipChore(c *gin.Context) {
 		})
 		return
 	}
+
+	completedDate := time.Now().UTC()
+	if chore.NextDueDate != nil {
+		completedDate = chore.NextDueDate.UTC()
+	}
+
+	nextDueDate, err := scheduleNextDueDate(c, chore, completedDate)
+	if err != nil {
+		c.JSON(500, gin.H{
+			"error": "Error scheduling next due date",
+		})
+  }
 	if !validateActionVersion(c, "skip", chore, req.ActionOptions) {
+
 		return
 	}
 
@@ -4192,6 +4205,7 @@ func (h *Handler) UndoChore(c *gin.Context) {
 	// Determine previous state based on action type
 	var previousAssignedTo *int
 	var previousDueDate *time.Time
+	reactivateOneTimeChore := false
 
 	switch lastAction.Status {
 	case chModel.ChoreHistoryStatusCompleted, chModel.ChoreHistoryStatusSkipped:
@@ -4205,6 +4219,9 @@ func (h *Handler) UndoChore(c *gin.Context) {
 				previousAssignedTo = lastAction.AssignedTo
 			}
 			previousDueDate = lastAction.DueDate
+			if chore.FrequencyType == chModel.FrequencyTypeOnce || chore.FrequencyType == chModel.FrequencyTypeNoRepeat || chore.FrequencyType == chModel.FrequencyTypeTrigger {
+				reactivateOneTimeChore = true
+			}
 		} else {
 			// Use the state from before this action
 			previousAssignedTo = previousHistory.AssignedTo
@@ -4236,6 +4253,19 @@ func (h *Handler) UndoChore(c *gin.Context) {
 			"error": "Failed to undo action",
 		})
 		return
+	}
+
+	if reactivateOneTimeChore {
+		if err := h.choreRepo.UpdateChoreFields(c, choreID, map[string]interface{}{
+			"is_active":     true,
+			"next_due_date": nil,
+		}); err != nil {
+			logger.Error("Failed to reactivate one-time chore after undo", "error", err)
+			c.JSON(500, gin.H{
+				"error": "Failed to restore chore state",
+			})
+			return
+		}
 	}
 
 	// Special handling for rejected actions - restore to pending approval

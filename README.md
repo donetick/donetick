@@ -250,8 +250,9 @@ Group matching is **exact-string and case-sensitive**.
 ---
 
 ## Contributing
+Contributions are welcome! If you want to work on something that is not already listed as an open, tagged issue, please open a [Discussion](https://github.com/donetick/donetick/discussions)  or reach out on [Discord](https://discord.gg/yyRDcwd3) first to ensure it aligns with our goals and to avoid any unnecessary effort.
 
-Contributions are welcome! If you want to work on something that is not listed as an issue, please open a [Discussion](https://github.com/donetick/donetick/discussions) first to ensure it aligns with our goals and to avoid any unnecessary effort!
+**Please note:** Pull Requests that are submitted without prior discussion or do not address an existing tagged issue will be deprioritized in the review queue.
 
 ## Code Formatting and Linting
 

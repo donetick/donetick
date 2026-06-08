@@ -71,6 +71,12 @@ type StorageConfig struct {
 	// (e.g. via a bucket policy). Intended for self-hosted deployments
 	// that don't want the 7-day presigned URL ceiling.
 	PublicRead bool `mapstructure:"public_read" yaml:"public_read"`
+	// PathStyle forces path-style S3 addressing (endpoint/bucket/key)
+	// instead of the default virtual-hosted style (bucket.endpoint/key).
+	// Required for S3-compatible backends like MinIO that don't expose
+	// a DNS wildcard at `*.<endpoint-host>`, as well as for plain HTTP
+	// endpoints without matching TLS wildcard certs.
+	PathStyle bool `mapstructure:"path_style" yaml:"path_style"`
 }
 type DonetickCloudConfig struct {
 	GoogleClientID        string `mapstructure:"google_client_id" yaml:"google_client_id"`
@@ -174,12 +180,13 @@ type FCMConfig struct {
 	ProjectID       string `json:"project_id" mapstructure:"project_id"`
 }
 type EmailConfig struct {
-	Email   string `mapstructure:"email"`
-	User    string `mapstructure:"user"`
-	Key     string `mapstructure:"key"`
-	Host    string `mapstructure:"host"`
-	Port    int    `mapstructure:"port"`
-	AppHost string `mapstructure:"appHost"`
+	Email     string `mapstructure:"email"`
+	User      string `mapstructure:"user"`
+	Key       string `mapstructure:"key"`
+	Host      string `mapstructure:"host"`
+	Port      int    `mapstructure:"port"`
+	AppHost   string `mapstructure:"appHost"`
+	LogRawURL bool   `mapstructure:"log_raw_url" yaml:"log_raw_url"`
 }
 
 type OAuth2Config struct {

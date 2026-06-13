@@ -1684,7 +1684,7 @@ func (h *Handler) SkipChore(c *gin.Context) {
 		c.JSON(500, gin.H{
 			"error": "Error scheduling next due date",
 		})
-  }
+	}
 	if !validateActionVersion(c, "skip", chore, req.ActionOptions) {
 
 		return

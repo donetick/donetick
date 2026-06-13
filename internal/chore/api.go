@@ -406,7 +406,7 @@ func (h *API) DeleteChore(c *gin.Context) {
 		c.JSON(403, gin.H{"error": "You can only delete your own chores"})
 		return
 	}
-	if err := h.choreRepo.DeleteChore(c, choreID); err != nil {
+	if _, err := h.choreRepo.DeleteChore(c, choreID); err != nil {
 		c.JSON(500, gin.H{"error": "Failed to delete chore"})
 		return
 	}

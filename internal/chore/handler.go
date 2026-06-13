@@ -1020,7 +1020,8 @@ func (h *Handler) DeleteChore(c *gin.Context) {
 		return
 	}
 
-	if err := h.choreRepo.DeleteChore(c, id); err != nil {
+	syncVersion, err := h.choreRepo.DeleteChore(c, id)
+	if err != nil {
 		logger.Error("Failed to delete chore", "error", err, "choreID", id, "userID", currentUser.ID)
 		c.JSON(500, gin.H{
 			"error": "Failed to delete chore",
@@ -1033,7 +1034,7 @@ func (h *Handler) DeleteChore(c *gin.Context) {
 	// Broadcast real-time chore deletion event
 	if h.realTimeService != nil {
 		broadcaster := h.realTimeService.GetEventBroadcaster()
-		broadcaster.BroadcastChoreDeleted(chore.ID, chore.Name, chore.CircleID, &currentUser.User)
+		broadcaster.BroadcastChoreDeleted(chore.ID, chore.Name, chore.CircleID, &currentUser.User, syncVersion)
 	}
 
 	c.JSON(200, gin.H{
@@ -2862,6 +2863,7 @@ func (h *Handler) UpdateSubtaskCompletedAt(c *gin.Context) {
 			req.CompletedAt,
 			&effectiveUser.User,
 			chore.CircleID,
+			chore.SyncVersion,
 		)
 
 	}

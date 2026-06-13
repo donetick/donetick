@@ -1679,12 +1679,6 @@ func (h *Handler) SkipChore(c *gin.Context) {
 		completedDate = chore.NextDueDate.UTC()
 	}
 
-	nextDueDate, err := scheduleNextDueDate(c, chore, completedDate)
-	if err != nil {
-		c.JSON(500, gin.H{
-			"error": "Error scheduling next due date",
-		})
-	}
 	if !validateActionVersion(c, "skip", chore, req.ActionOptions) {
 
 		return
@@ -1695,7 +1689,7 @@ func (h *Handler) SkipChore(c *gin.Context) {
 		t := req.ActionOptions.NextDueDate.UTC()
 		nextDueDate = &t
 	} else {
-		nextDueDate, err = scheduleNextDueDate(c, chore, chore.NextDueDate.UTC())
+		nextDueDate, err = scheduleNextDueDate(c, chore, completedDate)
 		if err != nil {
 			c.JSON(500, gin.H{
 				"error": "Error scheduling next due date",

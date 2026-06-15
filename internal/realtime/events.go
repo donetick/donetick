@@ -38,6 +38,7 @@ type Event struct {
 	Type      EventType   `json:"type"`
 	Timestamp time.Time   `json:"timestamp"`
 	CircleID  int         `json:"circleId"`
+	SyncVersion int64     `json:"syncVersion"`
 	Data      interface{} `json:"data"`
 	ID        string      `json:"id,omitempty"`
 }

@@ -17,6 +17,7 @@ import (
 	nModel "donetick.com/core/internal/notifier/model"
 	pModel "donetick.com/core/internal/points"
 	projModel "donetick.com/core/internal/project/model"
+	rModel "donetick.com/core/internal/reward"
 	storageModel "donetick.com/core/internal/storage/model"
 	stModel "donetick.com/core/internal/subtask/model"
 	syncModel "donetick.com/core/internal/sync/model"
@@ -56,6 +57,7 @@ func Migration(db *gorm.DB) error {
 		filterModel.Filter{},
 		migrations.Migration{},
 		pModel.PointsHistory{},
+		rModel.Reward{},
 		stModel.SubTask{},
 		storageModel.StorageFile{},
 		storageModel.StorageUsage{},

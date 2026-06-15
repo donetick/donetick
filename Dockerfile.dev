@@ -1,29 +1,41 @@
-# Stage 1: Build the application
-FROM alpine:latest AS builder
+# Stage 1: Build frontend in Linux environment
+FROM node:20-alpine AS frontend
 
-WORKDIR /usr/src/app
+WORKDIR /app
 
-COPY donetick .
-COPY config/selfhosted.yaml config/local.yaml ./config/
+# Cache npm install layer separately from source
+COPY donetick-frontend/package.json donetick-frontend/package-lock.json* ./
+RUN npm install
 
-# Stage 2: Create a smaller runtime image
+COPY donetick-frontend/ .
+RUN npx vite build --mode selfhosted
+
+# Stage 2: Build Go binary (with frontend dist embedded)
+FROM golang:alpine AS backend
+
+WORKDIR /src
+
+COPY donetick/go.mod donetick/go.sum ./
+RUN go mod download
+
+COPY donetick/ .
+COPY --from=frontend /app/dist ./frontend/dist/
+
+RUN go build -o /donetick .
+
+# Stage 3: Minimal runtime image
 FROM alpine:latest
 
-# Install timezone package
-RUN apk --no-cache add tzdata
+RUN apk --no-cache add ca-certificates libc6-compat tzdata
 
-# Install necessary CA certificates
-RUN apk --no-cache add ca-certificates libc6-compat
-
-# Copy the binary and config folder from the builder stage
-COPY --from=builder /usr/src/app/donetick /donetick
-COPY --from=builder /usr/src/app/config /config
+COPY --from=backend /donetick /donetick
+COPY donetick/config/selfhosted.yaml donetick/config/local.yaml /config/
 
 # Set environment variables
-ENV DT_ENV="selfhosted"
-
+ ENV DT_ENV="selfhosted"
+ 
 # Expose the application port
-EXPOSE 2021
-
+ EXPOSE 2021
+ 
 # Command to run the application
-CMD ["/donetick"]
+ CMD ["/donetick"]

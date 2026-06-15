@@ -15,7 +15,7 @@ database:
   password: "secret"
   name: "secret"
 jwt:
-  secret: "change_this_to_a_secure_random_string_32_characters_long"
+  secret: "<JWT_SECRET_PLACEHOLDER: run 'openssl rand -base64 32' to generate>"
   session_time: 168h # 7 days
   max_refresh: 1440h # 60 days 
 server:
@@ -83,3 +83,6 @@ realtime:
   enable_stats: true
   allowed_origins:
     - "*"
+storage:
+  storage_type: local
+  base_path: /data/uploads

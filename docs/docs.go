@@ -10,10 +10,6 @@ const docTemplate = `{
         "description": "{{escape .Description}}",
         "title": "{{.Title}}",
         "contact": {},
-        "license": {
-            "name": "GNU Affero General Public License v3.0",
-            "url": "https://github.com/donetick/donetick/blob/main/LICENSE.md"
-        },
         "version": "{{.Version}}"
     },
     "host": "{{.Host}}",
@@ -789,7 +785,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "res: detailed chore information\" //TODO: Add response model",
+                        "description": "res: detailed chore information",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -1284,7 +1280,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "message: Nudge sent status\" //TODO: Add response model",
+                        "description": "message: Nudge sent status",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -1352,7 +1348,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "res: {duration, status, timerUpdatedAt}\" //TODO: Add response model",
+                        "description": "res: {duration, status, timerUpdatedAt}",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -1525,7 +1521,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "res: updated chore, message: Chore rejected successfully\" //TODO: Add response model",
+                        "description": "res: updated chore, message: Chore rejected successfully",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -1672,7 +1668,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "res: {timerUpdatedAt, status, duration}\" //TODO: Add response model",
+                        "description": "res: {timerUpdatedAt, status, duration}",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -1846,7 +1842,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Empty success response\" //TODO: Add response model",
+                        "description": "Empty success response",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -2097,7 +2093,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "res: {timerUpdatedAt, status, duration}\" //TODO: Add response model",
+                        "description": "res: {timerUpdatedAt, status, duration}",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -2423,7 +2419,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "message: Successfully undid {action} action, res: updated chore object\" //TODO: Add response model",
+                        "description": "message: Successfully undid {action} action, res: updated chore object",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -3113,6 +3109,471 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "error: Error redeeming points",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/circles/{id}/members/rewards/redeem": {
+            "post": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
+                    }
+                ],
+                "description": "Redeems a circle reward for a member, deducting its cost in points (admin only)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "circles"
+                ],
+                "summary": "Redeem a reward for a member",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Circle ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Reward redemption request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "rewardId": {
+                                    "type": "integer"
+                                },
+                                "userId": {
+                                    "type": "integer"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "res: Reward redeemed successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "error: Invalid request / User does not have enough points / User is not a member of this circle",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "error: Authentication failed",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "error: You are not an admin of this circle",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "error: Reward not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Error redeeming reward",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/circles/{id}/rewards": {
+            "get": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
+                    }
+                ],
+                "description": "Returns all rewards defined for the circle",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "circles"
+                ],
+                "summary": "List circle rewards",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Circle ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "res: List of rewards",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "error: Invalid request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "error: Authentication failed",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Error fetching rewards",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
+                    }
+                ],
+                "description": "Creates a new reward for the circle (admin only)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "circles"
+                ],
+                "summary": "Create a circle reward",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Circle ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Reward details",
+                        "name": "reward",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "cost": {
+                                    "type": "integer"
+                                },
+                                "description": {
+                                    "type": "string"
+                                },
+                                "name": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "res: Created reward",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "error: Invalid request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "error: Authentication failed",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "error: You are not an admin of this circle",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Error creating reward",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/circles/{id}/rewards/{rewardId}": {
+            "put": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
+                    }
+                ],
+                "description": "Updates an existing reward for the circle (admin only)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "circles"
+                ],
+                "summary": "Update a circle reward",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Circle ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Reward ID",
+                        "name": "rewardId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Updated reward details",
+                        "name": "reward",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "cost": {
+                                    "type": "integer"
+                                },
+                                "description": {
+                                    "type": "string"
+                                },
+                                "name": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "res: Updated reward",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "error: Invalid request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "error: Authentication failed",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "error: You are not an admin of this circle",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "error: Reward not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Error updating reward",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
+                    }
+                ],
+                "description": "Deletes a reward from the circle (admin only)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "circles"
+                ],
+                "summary": "Delete a circle reward",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Circle ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Reward ID",
+                        "name": "rewardId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "res: Reward deleted successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "error: Invalid request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "error: Authentication failed",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "error: You are not an admin of this circle",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Error deleting reward",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -3841,6 +4302,75 @@ const docTemplate = `{
                 }
             }
         },
+        "/sync/changes": {
+            "get": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
+                    }
+                ],
+                "description": "Returns chores and chore histories that have changed since the given sync version cursor, along with deleted entity IDs. Paginated — call repeatedly while hasMore is true using the returned cursor.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "sync"
+                ],
+                "summary": "Get sync changes",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "default": 0,
+                        "description": "Sync version cursor (0 for initial full sync)",
+                        "name": "since",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "changes, deletions, cursor, hasMore",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "error: Invalid 'since' parameter",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "error: Authentication failed",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Failed to fetch changes",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/things": {
             "get": {
                 "security": [
@@ -4297,6 +4827,20 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "chore.ActionOptions": {
+            "type": "object",
+            "properties": {
+                "createdAt": {
+                    "type": "string"
+                },
+                "nextDueDate": {
+                    "type": "string"
+                },
+                "syncVersion": {
+                    "type": "integer"
+                }
+            }
+        },
         "chore.AssigneeReq": {
             "type": "object",
             "required": [
@@ -4317,7 +4861,6 @@ const docTemplate = `{
             "required": [
                 "assignStrategy",
                 "frequencyType",
-                "isPrivate",
                 "name"
             ],
             "properties": {
@@ -4393,6 +4936,7 @@ const docTemplate = `{
                 },
                 "labelsV2": {
                     "type": "array",
+                    "uniqueItems": true,
                     "items": {
                         "$ref": "#/definitions/model.LabelReq"
                     }
@@ -4442,6 +4986,9 @@ const docTemplate = `{
         "chore.CompleteChoreReq": {
             "type": "object",
             "properties": {
+                "actionOptions": {
+                    "$ref": "#/definitions/chore.ActionOptions"
+                },
                 "completedBy": {
                     "description": "The completed by only can be populated by the admin or super user.",
                     "type": "integer"
@@ -4516,6 +5063,9 @@ const docTemplate = `{
         "chore.RejectChoreReq": {
             "type": "object",
             "properties": {
+                "actionOptions": {
+                    "$ref": "#/definitions/chore.ActionOptions"
+                },
                 "note": {
                     "description": "This is going to be deprecated in future release, use \"Notes\" instead.",
                     "type": "string",
@@ -4871,6 +5421,9 @@ const docTemplate = `{
                         "$ref": "#/definitions/model.SubTask"
                     }
                 },
+                "syncVersion": {
+                    "type": "integer"
+                },
                 "thingChore": {
                     "description": "ThingChore relationship",
                     "allOf": [
@@ -4914,7 +5467,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "createdAt": {
-                    "description": "When the record was created",
+                    "description": "When the record was created (immutable after insert)",
                     "type": "string"
                 },
                 "dueDate": {
@@ -4948,6 +5501,9 @@ const docTemplate = `{
                             "$ref": "#/definitions/model.ChoreHistoryStatus"
                         }
                     ]
+                },
+                "syncVersion": {
+                    "type": "integer"
                 },
                 "updatedAt": {
                     "description": "When the record was last updated",
@@ -5556,31 +6112,17 @@ const docTemplate = `{
                 }
             }
         }
-    },
-    "securityDefinitions": {
-        "APIKeyAuth": {
-            "description": "donetick issued apikey",
-            "type": "apiKey",
-            "name": "secretkey",
-            "in": "header"
-        },
-        "JWTKeyAuth": {
-            "description": "Type \"Bearer\" followed by a space and JWT token.",
-            "type": "apiKey",
-            "name": "Authorization",
-            "in": "header"
-        }
     }
 }`
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
-	Version:          "1.0",
+	Version:          "",
 	Host:             "",
-	BasePath:         "/api/v1",
+	BasePath:         "",
 	Schemes:          []string{},
-	Title:            "Donetick Swagger API",
-	Description:      "Donetick swagger documentation.",
+	Title:            "",
+	Description:      "",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

@@ -39,6 +39,7 @@ import (
 	"donetick.com/core/internal/notifier/service/pushover"
 	telegram "donetick.com/core/internal/notifier/service/telegram"
 	pRepo "donetick.com/core/internal/points/repo"
+	rRepo "donetick.com/core/internal/reward/repo"
 	"donetick.com/core/internal/realtime"
 	"donetick.com/core/internal/resource"
 	"donetick.com/core/internal/storage"
@@ -132,6 +133,7 @@ func main() {
 
 		// points
 		fx.Provide(pRepo.NewPointsRepository),
+		fx.Provide(rRepo.NewRewardRepository),
 		fx.Provide(spRepo.NewSubTasksRepository),
 
 		// Labels:

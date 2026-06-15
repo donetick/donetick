@@ -1,0 +1,14 @@
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: donetick/Dockerfile.dev
+    container_name: donetick-dev
+    restart: unless-stopped
+    volumes:
+      - ./data:/data
+    ports:
+      - "2021:2021"
+    environment:
+      - DT_ENV=selfhosted
+      - DT_SQLITE_PATH=/data/donetick.db

@@ -1,5 +1,13 @@
-basePath: /api/v1
 definitions:
+  chore.ActionOptions:
+    properties:
+      createdAt:
+        type: string
+      nextDueDate:
+        type: string
+      syncVersion:
+        type: integer
+    type: object
   chore.AssigneeReq:
     properties:
       assignee:
@@ -65,6 +73,7 @@ definitions:
         items:
           $ref: '#/definitions/model.LabelReq'
         type: array
+        uniqueItems: true
       name:
         type: string
       nextDueDate:
@@ -96,11 +105,12 @@ definitions:
     required:
     - assignStrategy
     - frequencyType
-    - isPrivate
     - name
     type: object
   chore.CompleteChoreReq:
     properties:
+      actionOptions:
+        $ref: '#/definitions/chore.ActionOptions'
       completedBy:
         description: The completed by only can be populated by the admin or super
           user.
@@ -153,6 +163,8 @@ definitions:
     type: object
   chore.RejectChoreReq:
     properties:
+      actionOptions:
+        $ref: '#/definitions/chore.ActionOptions'
       note:
         description: This is going to be deprecated in future release, use "Notes"
           instead.
@@ -401,6 +413,8 @@ definitions:
         items:
           $ref: '#/definitions/model.SubTask'
         type: array
+      syncVersion:
+        type: integer
       thingChore:
         allOf:
         - $ref: '#/definitions/model.ThingChore'
@@ -430,7 +444,7 @@ definitions:
         description: Who completed the chore
         type: integer
       createdAt:
-        description: When the record was created
+        description: When the record was created (immutable after insert)
         type: string
       dueDate:
         description: When the chore was due
@@ -454,6 +468,8 @@ definitions:
         allOf:
         - $ref: '#/definitions/model.ChoreHistoryStatus'
         description: Status of the chore (1=completed, 2=skipped)
+      syncVersion:
+        type: integer
       updatedAt:
         description: When the record was last updated
         type: string
@@ -885,12 +901,6 @@ definitions:
     type: object
 info:
   contact: {}
-  description: Donetick swagger documentation.
-  license:
-    name: GNU Affero General Public License v3.0
-    url: https://github.com/donetick/donetick/blob/main/LICENSE.md
-  title: Donetick Swagger API
-  version: "1.0"
 paths:
   /chores:
     get:
@@ -1296,7 +1306,7 @@ paths:
       - application/json
       responses:
         "200":
-          description: 'res: detailed chore information" //TODO: Add response model'
+          description: 'res: detailed chore information'
           schema:
             additionalProperties: true
             type: object
@@ -1616,7 +1626,7 @@ paths:
       - application/json
       responses:
         "200":
-          description: 'message: Nudge sent status" //TODO: Add response model'
+          description: 'message: Nudge sent status'
           schema:
             additionalProperties: true
             type: object
@@ -1660,8 +1670,7 @@ paths:
       - application/json
       responses:
         "200":
-          description: 'res: {duration, status, timerUpdatedAt}" //TODO: Add response
-            model'
+          description: 'res: {duration, status, timerUpdatedAt}'
           schema:
             additionalProperties: true
             type: object
@@ -1774,8 +1783,7 @@ paths:
       - application/json
       responses:
         "200":
-          description: 'res: updated chore, message: Chore rejected successfully"
-            //TODO: Add response model'
+          description: 'res: updated chore, message: Chore rejected successfully'
           schema:
             additionalProperties: true
             type: object
@@ -1870,8 +1878,7 @@ paths:
       - application/json
       responses:
         "200":
-          description: 'res: {timerUpdatedAt, status, duration}" //TODO: Add response
-            model'
+          description: 'res: {timerUpdatedAt, status, duration}'
           schema:
             additionalProperties: true
             type: object
@@ -1982,7 +1989,7 @@ paths:
       - application/json
       responses:
         "200":
-          description: 'Empty success response" //TODO: Add response model'
+          description: Empty success response
           schema:
             additionalProperties: true
             type: object
@@ -2266,8 +2273,7 @@ paths:
       - application/json
       responses:
         "200":
-          description: 'res: {timerUpdatedAt, status, duration}" //TODO: Add response
-            model'
+          description: 'res: {timerUpdatedAt, status, duration}'
           schema:
             additionalProperties: true
             type: object
@@ -2363,7 +2369,7 @@ paths:
       responses:
         "200":
           description: 'message: Successfully undid {action} action, res: updated
-            chore object" //TODO: Add response model'
+            chore object'
           schema:
             additionalProperties: true
             type: object
@@ -2626,6 +2632,306 @@ paths:
       - JWTKeyAuth: []
       - APIKeyAuth: []
       summary: Redeem member points
+      tags:
+      - circles
+  /circles/{id}/members/rewards/redeem:
+    post:
+      consumes:
+      - application/json
+      description: Redeems a circle reward for a member, deducting its cost in points
+        (admin only)
+      parameters:
+      - description: Circle ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Reward redemption request
+        in: body
+        name: request
+        required: true
+        schema:
+          properties:
+            rewardId:
+              type: integer
+            userId:
+              type: integer
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'res: Reward redeemed successfully'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 'error: Invalid request / User does not have enough points
+            / User is not a member of this circle'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: Authentication failed'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 'error: You are not an admin of this circle'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: 'error: Reward not found'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Error redeeming reward'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      - APIKeyAuth: []
+      summary: Redeem a reward for a member
+      tags:
+      - circles
+  /circles/{id}/rewards:
+    get:
+      consumes:
+      - application/json
+      description: Returns all rewards defined for the circle
+      parameters:
+      - description: Circle ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'res: List of rewards'
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 'error: Invalid request'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: Authentication failed'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Error fetching rewards'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      - APIKeyAuth: []
+      summary: List circle rewards
+      tags:
+      - circles
+    post:
+      consumes:
+      - application/json
+      description: Creates a new reward for the circle (admin only)
+      parameters:
+      - description: Circle ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Reward details
+        in: body
+        name: reward
+        required: true
+        schema:
+          properties:
+            cost:
+              type: integer
+            description:
+              type: string
+            name:
+              type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: 'res: Created reward'
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 'error: Invalid request'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: Authentication failed'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 'error: You are not an admin of this circle'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Error creating reward'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      - APIKeyAuth: []
+      summary: Create a circle reward
+      tags:
+      - circles
+  /circles/{id}/rewards/{rewardId}:
+    delete:
+      consumes:
+      - application/json
+      description: Deletes a reward from the circle (admin only)
+      parameters:
+      - description: Circle ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Reward ID
+        in: path
+        name: rewardId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'res: Reward deleted successfully'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 'error: Invalid request'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: Authentication failed'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 'error: You are not an admin of this circle'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Error deleting reward'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      - APIKeyAuth: []
+      summary: Delete a circle reward
+      tags:
+      - circles
+    put:
+      consumes:
+      - application/json
+      description: Updates an existing reward for the circle (admin only)
+      parameters:
+      - description: Circle ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Reward ID
+        in: path
+        name: rewardId
+        required: true
+        type: integer
+      - description: Updated reward details
+        in: body
+        name: reward
+        required: true
+        schema:
+          properties:
+            cost:
+              type: integer
+            description:
+              type: string
+            name:
+              type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'res: Updated reward'
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 'error: Invalid request'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: Authentication failed'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 'error: You are not an admin of this circle'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: 'error: Reward not found'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Error updating reward'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      - APIKeyAuth: []
+      summary: Update a circle reward
       tags:
       - circles
   /circles/join:
@@ -3351,6 +3657,52 @@ paths:
       summary: Update a project
       tags:
       - projects
+  /sync/changes:
+    get:
+      consumes:
+      - application/json
+      description: Returns chores and chore histories that have changed since the
+        given sync version cursor, along with deleted entity IDs. Paginated — call
+        repeatedly while hasMore is true using the returned cursor.
+      parameters:
+      - default: 0
+        description: Sync version cursor (0 for initial full sync)
+        format: int64
+        in: query
+        name: since
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: changes, deletions, cursor, hasMore
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 'error: Invalid ''since'' parameter'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: Authentication failed'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to fetch changes'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      - APIKeyAuth: []
+      summary: Get sync changes
+      tags:
+      - sync
   /things:
     get:
       consumes:
@@ -3646,15 +3998,4 @@ paths:
       summary: Update thing state
       tags:
       - things
-securityDefinitions:
-  APIKeyAuth:
-    description: donetick issued apikey
-    in: header
-    name: secretkey
-    type: apiKey
-  JWTKeyAuth:
-    description: Type "Bearer" followed by a space and JWT token.
-    in: header
-    name: Authorization
-    type: apiKey
 swagger: "2.0"

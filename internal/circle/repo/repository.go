@@ -157,7 +157,7 @@ func (r *CircleRepository) AssignDefaultCircle(c context.Context, userID int) er
 	return r.db.WithContext(c).Model(&uModel.User{}).Where("id = ?", userID).Update("circle_id", defaultCircle.ID).Error
 }
 
-func (r *CircleRepository) RedeemPoints(c context.Context, circleID int, userID int, points int, createdBy int) error {
+func (r *CircleRepository) RedeemPoints(c context.Context, circleID int, userID int, points int, createdBy int, rewardID *int) error {
 	logger := logging.FromContext(c)
 	err := r.db.Transaction(func(tx *gorm.DB) error {
 
@@ -171,6 +171,7 @@ func (r *CircleRepository) RedeemPoints(c context.Context, circleID int, userID 
 			Points:    points,
 			CreatedAt: time.Now().UTC(),
 			CreatedBy: createdBy,
+			RewardID:  rewardID,
 		}).Error; err != nil {
 			return err
 		}

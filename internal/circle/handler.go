@@ -13,6 +13,8 @@ import (
 	cModel "donetick.com/core/internal/circle/model"
 	cRepo "donetick.com/core/internal/circle/repo"
 	pRepo "donetick.com/core/internal/points/repo"
+	rModel "donetick.com/core/internal/reward"
+	rRepo "donetick.com/core/internal/reward/repo"
 	"donetick.com/core/internal/storage"
 	uModel "donetick.com/core/internal/user/model"
 	uRepo "donetick.com/core/internal/user/repo"
@@ -25,6 +27,7 @@ type Handler struct {
 	userRepo             *uRepo.UserRepository
 	choreRepo            *chRepo.ChoreRepository
 	pointRepo            *pRepo.PointsRepository
+	rewardRepo           *rRepo.RewardRepository
 	signer               *storage.URLSignerS3
 	isDonetickDotCom     bool
 	maxCircleMembers     int
@@ -33,12 +36,13 @@ type Handler struct {
 }
 
 func NewHandler(cr *cRepo.CircleRepository, ur *uRepo.UserRepository, c *chRepo.ChoreRepository, pr *pRepo.PointsRepository,
-	signer *storage.URLSignerS3, config *config.Config) *Handler {
+	rr *rRepo.RewardRepository, signer *storage.URLSignerS3, config *config.Config) *Handler {
 	return &Handler{
 		circleRepo:           cr,
 		userRepo:             ur,
 		choreRepo:            c,
 		pointRepo:            pr,
+		rewardRepo:           rr,
 		signer:               signer,
 		isDonetickDotCom:     config.IsDoneTickDotCom,
 		maxCircleMembers:     config.FeatureLimits.MaxCircleMembers,
@@ -679,7 +683,7 @@ func (h *Handler) RedeemPoints(c *gin.Context) {
 		return
 	}
 
-	err = h.circleRepo.RedeemPoints(c, currentUser.CircleID, redeemReq.UserID, redeemReq.Points, currentUser.ID)
+	err = h.circleRepo.RedeemPoints(c, currentUser.CircleID, redeemReq.UserID, redeemReq.Points, currentUser.ID, nil)
 	if err != nil {
 		log.Error("Error redeeming points:", err)
 		c.JSON(500, gin.H{
@@ -789,6 +793,265 @@ func (h *Handler) ChangeMemberRole(c *gin.Context) {
 
 }
 
+func (h *Handler) requireCircleMembership(c *gin.Context) (currentUser *uModel.UserDetails, circleID int, ok bool) {
+	log := logging.FromContext(c)
+	currentUser, ok = auth.CurrentUser(c)
+	if !ok {
+		c.JSON(500, gin.H{"error": "Error getting current user"})
+		return
+	}
+	circleIDRaw := c.Param("id")
+	circleID, err := strconv.Atoi(circleIDRaw)
+	if err != nil || circleID != currentUser.CircleID {
+		log.Error("Invalid or mismatched circle id")
+		c.JSON(400, gin.H{"error": "Invalid request"})
+		ok = false
+		return
+	}
+	ok = true
+	return
+}
+
+func (h *Handler) requireCircleAdmin(c *gin.Context) (currentUser *uModel.UserDetails, circleID int, ok bool) {
+	log := logging.FromContext(c)
+	currentUser, circleID, ok = h.requireCircleMembership(c)
+	if !ok {
+		return
+	}
+	members, err := h.circleRepo.GetCircleUsers(c, circleID)
+	if err != nil {
+		log.Error("Error fetching circle members:", err)
+		c.JSON(500, gin.H{"error": "Error fetching circle members"})
+		ok = false
+		return
+	}
+	for _, m := range members {
+		if m.UserID == currentUser.ID && m.Role == "admin" {
+			return
+		}
+	}
+	c.JSON(403, gin.H{"error": "You are not an admin of this circle"})
+	ok = false
+	return
+}
+
+// GetCircleRewards godoc
+//
+//	@Summary		List circle rewards
+//	@Description	Returns all rewards defined for the circle
+//	@Tags			circles
+//	@Accept			json
+//	@Produce		json
+//	@Security		JWTKeyAuth
+//	@Security		APIKeyAuth
+//	@Param			id	path		int						true	"Circle ID"
+//	@Success		200	{object}	map[string]interface{}	"res: List of rewards"
+//	@Failure		400	{object}	map[string]string		"error: Invalid request"
+//	@Failure		401	{object}	map[string]string		"error: Authentication failed"
+//	@Failure		500	{object}	map[string]string		"error: Error fetching rewards"
+//	@Router			/circles/{id}/rewards [get]
+func (h *Handler) GetCircleRewards(c *gin.Context) {
+	_, circleID, ok := h.requireCircleMembership(c)
+	if !ok {
+		return
+	}
+	rewards, err := h.rewardRepo.GetCircleRewards(c, circleID)
+	if err != nil {
+		c.JSON(500, gin.H{"error": "Error fetching rewards"})
+		return
+	}
+	c.JSON(200, gin.H{"res": rewards})
+}
+
+// CreateCircleReward godoc
+//
+//	@Summary		Create a circle reward
+//	@Description	Creates a new reward for the circle (admin only)
+//	@Tags			circles
+//	@Accept			json
+//	@Produce		json
+//	@Security		JWTKeyAuth
+//	@Security		APIKeyAuth
+//	@Param			id		path		int										true	"Circle ID"
+//	@Param			reward	body		object{name=string,description=string,cost=int}	true	"Reward details"
+//	@Success		201		{object}	map[string]interface{}					"res: Created reward"
+//	@Failure		400		{object}	map[string]string						"error: Invalid request"
+//	@Failure		401		{object}	map[string]string						"error: Authentication failed"
+//	@Failure		403		{object}	map[string]string						"error: You are not an admin of this circle"
+//	@Failure		500		{object}	map[string]string						"error: Error creating reward"
+//	@Router			/circles/{id}/rewards [post]
+func (h *Handler) CreateCircleReward(c *gin.Context) {
+	currentUser, circleID, ok := h.requireCircleAdmin(c)
+	if !ok {
+		return
+	}
+	var reward rModel.Reward
+	if err := c.ShouldBindJSON(&reward); err != nil || reward.Name == "" || reward.Cost <= 0 {
+		c.JSON(400, gin.H{"error": "Invalid request: name and positive cost are required"})
+		return
+	}
+	reward.CircleID = circleID
+	reward.CreatedBy = currentUser.ID
+	if err := h.rewardRepo.CreateReward(c, &reward); err != nil {
+		c.JSON(500, gin.H{"error": "Error creating reward"})
+		return
+	}
+	c.JSON(201, gin.H{"res": reward})
+}
+
+// UpdateCircleReward godoc
+//
+//	@Summary		Update a circle reward
+//	@Description	Updates an existing reward for the circle (admin only)
+//	@Tags			circles
+//	@Accept			json
+//	@Produce		json
+//	@Security		JWTKeyAuth
+//	@Security		APIKeyAuth
+//	@Param			id			path		int										true	"Circle ID"
+//	@Param			rewardId	path		int										true	"Reward ID"
+//	@Param			reward		body		object{name=string,description=string,cost=int}	true	"Updated reward details"
+//	@Success		200			{object}	map[string]interface{}					"res: Updated reward"
+//	@Failure		400			{object}	map[string]string						"error: Invalid request"
+//	@Failure		401			{object}	map[string]string						"error: Authentication failed"
+//	@Failure		403			{object}	map[string]string						"error: You are not an admin of this circle"
+//	@Failure		404			{object}	map[string]string						"error: Reward not found"
+//	@Failure		500			{object}	map[string]string						"error: Error updating reward"
+//	@Router			/circles/{id}/rewards/{rewardId} [put]
+func (h *Handler) UpdateCircleReward(c *gin.Context) {
+	_, circleID, ok := h.requireCircleAdmin(c)
+	if !ok {
+		return
+	}
+	rewardIDRaw := c.Param("rewardId")
+	rewardID, err := strconv.Atoi(rewardIDRaw)
+	if err != nil {
+		c.JSON(400, gin.H{"error": "Invalid reward id"})
+		return
+	}
+	existing, err := h.rewardRepo.GetRewardByID(c, circleID, rewardID)
+	if err != nil {
+		c.JSON(404, gin.H{"error": "Reward not found"})
+		return
+	}
+	var update rModel.Reward
+	if err := c.ShouldBindJSON(&update); err != nil || update.Name == "" || update.Cost <= 0 {
+		c.JSON(400, gin.H{"error": "Invalid request: name and positive cost are required"})
+		return
+	}
+	existing.Name = update.Name
+	existing.Description = update.Description
+	existing.Cost = update.Cost
+	if err := h.rewardRepo.UpdateReward(c, existing); err != nil {
+		c.JSON(500, gin.H{"error": "Error updating reward"})
+		return
+	}
+	c.JSON(200, gin.H{"res": existing})
+}
+
+// DeleteCircleReward godoc
+//
+//	@Summary		Delete a circle reward
+//	@Description	Deletes a reward from the circle (admin only)
+//	@Tags			circles
+//	@Accept			json
+//	@Produce		json
+//	@Security		JWTKeyAuth
+//	@Security		APIKeyAuth
+//	@Param			id			path		int					true	"Circle ID"
+//	@Param			rewardId	path		int					true	"Reward ID"
+//	@Success		200			{object}	map[string]string	"res: Reward deleted successfully"
+//	@Failure		400			{object}	map[string]string	"error: Invalid request"
+//	@Failure		401			{object}	map[string]string	"error: Authentication failed"
+//	@Failure		403			{object}	map[string]string	"error: You are not an admin of this circle"
+//	@Failure		500			{object}	map[string]string	"error: Error deleting reward"
+//	@Router			/circles/{id}/rewards/{rewardId} [delete]
+func (h *Handler) DeleteCircleReward(c *gin.Context) {
+	_, circleID, ok := h.requireCircleAdmin(c)
+	if !ok {
+		return
+	}
+	rewardIDRaw := c.Param("rewardId")
+	rewardID, err := strconv.Atoi(rewardIDRaw)
+	if err != nil {
+		c.JSON(400, gin.H{"error": "Invalid reward id"})
+		return
+	}
+	if err := h.rewardRepo.DeleteReward(c, circleID, rewardID); err != nil {
+		c.JSON(500, gin.H{"error": "Error deleting reward"})
+		return
+	}
+	c.JSON(200, gin.H{"res": "Reward deleted successfully"})
+}
+
+// RedeemReward godoc
+//
+//	@Summary		Redeem a reward for a member
+//	@Description	Redeems a circle reward for a member, deducting its cost in points (admin only)
+//	@Tags			circles
+//	@Accept			json
+//	@Produce		json
+//	@Security		JWTKeyAuth
+//	@Security		APIKeyAuth
+//	@Param			id		path		int									true	"Circle ID"
+//	@Param			request	body		object{rewardId=int,userId=int}		true	"Reward redemption request"
+//	@Success		200		{object}	map[string]string					"res: Reward redeemed successfully"
+//	@Failure		400		{object}	map[string]string					"error: Invalid request / User does not have enough points / User is not a member of this circle"
+//	@Failure		401		{object}	map[string]string					"error: Authentication failed"
+//	@Failure		403		{object}	map[string]string					"error: You are not an admin of this circle"
+//	@Failure		404		{object}	map[string]string					"error: Reward not found"
+//	@Failure		500		{object}	map[string]string					"error: Error redeeming reward"
+//	@Router			/circles/{id}/members/rewards/redeem [post]
+func (h *Handler) RedeemReward(c *gin.Context) {
+	log := logging.FromContext(c)
+	currentUser, circleID, ok := h.requireCircleAdmin(c)
+	if !ok {
+		return
+	}
+	type RedeemRewardRequest struct {
+		RewardID int `json:"rewardId"`
+		UserID   int `json:"userId"`
+	}
+	var req RedeemRewardRequest
+	if err := c.ShouldBindJSON(&req); err != nil || req.RewardID <= 0 || req.UserID <= 0 {
+		c.JSON(400, gin.H{"error": "Invalid request"})
+		return
+	}
+	reward, err := h.rewardRepo.GetRewardByID(c, circleID, req.RewardID)
+	if err != nil {
+		c.JSON(404, gin.H{"error": "Reward not found"})
+		return
+	}
+	members, err := h.circleRepo.GetCircleUsers(c, circleID)
+	if err != nil {
+		log.Error("Error getting circle members:", err)
+		c.JSON(500, gin.H{"error": "Error getting circle members"})
+		return
+	}
+	var member *cModel.UserCircleDetail
+	for _, m := range members {
+		if m.UserID == req.UserID {
+			member = m
+			break
+		}
+	}
+	if member == nil {
+		c.JSON(400, gin.H{"error": "User is not a member of this circle"})
+		return
+	}
+	available := member.Points - member.PointsRedeemed
+	if available < reward.Cost {
+		c.JSON(400, gin.H{"error": "User does not have enough points"})
+		return
+	}
+	if err := h.circleRepo.RedeemPoints(c, circleID, req.UserID, reward.Cost, currentUser.ID, &req.RewardID); err != nil {
+		log.Error("Error redeeming reward:", err)
+		c.JSON(500, gin.H{"error": "Error redeeming reward"})
+		return
+	}
+	c.JSON(200, gin.H{"res": "Reward redeemed successfully"})
+}
+
 func Routes(router *gin.Engine, h *Handler, multiAuthMiddleware *auth.MultiAuthMiddleware) {
 	log.Println("Registering circle routes")
 
@@ -800,6 +1063,11 @@ func Routes(router *gin.Engine, h *Handler, multiAuthMiddleware *auth.MultiAuthM
 		circleRoutes.PUT("/members/role", h.ChangeMemberRole)
 		circleRoutes.GET("/", h.GetUserCircles)
 		circleRoutes.POST("/:id/members/points/redeem", h.RedeemPoints)
+		circleRoutes.GET("/:id/rewards", h.GetCircleRewards)
+		circleRoutes.POST("/:id/rewards", h.CreateCircleReward)
+		circleRoutes.PUT("/:id/rewards/:rewardId", h.UpdateCircleReward)
+		circleRoutes.DELETE("/:id/rewards/:rewardId", h.DeleteCircleReward)
+		circleRoutes.POST("/:id/members/rewards/redeem", h.RedeemReward)
 
 		if !h.singleCircleInstance {
 			circleRoutes.PUT("/members/requests/accept", h.AcceptJoinRequest)

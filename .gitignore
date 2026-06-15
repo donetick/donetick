@@ -1,3 +1,9 @@
 donetick.db
+donetick
 .vscode/launch.json
+frontend/dist/
+config/local.yaml
+config/selfhosted.env
+config/selfhosted.yaml
 *.exe
+.DS_Store

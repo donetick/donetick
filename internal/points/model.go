@@ -10,6 +10,7 @@ type PointsHistory struct {
 	CreatedBy int                 `json:"created_by" gorm:"column:created_by"`     // Created by
 	UserID    int                 `json:"user_id" gorm:"column:user_id;index"`     // User ID
 	CircleID  int                 `json:"circle_id" gorm:"column:circle_id;index"` // Circle ID with index
+	RewardID  *int                `json:"reward_id" gorm:"column:reward_id"`       // Reward ID (set when redeemed via a reward)
 }
 
 type PointsHistoryAction int8

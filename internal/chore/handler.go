@@ -1029,12 +1029,12 @@ func (h *Handler) DeleteChore(c *gin.Context) {
 		return
 	}
 	h.nRepo.DeleteAllChoreNotifications(id)
-	h.tRepo.DissociateChoreWithThing(c, id)
+	h.tRepo.DissociateChoreWithThing(c, id) // [me todo] check what's going on here
 
 	// Broadcast real-time chore deletion event
 	if h.realTimeService != nil {
 		broadcaster := h.realTimeService.GetEventBroadcaster()
-		broadcaster.BroadcastChoreDeleted(chore.ID, chore.Name, chore.CircleID, &currentUser.User, deletedSyncVersion)
+		broadcaster.BroadcastChoreDeleted(chore.ID, chore.Name, chore.CircleID, &currentUser.User)
 	}
 
 	c.JSON(200, gin.H{
@@ -2871,7 +2871,6 @@ func (h *Handler) UpdateSubtaskCompletedAt(c *gin.Context) {
 			req.CompletedAt,
 			&effectiveUser.User,
 			chore.CircleID,
-			chore.SyncVersion,
 		)
 
 	}

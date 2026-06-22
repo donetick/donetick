@@ -19,17 +19,20 @@ const MAX_TEMPLATES = 5
 type FrequencyType string
 
 const (
-	FrequencyTypeOnce          FrequencyType = "once"
-	FrequencyTypeDaily         FrequencyType = "daily"
-	FrequencyTypeWeekly        FrequencyType = "weekly"
-	FrequencyTypeMonthly       FrequencyType = "monthly"
-	FrequencyTypeYearly        FrequencyType = "yearly"
-	FrequencyTypeAdaptive      FrequencyType = "adaptive"
+	FrequencyTypeOnce     FrequencyType = "once"
+	FrequencyTypeHourly   FrequencyType = "hourly"
+	FrequencyTypeDaily    FrequencyType = "daily"
+	FrequencyTypeWeekly   FrequencyType = "weekly"
+	FrequencyTypeMonthly  FrequencyType = "monthly"
+	FrequencyTypeYearly   FrequencyType = "yearly"
+	FrequencyTypeAdaptive FrequencyType = "adaptive"
+	FrequencyTypeTrigger  FrequencyType = "trigger"
+	FrequencyTypeNoRepeat FrequencyType = "no_repeat"
+
+	// Deprecated: retired by the unified RRULE model; kept for migration/back-compat reads.
 	FrequencyTypeInterval      FrequencyType = "interval"
 	FrequencyTypeDayOfTheWeek  FrequencyType = "days_of_the_week"
 	FrequencyTypeDayOfTheMonth FrequencyType = "day_of_the_month"
-	FrequencyTypeTrigger       FrequencyType = "trigger"
-	FrequencyTypeNoRepeat      FrequencyType = "no_repeat"
 )
 
 type AssignmentStrategy string
@@ -120,23 +123,46 @@ const (
 	ChoreHistoryStatusRescheduled     ChoreHistoryStatus = 6
 )
 
+// FrequencyMetadata holds the RRULE-equivalent recurrence selectors for a chore.
+// The chore's FrequencyType is the RRULE FREQ (daily/weekly/monthly/yearly) and the
+// chore's Frequency field is the RRULE INTERVAL ("every X"). The fields below map to:
+//
+//	Days      -> BYDAY weekday list (weekly selection, or weekday set for an ordinal rule)
+//	Months    -> BYMONTH (yearly month selection)
+//	MonthDays -> BYMONTHDAY (monthly "Each" mode, days 1-31)
+//	SetPos    -> BYSETPOS ordinals: 1..5, -2 (next to last), -1 (last)
+//	DayToken  -> expands the weekday set for an ordinal rule (see DayToken* constants)
 type FrequencyMetadata struct {
-	Days        []*string    `json:"days,omitempty"`
-	Months      []*string    `json:"months,omitempty"`
-	Unit        *string      `json:"unit" binding:"omitempty,oneof=hours days weeks months years"`
-	Time        string       `json:"time" binding:"omitempty,datetime=2006-01-02T15:04:05Z07:00"`
-	Timezone    string       `json:"timezone" binding:"omitempty,timezone"`
-	WeekPattern *Weekpattern `json:"weekPattern" binding:"omitempty,oneof=every_week week_of_month week_of_quarter"`
-	WeekNumbers []int        `json:"weekNumbers,omitempty"` // DEPRECATED: use Occurrences instead
-	Occurrences []*int       `json:"occurrences,omitempty"` // e.g. ["1","3","last"] for 1st, 3rd, and last occurrence of the day
+	Days      []*string `json:"days,omitempty"`
+	Months    []*string `json:"months,omitempty"`
+	MonthDays []int     `json:"monthDays,omitempty"`                                                       // BYMONTHDAY for monthly "Each" mode (1-31)
+	SetPos    []int     `json:"setPos,omitempty"`                                                          // BYSETPOS ordinals: 1..5, -2 (next to last), -1 (last)
+	DayToken  *string   `json:"dayToken,omitempty" binding:"omitempty,oneof=specific day weekday weekend"` // weekday-set expansion for an ordinal rule
+	Unit      *string   `json:"unit" binding:"omitempty,oneof=hours days weeks months years"`
+	Time      string    `json:"time" binding:"omitempty,datetime=2006-01-02T15:04:05Z07:00"`
+	Timezone  string    `json:"timezone" binding:"omitempty,timezone"`
+
+	// DEPRECATED legacy fields, retained so pre-unification chores still deserialize.
+	WeekPattern *Weekpattern `json:"weekPattern,omitempty" binding:"omitempty,oneof=every_week week_of_month week_of_quarter"`
+	WeekNumbers []int        `json:"weekNumbers,omitempty"` // DEPRECATED: use SetPos instead
+	Occurrences []*int       `json:"occurrences,omitempty"` // DEPRECATED: use SetPos instead
 }
+
+// DayToken values expand into the BYDAY weekday set for an ordinal ("On the …") rule.
+const (
+	DayTokenSpecific = "specific" // use the explicitly selected Days
+	DayTokenDay      = "day"      // any day (all 7 weekdays)
+	DayTokenWeekday  = "weekday"  // Monday–Friday
+	DayTokenWeekend  = "weekend"  // Saturday & Sunday
+)
 
 type Weekpattern string
 
+// Deprecated: week patterns are superseded by the unified RRULE model (SetPos + DayToken).
 const (
 	WeekpatternEveryWeek     Weekpattern = "every_week"
-	WeekPatternWeekOfMonth   Weekpattern = "week_of_month"   // e.g. ["1","3","last"] for 1st, 3rd, and last occurrence of the day in the month
-	WeekPatternWeekOfQuarter Weekpattern = "week_of_quarter" // e.g. ["1","2","3"] for 1st, 2nd, and 3rd occurrence of the day in the quarter
+	WeekPatternWeekOfMonth   Weekpattern = "week_of_month"
+	WeekPatternWeekOfQuarter Weekpattern = "week_of_quarter"
 )
 
 type NotificationMetadata struct {

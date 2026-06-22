@@ -1,5 +1,5 @@
 name: "local"
-is_done_tick_dot_com: true
+is_done_tick_dot_com: false
 is_user_creation_disabled: false
 telegram:
   token: ""

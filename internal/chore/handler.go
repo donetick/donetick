@@ -237,7 +237,7 @@ func (h *Handler) GetChore(c *gin.Context) {
 type ChoreReq struct {
 	ID                   int                           `json:"id"`
 	Name                 string                        `json:"name" binding:"required"`
-	FrequencyType        chModel.FrequencyType         `json:"frequencyType" binding:"required,oneof=once daily weekly monthly yearly adaptive interval days_of_the_week day_of_the_month trigger no_repeat"`
+	FrequencyType        chModel.FrequencyType         `json:"frequencyType" binding:"required,oneof=once hourly daily weekly monthly yearly adaptive trigger no_repeat"`
 	Frequency            *int                          `json:"frequency" binding:"omitempty,gt=0"`
 	FrequencyMetadata    *chModel.FrequencyMetadata    `json:"frequencyMetadata"`
 	NextDueDate          *time.Time                    `json:"nextDueDate" binding:"required_with=IsRolling"` // Next due date in RFC3339 format

@@ -27,41 +27,68 @@ func validateFrequencyLogic(sl validator.StructLevel, req ChoreReq) {
 	hasMetadata := req.FrequencyMetadata != nil
 
 	switch req.FrequencyType {
-	case chModel.FrequencyTypeInterval:
-		// Interval must have metadata and a defined unit (hours, days, etc.)
-		if !hasMetadata || req.FrequencyMetadata.Unit == nil {
-			sl.ReportError(req.FrequencyMetadata, "Unit", "unit", "required_with_interval", "")
-		}
-		// Interval requires a frequency value
-		if req.Frequency == nil {
-			sl.ReportError(req.Frequency, "Frequency", "frequency", "required_with_interval", "")
+	case chModel.FrequencyTypeHourly, chModel.FrequencyTypeDaily:
+		// "Every X" interval only; Frequency must be a positive count when provided.
+		if req.Frequency != nil && *req.Frequency < 1 {
+			sl.ReportError(req.Frequency, "Frequency", "frequency", "valid_interval", "")
 		}
 
-	case chModel.FrequencyTypeDayOfTheWeek:
-		// Day of the week requires at least one specified day in the array
+	case chModel.FrequencyTypeWeekly:
+		// Weekly requires at least one selected weekday.
 		if !hasMetadata || len(req.FrequencyMetadata.Days) == 0 {
-			sl.ReportError(req.FrequencyMetadata, "Days", "days", "required_with_day_of_week", "")
+			sl.ReportError(req.FrequencyMetadata, "Days", "days", "required_with_weekly", "")
 		}
-		// Only validate occurrences if a specific monthly or quarterly week pattern is requested
-		if hasMetadata && req.FrequencyMetadata.WeekPattern != nil {
-			pattern := string(*req.FrequencyMetadata.WeekPattern)
-			if pattern == "week_of_month" || pattern == "week_of_quarter" {
-				hasOccurrences := len(req.FrequencyMetadata.Occurrences) > 0 || len(req.FrequencyMetadata.WeekNumbers) > 0
-				if !hasOccurrences {
-					sl.ReportError(req.FrequencyMetadata, "Occurrences", "occurrences", "required_with_week_pattern", "")
+
+	case chModel.FrequencyTypeMonthly:
+		if !hasMetadata {
+			sl.ReportError(req.FrequencyMetadata, "FrequencyMetadata", "frequencyMetadata", "required_with_monthly", "")
+			return
+		}
+		m := req.FrequencyMetadata
+		hasEach := len(m.MonthDays) > 0 // "Each" mode: specific day numbers
+		hasOnThe := len(m.SetPos) > 0   // "On the" mode: ordinal weekday(s)
+		if !hasEach && !hasOnThe {
+			sl.ReportError(m, "MonthDays", "monthDays", "required_with_monthly", "")
+		}
+		if hasEach {
+			for _, d := range m.MonthDays {
+				if d < 1 || d > 31 {
+					sl.ReportError(m, "MonthDays", "monthDays", "valid_month_day", "")
+					break
 				}
 			}
 		}
+		if hasOnThe {
+			validateOrdinalBlock(sl, m)
+		}
 
-	case chModel.FrequencyTypeDayOfTheMonth:
-		// Day of the month requires at least one specified month in the array
+	case chModel.FrequencyTypeYearly:
+		// Yearly requires at least one selected month, with an optional ordinal block.
 		if !hasMetadata || len(req.FrequencyMetadata.Months) == 0 {
-			sl.ReportError(req.FrequencyMetadata, "Months", "months", "required_with_day_of_month", "")
+			sl.ReportError(req.FrequencyMetadata, "Months", "months", "required_with_yearly", "")
+			return
 		}
-		// The struct tag handles min=1, but the upper bound of 31 requires struct-level checking
-		if req.Frequency == nil || *req.Frequency > 31 {
-			sl.ReportError(req.Frequency, "Frequency", "frequency", "valid_day_of_month", "")
+		if len(req.FrequencyMetadata.SetPos) > 0 {
+			validateOrdinalBlock(sl, req.FrequencyMetadata)
 		}
+	}
+}
+
+// validateOrdinalBlock validates an "On the …" ordinal rule (SetPos + DayToken/Days).
+func validateOrdinalBlock(sl validator.StructLevel, m *chModel.FrequencyMetadata) {
+	for _, p := range m.SetPos {
+		// Allowed ordinals: 1..5, -1 (last), -2 (next to last).
+		if p == 0 || p < -2 || p > 5 {
+			sl.ReportError(m, "SetPos", "setPos", "valid_set_pos", "")
+			break
+		}
+	}
+	token := chModel.DayTokenSpecific
+	if m.DayToken != nil && *m.DayToken != "" {
+		token = *m.DayToken
+	}
+	if token == chModel.DayTokenSpecific && len(m.Days) == 0 {
+		sl.ReportError(m, "Days", "days", "required_with_ordinal", "")
 	}
 }
 

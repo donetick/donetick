@@ -1907,6 +1907,8 @@ func (h *Handler) ArchiveChore(c *gin.Context) {
 		return
 	}
 
+	h.nRepo.DeleteAllChoreNotifications(id)
+
 	// Broadcast real-time chore archive event
 	if h.realTimeService != nil {
 		updatedChore, err := h.choreRepo.GetChore(c, id, currentUser.ID, currentUser.CircleID)

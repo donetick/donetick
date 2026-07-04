@@ -25,7 +25,7 @@ type Handler struct {
 	userRepo             *uRepo.UserRepository
 	choreRepo            *chRepo.ChoreRepository
 	pointRepo            *pRepo.PointsRepository
-	signer               *storage.URLSignerS3
+	signer               storage.URLSigner
 	isDonetickDotCom     bool
 	maxCircleMembers     int
 	plusMaxCircleMembers int
@@ -33,7 +33,7 @@ type Handler struct {
 }
 
 func NewHandler(cr *cRepo.CircleRepository, ur *uRepo.UserRepository, c *chRepo.ChoreRepository, pr *pRepo.PointsRepository,
-	signer *storage.URLSignerS3, config *config.Config) *Handler {
+	signer storage.URLSigner, config *config.Config) *Handler {
 	return &Handler{
 		circleRepo:           cr,
 		userRepo:             ur,

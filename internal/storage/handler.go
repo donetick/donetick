@@ -124,7 +124,7 @@ func (h *Handler) ChoreUploadHandler(c *gin.Context) {
 		return
 	}
 
-	entityType, entityID, _ := handleEntityType(c, h, currentUser)
+	entityType, entityID, draftID, _ := handleEntityType(c, h, currentUser)
 
 	// save the file to storage:
 	src, err := file.Open()
@@ -140,10 +140,12 @@ func (h *Handler) ChoreUploadHandler(c *gin.Context) {
 	path := fmt.Sprintf("users/%d/%s%s", currentUser.ID, uuid, ext)
 	mediaRecord := &storageModel.StorageFile{
 		FilePath:   path,
+		FileName:   file.Filename,
 		SizeBytes:  int(file.Size),
 		UserID:     currentUser.ID,
 		EntityID:   entityID,
 		EntityType: entityType,
+		DraftID:    draftID,
 	}
 
 	// Save the file first; only write the DB record if the upload succeeds
@@ -181,58 +183,224 @@ func (h *Handler) ChoreUploadHandler(c *gin.Context) {
 		return
 	}
 	// return the signed url:
-	c.JSON(http.StatusOK, gin.H{"path": path, "sign": signedURL})
+	c.JSON(http.StatusOK, gin.H{
+		"path":       path,
+		"sign":       signedURL,
+		"file_name":  file.Filename,
+		"size_bytes": int(file.Size),
+	})
 }
 
-func handleEntityType(c *gin.Context, h *Handler, currentUser *user.UserDetails) (storageModel.EntityType, int, bool) {
+// handleEntityType returns (entityType, entityID, draftID, ok).
+func handleEntityType(c *gin.Context, h *Handler, currentUser *user.UserDetails) (storageModel.EntityType, int, string, bool) {
 	log := logging.FromContext(c)
 	entityType := c.PostForm("entityType")
 
+	switch entityType {
+	case "chore_attachment_draft":
+		draftID := c.PostForm("draftId")
+		if draftID == "" {
+			log.Error("missing draftId for chore_attachment_draft")
+			c.JSON(http.StatusBadRequest, gin.H{"error": "missing draftId"})
+			return storageModel.EntityTypeUnknown, 0, "", false
+		}
+		return storageModel.EntityTypeChoreAttachmentDraft, 0, draftID, true
+	}
+
 	rawEntityId := c.PostForm("entityId")
 	if rawEntityId == "" {
-		return storageModel.EntityTypeChoreDescription, 0, false
+		return storageModel.EntityTypeChoreDescription, 0, "", false
 	}
 	entityID, err := strconv.Atoi(rawEntityId)
 	if err != nil {
 		log.Error("failed to parse chore ID", "error", err)
-		return storageModel.EntityTypeChoreDescription, 0, false
+		return storageModel.EntityTypeChoreDescription, 0, "", false
 	}
+
 	switch entityType {
 	case "chore":
 		chore, err := h.choreRepo.GetChore(c, entityID, currentUser.ID, currentUser.CircleID)
 		if err != nil {
 			log.Error("failed to get chore from db", "error", err)
-			return storageModel.EntityTypeChoreDescription, 0, false
+			return storageModel.EntityTypeChoreDescription, 0, "", false
 		}
 		circleUsers, err := h.circleRepo.GetCircleUsers(c, currentUser.CircleID)
 		if err != nil {
 			log.Error("failed to get circle users from db", "error", err)
-			return storageModel.EntityTypeChoreDescription, 0, false
+			return storageModel.EntityTypeChoreDescription, 0, "", false
 		}
 		now := time.Now().UTC()
 		if err := chore.CanEdit(currentUser.ID, circleUsers, &now); err != nil {
 			log.Error("user is not allowed to edit chore", "error", err)
 			c.JSON(http.StatusForbidden, gin.H{"error": "user is not allowed to edit chore"})
-			return storageModel.EntityTypeChoreDescription, 0, false
+			return storageModel.EntityTypeChoreDescription, 0, "", false
 		}
-		return storageModel.EntityTypeChoreDescription, chore.ID, true
+		return storageModel.EntityTypeChoreDescription, chore.ID, "", true
+	case "chore_attachment":
+		chore, err := h.choreRepo.GetChore(c, entityID, currentUser.ID, currentUser.CircleID)
+		if err != nil {
+			log.Error("failed to get chore from db", "error", err)
+			return storageModel.EntityTypeUnknown, 0, "", false
+		}
+		circleUsers, err := h.circleRepo.GetCircleUsers(c, currentUser.CircleID)
+		if err != nil {
+			log.Error("failed to get circle users from db", "error", err)
+			return storageModel.EntityTypeUnknown, 0, "", false
+		}
+		now := time.Now().UTC()
+		if err := chore.CanEdit(currentUser.ID, circleUsers, &now); err != nil {
+			log.Error("user is not allowed to edit chore", "error", err)
+			c.JSON(http.StatusForbidden, gin.H{"error": "user is not allowed to edit chore"})
+			return storageModel.EntityTypeUnknown, 0, "", false
+		}
+		return storageModel.EntityTypeChoreAttachment, chore.ID, "", true
 	default:
 		log.Error("invalid entity type", "entityType", entityType)
-		return storageModel.EntityTypeUnknown, 0, false
-
+		return storageModel.EntityTypeUnknown, 0, "", false
 	}
+}
+
+func (h *Handler) ListChoreAttachmentsHandler(c *gin.Context) {
+	log := logging.FromContext(c)
+	currentUser, ok := auth.CurrentUser(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	rawChoreID := c.Param("id")
+	choreID, err := strconv.Atoi(rawChoreID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid chore id"})
+		return
+	}
+
+	if _, err := h.choreRepo.GetChore(c, choreID, currentUser.ID, currentUser.CircleID); err != nil {
+		log.Error("failed to get chore", "error", err)
+		c.JSON(http.StatusNotFound, gin.H{"error": "chore not found"})
+		return
+	}
+
+	files, err := h.storageRepo.GetAllFilesByOwnerType(c, storageModel.EntityTypeChoreAttachment, choreID)
+	if err != nil {
+		log.Error("failed to get attachments", "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get attachments"})
+		return
+	}
+
+	type attachmentResponse struct {
+		FilePath  string `json:"file_path"`
+		FileName  string `json:"file_name"`
+		SizeBytes int    `json:"size_bytes"`
+		CreatedAt int    `json:"created_at"`
+		Sign      string `json:"sign"`
+	}
+
+	result := make([]attachmentResponse, 0, len(files))
+	for _, f := range files {
+		signedURL, err := h.signer.Sign(f.FilePath)
+		if err != nil {
+			log.Error("failed to sign url", "path", f.FilePath, "error", err)
+			continue
+		}
+		result = append(result, attachmentResponse{
+			FilePath:  f.FilePath,
+			FileName:  f.FileName,
+			SizeBytes: f.SizeBytes,
+			CreatedAt: f.CreatedAt,
+			Sign:      signedURL,
+		})
+	}
+
+	c.JSON(http.StatusOK, result)
+}
+
+func (h *Handler) DeleteChoreAttachmentHandler(c *gin.Context) {
+	log := logging.FromContext(c)
+	currentUser, ok := auth.CurrentUser(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	rawChoreID := c.Param("id")
+	choreID, err := strconv.Atoi(rawChoreID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid chore id"})
+		return
+	}
+
+	chore, err := h.choreRepo.GetChore(c, choreID, currentUser.ID, currentUser.CircleID)
+	if err != nil {
+		log.Error("failed to get chore", "error", err)
+		c.JSON(http.StatusNotFound, gin.H{"error": "chore not found"})
+		return
+	}
+
+	circleUsers, err := h.circleRepo.GetCircleUsers(c, currentUser.CircleID)
+	if err != nil {
+		log.Error("failed to get circle users", "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+	now := time.Now().UTC()
+	if err := chore.CanEdit(currentUser.ID, circleUsers, &now); err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": "not allowed to edit chore"})
+		return
+	}
+
+	var req struct {
+		FilePath string `json:"file_path" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "missing file_path"})
+		return
+	}
+
+	file, err := h.storageRepo.GetFileByPath(c, req.FilePath, currentUser.ID)
+	if err != nil {
+		log.Error("failed to find file record", "error", err)
+		c.JSON(http.StatusNotFound, gin.H{"error": "attachment not found"})
+		return
+	}
+
+	if file.EntityType != storageModel.EntityTypeChoreAttachment || file.EntityID != choreID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "attachment does not belong to this chore"})
+		return
+	}
+
+	if err := h.storage.Delete(context.Background(), []string{file.FilePath}); err != nil {
+		log.Error("failed to delete file from storage", "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete file"})
+		return
+	}
+
+	if err := h.storageRepo.RemoveFileRecords(c, []*storageModel.StorageFile{file}, currentUser.ID); err != nil {
+		log.Error("failed to remove file record", "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to remove attachment record"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "attachment deleted"})
 }
 
 // Routes registers storage-related routes
 func Routes(r *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware) {
 
-	choreAssetRoutes := r.Group("api/v1/assets")
-	choreAssetRoutes.Use(auth.MiddlewareFunc())
+	uploadRoutes := r.Group("api/v1/assets")
+	uploadRoutes.Use(auth.MiddlewareFunc())
 	{
-		// catch all requests to /assets/* and pass them to the AssetHandler
-		choreAssetRoutes.POST("/chore", h.ChoreUploadHandler)
-
+		uploadRoutes.POST("/chore", h.ChoreUploadHandler)
 	}
+
+	choreRoutes := r.Group("api/v1/chores")
+	choreRoutes.Use(auth.MiddlewareFunc())
+	{
+		choreRoutes.GET("/:id/attachments", h.ListChoreAttachmentsHandler)
+		choreRoutes.DELETE("/:id/attachments", h.DeleteChoreAttachmentHandler)
+	}
+
+	// wildcard asset-serving route — must be registered last and on its own group
 	assetRoutes := r.Group("api/v1/assets")
 	assetRoutes.GET("/*filepath", h.AssetHandler)
 

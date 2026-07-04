@@ -206,6 +206,12 @@ func (h *Handler) signUp(c *gin.Context) {
 		})
 		return
 	}
+	if err := h.storageRepo.CreateStorageUsage(c, insertedUser.ID, userCircle.ID); err != nil {
+		c.JSON(500, gin.H{
+			"error": "Error initializing storage",
+		})
+		return
+	}
 
 	c.JSON(201, gin.H{})
 }
@@ -368,6 +374,12 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 			if err := h.userRepo.UpdateUser(c, createdUser); err != nil {
 				c.JSON(500, gin.H{
 					"error": "Error updating user",
+				})
+				return
+			}
+			if err := h.storageRepo.CreateStorageUsage(c, createdUser.ID, userCircle.ID); err != nil {
+				c.JSON(500, gin.H{
+					"error": "Error initializing storage",
 				})
 				return
 			}
@@ -538,6 +550,13 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 				logger.Errorw("account.handler.thirdPartyAuthCallback (apple) failed to update user", "err", err)
 				c.JSON(500, gin.H{
 					"error": "Error updating user",
+				})
+				return
+			}
+			if err := h.storageRepo.CreateStorageUsage(c, createdUser.ID, userCircle.ID); err != nil {
+				logger.Errorw("account.handler.thirdPartyAuthCallback (apple) failed to create storage usage", "err", err)
+				c.JSON(500, gin.H{
+					"error": "Error initializing storage",
 				})
 				return
 			}
@@ -739,6 +758,12 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 			if err := h.userRepo.UpdateUser(c, createdUser); err != nil {
 				c.JSON(500, gin.H{
 					"error": "Error updating user",
+				})
+				return
+			}
+			if err := h.storageRepo.CreateStorageUsage(c, createdUser.ID, circleID); err != nil {
+				c.JSON(500, gin.H{
+					"error": "Error initializing storage",
 				})
 				return
 			}

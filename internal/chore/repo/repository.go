@@ -112,6 +112,9 @@ func (r *ChoreRepository) DeleteChore(c context.Context, id int) error {
 		if err := tx.Where("entity_type = ? AND entity_id = ?", storageModel.EntityTypeChoreDescription, id).Delete(&storageModel.StorageFile{}).Error; err != nil {
 			return err
 		}
+		if err := tx.Where("entity_type = ? AND entity_id = ?", storageModel.EntityTypeChoreAttachment, id).Delete(&storageModel.StorageFile{}).Error; err != nil {
+			return err
+		}
 
 		return nil
 	})

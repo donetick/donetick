@@ -234,6 +234,7 @@ type ChoreReq struct {
 	DeadlineOffset       *int                  `json:"deadlineOffset,omitempty"`
 	ProjectID            *int                  `json:"projectId,omitempty"`
 	UpdatedAt            *time.Time            `json:"updatedAt,omitempty"` // For internal use only when syncing a chore updated offline
+	DraftId              *string               `json:"draftId,omitempty"`
 }
 
 func (c *Chore) GetDeadline() *time.Time {

@@ -377,6 +377,15 @@ func (h *Handler) createChore(c *gin.Context) {
 			return
 		}
 	}
+
+	if choreReq.DraftId != nil && *choreReq.DraftId != "" {
+		if err := h.storageRepo.ReassignDraftAttachments(c, *choreReq.DraftId, currentUser.ID, createdChore.ID); err != nil {
+			logger.Error("Failed to reassign draft attachments", "error", err, "draftID", *choreReq.DraftId)
+			c.JSON(500, gin.H{"error": "Error processing attachments"})
+			return
+		}
+	}
+
 	if len(choreAssignees) > 0 {
 		if err := h.choreRepo.UpdateChoreAssignees(c, choreAssignees); err != nil {
 			c.JSON(500, gin.H{

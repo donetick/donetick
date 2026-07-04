@@ -8,7 +8,6 @@ import (
 
 	"donetick.com/core/config"
 	nModel "donetick.com/core/internal/notifier/model"
-	storageModel "donetick.com/core/internal/storage/model"
 	uModel "donetick.com/core/internal/user/model"
 	"donetick.com/core/logging"
 	"gorm.io/gorm"
@@ -76,15 +75,6 @@ func (r *UserRepository) CreateUser(c context.Context, user *uModel.User) (*uMod
 	if err := r.db.WithContext(c).Create(user).Error; err != nil {
 		return nil, err
 	}
-	if err := r.db.WithContext(c).Create(&storageModel.StorageUsage{
-		CircleID:  user.CircleID,
-		UserID:    user.ID,
-		UsedBytes: 0,
-		UpdatedAt: time.Now().UTC(),
-	}).Error; err != nil {
-		return nil, err
-	}
-
 	return user, nil
 }
 func (r *UserRepository) GetUserByUsername(c context.Context, username string) (*uModel.UserDetails, error) {

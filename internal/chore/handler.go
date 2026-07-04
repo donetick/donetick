@@ -912,6 +912,26 @@ func setEditChoreDefaults(choreReq *ChoreReq, oldChore *chModel.Chore) {
 	}
 }
 
+func (h *Handler) deleteChoreFiles(ctx *gin.Context, choreID int) {
+	files, err := h.storageRepo.GetAllFilesByOwnerType(ctx, storageModel.EntityTypeChoreDescription, choreID)
+	if err != nil || len(files) == 0 {
+		return
+	}
+	paths := make([]string, len(files))
+	for i, f := range files {
+		paths[i] = f.FilePath
+	}
+	h.storage.Delete(ctx, paths)
+
+	byUser := make(map[int][]*storageModel.StorageFile)
+	for _, f := range files {
+		byUser[f.UserID] = append(byUser[f.UserID], f)
+	}
+	for userID, userFiles := range byUser {
+		h.storageRepo.RemoveFileRecords(ctx, userFiles, userID)
+	}
+}
+
 func (h *Handler) cleanUpUnreferencedFiles(ctx *gin.Context, userID int, entityType storageModel.EntityType, entityID int, text string) error {
 	existedFiles, err := h.storageRepo.GetFilesByUser(ctx, userID, entityType, entityID)
 	if err != nil {
@@ -1030,6 +1050,7 @@ func (h *Handler) DeleteChore(c *gin.Context) {
 	}
 	h.nRepo.DeleteAllChoreNotifications(id)
 	h.tRepo.DissociateChoreWithThing(c, id)
+	h.deleteChoreFiles(c, id)
 
 	// Broadcast real-time chore deletion event
 	if h.realTimeService != nil {

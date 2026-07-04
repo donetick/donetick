@@ -63,6 +63,24 @@ jobs:
     - name: Run tests
       run: go test ./...
 
+  # Integration tests behind the `integration` build tag, run against a real
+  # Postgres via testcontainers (Docker is available on GitHub runners).
+  # PR-only: it's slower (container startup), so we skip it on direct pushes.
+  integration:
+    name: 🐘 Integration (Postgres)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version-file: go.mod
+
+    - name: Run integration tests
+      run: go test -tags integration ./...
+
   build:
     name: 🏗 Build
     runs-on: ubuntu-latest

@@ -1,3 +1,6 @@
 donetick.db
+e2e-test.db
 .vscode/launch.json
 *.exe
+/donetick
+test-results/

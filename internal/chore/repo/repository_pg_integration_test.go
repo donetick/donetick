@@ -21,7 +21,7 @@ import (
 )
 
 // Integration tests that run against a REAL PostgreSQL instance via
-// testcontainers. Production uses Postgres, and GORM/SQL behaviour can differ
+// testcontainers. Production uses Postgres, and GORM/SQL behavior can differ
 // from SQLite (e.g. the sync-cursor uses `ON CONFLICT ... RETURNING`), so these
 // guard the parts that unit-level SQLite tests can't. See be/TESTING.md.
 //

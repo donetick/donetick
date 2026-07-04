@@ -17,7 +17,7 @@ import (
 
 // Integration tests for the repository layer. They run against a real (in-memory)
 // SQLite database migrated with the production migration system — no mocks — so
-// they exercise real GORM behaviour and SQL. This is the reference pattern for
+// they exercise real GORM behavior and SQL. This is the reference pattern for
 // DB-backed tests in this repo. See TESTING.md.
 //
 // We use SQLite in-memory here for fast feedback; the production Postgres path
@@ -93,7 +93,7 @@ func TestChoreRepository_CompleteChore_RecordsHistoryAndDeactivates(t *testing.T
 
 	completedAt := time.Now().UTC()
 	// A one-time chore has no next due date; applyPoints=false keeps this focused
-	// on the completion + history behaviour.
+	// on the completion + history behavior.
 	err = repo.CompleteChore(ctx, chore, nil, userID, nil, &completedAt, nil, false)
 	require.NoError(t, err)
 

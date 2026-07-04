@@ -48,6 +48,8 @@ jobs:
       uses: golangci/golangci-lint-action@v6
       with:
         version: ${{ env.GOLANGCI_LINT_VERSION }}
+        # Only flag issues introduced by the PR, not pre-existing repo debt.
+        only-new-issues: true
 
   test:
     name: 🔬 Test

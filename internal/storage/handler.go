@@ -27,7 +27,7 @@ import (
 // Handler handles file storage-related routes
 type Handler struct {
 	storage     Storage
-	signer      *URLSignerS3
+	signer      URLSigner
 	storageRepo *storageRepo.StorageRepository
 	choreRepo   *chRepo.ChoreRepository
 	circleRepo  *cRepo.CircleRepository
@@ -35,8 +35,8 @@ type Handler struct {
 }
 
 // NewHandler creates a new Handler
-func NewHandler(storage *S3Storage, choreRepo *chRepo.ChoreRepository, circleRepo *cRepo.CircleRepository,
-	repo *storageRepo.StorageRepository, signer *URLSignerS3, cfg *config.Config) *Handler {
+func NewHandler(storage Storage, choreRepo *chRepo.ChoreRepository, circleRepo *cRepo.CircleRepository,
+	repo *storageRepo.StorageRepository, signer URLSigner, cfg *config.Config) *Handler {
 	return &Handler{storage: storage, circleRepo: circleRepo,
 		choreRepo:   choreRepo,
 		storageRepo: repo,
@@ -146,10 +146,19 @@ func (h *Handler) ChoreUploadHandler(c *gin.Context) {
 		EntityType: entityType,
 	}
 
-	if err := h.storageRepo.AddMediaRecord(c,
-		mediaRecord,
-		currentUser,
-	); err != nil {
+	// Save the file first; only write the DB record if the upload succeeds
+	// so we never end up with a dangling record pointing at a missing file.
+	if err = h.storage.Save(context.Background(), path, src); err != nil {
+		log.Error("failed to save file to storage", "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save file"})
+		return
+	}
+
+	if err := h.storageRepo.AddMediaRecord(c, mediaRecord, currentUser); err != nil {
+		// Best-effort cleanup: delete the file we just uploaded.
+		if delErr := h.storage.Delete(context.Background(), []string{path}); delErr != nil {
+			log.Error("failed to delete orphaned file after DB error", "path", path, "error", delErr)
+		}
 		switch {
 		case err == errorx.ErrNotEnoughSpace:
 			log.Error("user has no enough space", "error", err)
@@ -163,12 +172,6 @@ func (h *Handler) ChoreUploadHandler(c *gin.Context) {
 			log.Error("failed to save file record to db", "error", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save file record"})
 		}
-		return
-	}
-	err = h.storage.Save(context.Background(), path, src)
-	if err != nil {
-		log.Error("failed to save file to storage", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save file"})
 		return
 	}
 	// generate a signed url for the file:

@@ -43,9 +43,9 @@ type Handler struct {
 	isDonetickDotCom       bool
 	IsUserCreationDisabled bool
 	DonetickCloudConfig    config.DonetickCloudConfig
-	storage                *storage.S3Storage
+	storage                storage.Storage
 	storageRepo            *storageRepo.StorageRepository
-	signer                 *storage.URLSignerS3
+	signer                 storage.URLSigner
 	deletionService        *DeletionService
 	appleService           *apple.AppleService
 	mfaService             *mfa.MFAService
@@ -58,8 +58,8 @@ type Handler struct {
 func NewHandler(ur *uRepo.UserRepository, cr *cRepo.CircleRepository,
 	jwtAuth *jwt.GinJWTMiddleware, tokenService *auth.TokenService,
 	email *email.EmailSender,
-	idp *auth.IdentityProvider, storage *storage.S3Storage,
-	signer *storage.URLSignerS3, storageRepo *storageRepo.StorageRepository,
+	idp *auth.IdentityProvider, storage storage.Storage,
+	signer storage.URLSigner, storageRepo *storageRepo.StorageRepository,
 	appleService *apple.AppleService,
 	deletionService *DeletionService, mfaService *mfa.MFAService, config *config.Config) *Handler {
 	return &Handler{

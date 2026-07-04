@@ -164,13 +164,10 @@ func main() {
 		// Docs
 		fx.Provide(docs.NewHandler),
 
-		// storage :
-		// is storage local or remote?
-		// fx.Provide(storage.NewLocalStorage),
-		// fx.Provide(storage.NewURLSignerLocal),
-		fx.Provide(storage.NewS3Storage),
-		fx.Provide(storage.NewURLSignerS3),
-
+		// storage: factory selects local vs S3 based on config.Storage.StorageType.
+		// Set storage_type: "local" in config for local dev, leave blank for S3.
+		fx.Provide(storage.NewStorage),
+		fx.Provide(storage.NewURLSigner),
 		fx.Provide(storage.NewHandler),
 		fx.Provide(storageRepo.NewStorageRepository),
 

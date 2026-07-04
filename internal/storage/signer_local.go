@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"net/url"
+	"strings"
 
 	"donetick.com/core/config"
 )
@@ -33,7 +34,20 @@ func (s *URLSignerLocal) sign(path string) string {
 }
 
 func (s *URLSignerLocal) IsValid(rawPath string, providedSig string) bool {
-
 	expectedSig := s.sign(rawPath)
 	return hmac.Equal([]byte(expectedSig), []byte(providedSig))
+}
+
+func (s *URLSignerLocal) SignIfLocal(path string) string {
+	if path == "" {
+		return path
+	}
+	if strings.HasPrefix(path, "http://") || strings.HasPrefix(path, "https://") {
+		return path
+	}
+	signed, err := s.Sign(path)
+	if err != nil {
+		return ""
+	}
+	return signed
 }

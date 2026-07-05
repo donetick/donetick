@@ -10,6 +10,7 @@ import (
 	cModel "donetick.com/core/internal/circle/model"
 	lModel "donetick.com/core/internal/label/model"
 	pModel "donetick.com/core/internal/project/model"
+	storageModel "donetick.com/core/internal/storage/model"
 	stModel "donetick.com/core/internal/subtask/model"
 	tModel "donetick.com/core/internal/thing/model"
 )
@@ -79,6 +80,7 @@ type Chore struct {
 	DeadlineOffset         *int                  `json:"deadlineOffset,omitempty" gorm:"column:deadline_offset"`      // Seconds after NextDueDate when chore deadline is reached
 	ProjectID              *int                  `json:"projectId,omitempty" gorm:"column:project_id;index"`          // The project this chore belongs to
 	Project                *pModel.Project       `json:"project,omitempty" gorm:"foreignkey:ProjectID;references:ID"` // Project relationship
+	Attachments            []storageModel.StorageFile `json:"attachments,omitempty" gorm:"-"`
 }
 
 type Status int8
@@ -191,6 +193,7 @@ type ChoreDetail struct {
 	DeadlineOffset      *int               `json:"deadlineOffset,omitempty" gorm:"column:deadline_offset"`
 	ProjectID           *int               `json:"projectId,omitempty" gorm:"column:project_id"`
 	IsActive            bool               `json:"isActive" gorm:"column:is_active"`
+	Attachments         []storageModel.StorageFile `json:"attachments,omitempty" gorm:"-"`
 }
 
 type ChoreLabels struct {

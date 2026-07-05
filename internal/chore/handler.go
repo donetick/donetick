@@ -58,7 +58,7 @@ type Handler struct {
 func NewHandler(cr *chRepo.ChoreRepository, circleRepo *cRepo.CircleRepository, nt *notifier.Notifier,
 	np *nps.NotificationPlanner, nRepo *nRepo.NotificationRepository, tRepo *tRepo.ThingRepository, lRepo *lRepo.LabelRepository,
 	ep *events.EventsProducer, stRepo *stRepo.SubTasksRepository,
-	storage storage.Storage,
+	stor storage.Storage,
 	ur *uRepo.UserRepository,
 	dr *dRepo.DeviceRepository,
 	stoRepo *storageRepo.StorageRepository,
@@ -76,7 +76,7 @@ func NewHandler(cr *chRepo.ChoreRepository, circleRepo *cRepo.CircleRepository, 
 		eventProducer:   ep,
 		stRepo:          stRepo,
 		storageRepo:     stoRepo,
-		storage:         storage,
+		storage:         stor,
 		realTimeService: rts,
 	}
 }

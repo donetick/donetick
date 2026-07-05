@@ -63,6 +63,7 @@ func (r *ChoreRepository) GetChore(c context.Context, choreID int, userID int, c
 	if err := query.First(&chore).Error; err != nil {
 		return nil, err
 	}
+	r.db.WithContext(c).Where("entity_type = ? AND entity_id = ?", storageModel.EntityTypeChoreAttachment, choreID).Find(&chore.Attachments)
 	return &chore, nil
 }
 
@@ -619,8 +620,8 @@ func (r *ChoreRepository) GetChoreDetailByID(c context.Context, choreID int, cir
 		Group("chores.id, recent_history.last_completed_date, recent_history.last_assigned_to, recent_history.last_completed_by, recent_history.notes, time_sessions.start_time, time_sessions.updated_at").
 		First(&choreDetail).Error; err != nil {
 		return nil, err
-
 	}
+	r.db.WithContext(c).Where("entity_type = ? AND entity_id = ?", storageModel.EntityTypeChoreAttachment, choreID).Find(&choreDetail.Attachments)
 	return &choreDetail, nil
 }
 

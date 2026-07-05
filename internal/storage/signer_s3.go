@@ -68,8 +68,8 @@ func (s *URLSignerS3) Sign(rawPath string) (string, error) {
 	return urlStr, nil
 }
 
-func (s *URLSignerS3) IsValid(rawPath string, providedSig string) bool {
-
+func (s *URLSignerS3) IsValid(rawPath string, query url.Values) bool {
+	// S3 presigned URL validity is enforced by AWS; no local check needed.
 	return true
 }
 

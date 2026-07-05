@@ -37,7 +37,9 @@ type Handler struct {
 // NewHandler creates a new Handler
 func NewHandler(storage Storage, choreRepo *chRepo.ChoreRepository, circleRepo *cRepo.CircleRepository,
 	repo *storageRepo.StorageRepository, signer URLSigner, cfg *config.Config) *Handler {
-	return &Handler{storage: storage, circleRepo: circleRepo,
+	return &Handler{
+		storage:     storage,
+		circleRepo:  circleRepo,
 		choreRepo:   choreRepo,
 		storageRepo: repo,
 		signer:      signer,
@@ -63,9 +65,7 @@ func (h *Handler) AssetHandler(c *gin.Context) {
 		return
 	}
 
-	sig := c.Query("sig")
-
-	if !h.signer.IsValid(parsed.Path[1:], sig) {
+	if !h.signer.IsValid(parsed.Path[1:], c.Request.URL.Query()) {
 		c.JSON(http.StatusForbidden, gin.H{"error": "invalid or expired signature for url: " + parsed.Path[1:]})
 		return
 	}
@@ -176,6 +176,7 @@ func (h *Handler) ChoreUploadHandler(c *gin.Context) {
 		}
 		return
 	}
+
 	// generate a signed url for the file:
 	signedURL, err := h.signer.Sign(path)
 	if err != nil {
@@ -381,7 +382,58 @@ func (h *Handler) DeleteChoreAttachmentHandler(c *gin.Context) {
 		return
 	}
 
+	h.broadcastChoreAttachmentChange(c, chore, currentUser)
+
 	c.JSON(http.StatusOK, gin.H{"message": "attachment deleted"})
+}
+
+func (h *Handler) SignAssetHandler(c *gin.Context) {
+	log := logging.FromContext(c)
+	currentUser, ok := auth.CurrentUser(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	filePath := c.Query("path")
+	if filePath == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "missing path"})
+		return
+	}
+
+	file, err := h.storageRepo.GetFileByPathOnly(c, filePath)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "asset not found"})
+		return
+	}
+
+	switch file.EntityType {
+	case storageModel.EntityTypeChoreAttachment,
+		storageModel.EntityTypeChoreDescription,
+		storageModel.EntityTypeChoreHistory:
+		if _, err := h.choreRepo.GetChore(c, file.EntityID, currentUser.ID, currentUser.CircleID); err != nil {
+			log.Error("sign asset: chore access denied", "error", err)
+			c.JSON(http.StatusForbidden, gin.H{"error": "access denied"})
+			return
+		}
+	case storageModel.EntityTypeChoreAttachmentDraft:
+		if file.UserID != currentUser.ID {
+			c.JSON(http.StatusForbidden, gin.H{"error": "access denied"})
+			return
+		}
+	default:
+		c.JSON(http.StatusForbidden, gin.H{"error": "access denied"})
+		return
+	}
+
+	signedURL, err := h.signer.Sign(file.FilePath)
+	if err != nil {
+		log.Error("failed to sign url", "path", file.FilePath, "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to sign url"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"url": signedURL})
 }
 
 // Routes registers storage-related routes
@@ -391,6 +443,7 @@ func Routes(r *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware) {
 	uploadRoutes.Use(auth.MiddlewareFunc())
 	{
 		uploadRoutes.POST("/chore", h.ChoreUploadHandler)
+		uploadRoutes.GET("/sign", h.SignAssetHandler)
 	}
 
 	choreRoutes := r.Group("api/v1/chores")

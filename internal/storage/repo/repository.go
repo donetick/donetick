@@ -151,6 +151,14 @@ func (r *StorageRepository) GetFileByPath(ctx context.Context, filePath string, 
 	return &file, nil
 }
 
+func (r *StorageRepository) GetFileByPathOnly(ctx context.Context, filePath string) (*st.StorageFile, error) {
+	var file st.StorageFile
+	if err := r.db.WithContext(ctx).Where("file_path = ?", filePath).First(&file).Error; err != nil {
+		return nil, err
+	}
+	return &file, nil
+}
+
 func (r *StorageRepository) ReassignDraftAttachments(ctx context.Context, draftID string, userID int, choreID int) error {
 	return r.db.WithContext(ctx).Model(&st.StorageFile{}).
 		Where("draft_id = ? AND user_id = ? AND entity_type = ?", draftID, userID, st.EntityTypeChoreAttachmentDraft).

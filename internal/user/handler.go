@@ -1245,7 +1245,10 @@ func (h *Handler) updateProfilePhoto(c *gin.Context) {
 	// Use a random UUID for the filename so the path is not guessable from
 	// the username — this matters when the bucket is configured for public
 	// reads (storage.public_read: true) and the URL is served unsigned.
-	filename := fmt.Sprintf("profiles/%s%s", uuid.New().String(), fileExtension)
+	// UPDATE: we add back userID but kept the UUID to avoid collisions and make it unguessable.
+	// the currentUser.ID help managing the storage usage for each user
+
+	filename := fmt.Sprintf("profiles/%d/%s/%s", currentUser.ID, uuid.New().String(), fileExtension)
 
 	openedFile, err := file.Open()
 	if err != nil {

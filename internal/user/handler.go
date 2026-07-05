@@ -1248,7 +1248,7 @@ func (h *Handler) updateProfilePhoto(c *gin.Context) {
 	// UPDATE: we add back userID but kept the UUID to avoid collisions and make it unguessable.
 	// the currentUser.ID help managing the storage usage for each user
 
-	filename := fmt.Sprintf("profiles/%d/%s/%s", currentUser.ID, uuid.New().String(), fileExtension)
+	filename := fmt.Sprintf("profiles/%d/%s%s", currentUser.ID, uuid.New().String(), fileExtension)
 
 	openedFile, err := file.Open()
 	if err != nil {

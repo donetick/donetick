@@ -12,7 +12,6 @@ import (
 
 	"donetick.com/core/config"
 	auth "donetick.com/core/internal/auth"
-	chModel "donetick.com/core/internal/chore/model"
 	chRepo "donetick.com/core/internal/chore/repo"
 	cRepo "donetick.com/core/internal/circle/repo"
 	errorx "donetick.com/core/internal/error"
@@ -66,12 +65,25 @@ func (h *Handler) AssetHandler(c *gin.Context) {
 		return
 	}
 
-	if !h.signer.IsValid(parsed.Path[1:], c.Request.URL.Query()) {
-		c.JSON(http.StatusForbidden, gin.H{"error": "invalid or expired signature for url: " + parsed.Path[1:]})
+	// parsed.Path has a leading slash (e.g. "/uploads/profiles/..."); strip it.
+	// The URL exposed by this endpoint includes the storage base directory name
+	// as the first segment (e.g. "uploads/"), but storage.Get expects a path
+	// relative to BasePath. Strip the first path segment to get the relative key.
+	urlPath := parsed.Path[1:] // e.g. "uploads/profiles/1/uuid.jpg"
+	slash := strings.Index(urlPath, "/")
+	var filePath string
+	if slash >= 0 {
+		filePath = urlPath[slash+1:] // e.g. "profiles/1/uuid.jpg"
+	} else {
+		filePath = urlPath
+	}
+
+	if !isPublicAsset(urlPath) && !h.signer.IsValid(filePath, c.Request.URL.Query()) {
+		c.JSON(http.StatusForbidden, gin.H{"error": "invalid or expired signature for url: " + filePath})
 		return
 	}
 
-	filename := parsed.Path[1:] // remove leading slash
+	filename := filePath
 
 	file, err := h.storage.Get(context.Background(), filename)
 	if err != nil {
@@ -386,8 +398,6 @@ func (h *Handler) DeleteChoreAttachmentHandler(c *gin.Context) {
 		return
 	}
 
-	h.broadcastChoreAttachmentChange(c, chore, currentUser)
-
 	c.JSON(http.StatusOK, gin.H{"message": "attachment deleted"})
 }
 
@@ -485,6 +495,11 @@ func (h *Handler) SignAssetHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"url": signedURL})
 }
 
+// isPublicAsset returns true for paths that are publicly accessible without a signature.
+func isPublicAsset(path string) bool {
+	return strings.HasPrefix(path, "uploads/profiles/")
+}
+
 // Routes registers storage-related routes
 func Routes(r *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware) {
 
@@ -511,9 +526,4 @@ func Routes(r *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware) {
 	assetRoutes := r.Group("api/v1/assets")
 	assetRoutes.GET("/*filepath", h.AssetHandler)
 
-}
-
-// broadcastChoreAttachmentChange notifies circle members when a chore attachment changes.
-// TODO: wire up realtime service to the storage handler and implement.
-func (h *Handler) broadcastChoreAttachmentChange(c *gin.Context, chore *chModel.Chore, currentUser *user.UserDetails) {
 }

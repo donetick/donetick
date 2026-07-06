@@ -125,10 +125,18 @@ func (s *S3Storage) SavePublic(ctx context.Context, path string, file io.Reader)
 }
 
 func (s *S3Storage) GetPublicURL(ctx context.Context, path string) (string, error) {
-	if s.PublicHost == "" {
-		// No public CDN configured — fall back to a presigned URL from the private bucket.
-		return s.GetURL(ctx, path)
-	}
 	key := fmt.Sprintf("%s/%s", s.BasePath, path)
-	return fmt.Sprintf("https://%s/%s", s.PublicHost, key), nil
+	if s.PublicHost != "" {
+		return fmt.Sprintf("https://%s/%s", s.PublicHost, key), nil
+	}
+	if s.PublicBucket != "" {
+		// Public bucket with no CDN host — generate a presigned URL from the public bucket.
+		req, _ := s.Client.GetObjectRequest(&s3.GetObjectInput{
+			Bucket: aws.String(s.PublicBucket),
+			Key:    aws.String(key),
+		})
+		return req.Presign(VALID_FOR)
+	}
+	// No public bucket configured — fall back to the private bucket presigned URL.
+	return s.GetURL(ctx, path)
 }

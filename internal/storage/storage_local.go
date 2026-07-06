@@ -97,3 +97,9 @@ func (l *LocalStorage) SavePublic(ctx context.Context, path string, file io.Read
 func (l *LocalStorage) GetPublicURL(ctx context.Context, path string) (string, error) {
 	return l.GetURL(ctx, path)
 }
+
+// DeletePublicByURL is a no-op for local storage — local public URLs are
+// file paths (not https://), so the caller handles them via Delete directly.
+func (l *LocalStorage) DeletePublicByURL(ctx context.Context, rawURL string) error {
+	return nil
+}

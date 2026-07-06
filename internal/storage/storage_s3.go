@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 	"time"
 
 	"donetick.com/core/config"
@@ -139,4 +140,19 @@ func (s *S3Storage) GetPublicURL(ctx context.Context, path string) (string, erro
 	}
 	// No public bucket configured — fall back to the private bucket presigned URL.
 	return s.GetURL(ctx, path)
+}
+
+// DeletePublicByURL deletes the S3 object identified by a URL previously
+// returned by GetPublicURL. Only URLs whose host matches PublicHost are
+// acted on; all other URLs (external OIDC picture URLs, etc.) are ignored.
+func (s *S3Storage) DeletePublicByURL(ctx context.Context, rawURL string) error {
+	if s.PublicHost == "" {
+		return nil
+	}
+	prefix := fmt.Sprintf("https://%s/%s/", s.PublicHost, s.BasePath)
+	if !strings.HasPrefix(rawURL, prefix) {
+		return nil
+	}
+	path := strings.TrimPrefix(rawURL, prefix)
+	return s.Delete(ctx, []string{path})
 }

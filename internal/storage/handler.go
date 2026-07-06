@@ -12,6 +12,7 @@ import (
 
 	"donetick.com/core/config"
 	auth "donetick.com/core/internal/auth"
+	chModel "donetick.com/core/internal/chore/model"
 	chRepo "donetick.com/core/internal/chore/repo"
 	cRepo "donetick.com/core/internal/circle/repo"
 	errorx "donetick.com/core/internal/error"
@@ -219,7 +220,8 @@ func handleEntityType(c *gin.Context, h *Handler, currentUser *user.UserDetails)
 	}
 
 	switch entityType {
-	case "chore":
+	case "chore",
+		"chore_description":
 		chore, err := h.choreRepo.GetChore(c, entityID, currentUser.ID, currentUser.CircleID)
 		if err != nil {
 			log.Error("failed to get chore from db", "error", err)
@@ -293,6 +295,7 @@ func (h *Handler) ListChoreAttachmentsHandler(c *gin.Context) {
 		FilePath  string `json:"file_path"`
 		FileName  string `json:"file_name"`
 		SizeBytes int    `json:"size_bytes"`
+		CreatedBy int    `json:"created_by"`
 		CreatedAt int    `json:"created_at"`
 		Sign      string `json:"sign"`
 	}
@@ -309,6 +312,7 @@ func (h *Handler) ListChoreAttachmentsHandler(c *gin.Context) {
 			FileName:  f.FileName,
 			SizeBytes: f.SizeBytes,
 			CreatedAt: f.CreatedAt,
+			CreatedBy: f.UserID,
 			Sign:      signedURL,
 		})
 	}
@@ -387,6 +391,51 @@ func (h *Handler) DeleteChoreAttachmentHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "attachment deleted"})
 }
 
+func (h *Handler) RedirectAssetHandler(c *gin.Context) {
+	log := logging.FromContext(c)
+	currentUser, ok := auth.CurrentUser(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	filePath := c.Query("path")
+	if filePath == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "missing path"})
+		return
+	}
+
+	file, err := h.storageRepo.GetFileByPathOnly(c, filePath)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "asset not found"})
+		return
+	}
+
+	switch file.EntityType {
+	case storageModel.EntityTypeChoreAttachment,
+		storageModel.EntityTypeChoreDescription,
+		storageModel.EntityTypeChoreHistory:
+		if _, err := h.choreRepo.GetChore(c, file.EntityID, currentUser.ID, currentUser.CircleID); err != nil {
+			log.Error("redirect asset: chore access denied", "error", err)
+			c.JSON(http.StatusForbidden, gin.H{"error": "access denied"})
+			return
+		}
+	default:
+		c.JSON(http.StatusForbidden, gin.H{"error": "access denied"})
+		return
+	}
+
+	signedURL, err := h.signer.Sign(file.FilePath)
+	if err != nil {
+		log.Error("failed to sign url", "path", file.FilePath, "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to sign url"})
+		return
+	}
+
+	c.Redirect(http.StatusFound, signedURL)
+	return
+}
+
 func (h *Handler) SignAssetHandler(c *gin.Context) {
 	log := logging.FromContext(c)
 	currentUser, ok := auth.CurrentUser(c)
@@ -443,7 +492,12 @@ func Routes(r *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware) {
 	uploadRoutes.Use(auth.MiddlewareFunc())
 	{
 		uploadRoutes.POST("/chore", h.ChoreUploadHandler)
-		uploadRoutes.GET("/sign", h.SignAssetHandler)
+	}
+
+	filesRoutes := r.Group("api/v1/files")
+	filesRoutes.Use(auth.MiddlewareFunc())
+	{
+		filesRoutes.GET("", h.RedirectAssetHandler)
 	}
 
 	choreRoutes := r.Group("api/v1/chores")
@@ -457,4 +511,9 @@ func Routes(r *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware) {
 	assetRoutes := r.Group("api/v1/assets")
 	assetRoutes.GET("/*filepath", h.AssetHandler)
 
+}
+
+// broadcastChoreAttachmentChange notifies circle members when a chore attachment changes.
+// TODO: wire up realtime service to the storage handler and implement.
+func (h *Handler) broadcastChoreAttachmentChange(c *gin.Context, chore *chModel.Chore, currentUser *user.UserDetails) {
 }

@@ -68,3 +68,8 @@ func (s *URLSignerLocal) SignIfLocal(path string) string {
 	}
 	return signed
 }
+
+func (s *URLSignerLocal) SignAndGetPublicURL(rawPath string) (string, error) {
+	// For local storage, we can return a signed URL since it's not publicly accessible.
+	return s.Sign(rawPath)
+}

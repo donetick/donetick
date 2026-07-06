@@ -85,3 +85,15 @@ func (l *LocalStorage) GetURL(ctx context.Context, path string) (string, error) 
 	}
 	return filepath.Join(l.BasePath, cleanPath), nil
 }
+
+// SavePublic delegates to Save — local storage has no separate public bucket.
+// Files are still served via the signed asset endpoint.
+func (l *LocalStorage) SavePublic(ctx context.Context, path string, file io.Reader) error {
+	return l.Save(ctx, path, file)
+}
+
+// GetPublicURL delegates to GetURL — local storage has no CDN host, so callers
+// will sign the returned path via the signer as they would for any local asset.
+func (l *LocalStorage) GetPublicURL(ctx context.Context, path string) (string, error) {
+	return l.GetURL(ctx, path)
+}

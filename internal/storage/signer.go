@@ -9,4 +9,6 @@ type URLSigner interface {
 	IsValid(rawPath string, query url.Values) bool
 	// SignIfLocal signs a locally-stored path and passes through external URLs unchanged.
 	SignIfLocal(path string) string
+
+	SignAndGetPublicURL(rawPath string) (string, error)
 }

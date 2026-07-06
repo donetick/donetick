@@ -1257,15 +1257,25 @@ func (h *Handler) updateProfilePhoto(c *gin.Context) {
 	}
 	defer openedFile.Close()
 
-	err = h.storage.Save(c, filename, openedFile)
+	err = h.storage.SavePublic(c, filename, openedFile)
 	if err != nil {
 		logging.FromContext(c).Errorw("Failed to save profile photo", "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save file"})
 		return
 	}
 
-	// Clean up the previous profile photo (if it was a locally-stored file,
-	// not an OIDC `picture` claim URL) so re-uploads don't accumulate orphans.
+	// Resolve the URL before persisting. For S3 with a public bucket host this
+	// is a permanent bare URL; for local or unconfigured public bucket it is a
+	// raw path that SignIfLocal will sign on each read.
+	photoURL, err := h.storage.GetPublicURL(c, filename)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to resolve profile photo URL"})
+		return
+	}
+
+	// Clean up the previous profile photo when it is a locally-stored path.
+	// Full https:// URLs (OIDC picture claims or public-bucket URLs) are
+	// skipped — public-bucket objects accumulate until a future cleanup pass.
 	if prev := currentUser.Image; prev != "" &&
 		!strings.HasPrefix(prev, "http://") &&
 		!strings.HasPrefix(prev, "https://") {
@@ -1274,24 +1284,14 @@ func (h *Handler) updateProfilePhoto(c *gin.Context) {
 		}
 	}
 
-	// Store the raw storage path; URLs are minted on demand via
-	// URLSignerS3.SignIfLocal when the user is returned via
-	// GetUserProfile / users listing. In signed mode, SigV4 caps URL
-	// lifetime at 7 days, so persisting a pre-signed URL would leave
-	// stale references in the DB.
-	err = h.userRepo.UpdateUserImage(c, currentUser.ID, filename)
+	err = h.userRepo.UpdateUserImage(c, currentUser.ID, photoURL)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update profile photo"})
 		return
 	}
-	// Return a fresh URL (signed or public depending on config) so the
-	// client can display the upload immediately.
-	signedURL, err := h.signer.Sign(filename)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to sign URL"})
-		return
-	}
-	c.JSON(http.StatusOK, gin.H{"sign": signedURL})
+	// SignIfLocal passes through https:// URLs unchanged, so the response is
+	// correct regardless of whether a public bucket host is configured.
+	c.JSON(http.StatusOK, gin.H{"sign": h.signer.SignIfLocal(photoURL)})
 }
 
 func (h *Handler) getStorageUsage(c *gin.Context) {

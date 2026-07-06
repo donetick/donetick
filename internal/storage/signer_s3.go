@@ -91,3 +91,12 @@ func (s *URLSignerS3) SignIfLocal(path string) string {
 	}
 	return signed
 }
+
+func (s *URLSignerS3) SignAndGetPublicURL(rawPath string) (string, error) {
+	if s.PublicRead {
+		// If the bucket is public, return the public URL.
+		return s.storage.GetPublicURL(nil, rawPath)
+	}
+	// Otherwise, return a signed URL.
+	return s.Sign(rawPath)
+}

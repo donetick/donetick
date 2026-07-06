@@ -8,6 +8,7 @@ import (
 
 	"donetick.com/core/config"
 	nModel "donetick.com/core/internal/notifier/model"
+	storageModel "donetick.com/core/internal/storage/model"
 	uModel "donetick.com/core/internal/user/model"
 	"donetick.com/core/logging"
 	"gorm.io/gorm"
@@ -149,7 +150,19 @@ func (r *UserRepository) GetChildUserCount(c context.Context, parentID int) (int
 }
 
 func (r *UserRepository) UpdateUser(c context.Context, user *uModel.User) error {
-	return r.db.WithContext(c).Save(user).Error
+	return r.db.WithContext(c).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Save(user).Error; err != nil {
+			return err
+		}
+		if user.CircleID != 0 {
+			if err := tx.Model(&storageModel.StorageUsage{}).
+				Where("user_id = ? AND circle_id = 0", user.ID).
+				Update("circle_id", user.CircleID).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
 
 func (r *UserRepository) UpdateUserCircle(c context.Context, userID, circleID int) error {

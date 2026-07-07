@@ -41,12 +41,13 @@ scheduler_jobs:
   overdue_job: 3h
   pre_due_job: 3h
 email:
-  host: 
-  port: 
-  key: 
+  host:
+  port:
+  key:
   email:
-  user:  
-  appHost:  
+  user:
+  appHost:
+  log_raw_url: true # log password reset URL to console (useful when email is not configured)
 mfa:
   session_timeout: 10m
   backup_code_count: 8

@@ -2,6 +2,7 @@ package repo
 
 import (
 	"context"
+	"time"
 
 	"donetick.com/core/config"
 	errorx "donetick.com/core/internal/error"
@@ -24,18 +25,30 @@ func (r *StorageRepository) AddMediaRecord(ctx context.Context, media *st.Storag
 	if !user.IsPlusMember() {
 		return errorx.ErrNotAPlusMember
 	}
-	// create transaction and increment the storage then save the file:
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-
-		// confirm is the user have enough space and increment the storage:
-		res := tx.Model(&st.StorageUsage{}).Where("(user_id = ? OR circle_id = ?)and used_bytes <= ? ", user.ID, user.CircleID, r.maxUserStorage-media.SizeBytes).Updates(map[string]interface{}{"used_bytes": gorm.Expr("used_bytes + ?", media.SizeBytes)})
-		if res.RowsAffected == 0 {
+		// Check total circle-wide usage against quota (all members share the same pool).
+		var circleUsed int64
+		if err := tx.Model(&st.StorageUsage{}).
+			Select("COALESCE(SUM(used_bytes), 0)").
+			Where("circle_id = ?", user.CircleID).
+			Scan(&circleUsed).Error; err != nil {
+			return err
+		}
+		if int(circleUsed)+media.SizeBytes > r.maxUserStorage {
 			return errorx.ErrNotEnoughSpace
 		}
+
+		// Increment only this user's own row.
+		res := tx.Model(&st.StorageUsage{}).
+			Where("user_id = ?", user.ID).
+			Updates(map[string]interface{}{"used_bytes": gorm.Expr("used_bytes + ?", media.SizeBytes)})
 		if res.Error != nil {
 			return res.Error
 		}
-		// save the media record:
+		if res.RowsAffected == 0 {
+			return errorx.ErrNotEnoughSpace
+		}
+
 		if err := tx.Model(&st.StorageFile{}).Create(&media).Error; err != nil {
 			return err
 		}
@@ -98,9 +111,80 @@ func (r *StorageRepository) GetStorageStats(ctx context.Context, currentUser *uM
 }
 
 func (r *StorageRepository) RemoveAllFileByEntity(ctx context.Context, entityType st.EntityType, entityID int) error {
-	// delete all files by entity type and entity ID:
-	if err := r.db.WithContext(ctx).Where("entity_type = ? and entity_id = ?", entityType, entityID).Delete(&st.StorageFile{}).Error; err != nil {
-		return err
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var files []*st.StorageFile
+		if err := tx.Where("entity_type = ? AND entity_id = ?", entityType, entityID).Find(&files).Error; err != nil {
+			return err
+		}
+		if len(files) == 0 {
+			return nil
+		}
+
+		// group by user so each user's quota is decremented correctly
+		byUser := make(map[int]int)
+		paths := make([]string, 0, len(files))
+		for _, f := range files {
+			byUser[f.UserID] += f.SizeBytes
+			paths = append(paths, f.FilePath)
+		}
+
+		if err := tx.Where("file_path IN (?)", paths).Delete(&st.StorageFile{}).Error; err != nil {
+			return err
+		}
+
+		for userID, totalBytes := range byUser {
+			if err := tx.Model(&st.StorageUsage{}).
+				Where("user_id = ?", userID).
+				Updates(map[string]interface{}{"used_bytes": gorm.Expr("used_bytes - ?", totalBytes)}).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
+func (r *StorageRepository) GetFileByPath(ctx context.Context, filePath string, userID int) (*st.StorageFile, error) {
+	var file st.StorageFile
+	if err := r.db.WithContext(ctx).Where("file_path = ? and user_id = ?", filePath, userID).First(&file).Error; err != nil {
+		return nil, err
 	}
-	return nil
+	return &file, nil
+}
+
+func (r *StorageRepository) GetFileByPathOnly(ctx context.Context, filePath string) (*st.StorageFile, error) {
+	var file st.StorageFile
+	if err := r.db.WithContext(ctx).Where("file_path = ?", filePath).First(&file).Error; err != nil {
+		return nil, err
+	}
+	return &file, nil
+}
+
+func (r *StorageRepository) ReassignDraftAttachments(ctx context.Context, draftID string, userID int, choreID int) error {
+	return r.db.WithContext(ctx).Model(&st.StorageFile{}).
+		Where("draft_id = ? AND user_id = ? AND entity_type = ?", draftID, userID, st.EntityTypeChoreAttachmentDraft).
+		Updates(map[string]interface{}{
+			"entity_type": st.EntityTypeChoreAttachment,
+			"entity_id":   choreID,
+			"draft_id":    "",
+		}).Error
+}
+
+// GetExpiredDraftFiles returns draft attachment files older than the given unix timestamp.
+func (r *StorageRepository) CreateStorageUsage(ctx context.Context, userID, circleID int) error {
+	return r.db.WithContext(ctx).Create(&st.StorageUsage{
+		UserID:    userID,
+		CircleID:  circleID,
+		UsedBytes: 0,
+		UpdatedAt: time.Now().UTC(),
+	}).Error
+}
+
+func (r *StorageRepository) GetExpiredDraftFiles(ctx context.Context, olderThanUnix int64) ([]*st.StorageFile, error) {
+	var files []*st.StorageFile
+	if err := r.db.WithContext(ctx).
+		Where("entity_type = ? AND created_at < ?", st.EntityTypeChoreAttachmentDraft, olderThanUnix).
+		Find(&files).Error; err != nil {
+		return nil, err
+	}
+	return files, nil
 }

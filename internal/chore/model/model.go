@@ -10,6 +10,7 @@ import (
 	cModel "donetick.com/core/internal/circle/model"
 	lModel "donetick.com/core/internal/label/model"
 	pModel "donetick.com/core/internal/project/model"
+	storageModel "donetick.com/core/internal/storage/model"
 	stModel "donetick.com/core/internal/subtask/model"
 	tModel "donetick.com/core/internal/thing/model"
 )
@@ -46,36 +47,37 @@ const (
 
 type Chore struct {
 	ID                     int                   `json:"id" gorm:"primary_key"`
-	Name                   string                `json:"name" gorm:"column:name"`                                                                // Chore description
-	FrequencyType          FrequencyType         `json:"frequencyType" gorm:"column:frequency_type"`                                             // "daily", "weekly", "monthly", "yearly", "adaptive",or "custom"
-	Frequency              int                   `json:"frequency" gorm:"column:frequency"`                                                      // Number of days, weeks, months, or years between chores
-	FrequencyMetadataV2    *FrequencyMetadata    `json:"frequencyMetadata" gorm:"column:frequency_meta_v2;type:json"`                            // Additional frequency information for v2 (if used)
-	NextDueDate            *time.Time            `json:"nextDueDate" gorm:"column:next_due_date;index"`                                          // When the chore is due
-	IsRolling              bool                  `json:"isRolling" gorm:"column:is_rolling"`                                                     // Whether the chore is rolling
-	AssignedTo             *int                  `json:"assignedTo" gorm:"column:assigned_to"`                                                   // Who the chore is assigned to
-	Assignees              []ChoreAssignees      `json:"assignees" gorm:"foreignkey:ChoreID;references:ID"`                                      // Assignees of the chore
-	AssignStrategy         AssignmentStrategy    `json:"assignStrategy" gorm:"column:assign_strategy"`                                           // How the chore is assigned
-	IsActive               bool                  `json:"isActive" gorm:"column:is_active"`                                                       // Whether the chore is active
-	Notification           bool                  `json:"notification" gorm:"column:notification"`                                                // Whether the chore has notification
-	NotificationMetadataV2 *NotificationMetadata `json:"notificationMetadata" gorm:"column:notification_meta_v2;type:json"`                      // Additional notification information
-	LabelsV2               *[]lModel.Label       `json:"labelsV2" gorm:"many2many:chore_labels"`                                                 // Labels for the chore
-	CircleID               int                   `json:"circleId" gorm:"column:circle_id;index;index:idx_chores_circle_sync_version,priority:1"` // The circle this chore is in
-	CreatedAt              time.Time             `json:"createdAt" gorm:"column:created_at"`                                                     // When the chore was created
-	UpdatedAt              time.Time             `json:"updatedAt" gorm:"column:updated_at"`                                                     // When the chore was last updated
-	CreatedBy              int                   `json:"createdBy" gorm:"column:created_by"`                                                     // Who created the chore
-	UpdatedBy              int                   `json:"updatedBy" gorm:"column:updated_by"`                                                     // Who last updated the chore
-	ThingChore             *tModel.ThingChore    `json:"thingChore" gorm:"foreignkey:chore_id;references:id;<-:false"`                           // ThingChore relationship
-	Status                 Status                `json:"status" gorm:"column:status"`                                                            //
-	Priority               int                   `json:"priority" gorm:"column:priority"`                                                        //
-	CompletionWindow       *int                  `json:"completionWindow,omitempty" gorm:"column:completion_window"`                             // Number seconds before the chore is due that it can be completed
-	Points                 *int                  `json:"points,omitempty" gorm:"column:points"`                                                  // Points for completing the chore
-	Description            *string               `json:"description,omitempty" gorm:"type:text;column:description"`                              // Description of the chore
-	SubTasks               *[]stModel.SubTask    `json:"subTasks,omitempty" gorm:"foreignkey:ChoreID;references:ID"`                             // Subtasks for the chore
-	RequireApproval        bool                  `json:"requireApproval" gorm:"column:require_approval"`                                         // Whether chore completion requires admin approval
-	IsPrivate              bool                  `json:"isPrivate" gorm:"column:is_private;default:false"`                                       // Whether the chore is private
-	ProjectID              *int                  `json:"projectId,omitempty" gorm:"column:project_id;index"`                                     // The project this chore belongs to
-	Project                *pModel.Project       `json:"project,omitempty" gorm:"foreignkey:ProjectID;references:ID"`                            // Project relationship
-	SyncVersion            int64                 `json:"syncVersion" gorm:"column:sync_version;not null;default:0;index;index:idx_chores_circle_sync_version,priority:2"`
+	Name                   string                     `json:"name" gorm:"column:name"`                                                                // Chore description
+	FrequencyType          FrequencyType              `json:"frequencyType" gorm:"column:frequency_type"`                                             // "daily", "weekly", "monthly", "yearly", "adaptive",or "custom"
+	Frequency              int                        `json:"frequency" gorm:"column:frequency"`                                                      // Number of days, weeks, months, or years between chores
+	FrequencyMetadataV2    *FrequencyMetadata         `json:"frequencyMetadata" gorm:"column:frequency_meta_v2;type:json"`                            // Additional frequency information for v2 (if used)
+	NextDueDate            *time.Time                 `json:"nextDueDate" gorm:"column:next_due_date;index"`                                          // When the chore is due
+	IsRolling              bool                       `json:"isRolling" gorm:"column:is_rolling"`                                                     // Whether the chore is rolling
+	AssignedTo             *int                       `json:"assignedTo" gorm:"column:assigned_to"`                                                   // Who the chore is assigned to
+	Assignees              []ChoreAssignees           `json:"assignees" gorm:"foreignkey:ChoreID;references:ID"`                                      // Assignees of the chore
+	AssignStrategy         AssignmentStrategy         `json:"assignStrategy" gorm:"column:assign_strategy"`                                           // How the chore is assigned
+	IsActive               bool                       `json:"isActive" gorm:"column:is_active"`                                                       // Whether the chore is active
+	Notification           bool                       `json:"notification" gorm:"column:notification"`                                                // Whether the chore has notification
+	NotificationMetadataV2 *NotificationMetadata      `json:"notificationMetadata" gorm:"column:notification_meta_v2;type:json"`                      // Additional notification information
+	LabelsV2               *[]lModel.Label            `json:"labelsV2" gorm:"many2many:chore_labels"`                                                 // Labels for the chore
+	CircleID               int                        `json:"circleId" gorm:"column:circle_id;index;index:idx_chores_circle_sync_version,priority:1"` // The circle this chore is in
+	CreatedAt              time.Time                  `json:"createdAt" gorm:"column:created_at"`                                                     // When the chore was created
+	UpdatedAt              time.Time                  `json:"updatedAt" gorm:"column:updated_at"`                                                     // When the chore was last updated
+	CreatedBy              int                        `json:"createdBy" gorm:"column:created_by"`                                                     // Who created the chore
+	UpdatedBy              int                        `json:"updatedBy" gorm:"column:updated_by"`                                                     // Who last updated the chore
+	ThingChore             *tModel.ThingChore         `json:"thingChore" gorm:"foreignkey:chore_id;references:id;<-:false"`                           // ThingChore relationship
+	Status                 Status                     `json:"status" gorm:"column:status"`                                                            //
+	Priority               int                        `json:"priority" gorm:"column:priority"`                                                        //
+	CompletionWindow       *int                       `json:"completionWindow,omitempty" gorm:"column:completion_window"`                             // Number seconds before the chore is due that it can be completed
+	Points                 *int                       `json:"points,omitempty" gorm:"column:points"`                                                  // Points for completing the chore
+	Description            *string                    `json:"description,omitempty" gorm:"type:text;column:description"`                              // Description of the chore
+	SubTasks               *[]stModel.SubTask         `json:"subTasks,omitempty" gorm:"foreignkey:ChoreID;references:ID"`                             // Subtasks for the chore
+	RequireApproval        bool                       `json:"requireApproval" gorm:"column:require_approval"`                                         // Whether chore completion requires admin approval
+	IsPrivate              bool                       `json:"isPrivate" gorm:"column:is_private;default:false"`                                       // Whether the chore is private
+	ProjectID              *int                       `json:"projectId,omitempty" gorm:"column:project_id;index"`                                     // The project this chore belongs to
+	Project                *pModel.Project            `json:"project,omitempty" gorm:"foreignkey:ProjectID;references:ID"`                            // Project relationship
+	SyncVersion            int64                      `json:"syncVersion" gorm:"column:sync_version;not null;default:0;index;index:idx_chores_circle_sync_version,priority:2"`
+	Attachments            []storageModel.StorageFile `json:"attachments,omitempty" gorm:"-"`
 }
 
 type Status int8
@@ -188,7 +190,8 @@ type ChoreDetail struct {
 	TimerUpdatedAt      *time.Time         `json:"timerUpdatedAt" gorm:"column:timer_updated_at"` // When the chore was last started
 	ProjectID           *int               `json:"projectId,omitempty" gorm:"column:project_id"`
 	IsActive            bool               `json:"isActive" gorm:"column:is_active"`
-	SyncVersion         int64              `json:"syncVersion" gorm:"column:sync_version"`
+	SyncVersion         int64                      `json:"syncVersion" gorm:"column:sync_version"`
+	Attachments         []storageModel.StorageFile `json:"attachments,omitempty" gorm:"-"`
 }
 
 type ChoreLabels struct {

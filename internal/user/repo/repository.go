@@ -76,15 +76,6 @@ func (r *UserRepository) CreateUser(c context.Context, user *uModel.User) (*uMod
 	if err := r.db.WithContext(c).Create(user).Error; err != nil {
 		return nil, err
 	}
-	if err := r.db.WithContext(c).Create(&storageModel.StorageUsage{
-		CircleID:  user.CircleID,
-		UserID:    user.ID,
-		UsedBytes: 0,
-		UpdatedAt: time.Now().UTC(),
-	}).Error; err != nil {
-		return nil, err
-	}
-
 	return user, nil
 }
 func (r *UserRepository) GetUserByUsername(c context.Context, username string) (*uModel.UserDetails, error) {
@@ -159,7 +150,19 @@ func (r *UserRepository) GetChildUserCount(c context.Context, parentID int) (int
 }
 
 func (r *UserRepository) UpdateUser(c context.Context, user *uModel.User) error {
-	return r.db.WithContext(c).Save(user).Error
+	return r.db.WithContext(c).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Save(user).Error; err != nil {
+			return err
+		}
+		if user.CircleID != 0 {
+			if err := tx.Model(&storageModel.StorageUsage{}).
+				Where("user_id = ? AND circle_id = 0", user.ID).
+				Update("circle_id", user.CircleID).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
 
 func (r *UserRepository) UpdateUserCircle(c context.Context, userID, circleID int) error {

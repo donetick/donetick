@@ -68,6 +68,10 @@ oauth2:
 # When true, disables circle join/leave endpoints and adds new OIDC users
 # to a shared household circle instead of creating personal circles.
 # single_circle_instance: false
+# SSO-only mode (optional).
+# When true, all password-based auth (signup, login, reset) is rejected and
+# the login UI hides the password form.
+# disable_password_auth: false
 # Real-time configuration
 realtime:
   enabled: true

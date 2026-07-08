@@ -43,9 +43,9 @@ type Handler struct {
 	isDonetickDotCom       bool
 	IsUserCreationDisabled bool
 	DonetickCloudConfig    config.DonetickCloudConfig
-	storage                *storage.S3Storage
+	storage                storage.Storage
 	storageRepo            *storageRepo.StorageRepository
-	signer                 *storage.URLSignerS3
+	signer                 storage.URLSigner
 	deletionService        *DeletionService
 	appleService           *apple.AppleService
 	mfaService             *mfa.MFAService
@@ -58,8 +58,8 @@ type Handler struct {
 func NewHandler(ur *uRepo.UserRepository, cr *cRepo.CircleRepository,
 	jwtAuth *jwt.GinJWTMiddleware, tokenService *auth.TokenService,
 	email *email.EmailSender,
-	idp *auth.IdentityProvider, storage *storage.S3Storage,
-	signer *storage.URLSignerS3, storageRepo *storageRepo.StorageRepository,
+	idp *auth.IdentityProvider, storage storage.Storage,
+	signer storage.URLSigner, storageRepo *storageRepo.StorageRepository,
 	appleService *apple.AppleService,
 	deletionService *DeletionService, mfaService *mfa.MFAService, config *config.Config) *Handler {
 	return &Handler{
@@ -203,6 +203,12 @@ func (h *Handler) signUp(c *gin.Context) {
 	if err := h.userRepo.UpdateUser(c, insertedUser); err != nil {
 		c.JSON(500, gin.H{
 			"error": "Error updating user",
+		})
+		return
+	}
+	if err := h.storageRepo.CreateStorageUsage(c, insertedUser.ID, userCircle.ID); err != nil {
+		c.JSON(500, gin.H{
+			"error": "Error initializing storage",
 		})
 		return
 	}
@@ -368,6 +374,12 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 			if err := h.userRepo.UpdateUser(c, createdUser); err != nil {
 				c.JSON(500, gin.H{
 					"error": "Error updating user",
+				})
+				return
+			}
+			if err := h.storageRepo.CreateStorageUsage(c, createdUser.ID, userCircle.ID); err != nil {
+				c.JSON(500, gin.H{
+					"error": "Error initializing storage",
 				})
 				return
 			}
@@ -538,6 +550,13 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 				logger.Errorw("account.handler.thirdPartyAuthCallback (apple) failed to update user", "err", err)
 				c.JSON(500, gin.H{
 					"error": "Error updating user",
+				})
+				return
+			}
+			if err := h.storageRepo.CreateStorageUsage(c, createdUser.ID, userCircle.ID); err != nil {
+				logger.Errorw("account.handler.thirdPartyAuthCallback (apple) failed to create storage usage", "err", err)
+				c.JSON(500, gin.H{
+					"error": "Error initializing storage",
 				})
 				return
 			}
@@ -739,6 +758,12 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 			if err := h.userRepo.UpdateUser(c, createdUser); err != nil {
 				c.JSON(500, gin.H{
 					"error": "Error updating user",
+				})
+				return
+			}
+			if err := h.storageRepo.CreateStorageUsage(c, createdUser.ID, circleID); err != nil {
+				c.JSON(500, gin.H{
+					"error": "Error initializing storage",
 				})
 				return
 			}
@@ -1220,7 +1245,10 @@ func (h *Handler) updateProfilePhoto(c *gin.Context) {
 	// Use a random UUID for the filename so the path is not guessable from
 	// the username — this matters when the bucket is configured for public
 	// reads (storage.public_read: true) and the URL is served unsigned.
-	filename := fmt.Sprintf("profiles/%s%s", uuid.New().String(), fileExtension)
+	// UPDATE: we add back userID but kept the UUID to avoid collisions and make it unguessable.
+	// the currentUser.ID help managing the storage usage for each user
+
+	filename := fmt.Sprintf("profiles/%d/%s%s", currentUser.ID, uuid.New().String(), fileExtension)
 
 	openedFile, err := file.Open()
 	if err != nil {
@@ -1229,15 +1257,25 @@ func (h *Handler) updateProfilePhoto(c *gin.Context) {
 	}
 	defer openedFile.Close()
 
-	err = h.storage.Save(c, filename, openedFile)
+	err = h.storage.SavePublic(c, filename, openedFile)
 	if err != nil {
 		logging.FromContext(c).Errorw("Failed to save profile photo", "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save file"})
 		return
 	}
 
-	// Clean up the previous profile photo (if it was a locally-stored file,
-	// not an OIDC `picture` claim URL) so re-uploads don't accumulate orphans.
+	// Resolve the URL before persisting. For S3 with a public bucket host this
+	// is a permanent bare URL; for local or unconfigured public bucket it is a
+	// raw path that SignIfLocal will sign on each read.
+	photoURL, err := h.storage.GetPublicURL(c, filename)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to resolve profile photo URL"})
+		return
+	}
+
+	// Clean up the previous profile photo when it is a locally-stored path.
+	// Full https:// URLs (OIDC picture claims or public-bucket URLs) are
+	// skipped — public-bucket objects accumulate until a future cleanup pass.
 	if prev := currentUser.Image; prev != "" &&
 		!strings.HasPrefix(prev, "http://") &&
 		!strings.HasPrefix(prev, "https://") {
@@ -1246,24 +1284,14 @@ func (h *Handler) updateProfilePhoto(c *gin.Context) {
 		}
 	}
 
-	// Store the raw storage path; URLs are minted on demand via
-	// URLSignerS3.SignIfLocal when the user is returned via
-	// GetUserProfile / users listing. In signed mode, SigV4 caps URL
-	// lifetime at 7 days, so persisting a pre-signed URL would leave
-	// stale references in the DB.
-	err = h.userRepo.UpdateUserImage(c, currentUser.ID, filename)
+	err = h.userRepo.UpdateUserImage(c, currentUser.ID, photoURL)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update profile photo"})
 		return
 	}
-	// Return a fresh URL (signed or public depending on config) so the
-	// client can display the upload immediately.
-	signedURL, err := h.signer.Sign(filename)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to sign URL"})
-		return
-	}
-	c.JSON(http.StatusOK, gin.H{"sign": signedURL})
+	// SignIfLocal passes through https:// URLs unchanged, so the response is
+	// correct regardless of whether a public bucket host is configured.
+	c.JSON(http.StatusOK, gin.H{"sign": h.signer.SignIfLocal(photoURL)})
 }
 
 func (h *Handler) getStorageUsage(c *gin.Context) {

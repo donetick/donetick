@@ -71,6 +71,14 @@ type StorageConfig struct {
 	// (e.g. via a bucket policy). Intended for self-hosted deployments
 	// that don't want the 7-day presigned URL ceiling.
 	PublicRead bool `mapstructure:"public_read" yaml:"public_read"`
+	// PublicBucketName is an optional separate bucket for publicly readable
+	// assets (e.g. profile photos). If empty, public uploads fall back to the
+	// private bucket (BucketName).
+	PublicBucketName string `mapstructure:"public_bucket_name" yaml:"public_bucket_name"`
+	// PublicBucketHost is the CDN / custom-domain host used to construct bare
+	// (unsigned) URLs for objects in PublicBucketName. Example: "pub.donetick.com".
+	// If empty, GetPublicURL falls back to a presigned URL from the private bucket.
+	PublicBucketHost string `mapstructure:"public_bucket_host" yaml:"public_bucket_host"`
 	// PathStyle forces path-style S3 addressing (endpoint/bucket/key)
 	// instead of the default virtual-hosted style (bucket.endpoint/key).
 	// Required for S3-compatible backends like MinIO that don't expose
@@ -322,6 +330,8 @@ func LoadConfig() *Config {
 		viper.SetConfigName("prod")
 	case "selfhosted":
 		viper.SetConfigName("selfhosted")
+	case "r2":
+		viper.SetConfigName("r2")
 	default:
 		viper.SetConfigName("local")
 	}

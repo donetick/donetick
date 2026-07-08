@@ -1728,6 +1728,17 @@ func hashToken(token string) string {
 	return hex.EncodeToString(hash[:])
 }
 
+// passwordAuthDisabled rejects password-based auth requests (signup, login,
+// password reset) when the instance is configured as SSO-only via
+// disable_password_auth (#438).
+func passwordAuthDisabled() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
+			"error": "Password authentication is disabled on this instance. Please sign in with SSO.",
+		})
+	}
+}
+
 func Routes(router *gin.Engine, h *Handler, jwtAuth *jwt.GinJWTMiddleware, limiter *limiter.Limiter, cfg *config.Config) {
 
 	userRoutes := router.Group("api/v1/users")
@@ -1771,14 +1782,22 @@ func Routes(router *gin.Engine, h *Handler, jwtAuth *jwt.GinJWTMiddleware, limit
 	authRoutes.Use(utils.RateLimitMiddleware(limiter))
 	{
 		authRoutes.POST("/:provider/callback", h.thirdPartyAuthCallback)
-		authRoutes.POST("/", h.signUp)
-		authRoutes.POST("login", authHandler.EnhancedLoginHandler)  // Enhanced login with refresh tokens
-		authRoutes.POST("login/legacy", jwtAuth.LoginHandler)       // Legacy login for backward compatibility
 		authRoutes.POST("refresh", authHandler.RefreshTokenHandler) // Changed from GET to POST
 		authRoutes.POST("logout", authHandler.LogoutHandler)        // New logout endpoint
-		authRoutes.POST("reset", h.resetPassword)
-		authRoutes.POST("password", h.updateUserPassword)
-		authRoutes.POST("mfa/verify", h.verifyMFA) // Add MFA verification endpoint
+		authRoutes.POST("mfa/verify", h.verifyMFA)                  // Add MFA verification endpoint
+
+		// Password-based auth (signup, login, password reset). When
+		// disable_password_auth is set the instance is SSO-only, so these
+		// routes are guarded and reject with 403 (#438).
+		pwAuth := authRoutes.Group("")
+		if cfg.DisablePasswordAuth {
+			pwAuth.Use(passwordAuthDisabled())
+		}
+		pwAuth.POST("/", h.signUp)
+		pwAuth.POST("login", authHandler.EnhancedLoginHandler) // Enhanced login with refresh tokens
+		pwAuth.POST("login/legacy", jwtAuth.LoginHandler)      // Legacy login for backward compatibility
+		pwAuth.POST("reset", h.resetPassword)
+		pwAuth.POST("password", h.updateUserPassword)
 	}
 
 	// Protected auth routes (require JWT)

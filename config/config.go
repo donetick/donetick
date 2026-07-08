@@ -222,6 +222,7 @@ type RealTimeConfig struct {
 	EnableCompression     bool          `mapstructure:"enable_compression" yaml:"enable_compression" default:"true"`
 	EnableStats           bool          `mapstructure:"enable_stats" yaml:"enable_stats" default:"true"`
 	AllowedOrigins        []string      `mapstructure:"allowed_origins" yaml:"allowed_origins"`
+	MaxSSETickets         int           `mapstructure:"max_sse_tickets" yaml:"max_sse_tickets" default:"10000"`
 }
 
 type MFAConfig struct {
@@ -274,6 +275,7 @@ func NewConfig() *Config {
 			EnableCompression:     true,
 			EnableStats:           true,
 			AllowedOrigins:        []string{"*"},
+			MaxSSETickets:         10000,
 		},
 		Logging: LogConfig{
 			Level:       "info",

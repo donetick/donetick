@@ -18,11 +18,12 @@ import (
 
 // AuthMiddleware handles WebSocket authentication
 type AuthMiddleware struct {
-	userRepo   *uRepo.UserRepository
-	circleRepo *cRepo.CircleRepository
-	jwtAuth    *ginJWT.GinJWTMiddleware
-	config     *config.Config
-	logger     *zap.SugaredLogger
+	userRepo    *uRepo.UserRepository
+	circleRepo  *cRepo.CircleRepository
+	jwtAuth     *ginJWT.GinJWTMiddleware
+	config      *config.Config
+	ticketStore *TicketStore
+	logger      *zap.SugaredLogger
 }
 
 // NewAuthMiddleware creates a new WebSocket auth middleware
@@ -31,18 +32,39 @@ func NewAuthMiddleware(
 	circleRepo *cRepo.CircleRepository,
 	jwtAuth *ginJWT.GinJWTMiddleware,
 	config *config.Config,
+	ticketStore *TicketStore,
 ) *AuthMiddleware {
 	return &AuthMiddleware{
-		userRepo:   userRepo,
-		circleRepo: circleRepo,
-		jwtAuth:    jwtAuth,
-		config:     config,
+		userRepo:    userRepo,
+		circleRepo:  circleRepo,
+		jwtAuth:     jwtAuth,
+		config:      config,
+		ticketStore: ticketStore,
 	}
 }
 
 // AuthenticateConnection authenticates a WebSocket connection request
 func (am *AuthMiddleware) AuthenticateConnection(c *gin.Context) (*uModel.User, int, error) {
 	am.logger = logging.FromContext(c.Request.Context())
+
+	// Native EventSource clients (e.g. the iOS/Android Capacitor app) cannot send
+	// a custom Authorization header, so they authenticate with a short-lived,
+	// single-use ticket passed as a query parameter. Prefer the ticket when
+	// present so we never fall through to JWT validation for it.
+	if ticket := c.Query("ticket"); ticket != "" {
+		userID, ok := am.ticketStore.Consume(ticket)
+		if !ok {
+			return nil, 0, ErrInvalidToken
+		}
+
+		user, err := am.userRepo.GetUserByID(c.Request.Context(), userID)
+		if err != nil {
+			am.logger.Errorw("Failed to get user for SSE ticket", "userID", userID, "error", err)
+			return nil, 0, ErrInvalidToken
+		}
+
+		return user, user.CircleID, nil
+	}
 
 	// Extract token from query parameter or header
 	token := am.extractToken(c)

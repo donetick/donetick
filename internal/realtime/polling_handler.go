@@ -5,12 +5,14 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"sync"
 	"time"
 
 	"donetick.com/core/config"
+	"donetick.com/core/internal/auth"
 	uModel "donetick.com/core/internal/user/model"
 	"donetick.com/core/logging"
 	"github.com/gin-gonic/gin"
@@ -59,6 +61,58 @@ func NewPollingHandler(
 	return h
 }
 
+// HandleSSETicket issues a short-lived, single-use ticket that native
+// EventSource clients exchange for an authenticated SSE connection. This
+// endpoint is protected by the standard JWT middleware, so the token is sent in
+// the Authorization header and never exposed in a URL.
+func (h *PollingHandler) HandleSSETicket(c *gin.Context) {
+	h.logger = logging.FromContext(c.Request.Context())
+
+	user, ok := auth.CurrentUser(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "Authentication required",
+			"code":  "AUTH_REQUIRED",
+		})
+		return
+	}
+
+	// Throttle ticket minting per user+IP using the same rate limit as the SSE
+	// connection itself. A ticket is only ever exchanged for a single connection,
+	// so it should follow the same cadence. This is check-only: we intentionally
+	// do NOT record a connection time here, otherwise the immediate follow-up
+	// /sse request would be blocked by MinConnectionInterval.
+	if !h.checkRateLimit(user.ID, c.ClientIP()) {
+		c.JSON(http.StatusTooManyRequests, gin.H{
+			"error": "Rate limit exceeded",
+			"code":  "RATE_LIMIT_EXCEEDED",
+		})
+		return
+	}
+
+	ticket, err := h.authMiddleware.ticketStore.Issue(user.ID)
+	if err != nil {
+		h.logger.Errorw("Failed to issue SSE ticket", "userID", user.ID, "error", err)
+		if errors.Is(err, ErrTicketStoreFull) {
+			c.JSON(http.StatusServiceUnavailable, gin.H{
+				"error": "Real-time service is temporarily busy, please retry",
+				"code":  "TICKET_STORE_FULL",
+			})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to issue ticket",
+			"code":  "TICKET_ISSUE_FAILED",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"ticket":    ticket,
+		"expiresIn": int(ticketTTL.Seconds()),
+	})
+}
+
 // HandleSSE handles Server-Sent Events connections
 func (h *PollingHandler) HandleSSE(c *gin.Context) {
 	h.logger = logging.FromContext(c.Request.Context())
@@ -94,7 +148,7 @@ func (h *PollingHandler) HandleSSE(c *gin.Context) {
 		return
 	}
 
-	// Rate limiting: check if the user is already connected
+	// Reconnect throttle: reject if the user reconnected too recently.
 	if !h.checkRateLimit(user.ID, c.ClientIP()) {
 		c.JSON(http.StatusTooManyRequests, gin.H{
 			"error": "Rate limit exceeded",
@@ -148,6 +202,10 @@ func (h *PollingHandler) HandleSSE(c *gin.Context) {
 		})
 		return
 	}
+
+	// Record connection time now so that even a very short-lived connection
+	// counts against the reconnect throttle.
+	h.updateConnectionTime(user.ID, c.ClientIP())
 
 	h.logger.Infow("SSE connection established",
 		"connectionId", connectionID,
@@ -377,42 +435,6 @@ func (h *PollingHandler) cleanupStaleConnections() {
 	for key, lastTime := range h.sseConnections {
 		if lastTime.Before(cutoff) {
 			delete(h.sseConnections, key)
-		}
-	}
-}
-
-// cleanupUserConnections removes stale connections for a specific user
-func (h *PollingHandler) cleanupUserConnections(userID int) {
-	// Get all connection pools and clean up user connections
-	stats := h.realTimeService.GetStats()
-	h.logger.Debugw("Cleaning up user connections",
-		"userId", userID,
-		"totalActiveConnections", stats.ActiveConnections,
-		"circlesActive", stats.CirclesActive)
-
-	// Instead of guessing circle IDs, get all pools from the service
-	// This is a bit hacky but necessary since we don't have direct access to pools
-	for circleID := 1; circleID <= 100; circleID++ {
-		pool := h.realTimeService.GetConnectionPool(circleID)
-		if pool != nil && !pool.IsEmpty() {
-			userConnections := pool.GetUserConnections(userID)
-			h.logger.Debugw("Found user connections in circle",
-				"userId", userID,
-				"circleId", circleID,
-				"connectionCount", len(userConnections))
-
-			for _, conn := range userConnections {
-				// For SSE connections, be more aggressive - remove connections older than 1 minute
-				if conn.Conn == nil && conn.IsStale(1*time.Minute) {
-					h.logger.Infow("Removing stale SSE connection",
-						"connectionId", conn.ID,
-						"userId", userID,
-						"circleId", circleID,
-						"lastActivity", conn.LastActivity)
-					pool.RemoveConnection(conn)
-					conn.Close()
-				}
-			}
 		}
 	}
 }

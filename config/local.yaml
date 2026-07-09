@@ -67,7 +67,7 @@ storage:
   max_file_size: 102400
   bucket_name: 
   region: 
-  base_path:
+  base_path: "./uploads"
   access_key: 
   secret_key: 
   endpoint:

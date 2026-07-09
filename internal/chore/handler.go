@@ -1040,6 +1040,15 @@ func (h *Handler) DeleteChore(c *gin.Context) {
 		return
 	}
 
+	// Collect file paths before deletion; the DeleteChore transaction removes the
+	// DB records, so we must query them first or the backing objects are orphaned.
+	var choreFilePaths []string
+	if files, err := h.storageRepo.GetAllFilesByOwnerType(c, storageModel.EntityTypeChoreDescription, id); err == nil {
+		for _, f := range files {
+			choreFilePaths = append(choreFilePaths, f.FilePath)
+		}
+	}
+
 	deletedSyncVersion, err := h.choreRepo.DeleteChore(c, id)
 	if err != nil {
 		logger.Error("Failed to delete chore", "error", err, "choreID", id, "userID", currentUser.ID)
@@ -1050,7 +1059,10 @@ func (h *Handler) DeleteChore(c *gin.Context) {
 	}
 	h.nRepo.DeleteAllChoreNotifications(id)
 	h.tRepo.DissociateChoreWithThing(c, id)
-	h.deleteChoreFiles(c, id)
+	// DB records are already gone; only delete the backing storage objects.
+	if len(choreFilePaths) > 0 {
+		h.storage.Delete(c, choreFilePaths)
+	}
 
 	// Broadcast real-time chore deletion event
 	if h.realTimeService != nil {

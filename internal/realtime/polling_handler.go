@@ -41,6 +41,7 @@ func NewPollingHandler(
 		realTimeService: rts,
 		authMiddleware:  authMiddleware,
 		config:          config,
+		logger:          logging.DefaultLogger(),
 		sseConnections:  make(map[string]time.Time),
 		AllowedOrigins:  make(map[string]bool),
 	}
@@ -66,13 +67,21 @@ func NewPollingHandler(
 // endpoint is protected by the standard JWT middleware, so the token is sent in
 // the Authorization header and never exposed in a URL.
 func (h *PollingHandler) HandleSSETicket(c *gin.Context) {
-	h.logger = logging.FromContext(c.Request.Context())
+	logger := logging.FromContext(c.Request.Context())
 
 	user, ok := auth.CurrentUser(c)
 	if !ok {
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"error": "Authentication required",
 			"code":  "AUTH_REQUIRED",
+		})
+		return
+	}
+
+	if !user.IsPlusMember() {
+		c.JSON(http.StatusForbidden, gin.H{
+			"error": "Access denied for non-plus members",
+			"code":  "ACCESS_DENIED",
 		})
 		return
 	}
@@ -92,7 +101,7 @@ func (h *PollingHandler) HandleSSETicket(c *gin.Context) {
 
 	ticket, err := h.authMiddleware.ticketStore.Issue(user.ID)
 	if err != nil {
-		h.logger.Errorw("Failed to issue SSE ticket", "userID", user.ID, "error", err)
+		logger.Errorw("Failed to issue SSE ticket", "userID", user.ID, "error", err)
 		if errors.Is(err, ErrTicketStoreFull) {
 			c.JSON(http.StatusServiceUnavailable, gin.H{
 				"error": "Real-time service is temporarily busy, please retry",
@@ -115,8 +124,6 @@ func (h *PollingHandler) HandleSSETicket(c *gin.Context) {
 
 // HandleSSE handles Server-Sent Events connections
 func (h *PollingHandler) HandleSSE(c *gin.Context) {
-	h.logger = logging.FromContext(c.Request.Context())
-
 	// Check if SSE is enabled
 	if !h.config.RealTimeConfig.Enabled || !h.config.RealTimeConfig.SSEEnabled {
 		c.JSON(http.StatusServiceUnavailable, gin.H{

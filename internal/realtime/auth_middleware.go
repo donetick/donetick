@@ -23,7 +23,6 @@ type AuthMiddleware struct {
 	jwtAuth     *ginJWT.GinJWTMiddleware
 	config      *config.Config
 	ticketStore *TicketStore
-	logger      *zap.SugaredLogger
 }
 
 // NewAuthMiddleware creates a new WebSocket auth middleware
@@ -45,7 +44,7 @@ func NewAuthMiddleware(
 
 // AuthenticateConnection authenticates a WebSocket connection request
 func (am *AuthMiddleware) AuthenticateConnection(c *gin.Context) (*uModel.User, int, error) {
-	am.logger = logging.FromContext(c.Request.Context())
+	logger := logging.FromContext(c.Request.Context())
 
 	// Native EventSource clients (e.g. the iOS/Android Capacitor app) cannot send
 	// a custom Authorization header, so they authenticate with a short-lived,
@@ -59,7 +58,7 @@ func (am *AuthMiddleware) AuthenticateConnection(c *gin.Context) (*uModel.User, 
 
 		user, err := am.userRepo.GetUserByID(c.Request.Context(), userID)
 		if err != nil {
-			am.logger.Errorw("Failed to get user for SSE ticket", "userID", userID, "error", err)
+			logger.Errorw("Failed to get user for SSE ticket", "userID", userID, "error", err)
 			return nil, 0, ErrInvalidToken
 		}
 
@@ -81,21 +80,21 @@ func (am *AuthMiddleware) AuthenticateConnection(c *gin.Context) (*uModel.User, 
 			return nil, 0, ErrTokenExpired
 		}
 
-		am.logger.Errorw("Invalid token for WebSocket connection", "error", err)
+		logger.Errorw("Invalid token for WebSocket connection", "error", err)
 		return nil, 0, ErrInvalidToken
 	}
 
 	// Extract user ID from claims
-	userID, err := am.extractUserIDFromClaims(c, claims)
+	userID, err := am.extractUserIDFromClaims(c, claims, logger)
 	if err != nil {
-		am.logger.Errorw("Invalid user ID in token", "error", err)
+		logger.Errorw("Invalid user ID in token", "error", err)
 		return nil, 0, ErrInvalidToken
 	}
 
 	// Get user from database
 	user, err := am.userRepo.GetUserByID(c.Request.Context(), userID)
 	if err != nil {
-		am.logger.Errorw("Failed to get user", "userID", userID, "error", err)
+		logger.Errorw("Failed to get user", "userID", userID, "error", err)
 		return nil, 0, ErrInvalidToken
 	}
 
@@ -160,7 +159,7 @@ func (am *AuthMiddleware) validateToken(tokenString string) (jwt.MapClaims, erro
 }
 
 // extractUserIDFromClaims extracts the user ID from JWT claims
-func (am *AuthMiddleware) extractUserIDFromClaims(c *gin.Context, claims jwt.MapClaims) (int, error) {
+func (am *AuthMiddleware) extractUserIDFromClaims(c *gin.Context, claims jwt.MapClaims, logger *zap.SugaredLogger) (int, error) {
 	// The JWT token stores the username in the "id" field, not the numeric user ID
 	usernameInterface, exists := claims["id"]
 	if !exists {
@@ -176,7 +175,7 @@ func (am *AuthMiddleware) extractUserIDFromClaims(c *gin.Context, claims jwt.Map
 	// Use request context for proper cancellation and tracing
 	user, err := am.userRepo.GetUserByUsername(c.Request.Context(), username)
 	if err != nil {
-		am.logger.Errorw("Failed to get user by username",
+		logger.Errorw("Failed to get user by username",
 			"username", "[REDACTED]", // Don't log actual username for security
 			"error", err,
 			"remote_addr", c.ClientIP())
@@ -203,9 +202,10 @@ func (am *AuthMiddleware) CheckCircleAccess(ctx context.Context, userID, circleI
 // WebSocketAuthHandler creates a Gin handler for WebSocket authentication
 func (am *AuthMiddleware) WebSocketAuthHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		logger := logging.FromContext(c.Request.Context())
 		user, circleID, err := am.AuthenticateConnection(c)
 		if err != nil {
-			am.logger.Warnw("WebSocket authentication failed",
+			logger.Warnw("WebSocket authentication failed",
 				"error", err,
 				"remote_addr", c.ClientIP())
 
@@ -217,7 +217,7 @@ func (am *AuthMiddleware) WebSocketAuthHandler() gin.HandlerFunc {
 			return
 		}
 		if !user.IsPlusMember() {
-			am.logger.Warnw("WebSocket access denied for non-plus member",
+			logger.Warnw("WebSocket access denied for non-plus member",
 				"user_id", user.ID,
 				"remote_addr", c.ClientIP())
 

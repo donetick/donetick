@@ -182,7 +182,9 @@ func main() {
 
 		// Real-time service and components
 		fx.Provide(realtime.NewRealTimeService),
+		fx.Provide(realtime.NewTicketStore),
 		fx.Provide(realtime.NewAuthMiddleware),
+		fx.Provide(realtime.NewPollingHandler),
 
 		// MCP server
 
@@ -206,7 +208,7 @@ func main() {
 			// backup.Routes,
 
 			dsync.Routes,
-			realtime.Routes, // (router, rts, authMiddleware, pollingHandler)
+			realtime.Routes, // (router, rtAuthMiddleware, pollingHandler, jwtAuth)
 
 			func(r *gin.Engine) {},
 		),
@@ -220,7 +222,8 @@ func main() {
 
 }
 
-func newServer(lc fx.Lifecycle, cfg *config.Config, db *gorm.DB, notifier *notifier.Scheduler, eventProducer *events.EventsProducer, mfaCleanup *mfa.CleanupService, authCleanup *auth.CleanupService, draftCleanup *storage.DraftCleanupService, rts *realtime.RealTimeService) *gin.Engine {
+
+func newServer(lc fx.Lifecycle, cfg *config.Config, db *gorm.DB, notifier *notifier.Scheduler, eventProducer *events.EventsProducer, mfaCleanup *mfa.CleanupService, authCleanup *auth.CleanupService, rts *realtime.RealTimeService, draftCleanup *storage.DraftCleanupService, ticketStore *realtime.TicketStore) *gin.Engine {
 	// Set Gin mode based on logging configuration
 	if cfg.Logging.Development || strings.ToLower(cfg.Logging.Level) == "debug" {
 		gin.SetMode(gin.DebugMode)
@@ -315,6 +318,9 @@ func newServer(lc fx.Lifecycle, cfg *config.Config, db *gorm.DB, notifier *notif
 			mfaCleanup.Stop()
 			authCleanup.Stop()
 			draftCleanup.Stop()
+
+			// Stop the SSE ticket store cleanup goroutine
+			ticketStore.Stop()
 
 			// Shutdown HTTP server with timeout
 			shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

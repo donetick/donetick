@@ -68,8 +68,8 @@ func (s *URLSignerS3) Sign(rawPath string) (string, error) {
 	return urlStr, nil
 }
 
-func (s *URLSignerS3) IsValid(rawPath string, providedSig string) bool {
-
+func (s *URLSignerS3) IsValid(rawPath string, query url.Values) bool {
+	// S3 presigned URL validity is enforced by AWS; no local check needed.
 	return true
 }
 
@@ -90,4 +90,13 @@ func (s *URLSignerS3) SignIfLocal(path string) string {
 		return ""
 	}
 	return signed
+}
+
+func (s *URLSignerS3) SignAndGetPublicURL(rawPath string) (string, error) {
+	if s.PublicRead {
+		// If the bucket is public, return the public URL.
+		return s.storage.GetPublicURL(nil, rawPath)
+	}
+	// Otherwise, return a signed URL.
+	return s.Sign(rawPath)
 }

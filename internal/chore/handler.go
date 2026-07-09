@@ -8,6 +8,7 @@ import (
 	"math"
 	"math/rand"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -56,17 +57,19 @@ type Handler struct {
 	eventProducer   *events.EventsProducer
 	stRepo          *stRepo.SubTasksRepository
 	storageRepo     *storageRepo.StorageRepository
-	storage         *storage.S3Storage
+	storage         storage.Storage
 	realTimeService *realtime.RealTimeService
+	signer          storage.URLSigner
 }
 
 func NewHandler(cr *chRepo.ChoreRepository, circleRepo *cRepo.CircleRepository, nt *notifier.Notifier,
 	np *nps.NotificationPlanner, nRepo *nRepo.NotificationRepository, tRepo *tRepo.ThingRepository, lRepo *lRepo.LabelRepository,
 	ep *events.EventsProducer, stRepo *stRepo.SubTasksRepository,
-	storage *storage.S3Storage,
+	stor storage.Storage,
 	ur *uRepo.UserRepository,
 	dr *dRepo.DeviceRepository,
 	stoRepo *storageRepo.StorageRepository,
+	signer storage.URLSigner,
 	rts *realtime.RealTimeService) *Handler {
 	return &Handler{
 		choreRepo:       cr,
@@ -81,7 +84,8 @@ func NewHandler(cr *chRepo.ChoreRepository, circleRepo *cRepo.CircleRepository, 
 		eventProducer:   ep,
 		stRepo:          stRepo,
 		storageRepo:     stoRepo,
-		storage:         storage,
+		storage:         stor,
+		signer:          signer,
 		realTimeService: rts,
 	}
 }
@@ -225,10 +229,56 @@ func (h *Handler) GetChore(c *gin.Context) {
 		})
 		return
 	}
-
+	if chore.Description != nil {
+		// see if we have an <img> tag with attribute dt-data-path if so resigned the url using it's value and replace the src:
+		updatedDescription := h.generateUpdatedSignedDescription(c, *chore.Description)
+		chore.Description = &updatedDescription
+	}
 	c.JSON(200, gin.H{
 		"res": chore,
 	})
+}
+
+func (h *Handler) generateUpdatedSignedDescription(c *gin.Context, description string) string {
+	logger := logging.FromContext(c)
+	reg := regexp.MustCompile(`<img[^>]+dt-data-path="([^">]+)"[^>]*>`)
+	matches := reg.FindAllStringSubmatch(description, -1)
+	if len(matches) > 0 {
+		for _, match := range matches {
+			if len(match) > 1 {
+				originalDataPath := match[1]
+				// Strip any existing query parameters to get the clean path
+				cleanPath := originalDataPath
+				if idx := strings.Index(cleanPath, "?"); idx != -1 {
+					cleanPath = cleanPath[:idx]
+				}
+
+				// Sign the clean path to get a fresh signed URL
+				newURL, err := h.signer.Sign(cleanPath)
+				if err != nil {
+					logger.Error("Failed to get signed URL for image", "error", err, "dtDataPath", cleanPath)
+					continue
+				}
+
+				// Update the img tag: ensure dt-data-path has clean path and src has signed URL
+				oldImgTag := match[0]
+				newImgTag := oldImgTag
+
+				// If dt-data-path had query params, update it to the clean path
+				if originalDataPath != cleanPath {
+					newImgTag = strings.Replace(newImgTag, fmt.Sprintf(`dt-data-path="%s"`, originalDataPath), fmt.Sprintf(`dt-data-path="%s"`, cleanPath), 1)
+				}
+
+				// Update the src attribute to have the new signed URL
+				// Match src="..." and replace its value
+				srcReg := regexp.MustCompile(`src="[^"]*"`)
+				newImgTag = srcReg.ReplaceAllString(newImgTag, fmt.Sprintf(`src="%s"`, newURL))
+
+				description = strings.Replace(description, oldImgTag, newImgTag, 1)
+			}
+		}
+	}
+	return description
 }
 
 // UpdatedAt is for internal use only when syncing a chore updated offline
@@ -259,6 +309,7 @@ type ChoreReq struct {
 	IsPrivate            *bool                         `json:"isPrivate" binding:"omitempty"`
 	ProjectID            *int                          `json:"projectId" binding:"omitempty,gt=0"`
 	ThingTrigger         *tModel.ThingTrigger          `json:"thingTrigger"`
+	DraftId              *string                       `json:"draftId,omitempty"`
 }
 
 type ActionOptions struct {
@@ -501,6 +552,15 @@ func (h *Handler) CreateChore(c *gin.Context) {
 			return
 		}
 	}
+
+	if choreReq.DraftId != nil && *choreReq.DraftId != "" {
+		if err := h.storageRepo.ReassignDraftAttachments(c, *choreReq.DraftId, currentUser.ID, createdChore.ID); err != nil {
+			logger.Error("Failed to reassign draft attachments", "error", err, "draftID", *choreReq.DraftId)
+			c.JSON(500, gin.H{"error": "Error processing attachments"})
+			return
+		}
+	}
+
 	if len(choreAssignees) > 0 {
 		if err := h.choreRepo.UpdateChoreAssignees(c, choreAssignees); err != nil {
 			c.JSON(500, gin.H{
@@ -2428,7 +2488,11 @@ func (h *Handler) GetChoreDetail(c *gin.Context) {
 		})
 		return
 	}
-
+	if detailed.Description != nil {
+		// see if we have an <img> tag with attribute dt-data-path if so resigned the url using it's value and replace the src:
+		updatedDescription := h.generateUpdatedSignedDescription(c, *detailed.Description)
+		detailed.Description = &updatedDescription
+	}
 	c.JSON(200, gin.H{
 		"res": detailed,
 	})

@@ -27,7 +27,8 @@ type PollingHandler struct {
 	logger          *zap.SugaredLogger
 	// Rate limiting for SSE connections
 	AllowedOrigins map[string]bool
-	sseConnections map[string]time.Time // userID:IP -> last connection time
+	sseConnections map[string]time.Time // userID:IP -> last SSE connection time
+	sseTickets     map[string]time.Time // userID:IP -> last ticket mint time
 	sseMutex       sync.RWMutex
 }
 
@@ -43,6 +44,7 @@ func NewPollingHandler(
 		config:          config,
 		logger:          logging.DefaultLogger(),
 		sseConnections:  make(map[string]time.Time),
+		sseTickets:      make(map[string]time.Time),
 		AllowedOrigins:  make(map[string]bool),
 	}
 
@@ -86,12 +88,11 @@ func (h *PollingHandler) HandleSSETicket(c *gin.Context) {
 		return
 	}
 
-	// Throttle ticket minting per user+IP using the same rate limit as the SSE
-	// connection itself. A ticket is only ever exchanged for a single connection,
-	// so it should follow the same cadence. This is check-only: we intentionally
-	// do NOT record a connection time here, otherwise the immediate follow-up
-	// /sse request would be blocked by MinConnectionInterval.
-	if !h.checkRateLimit(user.ID, c.ClientIP()) {
+	// Throttle ticket minting per user+IP using a dedicated counter that is
+	// separate from the SSE-connection counter. This ensures that minting a
+	// ticket doesn't block the immediate follow-up /sse request, while still
+	// preventing a client from flooding /sse/ticket and exhausting TicketStore.
+	if !h.checkTicketRateLimit(user.ID, c.ClientIP()) {
 		c.JSON(http.StatusTooManyRequests, gin.H{
 			"error": "Rate limit exceeded",
 			"code":  "RATE_LIMIT_EXCEEDED",
@@ -116,6 +117,7 @@ func (h *PollingHandler) HandleSSETicket(c *gin.Context) {
 		return
 	}
 
+	h.recordTicketMint(user.ID, c.ClientIP())
 	c.JSON(http.StatusOK, gin.H{
 		"ticket":    ticket,
 		"expiresIn": int(ticketTTL.Seconds()),
@@ -409,7 +411,7 @@ func (h *PollingHandler) validateSSERequest(c *gin.Context, user *uModel.User) e
 	return nil
 }
 
-// checkRateLimit checks if the user has exceeded the rate limit for SSE connections
+// checkRateLimit checks if the user has exceeded the rate limit for SSE connections.
 func (h *PollingHandler) checkRateLimit(userID int, clientIP string) bool {
 	h.sseMutex.RLock()
 	key := fmt.Sprintf("%d:%s", userID, clientIP)
@@ -425,7 +427,33 @@ func (h *PollingHandler) checkRateLimit(userID int, clientIP string) bool {
 	return true
 }
 
-// updateConnectionTime updates the last connection time for rate limiting
+// checkTicketRateLimit checks if the user has exceeded the rate limit for ticket minting.
+// It uses a separate counter from the SSE-connection rate limit so that minting
+// a ticket does not prevent the subsequent /sse connection.
+func (h *PollingHandler) checkTicketRateLimit(userID int, clientIP string) bool {
+	h.sseMutex.RLock()
+	key := fmt.Sprintf("%d:%s", userID, clientIP)
+	lastMintTime, exists := h.sseTickets[key]
+	h.sseMutex.RUnlock()
+
+	if exists {
+		if time.Since(lastMintTime) < h.config.RealTimeConfig.MinConnectionInterval {
+			return false
+		}
+	}
+
+	return true
+}
+
+// recordTicketMint records the current time as the last ticket-mint time for rate limiting.
+func (h *PollingHandler) recordTicketMint(userID int, clientIP string) {
+	h.sseMutex.Lock()
+	key := fmt.Sprintf("%d:%s", userID, clientIP)
+	h.sseTickets[key] = time.Now().UTC()
+	h.sseMutex.Unlock()
+}
+
+// updateConnectionTime updates the last connection time for rate limiting.
 func (h *PollingHandler) updateConnectionTime(userID int, clientIP string) {
 	h.sseMutex.Lock()
 	key := fmt.Sprintf("%d:%s", userID, clientIP)
@@ -433,7 +461,7 @@ func (h *PollingHandler) updateConnectionTime(userID int, clientIP string) {
 	h.sseMutex.Unlock()
 }
 
-// cleanupStaleConnections removes stale SSE connections from the rate limiting map
+// cleanupStaleConnections removes stale entries from both rate-limiting maps.
 func (h *PollingHandler) cleanupStaleConnections() {
 	h.sseMutex.Lock()
 	defer h.sseMutex.Unlock()
@@ -442,6 +470,11 @@ func (h *PollingHandler) cleanupStaleConnections() {
 	for key, lastTime := range h.sseConnections {
 		if lastTime.Before(cutoff) {
 			delete(h.sseConnections, key)
+		}
+	}
+	for key, lastTime := range h.sseTickets {
+		if lastTime.Before(cutoff) {
+			delete(h.sseTickets, key)
 		}
 	}
 }

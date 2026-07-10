@@ -1296,7 +1296,7 @@ paths:
       - application/json
       responses:
         "200":
-          description: 'res: detailed chore information" //TODO: Add response model'
+          description: 'res: detailed chore information'
           schema:
             additionalProperties: true
             type: object
@@ -1616,7 +1616,7 @@ paths:
       - application/json
       responses:
         "200":
-          description: 'message: Nudge sent status" //TODO: Add response model'
+          description: 'message: Nudge sent status'
           schema:
             additionalProperties: true
             type: object
@@ -1660,8 +1660,7 @@ paths:
       - application/json
       responses:
         "200":
-          description: 'res: {duration, status, timerUpdatedAt}" //TODO: Add response
-            model'
+          description: 'res: {duration, status, timerUpdatedAt}'
           schema:
             additionalProperties: true
             type: object
@@ -1774,8 +1773,7 @@ paths:
       - application/json
       responses:
         "200":
-          description: 'res: updated chore, message: Chore rejected successfully"
-            //TODO: Add response model'
+          description: 'res: updated chore, message: Chore rejected successfully'
           schema:
             additionalProperties: true
             type: object
@@ -1870,8 +1868,7 @@ paths:
       - application/json
       responses:
         "200":
-          description: 'res: {timerUpdatedAt, status, duration}" //TODO: Add response
-            model'
+          description: 'res: {timerUpdatedAt, status, duration}'
           schema:
             additionalProperties: true
             type: object
@@ -1982,7 +1979,7 @@ paths:
       - application/json
       responses:
         "200":
-          description: 'Empty success response" //TODO: Add response model'
+          description: Empty success response
           schema:
             additionalProperties: true
             type: object
@@ -2266,8 +2263,7 @@ paths:
       - application/json
       responses:
         "200":
-          description: 'res: {timerUpdatedAt, status, duration}" //TODO: Add response
-            model'
+          description: 'res: {timerUpdatedAt, status, duration}'
           schema:
             additionalProperties: true
             type: object
@@ -2363,7 +2359,7 @@ paths:
       responses:
         "200":
           description: 'message: Successfully undid {action} action, res: updated
-            chore object" //TODO: Add response model'
+            chore object'
           schema:
             additionalProperties: true
             type: object

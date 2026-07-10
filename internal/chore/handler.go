@@ -289,8 +289,8 @@ type ChoreReq struct {
 	Name                 string                        `json:"name" binding:"required"`
 	FrequencyType        chModel.FrequencyType         `json:"frequencyType" binding:"required,oneof=once daily weekly monthly yearly adaptive interval days_of_the_week day_of_the_month trigger no_repeat"`
 	Frequency            *int                          `json:"frequency" binding:"omitempty,gt=0"`
-	FrequencyMetadata    *chModel.FrequencyMetadata    `json:"frequencyMetadata"`
-	NextDueDate          *time.Time                    `json:"nextDueDate" binding:"required_with=IsRolling"` // Next due date in RFC3339 format
+	FrequencyMetadata    *chModel.FrequencyMetadata    `json:"frequencyMetadata,omitempty"`
+	NextDueDate          *time.Time                    `json:"nextDueDate" binding:"omitempty,required_with=IsRolling"` // Next due date in RFC3339 format
 	IsRolling            bool                          `json:"isRolling"`
 	AssignedTo           *int                          `json:"assignedTo" binding:"omitempty,gt=0"`
 	Assignees            []chModel.ChoreAssignees      `json:"assignees" binding:"dive"`
@@ -1276,6 +1276,9 @@ func (h *Handler) UpdateAssignee(c *gin.Context) {
 //	@Security		JWTKeyAuth
 //	@Security		APIKeyAuth
 //	@Param			id	path		int						true	"Chore ID"
+//
+// TODO: Add response model
+//
 //	@Success		200	{object}	map[string]interface{}	"res: {timerUpdatedAt, status, duration}"
 //	@Failure		400	{object}	map[string]string		"error: Invalid ID | Chore is not in a state that can be started"
 //	@Failure		401	{object}	map[string]string		"error: Authentication failed"
@@ -1447,6 +1450,9 @@ func (h *Handler) StartChore(c *gin.Context) {
 //	@Security		JWTKeyAuth
 //	@Security		APIKeyAuth
 //	@Param			id	path		int						true	"Chore ID"
+//
+// TODO: Add response model
+//
 //	@Success		200	{object}	map[string]interface{}	"res: {duration, status, timerUpdatedAt}"
 //	@Failure		400	{object}	map[string]string		"error: Invalid ID | No active time session found for this chore"
 //	@Failure		401	{object}	map[string]string		"error: Authentication failed"
@@ -1587,6 +1593,9 @@ func (h *Handler) PauseChore(c *gin.Context) {
 //	@Security		JWTKeyAuth
 //	@Security		APIKeyAuth
 //	@Param			id	path		int						true	"Chore ID"
+//
+// TODO: Add response model
+//
 //	@Success		200	{object}	map[string]interface{}	"res: {timerUpdatedAt, status, duration}"
 //	@Failure		400	{object}	map[string]string		"error: Invalid ID | No active time session found for this chore"
 //	@Failure		401	{object}	map[string]string		"error: Authentication failed"
@@ -2462,6 +2471,9 @@ func (h *Handler) GetChoreHistory(c *gin.Context) {
 //	@Security		JWTKeyAuth
 //	@Security		APIKeyAuth
 //	@Param			id	path		int						true	"Chore ID"
+//
+// TODO: Add response model
+//
 //	@Success		200	{object}	map[string]interface{}	"res: detailed chore information"
 //	@Failure		400	{object}	map[string]string		"error: Invalid ID"
 //	@Failure		401	{object}	map[string]string		"error: Authentication failed"
@@ -2890,6 +2902,9 @@ type SubtaskReq struct {
 //	@Security		APIKeyAuth
 //	@Param			id		path		int						true	"Chore ID"
 //	@Param			subtask	body		SubtaskReq				true	"Subtask completion request"
+//
+// TODO: Add response model
+//
 //	@Success		200		{object}	map[string]interface{}	"Empty success response"
 //	@Failure		400		{object}	map[string]string		"error: Invalid Chore ID | Invalid request | User is not assigned to chore"
 //	@Failure		401		{object}	map[string]string		"error: Authentication failed"
@@ -3552,6 +3567,9 @@ type RejectChoreReq struct { // TODO: Remove "Note" in future.
 //	@Security		APIKeyAuth
 //	@Param			id			path		int						true	"Chore ID"
 //	@Param			rejection	body		RejectChoreReq			false	"Rejection details"
+//
+// TODO: Add response model
+//
 //	@Success		200			{object}	map[string]interface{}	"res: updated chore, message: Chore rejected successfully"
 //	@Failure		400			{object}	map[string]string		"error: Invalid ID | Chore is not pending approval"
 //	@Failure		401			{object}	map[string]string		"error: Authentication failed"
@@ -4058,6 +4076,9 @@ type NudgeRequest struct {
 //	@Security		APIKeyAuth
 //	@Param			id		path		int						true	"Chore ID"
 //	@Param			nudge	body		NudgeRequest			true	"Nudge request"
+//
+// TODO: Add response model
+//
 //	@Success		200		{object}	map[string]interface{}	"message: Nudge sent status"
 //	@Failure		400		{object}	map[string]string		"error: Invalid chore ID | Invalid request payload | Chore has no assignees | Cannot nudge yourself"
 //	@Failure		401		{object}	map[string]string		"error: Authentication failed"
@@ -4250,6 +4271,9 @@ func (h *Handler) sendNudgeToDevices(c context.Context, fcmTokens []string, titl
 //	@Security		JWTKeyAuth
 //	@Security		APIKeyAuth
 //	@Param			id	path		int						true	"Chore ID"
+//
+// TODO: Add response model
+//
 //	@Success		200	{object}	map[string]interface{}	"message: Successfully undid {action} action, res: updated chore object"
 //	@Failure		400	{object}	map[string]string		"error: Invalid chore ID | No recent action found to undo | Cannot undo this type of action"
 //	@Failure		401	{object}	map[string]string		"error: Authentication failed"

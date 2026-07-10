@@ -92,7 +92,7 @@ func validateAssignments(sl validator.StructLevel, req ChoreReq) {
 }
 
 func validateNotifications(sl validator.StructLevel, req ChoreReq) {
-	hasNotificationMetadata := req.NotificationMetadata != nil
+	hasNotificationMetadata := req.NotificationMetadata != nil && len(req.NotificationMetadata.Templates) != 0
 
 	if req.Notification {
 		// Notifications are invalid for 'trigger' frequency types

@@ -13,10 +13,10 @@ import (
 
 type DeletionService struct {
 	db      *gorm.DB
-	storage *storage.S3Storage
+	storage storage.Storage
 }
 
-func NewDeletionService(db *gorm.DB, storage *storage.S3Storage) *DeletionService {
+func NewDeletionService(db *gorm.DB, storage storage.Storage) *DeletionService {
 	return &DeletionService{
 		db:      db,
 		storage: storage,

@@ -504,11 +504,11 @@ func (es *EmailSender) SendResetPasswordEmail(c context.Context, to, code string
 // }
 func encodeEmailAndCode(email, code string) string {
 	data := email + ":" + code
-	return base64.StdEncoding.EncodeToString([]byte(data))
+	return base64.RawURLEncoding.EncodeToString([]byte(data))
 }
 
 func DecodeEmailAndCode(encoded string) (string, string, error) {
-	data, err := base64.StdEncoding.DecodeString(encoded)
+	data, err := base64.RawURLEncoding.DecodeString(encoded)
 	if err != nil {
 		return "", "", err
 	}

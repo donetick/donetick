@@ -8,6 +8,7 @@ import (
 	"math"
 	"math/rand"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -56,17 +57,19 @@ type Handler struct {
 	eventProducer   *events.EventsProducer
 	stRepo          *stRepo.SubTasksRepository
 	storageRepo     *storageRepo.StorageRepository
-	storage         *storage.S3Storage
+	storage         storage.Storage
 	realTimeService *realtime.RealTimeService
+	signer          storage.URLSigner
 }
 
 func NewHandler(cr *chRepo.ChoreRepository, circleRepo *cRepo.CircleRepository, nt *notifier.Notifier,
 	np *nps.NotificationPlanner, nRepo *nRepo.NotificationRepository, tRepo *tRepo.ThingRepository, lRepo *lRepo.LabelRepository,
 	ep *events.EventsProducer, stRepo *stRepo.SubTasksRepository,
-	storage *storage.S3Storage,
+	stor storage.Storage,
 	ur *uRepo.UserRepository,
 	dr *dRepo.DeviceRepository,
 	stoRepo *storageRepo.StorageRepository,
+	signer storage.URLSigner,
 	rts *realtime.RealTimeService) *Handler {
 	return &Handler{
 		choreRepo:       cr,
@@ -81,7 +84,8 @@ func NewHandler(cr *chRepo.ChoreRepository, circleRepo *cRepo.CircleRepository, 
 		eventProducer:   ep,
 		stRepo:          stRepo,
 		storageRepo:     stoRepo,
-		storage:         storage,
+		storage:         stor,
+		signer:          signer,
 		realTimeService: rts,
 	}
 }
@@ -225,10 +229,56 @@ func (h *Handler) GetChore(c *gin.Context) {
 		})
 		return
 	}
-
+	if chore.Description != nil {
+		// see if we have an <img> tag with attribute dt-data-path if so resigned the url using it's value and replace the src:
+		updatedDescription := h.generateUpdatedSignedDescription(c, *chore.Description)
+		chore.Description = &updatedDescription
+	}
 	c.JSON(200, gin.H{
 		"res": chore,
 	})
+}
+
+func (h *Handler) generateUpdatedSignedDescription(c *gin.Context, description string) string {
+	logger := logging.FromContext(c)
+	reg := regexp.MustCompile(`<img[^>]+dt-data-path="([^">]+)"[^>]*>`)
+	matches := reg.FindAllStringSubmatch(description, -1)
+	if len(matches) > 0 {
+		for _, match := range matches {
+			if len(match) > 1 {
+				originalDataPath := match[1]
+				// Strip any existing query parameters to get the clean path
+				cleanPath := originalDataPath
+				if idx := strings.Index(cleanPath, "?"); idx != -1 {
+					cleanPath = cleanPath[:idx]
+				}
+
+				// Sign the clean path to get a fresh signed URL
+				newURL, err := h.signer.Sign(cleanPath)
+				if err != nil {
+					logger.Error("Failed to get signed URL for image", "error", err, "dtDataPath", cleanPath)
+					continue
+				}
+
+				// Update the img tag: ensure dt-data-path has clean path and src has signed URL
+				oldImgTag := match[0]
+				newImgTag := oldImgTag
+
+				// If dt-data-path had query params, update it to the clean path
+				if originalDataPath != cleanPath {
+					newImgTag = strings.Replace(newImgTag, fmt.Sprintf(`dt-data-path="%s"`, originalDataPath), fmt.Sprintf(`dt-data-path="%s"`, cleanPath), 1)
+				}
+
+				// Update the src attribute to have the new signed URL
+				// Match src="..." and replace its value
+				srcReg := regexp.MustCompile(`src="[^"]*"`)
+				newImgTag = srcReg.ReplaceAllString(newImgTag, fmt.Sprintf(`src="%s"`, newURL))
+
+				description = strings.Replace(description, oldImgTag, newImgTag, 1)
+			}
+		}
+	}
+	return description
 }
 
 // UpdatedAt is for internal use only when syncing a chore updated offline
@@ -247,9 +297,9 @@ type ChoreReq struct {
 	AssignStrategy       chModel.AssignmentStrategy    `json:"assignStrategy" binding:"required,oneof=no_assignee least_assigned least_completed random keep_last_assigned random_except_last_assigned round_robin"`
 	IsActive             *bool                         `json:"isActive" binding:"omitempty"`
 	Notification         bool                          `json:"notification"`
-	NotificationMetadata *chModel.NotificationMetadata `json:"notificationMetadata,omitempty"`
-	LabelsV2             *[]lModel.LabelReq            `json:"labelsV2" binding:"omitempty,dive"`
-	UpdatedAt            *time.Time                    `json:"updatedAt,omitempty"`
+	NotificationMetadata *chModel.NotificationMetadata `json:"notificationMetadata"`
+	LabelsV2             *[]lModel.LabelReq            `json:"labelsV2" binding:"omitempty,unique=LabelID,dive"`
+	UpdatedAt            *time.Time                    `json:"updatedAt"`
 	Priority             *int                          `json:"priority" binding:"omitempty,gte=0,lte=5"`
 	CompletionWindow     *int                          `json:"completionWindow" binding:"omitempty,min=0"`
 	Points               *int                          `json:"points" binding:"omitempty,gte=0"`
@@ -258,7 +308,8 @@ type ChoreReq struct {
 	RequireApproval      bool                          `json:"requireApproval" binding:"omitempty"`
 	IsPrivate            *bool                         `json:"isPrivate" binding:"omitempty"`
 	ProjectID            *int                          `json:"projectId" binding:"omitempty,gt=0"`
-	ThingTrigger         *tModel.ThingTrigger          `json:"thingTrigger,omitempty"`
+	ThingTrigger         *tModel.ThingTrigger          `json:"thingTrigger"`
+	DraftId              *string                       `json:"draftId,omitempty"`
 }
 
 type ActionOptions struct {
@@ -501,6 +552,15 @@ func (h *Handler) CreateChore(c *gin.Context) {
 			return
 		}
 	}
+
+	if choreReq.DraftId != nil && *choreReq.DraftId != "" {
+		if err := h.storageRepo.ReassignDraftAttachments(c, *choreReq.DraftId, currentUser.ID, createdChore.ID); err != nil {
+			logger.Error("Failed to reassign draft attachments", "error", err, "draftID", *choreReq.DraftId)
+			c.JSON(500, gin.H{"error": "Error processing attachments"})
+			return
+		}
+	}
+
 	if len(choreAssignees) > 0 {
 		if err := h.choreRepo.UpdateChoreAssignees(c, choreAssignees); err != nil {
 			c.JSON(500, gin.H{
@@ -912,6 +972,26 @@ func setEditChoreDefaults(choreReq *ChoreReq, oldChore *chModel.Chore) {
 	}
 }
 
+func (h *Handler) deleteChoreFiles(ctx *gin.Context, choreID int) {
+	files, err := h.storageRepo.GetAllFilesByOwnerType(ctx, storageModel.EntityTypeChoreDescription, choreID)
+	if err != nil || len(files) == 0 {
+		return
+	}
+	paths := make([]string, len(files))
+	for i, f := range files {
+		paths[i] = f.FilePath
+	}
+	h.storage.Delete(ctx, paths)
+
+	byUser := make(map[int][]*storageModel.StorageFile)
+	for _, f := range files {
+		byUser[f.UserID] = append(byUser[f.UserID], f)
+	}
+	for userID, userFiles := range byUser {
+		h.storageRepo.RemoveFileRecords(ctx, userFiles, userID)
+	}
+}
+
 func (h *Handler) cleanUpUnreferencedFiles(ctx *gin.Context, userID int, entityType storageModel.EntityType, entityID int, text string) error {
 	existedFiles, err := h.storageRepo.GetFilesByUser(ctx, userID, entityType, entityID)
 	if err != nil {
@@ -1020,7 +1100,24 @@ func (h *Handler) DeleteChore(c *gin.Context) {
 		return
 	}
 
-	if err := h.choreRepo.DeleteChore(c, id); err != nil {
+	// Collect file paths before deletion; the DeleteChore transaction removes the
+	// DB records, so we must query them first or the backing objects are orphaned.
+	var choreFilePaths []string
+	for _, entityType := range []storageModel.EntityType{
+		storageModel.EntityTypeChoreDescription,
+		storageModel.EntityTypeChoreAttachment,
+	} {
+		files, err := h.storageRepo.GetAllFilesByOwnerType(c, entityType, id)
+		if err != nil {
+			logger.Error("Failed to list chore files for cleanup", "error", err, "choreID", id, "entityType", entityType)
+			continue
+		}
+		for _, f := range files {
+			choreFilePaths = append(choreFilePaths, f.FilePath)
+		}
+	}
+	deletedSyncVersion, err := h.choreRepo.DeleteChore(c, id)
+	if err != nil {
 		logger.Error("Failed to delete chore", "error", err, "choreID", id, "userID", currentUser.ID)
 		c.JSON(500, gin.H{
 			"error": "Failed to delete chore",
@@ -1029,15 +1126,20 @@ func (h *Handler) DeleteChore(c *gin.Context) {
 	}
 	h.nRepo.DeleteAllChoreNotifications(id)
 	h.tRepo.DissociateChoreWithThing(c, id)
+	// DB records are already gone; only delete the backing storage objects.
+	if len(choreFilePaths) > 0 {
+		h.storage.Delete(c, choreFilePaths)
+	}
 
 	// Broadcast real-time chore deletion event
 	if h.realTimeService != nil {
 		broadcaster := h.realTimeService.GetEventBroadcaster()
-		broadcaster.BroadcastChoreDeleted(chore.ID, chore.Name, chore.CircleID, &currentUser.User)
+		broadcaster.BroadcastChoreDeleted(chore.ID, chore.Name, chore.CircleID, &currentUser.User, deletedSyncVersion)
 	}
 
 	c.JSON(200, gin.H{
-		"message": "Chore deleted successfully",
+		"message":     "Chore deleted successfully",
+		"syncVersion": deletedSyncVersion,
 	})
 }
 
@@ -1680,7 +1782,14 @@ func (h *Handler) SkipChore(c *gin.Context) {
 		})
 		return
 	}
+
+	completedDate := time.Now().UTC()
+	if chore.NextDueDate != nil {
+		completedDate = chore.NextDueDate.UTC()
+	}
+
 	if !validateActionVersion(c, "skip", chore, req.ActionOptions) {
+
 		return
 	}
 
@@ -1689,7 +1798,7 @@ func (h *Handler) SkipChore(c *gin.Context) {
 		t := req.ActionOptions.NextDueDate.UTC()
 		nextDueDate = &t
 	} else {
-		nextDueDate, err = scheduleNextDueDate(c, chore, chore.NextDueDate.UTC())
+		nextDueDate, err = scheduleNextDueDate(c, chore, completedDate)
 		if err != nil {
 			c.JSON(500, gin.H{
 				"error": "Error scheduling next due date",
@@ -1906,6 +2015,8 @@ func (h *Handler) ArchiveChore(c *gin.Context) {
 		})
 		return
 	}
+
+	h.nRepo.DeleteAllChoreNotifications(id)
 
 	// Broadcast real-time chore archive event
 	if h.realTimeService != nil {
@@ -2396,7 +2507,11 @@ func (h *Handler) GetChoreDetail(c *gin.Context) {
 		})
 		return
 	}
-
+	if detailed.Description != nil {
+		// see if we have an <img> tag with attribute dt-data-path if so resigned the url using it's value and replace the src:
+		updatedDescription := h.generateUpdatedSignedDescription(c, *detailed.Description)
+		detailed.Description = &updatedDescription
+	}
 	c.JSON(200, gin.H{
 		"res": detailed,
 	})
@@ -2877,6 +2992,7 @@ func (h *Handler) UpdateSubtaskCompletedAt(c *gin.Context) {
 			req.CompletedAt,
 			&effectiveUser.User,
 			chore.CircleID,
+			chore.SyncVersion,
 		)
 
 	}
@@ -4213,6 +4329,7 @@ func (h *Handler) UndoChore(c *gin.Context) {
 	// Determine previous state based on action type
 	var previousAssignedTo *int
 	var previousDueDate *time.Time
+	reactivateOneTimeChore := false
 
 	switch lastAction.Status {
 	case chModel.ChoreHistoryStatusCompleted, chModel.ChoreHistoryStatusSkipped:
@@ -4226,6 +4343,9 @@ func (h *Handler) UndoChore(c *gin.Context) {
 				previousAssignedTo = lastAction.AssignedTo
 			}
 			previousDueDate = lastAction.DueDate
+			if chore.FrequencyType == chModel.FrequencyTypeOnce || chore.FrequencyType == chModel.FrequencyTypeNoRepeat || chore.FrequencyType == chModel.FrequencyTypeTrigger {
+				reactivateOneTimeChore = true
+			}
 		} else {
 			// Use the state from before this action
 			previousAssignedTo = previousHistory.AssignedTo
@@ -4257,6 +4377,19 @@ func (h *Handler) UndoChore(c *gin.Context) {
 			"error": "Failed to undo action",
 		})
 		return
+	}
+
+	if reactivateOneTimeChore {
+		if err := h.choreRepo.UpdateChoreFields(c, choreID, map[string]interface{}{
+			"is_active":     true,
+			"next_due_date": nil,
+		}); err != nil {
+			logger.Error("Failed to reactivate one-time chore after undo", "error", err)
+			c.JSON(500, gin.H{
+				"error": "Failed to restore chore state",
+			})
+			return
+		}
 	}
 
 	// Special handling for rejected actions - restore to pending approval

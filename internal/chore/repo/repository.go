@@ -63,18 +63,21 @@ func (r *ChoreRepository) nextSyncVersion(ctx context.Context, circleID int) (in
 	return r.nextSyncVersionWithDB(ctx, r.db, circleID)
 }
 
-func (r *ChoreRepository) insertTombstone(ctx context.Context, tx *gorm.DB, circleID int, entityID int) error {
+func (r *ChoreRepository) insertTombstone(ctx context.Context, tx *gorm.DB, circleID int, entityID int) (int64, error) {
 	// Use tx (not r.db) so the version increment and tombstone insert are atomic.
 	version, err := r.nextSyncVersionWithDB(ctx, tx, circleID)
 	if err != nil {
-		return err
+		return 0, err
 	}
-	return tx.WithContext(ctx).Create(&syncModel.Tombstone{
+	if err := tx.WithContext(ctx).Create(&syncModel.Tombstone{
 		CircleID:    circleID,
 		EntityType:  syncModel.EntityTypeChore,
 		EntityID:    entityID,
 		SyncVersion: version,
-	}).Error
+	}).Error; err != nil {
+		return 0, err
+	}
+	return version, nil
 }
 
 func (r *ChoreRepository) UpsertChore(c context.Context, chore *chModel.Chore) error {
@@ -171,6 +174,7 @@ func (r *ChoreRepository) GetChore(c context.Context, choreID int, userID int, c
 	if err := query.First(&chore).Error; err != nil {
 		return nil, err
 	}
+	r.db.WithContext(c).Where("entity_type = ? AND entity_id = ?", storageModel.EntityTypeChoreAttachment, choreID).Find(&chore.Attachments)
 	return &chore, nil
 }
 
@@ -225,12 +229,13 @@ func (r *ChoreRepository) GetArchivedChores(c context.Context, circleID int, use
 	return chores, nil
 }
 
-func (r *ChoreRepository) DeleteChore(c context.Context, id int) error {
+func (r *ChoreRepository) DeleteChore(c context.Context, id int) (int64, error) {
 	var chore chModel.Chore
 	if err := r.db.WithContext(c).Select("id, circle_id").First(&chore, id).Error; err != nil {
-		return err
+		return 0, err
 	}
-	return r.db.WithContext(c).Transaction(func(tx *gorm.DB) error {
+	var tombstoneSyncVersion int64
+	err := r.db.WithContext(c).Transaction(func(tx *gorm.DB) error {
 		// Delete all chore assignees
 		if err := tx.Where("chore_id = ?", id).Delete(&chModel.ChoreAssignees{}).Error; err != nil {
 			return err
@@ -255,13 +260,25 @@ func (r *ChoreRepository) DeleteChore(c context.Context, id int) error {
 		if err := tx.Where("entity_type = ? AND entity_id = ?", storageModel.EntityTypeChoreDescription, id).Delete(&storageModel.StorageFile{}).Error; err != nil {
 			return err
 		}
+		if err := tx.Where("entity_type = ? AND entity_id = ?", storageModel.EntityTypeChoreAttachment, id).Delete(&storageModel.StorageFile{}).Error; err != nil {
+			return err
+		}
 		// Delete the chore itself
 		if err := tx.Delete(&chModel.Chore{}, id).Error; err != nil {
 			return err
 		}
 		// Record tombstone so clients can remove it during sync
-		return r.insertTombstone(c, tx, chore.CircleID, id)
+		version, err := r.insertTombstone(c, tx, chore.CircleID, id)
+		if err != nil {
+			return err
+		}
+		tombstoneSyncVersion = version
+		return nil
 	})
+	if err != nil {
+		return 0, err
+	}
+	return tombstoneSyncVersion, nil
 }
 
 func (r *ChoreRepository) SoftDelete(c context.Context, id int, userID int, circleID int) error {
@@ -856,8 +873,8 @@ func (r *ChoreRepository) GetChoreDetailByID(c context.Context, choreID int, cir
 		Group("chores.id, recent_history.last_completed_date, recent_history.last_assigned_to, recent_history.last_completed_by, recent_history.notes, time_sessions.start_time, time_sessions.updated_at").
 		First(&choreDetail).Error; err != nil {
 		return nil, err
-
 	}
+	r.db.WithContext(c).Where("entity_type = ? AND entity_id = ?", storageModel.EntityTypeChoreAttachment, choreID).Find(&choreDetail.Attachments)
 	return &choreDetail, nil
 }
 

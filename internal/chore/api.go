@@ -9,6 +9,7 @@ import (
 	authMiddleware "donetick.com/core/internal/auth"
 	chRepo "donetick.com/core/internal/chore/repo"
 	"donetick.com/core/internal/events"
+	nRepo "donetick.com/core/internal/notifier/repo"
 	nps "donetick.com/core/internal/notifier/service"
 	"donetick.com/core/internal/utils"
 	"donetick.com/core/logging"
@@ -28,16 +29,18 @@ type API struct {
 	userRepo      *uRepo.UserRepository
 	circleRepo    *cRepo.CircleRepository
 	nPlanner      *nps.NotificationPlanner
+	nRepo         *nRepo.NotificationRepository
 	eventProducer *events.EventsProducer
 	stRepo        *stRepo.SubTasksRepository
 }
 
-func NewAPI(cr *chRepo.ChoreRepository, userRepo *uRepo.UserRepository, circleRepo *cRepo.CircleRepository, nPlanner *nps.NotificationPlanner, eventProducer *events.EventsProducer, stRepo *stRepo.SubTasksRepository) *API {
+func NewAPI(cr *chRepo.ChoreRepository, userRepo *uRepo.UserRepository, circleRepo *cRepo.CircleRepository, nPlanner *nps.NotificationPlanner, nr *nRepo.NotificationRepository, eventProducer *events.EventsProducer, stRepo *stRepo.SubTasksRepository) *API {
 	return &API{
 		choreRepo:     cr,
 		userRepo:      userRepo,
 		circleRepo:    circleRepo,
 		nPlanner:      nPlanner,
+		nRepo:         nr,
 		eventProducer: eventProducer,
 		stRepo:        stRepo,
 	}
@@ -297,7 +300,7 @@ func (h *API) CompleteChore(c *gin.Context) {
 
 	// confirm that the chore in completion window:
 	if chore.CompletionWindow != nil {
-		if completedDate.Before(chore.NextDueDate.Add(time.Hour * time.Duration(*chore.CompletionWindow))) {
+		if completedDate.Before(chore.NextDueDate.Add(time.Hour * time.Duration(-*chore.CompletionWindow))) {
 			log.Debugw("chore.api.CompleteChore chore is in completion window", "choreID", choreID, "completionWindow", chore.CompletionWindow)
 			c.JSON(400, gin.H{
 				"error": "Chore is out of completion window",
@@ -406,10 +409,11 @@ func (h *API) DeleteChore(c *gin.Context) {
 		c.JSON(403, gin.H{"error": "You can only delete your own chores"})
 		return
 	}
-	if err := h.choreRepo.DeleteChore(c, choreID); err != nil {
+	if _, err := h.choreRepo.DeleteChore(c, choreID); err != nil {
 		c.JSON(500, gin.H{"error": "Failed to delete chore"})
 		return
 	}
+	h.nRepo.DeleteAllChoreNotifications(choreID)
 	c.JSON(200, gin.H{"message": "Chore deleted successfully"})
 }
 

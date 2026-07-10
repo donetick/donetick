@@ -22,6 +22,7 @@ import (
 	cRepo "donetick.com/core/internal/circle/repo"
 	stRepo "donetick.com/core/internal/subtask/repo"
 	uRepo "donetick.com/core/internal/user/repo"
+	pjRepo "donetick.com/core/internal/project/repo"
 )
 
 type API struct {
@@ -32,9 +33,10 @@ type API struct {
 	nRepo         *nRepo.NotificationRepository
 	eventProducer *events.EventsProducer
 	stRepo        *stRepo.SubTasksRepository
+	pjRepo        *pjRepo.ProjectRepository
 }
 
-func NewAPI(cr *chRepo.ChoreRepository, userRepo *uRepo.UserRepository, circleRepo *cRepo.CircleRepository, nPlanner *nps.NotificationPlanner, nr *nRepo.NotificationRepository, eventProducer *events.EventsProducer, stRepo *stRepo.SubTasksRepository) *API {
+func NewAPI(cr *chRepo.ChoreRepository, userRepo *uRepo.UserRepository, circleRepo *cRepo.CircleRepository, nPlanner *nps.NotificationPlanner, nr *nRepo.NotificationRepository, eventProducer *events.EventsProducer, stRepo *stRepo.SubTasksRepository, pjRepo *pjRepo.ProjectRepository) *API {
 	return &API{
 		choreRepo:     cr,
 		userRepo:      userRepo,
@@ -43,6 +45,7 @@ func NewAPI(cr *chRepo.ChoreRepository, userRepo *uRepo.UserRepository, circleRe
 		nRepo:         nr,
 		eventProducer: eventProducer,
 		stRepo:        stRepo,
+		pjRepo:        pjRepo,
 	}
 }
 
@@ -119,6 +122,14 @@ func (h *API) CreateChore(c *gin.Context) {
 		}
 	}
 
+	if choreRequest.ProjectID != nil {
+		// check if the specified project exists
+		if proj, _ := h.pjRepo.GetProjectByID(c, *choreRequest.ProjectID, user.CircleID); proj == nil {
+			c.JSON(400, gin.H{"error": "Specified project not found"})
+			return
+		}
+	}
+
 	chore := &chModel.Chore{
 		CreatedBy:     createdBy,
 		CircleID:      user.CircleID,
@@ -132,6 +143,7 @@ func (h *API) CreateChore(c *gin.Context) {
 		Description:    choreRequest.Description,
 		NextDueDate:    nextDueDate,
 		CreatedAt:      time.Now().UTC(),
+		ProjectID:      choreRequest.ProjectID,
 	}
 
 	id, err := h.choreRepo.CreateChore(c, chore)

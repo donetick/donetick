@@ -288,11 +288,6 @@ func (r *ChoreRepository) SoftDelete(c context.Context, id int, userID int, circ
 	}).Error
 }
 
-func (r *ChoreRepository) IsChoreOwner(c context.Context, choreID int, userID int) error {
-	var chore chModel.Chore
-	err := r.db.WithContext(c).Model(&chModel.Chore{}).Where("id = ? AND created_by = ?", choreID, userID).First(&chore).Error
-	return err
-}
 
 func (r *ChoreRepository) SetChorePendingApproval(c context.Context, chore *chModel.Chore, note *string, userID int, completedDate *time.Time) error {
 	nextVersion, err := r.nextSyncVersion(c, chore.CircleID)
@@ -798,11 +793,11 @@ func (r *ChoreRepository) GetPreDueChoresForNotification(c context.Context, preD
 	return chores, nil
 }
 
-func readJSONBooleanField(dbType string, columnName string, fieldName string) string {
+func readJSONBooleanField(dbType string, columnName string, fieldName string) clause.Expr {
 	if dbType == "postgres" {
-		return fmt.Sprintf("(%s::json->>'%s')::boolean", columnName, fieldName)
+		return gorm.Expr("("+columnName+"::json->>?)::boolean", fieldName)
 	}
-	return fmt.Sprintf("JSON_EXTRACT(%s, '$.%s')", columnName, fieldName)
+	return gorm.Expr("JSON_EXTRACT("+columnName+", ?)", "$."+fieldName)
 }
 
 func (r *ChoreRepository) SetDueDate(c context.Context, choreID int, dueDate time.Time) error {

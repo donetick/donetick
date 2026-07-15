@@ -191,6 +191,13 @@ func (h *Handler) LeaveCircle(c *gin.Context) {
 		return
 	}
 
+	if circleID != currentUser.CircleID {
+		c.JSON(400, gin.H{
+			"error": "circle_id must match your current circle",
+		})
+		return
+	}
+
 	orginalCircleID, err := h.circleRepo.GetUserOriginalCircle(c, currentUser.ID)
 	if err != nil {
 		log.Error("Error getting user original circle:", err)

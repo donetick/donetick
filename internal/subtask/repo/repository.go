@@ -154,8 +154,8 @@ func (r *SubTasksRepository) UpdateSubtask(c context.Context, choreId int, toBeR
 		return nil // Commit
 	})
 }
-func (r *SubTasksRepository) UpdateSubTaskStatus(c context.Context, userID int, subtaskID int, completedAt *time.Time) error {
-	return r.db.Model(&stModel.SubTask{}).Where("id = ?", subtaskID).Updates(map[string]interface{}{
+func (r *SubTasksRepository) UpdateSubTaskStatus(c context.Context, userID int, choreID int, subtaskID int, completedAt *time.Time) error {
+	return r.db.Model(&stModel.SubTask{}).Where("id = ? AND chore_id = ?", subtaskID, choreID).Updates(map[string]interface{}{
 		"completed_at": completedAt,
 		"completed_by": userID,
 	}).Error

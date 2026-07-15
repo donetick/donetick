@@ -2853,7 +2853,7 @@ func (h *Handler) UpdateSubtaskCompletedAt(c *gin.Context) {
 		})
 		return
 	}
-	err = h.stRepo.UpdateSubTaskStatus(c, effectiveUser.ID, req.ID, req.CompletedAt)
+	err = h.stRepo.UpdateSubTaskStatus(c, effectiveUser.ID, choreID, req.ID, req.CompletedAt)
 	if err != nil {
 		c.JSON(500, gin.H{
 			"error": "Error getting subtask",

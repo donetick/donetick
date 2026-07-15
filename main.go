@@ -110,8 +110,8 @@ func main() {
 		// Rate limiter
 		fx.Provide(utils.NewRateLimiter),
 
-		// add email sender:
-		fx.Provide(email.NewEmailSender),
+		// add email sender (implementation selected by email.provider config):
+		fx.Provide(email.NewSender),
 
 		// MFA services
 		fx.Provide(mfa.NewService),
@@ -221,7 +221,6 @@ func main() {
 	app.Run()
 
 }
-
 
 func newServer(lc fx.Lifecycle, cfg *config.Config, db *gorm.DB, notifier *notifier.Scheduler, eventProducer *events.EventsProducer, mfaCleanup *mfa.CleanupService, authCleanup *auth.CleanupService, rts *realtime.RealTimeService, draftCleanup *storage.DraftCleanupService, ticketStore *realtime.TicketStore) *gin.Engine {
 	// Set Gin mode based on logging configuration

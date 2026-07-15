@@ -196,6 +196,13 @@ type EmailConfig struct {
 	Port      int    `mapstructure:"port"`
 	AppHost   string `mapstructure:"appHost"`
 	LogRawURL bool   `mapstructure:"log_raw_url" yaml:"log_raw_url"`
+	// Provider selects which email sender implementation to use.
+	// "smtp" (default, empty also means smtp) uses host/port/user/key as SMTP creds.
+	// "smtp2go" uses the SMTP2Go HTTP API with `key` as the API key and the
+	// template IDs below.
+	Provider                string `mapstructure:"provider" yaml:"provider" default:"smtp"`
+	VerifyTemplateID        string `mapstructure:"verify_template_id" yaml:"verify_template_id"`
+	ResetPasswordTemplateID string `mapstructure:"reset_password_template_id" yaml:"reset_password_template_id"`
 }
 
 type OAuth2Config struct {

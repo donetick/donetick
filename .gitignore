@@ -1,3 +1,4 @@
 donetick.db
 .vscode/launch.json
 *.exe
+config/prod.yaml

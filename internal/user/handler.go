@@ -38,7 +38,7 @@ type Handler struct {
 	circleRepo             *cRepo.CircleRepository
 	jwtAuth                *jwt.GinJWTMiddleware
 	tokenService           *auth.TokenService
-	email                  *email.EmailSender
+	email                  email.Sender
 	identityProvider       *auth.IdentityProvider
 	isDonetickDotCom       bool
 	IsUserCreationDisabled bool
@@ -57,7 +57,7 @@ type Handler struct {
 
 func NewHandler(ur *uRepo.UserRepository, cr *cRepo.CircleRepository,
 	jwtAuth *jwt.GinJWTMiddleware, tokenService *auth.TokenService,
-	email *email.EmailSender,
+	email email.Sender,
 	idp *auth.IdentityProvider, storage storage.Storage,
 	signer storage.URLSigner, storageRepo *storageRepo.StorageRepository,
 	appleService *apple.AppleService,

@@ -224,6 +224,7 @@ These features are designed for self-hosted single-household deployments where c
 | `DT_OAUTH2_ADMIN_GROUPS` | comma-separated strings | *(empty)* | OIDC group names that grant the `admin` role. |
 | `DT_OAUTH2_MANAGER_GROUPS` | comma-separated strings | *(empty)* | OIDC group names that grant the `manager` role. |
 | `DT_DISABLE_PASSWORD_AUTH` | bool | `false` | SSO-only: disables password login. |
+| `DT_SERVER_HOST` | string | *(empty)* | The listening host/IP address for the server. If empty, binds to all interfaces. |
 
 ### Role Resolution Rules
 

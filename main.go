@@ -72,6 +72,10 @@ func main() {
 		cfg.Logging.Development,
 	)
 	app := fx.New(
+		// Startup runs DB migrations synchronously in an OnStart hook. On large
+		// datasets the backfill migrations take well over fx's 15s default,
+		// which would abort startup and crash-loop. Give them room to finish.
+		fx.StartTimeout(15*time.Minute),
 		fx.Supply(cfg),
 		fx.Supply(logging.DefaultLogger().Desugar()),
 

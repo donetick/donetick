@@ -65,20 +65,18 @@ func (h *Handler) AssetHandler(c *gin.Context) {
 		return
 	}
 
-	// parsed.Path has a leading slash (e.g. "/uploads/profiles/..."); strip it.
-	// The URL exposed by this endpoint includes the storage base directory name
-	// as the first segment (e.g. "uploads/"), but storage.Get expects a path
-	// relative to BasePath. Strip the first path segment to get the relative key.
-	urlPath := parsed.Path[1:] // e.g. "uploads/profiles/1/uuid.jpg"
-	slash := strings.Index(urlPath, "/")
-	var filePath string
-	if slash >= 0 {
-		filePath = urlPath[slash+1:] // e.g. "profiles/1/uuid.jpg"
-	} else {
-		filePath = urlPath
+	// parsed.Path has a leading slash (e.g. "/users/1/uuid.jpg"); strip it.
+	// The remainder is the storage key relative to BasePath — the same string
+	// that was signed, so signature validation and storage.Get agree.
+	filePath := strings.TrimPrefix(parsed.Path, "/")
+
+	// Legacy profile rows stored the storage base directory in the URL
+	// (e.g. "uploads/profiles/1/uuid.jpg"); normalize to the relative key.
+	if idx := strings.Index(filePath, "profiles/"); idx > 0 {
+		filePath = filePath[idx:]
 	}
 
-	if !isPublicAsset(urlPath) && !h.signer.IsValid(filePath, c.Request.URL.Query()) {
+	if !isPublicAsset(filePath) && !h.signer.IsValid(filePath, c.Request.URL.Query()) {
 		c.JSON(http.StatusForbidden, gin.H{"error": "invalid or expired signature for url: " + filePath})
 		return
 	}
@@ -137,7 +135,15 @@ func (h *Handler) ChoreUploadHandler(c *gin.Context) {
 		return
 	}
 
-	entityType, entityID, draftID, _ := handleEntityType(c, h, currentUser)
+	entityType, entityID, draftID, ok := handleEntityType(c, h, currentUser)
+	if !ok {
+		// handleEntityType writes a specific error for some failures; make sure
+		// the client always gets one instead of silently storing an orphan file.
+		if !c.Writer.Written() {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid entityType or entityId"})
+		}
+		return
+	}
 
 	// save the file to storage:
 	src, err := file.Open()
@@ -219,16 +225,24 @@ func handleEntityType(c *gin.Context, h *Handler, currentUser *user.UserDetails)
 			return storageModel.EntityTypeUnknown, 0, "", false
 		}
 		return storageModel.EntityTypeChoreAttachmentDraft, 0, draftID, true
+	case "chore_description_draft":
+		draftID := c.PostForm("draftId")
+		if draftID == "" {
+			log.Error("missing draftId for chore_description_draft")
+			c.JSON(http.StatusBadRequest, gin.H{"error": "missing draftId"})
+			return storageModel.EntityTypeUnknown, 0, "", false
+		}
+		return storageModel.EntityTypeChoreDescriptionDraft, 0, draftID, true
 	}
 
 	rawEntityId := c.PostForm("entityId")
 	if rawEntityId == "" {
-		return storageModel.EntityTypeChoreDescription, 0, "", false
+		return storageModel.EntityTypeUnknown, 0, "", false
 	}
 	entityID, err := strconv.Atoi(rawEntityId)
 	if err != nil {
 		log.Error("failed to parse chore ID", "error", err)
-		return storageModel.EntityTypeChoreDescription, 0, "", false
+		return storageModel.EntityTypeUnknown, 0, "", false
 	}
 
 	switch entityType {
@@ -237,20 +251,29 @@ func handleEntityType(c *gin.Context, h *Handler, currentUser *user.UserDetails)
 		chore, err := h.choreRepo.GetChore(c, entityID, currentUser.ID, currentUser.CircleID)
 		if err != nil {
 			log.Error("failed to get chore from db", "error", err)
-			return storageModel.EntityTypeChoreDescription, 0, "", false
+			return storageModel.EntityTypeUnknown, 0, "", false
 		}
 		circleUsers, err := h.circleRepo.GetCircleUsers(c, currentUser.CircleID)
 		if err != nil {
 			log.Error("failed to get circle users from db", "error", err)
-			return storageModel.EntityTypeChoreDescription, 0, "", false
+			return storageModel.EntityTypeUnknown, 0, "", false
 		}
 		now := time.Now().UTC()
 		if err := chore.CanEdit(currentUser.ID, circleUsers, &now); err != nil {
 			log.Error("user is not allowed to edit chore", "error", err)
 			c.JSON(http.StatusForbidden, gin.H{"error": "user is not allowed to edit chore"})
-			return storageModel.EntityTypeChoreDescription, 0, "", false
+			return storageModel.EntityTypeUnknown, 0, "", false
 		}
 		return storageModel.EntityTypeChoreDescription, chore.ID, "", true
+	case "chore_completion_note":
+		// Completion-note images belong to the chore's history. Any circle
+		// member who can view the chore can complete it, so GetChore access
+		// (no CanEdit) is the right gate here.
+		if _, err := h.choreRepo.GetChore(c, entityID, currentUser.ID, currentUser.CircleID); err != nil {
+			log.Error("failed to get chore from db", "error", err)
+			return storageModel.EntityTypeUnknown, 0, "", false
+		}
+		return storageModel.EntityTypeChoreHistory, entityID, "", true
 	case "chore_attachment":
 		chore, err := h.choreRepo.GetChore(c, entityID, currentUser.ID, currentUser.CircleID)
 		if err != nil {
@@ -475,7 +498,8 @@ func (h *Handler) SignAssetHandler(c *gin.Context) {
 			c.JSON(http.StatusForbidden, gin.H{"error": "access denied"})
 			return
 		}
-	case storageModel.EntityTypeChoreAttachmentDraft:
+	case storageModel.EntityTypeChoreAttachmentDraft,
+		storageModel.EntityTypeChoreDescriptionDraft:
 		if file.UserID != currentUser.ID {
 			c.JSON(http.StatusForbidden, gin.H{"error": "access denied"})
 			return
@@ -492,12 +516,58 @@ func (h *Handler) SignAssetHandler(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"url": signedURL})
+	c.JSON(http.StatusOK, gin.H{"url": signedURL, "path": file.FilePath})
+}
+
+// DeleteDraftAttachmentHandler deletes a draft upload (attachment or
+// description image) before its chore exists. Only the uploader can delete it.
+func (h *Handler) DeleteDraftAttachmentHandler(c *gin.Context) {
+	log := logging.FromContext(c)
+	currentUser, ok := auth.CurrentUser(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	var req struct {
+		FilePath string `json:"file_path" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "missing file_path"})
+		return
+	}
+
+	file, err := h.storageRepo.GetFileByPath(c, req.FilePath, currentUser.ID)
+	if err != nil {
+		log.Error("failed to find draft file record", "error", err)
+		c.JSON(http.StatusNotFound, gin.H{"error": "draft file not found"})
+		return
+	}
+
+	if file.EntityType != storageModel.EntityTypeChoreAttachmentDraft &&
+		file.EntityType != storageModel.EntityTypeChoreDescriptionDraft {
+		c.JSON(http.StatusForbidden, gin.H{"error": "file is not a draft"})
+		return
+	}
+
+	if err := h.storage.Delete(context.Background(), []string{file.FilePath}); err != nil {
+		log.Error("failed to delete draft file from storage", "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete file"})
+		return
+	}
+
+	if err := h.storageRepo.RemoveFileRecords(c, []*storageModel.StorageFile{file}, currentUser.ID); err != nil {
+		log.Error("failed to remove draft file record", "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to remove file record"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "draft file deleted"})
 }
 
 // isPublicAsset returns true for paths that are publicly accessible without a signature.
 func isPublicAsset(path string) bool {
-	return strings.HasPrefix(path, "uploads/profiles/")
+	return strings.HasPrefix(path, "profiles/")
 }
 
 // Routes registers storage-related routes
@@ -507,12 +577,17 @@ func Routes(r *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware) {
 	uploadRoutes.Use(auth.MiddlewareFunc())
 	{
 		uploadRoutes.POST("/chore", h.ChoreUploadHandler)
+		uploadRoutes.DELETE("/chore", h.DeleteDraftAttachmentHandler)
 	}
 
+	// /files hosts the authed JSON endpoints; a static route like "/sign"
+	// cannot live under /assets because it would conflict with the GET
+	// /*filepath wildcard below.
 	filesRoutes := r.Group("api/v1/files")
 	filesRoutes.Use(auth.MiddlewareFunc())
 	{
 		filesRoutes.GET("", h.RedirectAssetHandler)
+		filesRoutes.GET("/sign", h.SignAssetHandler)
 	}
 
 	choreRoutes := r.Group("api/v1/chores")

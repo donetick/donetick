@@ -160,10 +160,19 @@ func (r *StorageRepository) GetFileByPathOnly(ctx context.Context, filePath stri
 }
 
 func (r *StorageRepository) ReassignDraftAttachments(ctx context.Context, draftID string, userID int, choreID int) error {
-	return r.db.WithContext(ctx).Model(&st.StorageFile{}).
+	if err := r.db.WithContext(ctx).Model(&st.StorageFile{}).
 		Where("draft_id = ? AND user_id = ? AND entity_type = ?", draftID, userID, st.EntityTypeChoreAttachmentDraft).
 		Updates(map[string]interface{}{
 			"entity_type": st.EntityTypeChoreAttachment,
+			"entity_id":   choreID,
+			"draft_id":    "",
+		}).Error; err != nil {
+		return err
+	}
+	return r.db.WithContext(ctx).Model(&st.StorageFile{}).
+		Where("draft_id = ? AND user_id = ? AND entity_type = ?", draftID, userID, st.EntityTypeChoreDescriptionDraft).
+		Updates(map[string]interface{}{
+			"entity_type": st.EntityTypeChoreDescription,
 			"entity_id":   choreID,
 			"draft_id":    "",
 		}).Error
@@ -182,7 +191,9 @@ func (r *StorageRepository) CreateStorageUsage(ctx context.Context, userID, circ
 func (r *StorageRepository) GetExpiredDraftFiles(ctx context.Context, olderThanUnix int64) ([]*st.StorageFile, error) {
 	var files []*st.StorageFile
 	if err := r.db.WithContext(ctx).
-		Where("entity_type = ? AND created_at < ?", st.EntityTypeChoreAttachmentDraft, olderThanUnix).
+		Where("entity_type IN ? AND created_at < ?",
+			[]st.EntityType{st.EntityTypeChoreAttachmentDraft, st.EntityTypeChoreDescriptionDraft},
+			olderThanUnix).
 		Find(&files).Error; err != nil {
 		return nil, err
 	}

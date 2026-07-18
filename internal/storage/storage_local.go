@@ -92,10 +92,12 @@ func (l *LocalStorage) SavePublic(ctx context.Context, path string, file io.Read
 	return l.Save(ctx, path, file)
 }
 
-// GetPublicURL delegates to GetURL — local storage has no CDN host, so callers
-// will sign the returned path via the signer as they would for any local asset.
+// GetPublicURL returns the storage key relative to BasePath — local storage
+// has no CDN host, so the caller serves it via the /assets endpoint, which
+// resolves keys relative to BasePath. Never include BasePath here: the stored
+// value ends up in URLs and DB rows that must stay valid if BasePath changes.
 func (l *LocalStorage) GetPublicURL(ctx context.Context, path string) (string, error) {
-	return l.GetURL(ctx, path)
+	return sanitizePath(path)
 }
 
 // DeletePublicByURL is a no-op for local storage — local public URLs are

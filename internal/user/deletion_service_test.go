@@ -55,6 +55,18 @@ func (m *mockStorage) Get(ctx context.Context, path string) (io.ReadCloser, erro
 	return io.NopCloser(strings.NewReader("")), nil
 }
 
+func (m *mockStorage) SavePublic(ctx context.Context, path string, file io.Reader) error {
+	return nil
+}
+
+func (m *mockStorage) GetPublicURL(ctx context.Context, path string) (string, error) {
+	return path, nil
+}
+
+func (m *mockStorage) DeletePublicByURL(ctx context.Context, rawURL string) error {
+	return nil
+}
+
 // NewMockDeletionService creates a deletion service with mock storage for testing
 func NewMockDeletionService(db *gorm.DB, mockStor *mockStorage) *DeletionService {
 	// For testing, we create the service with nil storage to focus on database operations

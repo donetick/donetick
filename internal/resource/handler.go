@@ -50,7 +50,18 @@ func (h *Handler) getResource(c *gin.Context) {
 	})
 }
 
+func (h *Handler) getHealth(c *gin.Context) {
+	c.JSON(200, gin.H{
+		"status":  "healthy",
+		"version": h.config.Info.Version,
+		"commit":  h.config.Info.Commit,
+	})
+}
+
 func Routes(r *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware, limiter *limiter.Limiter) {
+	// No-auth health check endpoint for container/orchestrator health checks.
+	r.GET("/health", h.getHealth)
+
 	resourceRoutes := r.Group("api/v1/resource")
 
 	resourceRoutes.GET("", h.getResource)

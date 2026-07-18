@@ -72,6 +72,10 @@ func main() {
 		cfg.Logging.Development,
 	)
 	app := fx.New(
+		// Startup runs DB migrations synchronously in an OnStart hook. On large
+		// datasets the backfill migrations take well over fx's 15s default,
+		// which would abort startup and crash-loop. Give them room to finish.
+		fx.StartTimeout(15*time.Minute),
 		fx.Supply(cfg),
 		fx.Supply(logging.DefaultLogger().Desugar()),
 
@@ -110,8 +114,8 @@ func main() {
 		// Rate limiter
 		fx.Provide(utils.NewRateLimiter),
 
-		// add email sender:
-		fx.Provide(email.NewEmailSender),
+		// add email sender (implementation selected by email.provider config):
+		fx.Provide(email.NewSender),
 
 		// MFA services
 		fx.Provide(mfa.NewService),
@@ -221,7 +225,6 @@ func main() {
 	app.Run()
 
 }
-
 
 func newServer(lc fx.Lifecycle, cfg *config.Config, db *gorm.DB, notifier *notifier.Scheduler, eventProducer *events.EventsProducer, mfaCleanup *mfa.CleanupService, authCleanup *auth.CleanupService, rts *realtime.RealTimeService, draftCleanup *storage.DraftCleanupService, ticketStore *realtime.TicketStore) *gin.Engine {
 	// Set Gin mode based on logging configuration

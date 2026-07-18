@@ -39,8 +39,6 @@ import (
 	"donetick.com/core/internal/utils"
 	"donetick.com/core/logging"
 	"github.com/gin-gonic/gin"
-	"github.com/gin-gonic/gin/binding"
-	"github.com/go-playground/validator/v10"
 	"gorm.io/gorm"
 )
 
@@ -288,11 +286,11 @@ type ChoreReq struct {
 	ID                   int                           `json:"id"`
 	Name                 string                        `json:"name" binding:"required"`
 	FrequencyType        chModel.FrequencyType         `json:"frequencyType" binding:"required,oneof=once daily weekly monthly yearly adaptive interval days_of_the_week day_of_the_month trigger no_repeat"`
-	Frequency            *int                          `json:"frequency" binding:"omitempty,gt=0"`
+	Frequency            *int                          `json:"frequency" binding:"omitempty"`
 	FrequencyMetadata    *chModel.FrequencyMetadata    `json:"frequencyMetadata,omitempty"`
 	NextDueDate          *time.Time                    `json:"nextDueDate" binding:"omitempty,required_with=IsRolling"` // Next due date in RFC3339 format
 	IsRolling            bool                          `json:"isRolling"`
-	AssignedTo           *int                          `json:"assignedTo" binding:"omitempty,gt=0"`
+	AssignedTo           *int                          `json:"assignedTo" binding:"omitempty"`
 	Assignees            []chModel.ChoreAssignees      `json:"assignees" binding:"dive"`
 	AssignStrategy       chModel.AssignmentStrategy    `json:"assignStrategy" binding:"required,oneof=no_assignee least_assigned least_completed random keep_last_assigned random_except_last_assigned round_robin"`
 	IsActive             *bool                         `json:"isActive" binding:"omitempty"`
@@ -300,14 +298,14 @@ type ChoreReq struct {
 	NotificationMetadata *chModel.NotificationMetadata `json:"notificationMetadata"`
 	LabelsV2             *[]lModel.LabelReq            `json:"labelsV2" binding:"omitempty,unique=LabelID,dive"`
 	UpdatedAt            *time.Time                    `json:"updatedAt"`
-	Priority             *int                          `json:"priority" binding:"omitempty,gte=0,lte=5"`
-	CompletionWindow     *int                          `json:"completionWindow" binding:"omitempty,min=0"`
-	Points               *int                          `json:"points" binding:"omitempty,gte=0"`
+	Priority             *int                          `json:"priority" binding:"omitempty"`
+	CompletionWindow     *int                          `json:"completionWindow" binding:"omitempty"`
+	Points               *int                          `json:"points" binding:"omitempty"`
 	Description          *string                       `json:"description" binding:"omitempty"`
 	SubTasks             *[]stModel.SubTask            `json:"subTasks" binding:"omitempty,dive"`
 	RequireApproval      bool                          `json:"requireApproval" binding:"omitempty"`
 	IsPrivate            *bool                         `json:"isPrivate" binding:"omitempty"`
-	ProjectID            *int                          `json:"projectId" binding:"omitempty,gt=0"`
+	ProjectID            *int                          `json:"projectId" binding:"omitempty"`
 	ThingTrigger         *tModel.ThingTrigger          `json:"thingTrigger"`
 	DraftId              *string                       `json:"draftId,omitempty"`
 }
@@ -4453,9 +4451,9 @@ func getActionName(status chModel.ChoreHistoryStatus) string {
 func Routes(router *gin.Engine, h *Handler, multiAuthMiddleware *auth.MultiAuthMiddleware) {
 
 	// Input validation
-	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
-		v.RegisterStructValidation(ChoreReqStructLevelValidation, ChoreReq{})
-	}
+	// if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
+	// 	v.RegisterStructValidation(ChoreReqStructLevelValidation, ChoreReq{})
+	// }
 
 	choresRoutes := router.Group("api/v1/chores")
 	choresRoutes.Use(multiAuthMiddleware.MiddlewareFunc())

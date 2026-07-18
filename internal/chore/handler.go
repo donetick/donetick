@@ -232,6 +232,7 @@ func (h *Handler) GetChore(c *gin.Context) {
 		updatedDescription := h.generateUpdatedSignedDescription(c, *chore.Description)
 		chore.Description = &updatedDescription
 	}
+	h.signAttachments(c, chore.Attachments)
 	c.JSON(200, gin.H{
 		"res": chore,
 	})
@@ -277,6 +278,20 @@ func (h *Handler) generateUpdatedSignedDescription(c *gin.Context, description s
 		}
 	}
 	return description
+}
+
+// signAttachments populates a fetchable signed URL on each attachment record
+// before it is serialized to a client.
+func (h *Handler) signAttachments(c *gin.Context, attachments []storageModel.StorageFile) {
+	logger := logging.FromContext(c)
+	for i := range attachments {
+		signed, err := h.signer.Sign(attachments[i].FilePath)
+		if err != nil {
+			logger.Error("Failed to sign attachment url", "error", err, "path", attachments[i].FilePath)
+			continue
+		}
+		attachments[i].Sign = signed
+	}
 }
 
 // UpdatedAt is for internal use only when syncing a chore updated offline
@@ -2510,6 +2525,7 @@ func (h *Handler) GetChoreDetail(c *gin.Context) {
 		updatedDescription := h.generateUpdatedSignedDescription(c, *detailed.Description)
 		detailed.Description = &updatedDescription
 	}
+	h.signAttachments(c, detailed.Attachments)
 	c.JSON(200, gin.H{
 		"res": detailed,
 	})

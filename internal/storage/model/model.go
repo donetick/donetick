@@ -11,6 +11,8 @@ type StorageFile struct {
 	EntityType EntityType `json:"entity_type" gorm:"column:entity_type;index:idx_entity"`
 	DraftID    string     `json:"draft_id,omitempty" gorm:"column:draft_id;index:idx_draft_id"`
 	CreatedAt  int        `json:"created_at" gorm:"column:created_at"`
+	// Sign is a fetchable (signed) URL populated at serialization time; never stored.
+	Sign string `json:"sign,omitempty" gorm:"-"`
 }
 
 type StorageUsage struct {
@@ -28,4 +30,8 @@ const (
 	EntityTypeThing
 	EntityTypeChoreAttachment
 	EntityTypeChoreAttachmentDraft
+	// EntityTypeChoreDescriptionDraft is a description image uploaded before the
+	// chore exists; promoted to EntityTypeChoreDescription on chore creation.
+	// Append new values only — these are persisted as integers.
+	EntityTypeChoreDescriptionDraft
 )

@@ -1279,6 +1279,12 @@ func (h *Handler) updateProfilePhoto(c *gin.Context) {
 	if prev := currentUser.Image; prev != "" &&
 		!strings.HasPrefix(prev, "http://") &&
 		!strings.HasPrefix(prev, "https://") {
+		// Legacy rows stored the storage base directory in the path
+		// (e.g. "uploads/profiles/..."); storage.Delete expects a key
+		// relative to BasePath.
+		if idx := strings.Index(prev, "profiles/"); idx > 0 {
+			prev = prev[idx:]
+		}
 		if derr := h.storage.Delete(c, []string{prev}); derr != nil {
 			logging.FromContext(c).Warnw("Failed to delete previous profile photo", "path", prev, "error", derr)
 		}

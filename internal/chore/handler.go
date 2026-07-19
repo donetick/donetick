@@ -1095,20 +1095,18 @@ func (h *Handler) DeleteChore(c *gin.Context) {
 		})
 		return
 	}
-	// check if the user is the owner of the chore before deleting
-	if err := h.choreRepo.IsChoreOwner(c, id, currentUser.ID); err != nil {
-		c.JSON(403, gin.H{
-			"error": "You are not allowed to delete this chore",
-		})
-		return
-	}
-
-	// Get chore details before deletion for real-time event
+	// Get chore details before deletion for real-time event; scopes to current circle
 	chore, err := h.choreRepo.GetChore(c, id, currentUser.ID, currentUser.CircleID)
 	if err != nil {
 		logger.Error("Failed to retrieve chore", "error", err)
 		c.JSON(500, gin.H{
 			"error": "Failed to retrieve chore",
+		})
+		return
+	}
+	if chore.CreatedBy != currentUser.ID {
+		c.JSON(403, gin.H{
+			"error": "You are not allowed to delete this chore",
 		})
 		return
 	}
@@ -2988,7 +2986,7 @@ func (h *Handler) UpdateSubtaskCompletedAt(c *gin.Context) {
 		})
 		return
 	}
-	err = h.stRepo.UpdateSubTaskStatus(c, effectiveUser.ID, req.ID, req.CompletedAt)
+	err = h.stRepo.UpdateSubTaskStatus(c, effectiveUser.ID, choreID, req.ID, req.CompletedAt)
 	if err != nil {
 		c.JSON(500, gin.H{
 			"error": "Error getting subtask",

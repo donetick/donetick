@@ -466,7 +466,6 @@ func (h *Handler) RedirectAssetHandler(c *gin.Context) {
 	}
 
 	c.Redirect(http.StatusFound, signedURL)
-	return
 }
 
 func (h *Handler) SignAssetHandler(c *gin.Context) {

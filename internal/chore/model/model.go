@@ -46,7 +46,7 @@ const (
 )
 
 type Chore struct {
-	ID                     int                   `json:"id" gorm:"primary_key"`
+	ID                     int                        `json:"id" gorm:"primary_key"`
 	Name                   string                     `json:"name" gorm:"column:name"`                                                                // Chore description
 	FrequencyType          FrequencyType              `json:"frequencyType" gorm:"column:frequency_type"`                                             // "daily", "weekly", "monthly", "yearly", "adaptive",or "custom"
 	Frequency              int                        `json:"frequency" gorm:"column:frequency"`                                                      // Number of days, weeks, months, or years between chores
@@ -170,26 +170,26 @@ type Tag struct {
 }
 
 type ChoreDetail struct {
-	ID                  int                `json:"id" gorm:"column:id"`
-	Name                string             `json:"name" gorm:"column:name"`
-	Description         *string            `json:"description" gorm:"column:description"`
-	FrequencyType       string             `json:"frequencyType" gorm:"column:frequency_type"`
-	NextDueDate         *time.Time         `json:"nextDueDate" gorm:"column:next_due_date"`
-	AssignedTo          *int               `json:"assignedTo" gorm:"column:assigned_to"`
-	LastCompletedDate   *time.Time         `json:"lastCompletedDate" gorm:"column:last_completed_date"`
-	LastCompletedBy     *int               `json:"lastCompletedBy" gorm:"column:last_completed_by"`
-	TotalCompletedCount int                `json:"totalCompletedCount" gorm:"column:total_completed"`
-	Priority            int                `json:"priority" gorm:"column:priority"`
-	Notes               *string            `json:"notes" gorm:"column:notes"`
-	CreatedBy           int                `json:"createdBy" gorm:"column:created_by"`
-	CompletionWindow    *int               `json:"completionWindow,omitempty" gorm:"column:completion_window"`
-	Subtasks            *[]stModel.SubTask `json:"subTasks,omitempty" gorm:"foreignkey:ChoreID;references:ID"`
-	Status              Status             `json:"status" gorm:"column:status"`
-	Duration            int                `json:"duration" gorm:"column:duration"` // Total duration in seconds for the chore
-	StartTime           *time.Time         `json:"startTime" gorm:"column:start_time"`
-	TimerUpdatedAt      *time.Time         `json:"timerUpdatedAt" gorm:"column:timer_updated_at"` // When the chore was last started
-	ProjectID           *int               `json:"projectId,omitempty" gorm:"column:project_id"`
-	IsActive            bool               `json:"isActive" gorm:"column:is_active"`
+	ID                  int                        `json:"id" gorm:"column:id"`
+	Name                string                     `json:"name" gorm:"column:name"`
+	Description         *string                    `json:"description" gorm:"column:description"`
+	FrequencyType       string                     `json:"frequencyType" gorm:"column:frequency_type"`
+	NextDueDate         *time.Time                 `json:"nextDueDate" gorm:"column:next_due_date"`
+	AssignedTo          *int                       `json:"assignedTo" gorm:"column:assigned_to"`
+	LastCompletedDate   *time.Time                 `json:"lastCompletedDate" gorm:"column:last_completed_date"`
+	LastCompletedBy     *int                       `json:"lastCompletedBy" gorm:"column:last_completed_by"`
+	TotalCompletedCount int                        `json:"totalCompletedCount" gorm:"column:total_completed"`
+	Priority            int                        `json:"priority" gorm:"column:priority"`
+	Notes               *string                    `json:"notes" gorm:"column:notes"`
+	CreatedBy           int                        `json:"createdBy" gorm:"column:created_by"`
+	CompletionWindow    *int                       `json:"completionWindow,omitempty" gorm:"column:completion_window"`
+	Subtasks            *[]stModel.SubTask         `json:"subTasks,omitempty" gorm:"foreignkey:ChoreID;references:ID"`
+	Status              Status                     `json:"status" gorm:"column:status"`
+	Duration            int                        `json:"duration" gorm:"column:duration"` // Total duration in seconds for the chore
+	StartTime           *time.Time                 `json:"startTime" gorm:"column:start_time"`
+	TimerUpdatedAt      *time.Time                 `json:"timerUpdatedAt" gorm:"column:timer_updated_at"` // When the chore was last started
+	ProjectID           *int                       `json:"projectId,omitempty" gorm:"column:project_id"`
+	IsActive            bool                       `json:"isActive" gorm:"column:is_active"`
 	SyncVersion         int64                      `json:"syncVersion" gorm:"column:sync_version"`
 	Attachments         []storageModel.StorageFile `json:"attachments,omitempty" gorm:"-"`
 }

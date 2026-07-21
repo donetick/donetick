@@ -241,7 +241,7 @@ func (h *Handler) LeaveCircle(c *gin.Context) {
 }
 
 func handleUserLeavingCircle(h *Handler, c *gin.Context, leavingUser *uModel.User, orginalCircleID int) error {
-	userAssignedCircleChores, err := h.choreRepo.GetChores(c, leavingUser.CircleID, leavingUser.ID, true, nil)
+	userAssignedCircleChores, err := h.choreRepo.GetChores(c, leavingUser.CircleID, leavingUser.ID, true, nil, false)
 	if err != nil {
 		return err
 	}

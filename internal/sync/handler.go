@@ -54,7 +54,7 @@ func (h *SyncHandler) GetChanges(c *gin.Context) {
 		SyncVersion: &since,
 		Limit:       defaultSyncLimit,
 	}
-	chores, err := h.choreRepo.GetChores(c, circleID, userID, true, syncOpts)
+	chores, err := h.choreRepo.GetChores(c, circleID, userID, true, syncOpts, false)
 	if err != nil {
 		c.JSON(500, gin.H{"error": "Failed to fetch changes"})
 		return

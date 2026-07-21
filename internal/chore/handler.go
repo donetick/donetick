@@ -98,6 +98,7 @@ func NewHandler(cr *chRepo.ChoreRepository, circleRepo *cRepo.CircleRepository, 
 //	@Security		JWTKeyAuth
 //	@Security		APIKeyAuth
 //	@Param			includeArchived	query		boolean						false	"Include archived chores"
+//	@Param			includeSubtasks	query		boolean						false	"Include subtasks for chore"
 //	@Success		200				{object}	map[string][]chModel.Chore	"res: array of chores"
 //	@Failure		401				{object}	map[string]string			"error: Authentication failed"
 //	@Failure		500				{object}	map[string]string			"error: Failed to retrieve chores"
@@ -113,12 +114,17 @@ func (h *Handler) GetChores(c *gin.Context) {
 		return
 	}
 	includeArchived := false
+	includeSubtasks := false
+
+	if c.Query("includeSubtasks") == "true" {
+		includeSubtasks = true
+	}
 
 	if c.Query("includeArchived") == "true" {
 		includeArchived = true
 	}
 
-	chores, err := h.choreRepo.GetChores(c, u.CircleID, u.ID, includeArchived, nil)
+	chores, err := h.choreRepo.GetChores(c, u.CircleID, u.ID, includeArchived, nil, includeSubtasks)
 	if err != nil {
 		logger.Error("Failed to retrieve chores", "error", err, "userID", u.ID, "circleID", u.CircleID, "includeArchived", includeArchived)
 		c.JSON(500, gin.H{

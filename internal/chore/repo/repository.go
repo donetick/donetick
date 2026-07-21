@@ -181,7 +181,7 @@ func (r *ChoreRepository) GetChore(c context.Context, choreID int, userID int, c
 // GetChores retrieves chores for a user in a circle, respecting privacy and optionally filtered by sync version.
 // If syncOptions is nil or syncOptions.SyncVersion is nil, returns all visible chores ordered by next_due_date.
 // If syncOptions.SyncVersion is set, returns only chores with sync_version > *SyncVersion, ordered by sync_version.
-func (r *ChoreRepository) GetChores(c context.Context, circleID int, userID int, includeArchived bool, syncOptions *SyncOptions) ([]*chModel.Chore, error) {
+func (r *ChoreRepository) GetChores(c context.Context, circleID int, userID int, includeArchived bool, syncOptions *SyncOptions, includeSubtasks bool) ([]*chModel.Chore, error) {
 	var chores []*chModel.Chore
 
 	query := r.db.WithContext(c).
@@ -192,6 +192,9 @@ func (r *ChoreRepository) GetChores(c context.Context, circleID int, userID int,
 		Where(privacyPredicate(userID)).
 		Group("chores.id")
 
+	if includeSubtasks {
+		query = query.Preload("SubTasks")
+	}
 	if !includeArchived {
 		query = query.Where("chores.is_active = ?", true)
 	}
@@ -291,7 +294,6 @@ func (r *ChoreRepository) SoftDelete(c context.Context, id int, userID int, circ
 		"sync_version": nextVersion,
 	}).Error
 }
-
 
 func (r *ChoreRepository) SetChorePendingApproval(c context.Context, chore *chModel.Chore, note *string, userID int, completedDate *time.Time) error {
 	nextVersion, err := r.nextSyncVersion(c, chore.CircleID)

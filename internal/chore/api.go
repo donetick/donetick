@@ -48,7 +48,14 @@ func NewAPI(cr *chRepo.ChoreRepository, userRepo *uRepo.UserRepository, circleRe
 
 func (h *API) GetAllChores(c *gin.Context) {
 	user := auth.MustCurrentUser(c)
-	chores, err := h.choreRepo.GetChores(c, user.CircleID, user.ID, false, nil)
+
+	includeSubtasks := false
+
+	if c.Query("includeSubtasks") == "true" {
+		includeSubtasks = true
+	}
+
+	chores, err := h.choreRepo.GetChores(c, user.CircleID, user.ID, false, nil, includeSubtasks)
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return

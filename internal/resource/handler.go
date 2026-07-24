@@ -23,6 +23,7 @@ type identityProvider struct {
 	Client_ID string   `json:"client_id" binding:"omitempty"`
 	Name      string   `json:"name" binding:"omitempty"`
 	Scopes    []string `json:"scopes" binding:"omitempty"`
+	PKCE      bool     `json:"pkce" binding:"omitempty"`
 }
 
 type Handler struct {
@@ -42,6 +43,7 @@ func (h *Handler) getResource(c *gin.Context) {
 			Client_ID: h.config.OAuth2Config.ClientID,
 			Name:      h.config.OAuth2Config.Name,
 			Scopes:    h.config.OAuth2Config.Scopes,
+			PKCE:      h.config.OAuth2Config.PKCE,
 		},
 		MinVersion:             h.config.MinVersion,
 		APIVersion:             h.config.Info.Version,

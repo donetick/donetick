@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 	"time"
 
 	"donetick.com/core/config"
@@ -16,10 +17,12 @@ import (
 )
 
 type S3Storage struct {
-	Bucket   string
-	BasePath string
-	Client   *s3.S3
-	Key      string
+	Bucket       string
+	PublicBucket string
+	PublicHost   string
+	BasePath     string
+	Client       *s3.S3
+	Key          string
 }
 
 // VALID_FOR is the lifetime of a presigned URL. AWS SigV4 caps presigned
@@ -35,14 +38,17 @@ func NewS3Storage(config *config.Config) (*S3Storage, error) {
 			config.Storage.SecretKey,
 			"",
 		),
+		S3ForcePathStyle: aws.Bool(config.Storage.PathStyle),
 	})
 	if err != nil {
 		return nil, err
 	}
 	return &S3Storage{
-		Bucket:   config.Storage.BucketName,
-		BasePath: config.Storage.BasePath,
-		Client:   s3.New(sess),
+		Bucket:       config.Storage.BucketName,
+		PublicBucket: config.Storage.PublicBucketName,
+		PublicHost:   config.Storage.PublicBucketHost,
+		BasePath:     config.Storage.BasePath,
+		Client:       s3.New(sess),
 	}, nil
 }
 func (s *S3Storage) Save(ctx context.Context, path string, file io.Reader) error {
@@ -82,7 +88,7 @@ func (s *S3Storage) Delete(ctx context.Context, paths []string) error {
 }
 
 func (s *S3Storage) GetURL(ctx context.Context, path string) (string, error) {
-	key := s.BasePath + path
+	key := fmt.Sprintf("%s/%s", s.BasePath, path)
 	req, _ := s.Client.GetObjectRequest(&s3.GetObjectInput{
 		Bucket: aws.String(s.Bucket),
 		Key:    aws.String(key),
@@ -97,4 +103,57 @@ func (s *S3Storage) GetURL(ctx context.Context, path string) (string, error) {
 
 func (s *S3Storage) Get(ctx context.Context, path string) (io.ReadCloser, error) {
 	return nil, errors.New("Get method not implemented for S3Storage, use GetObject with the key")
+}
+
+func (s *S3Storage) publicBucket() string {
+	if s.PublicBucket != "" {
+		return s.PublicBucket
+	}
+	return s.Bucket
+}
+
+func (s *S3Storage) SavePublic(ctx context.Context, path string, file io.Reader) error {
+	key := fmt.Sprintf("%s/%s", s.BasePath, path)
+	buf, err := io.ReadAll(file)
+	if err != nil {
+		return err
+	}
+	_, err = s.Client.PutObjectWithContext(ctx, &s3.PutObjectInput{
+		Bucket: aws.String(s.publicBucket()),
+		Key:    aws.String(key),
+		Body:   bytes.NewReader(buf),
+	})
+	return err
+}
+
+func (s *S3Storage) GetPublicURL(ctx context.Context, path string) (string, error) {
+	key := fmt.Sprintf("%s/%s", s.BasePath, path)
+	if s.PublicHost != "" {
+		return fmt.Sprintf("https://%s/%s", s.PublicHost, key), nil
+	}
+	if s.PublicBucket != "" {
+		// Public bucket with no CDN host — generate a presigned URL from the public bucket.
+		req, _ := s.Client.GetObjectRequest(&s3.GetObjectInput{
+			Bucket: aws.String(s.PublicBucket),
+			Key:    aws.String(key),
+		})
+		return req.Presign(VALID_FOR)
+	}
+	// No public bucket configured — fall back to the private bucket presigned URL.
+	return s.GetURL(ctx, path)
+}
+
+// DeletePublicByURL deletes the S3 object identified by a URL previously
+// returned by GetPublicURL. Only URLs whose host matches PublicHost are
+// acted on; all other URLs (external OIDC picture URLs, etc.) are ignored.
+func (s *S3Storage) DeletePublicByURL(ctx context.Context, rawURL string) error {
+	if s.PublicHost == "" {
+		return nil
+	}
+	prefix := fmt.Sprintf("https://%s/%s/", s.PublicHost, s.BasePath)
+	if !strings.HasPrefix(rawURL, prefix) {
+		return nil
+	}
+	path := strings.TrimPrefix(rawURL, prefix)
+	return s.Delete(ctx, []string{path})
 }

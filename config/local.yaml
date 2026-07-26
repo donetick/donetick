@@ -30,6 +30,14 @@ server:
   cors_allow_origins:
     - "http://localhost:5173"
     - "http://localhost:7926"
+    # Required for Capacitor apps running on Android and iOS
+    - "capacitor://localhost"
+    - "https://localhost"    
+    # Development URLs 
+    - "http://localhost"   
+    - "http://localhost:5173"
+    - "http://localhost:5174"
+
   serve_frontend: true
   serve_swagger: true
 logging:
@@ -41,23 +49,25 @@ scheduler_jobs:
   overdue_job: 3h
   pre_due_job: 3h
 email:
-  host: 
-  port: 
-  key: 
+  host:
+  port:
+  key:
   email:
-  user:  
-  appHost:  
+  user:
+  appHost:
+  log_raw_url: true # log password reset URL to console (useful when email is not configured)
 mfa:
   session_timeout: 10m
   backup_code_count: 8
   rate_limit_attempts: 5
   rate_limit_window: 15m 
 storage:
-  max_user_storage:
-  max_file_size:
+  storage_type: "local" # options: local, s3
+  max_user_storage: 10737418240
+  max_file_size: 102400
   bucket_name: 
   region: 
-  base_path:
+  base_path: "./uploads"
   access_key: 
   secret_key: 
   endpoint:

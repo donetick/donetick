@@ -32,6 +32,7 @@ func (b *EventBroadcaster) BroadcastChoreCreated(chore *chModel.Chore, user *uMo
 
 	event := NewChoreCreatedEvent(chore, user)
 	event.ID = b.generateEventID()
+	event.SyncVersion = chore.SyncVersion
 
 	b.service.BroadcastToCircle(chore.CircleID, event)
 }
@@ -44,18 +45,20 @@ func (b *EventBroadcaster) BroadcastChoreUpdated(chore *chModel.Chore, user *uMo
 
 	event := NewChoreUpdatedEvent(chore, user, changes, note)
 	event.ID = b.generateEventID()
+	event.SyncVersion = chore.SyncVersion
 
 	b.service.BroadcastToCircle(chore.CircleID, event)
 }
 
 // BroadcastChoreDeleted broadcasts a chore deletion event
-func (b *EventBroadcaster) BroadcastChoreDeleted(choreID int, choreName string, circleID int, user *uModel.User) {
+func (b *EventBroadcaster) BroadcastChoreDeleted(choreID int, choreName string, circleID int, user *uModel.User, syncVersion int64) {
 	if !b.service.config.Enabled {
 		return
 	}
 
 	event := NewChoreDeletedEvent(choreID, choreName, circleID, user)
 	event.ID = b.generateEventID()
+	event.SyncVersion = syncVersion
 
 	b.service.BroadcastToCircle(circleID, event)
 }
@@ -68,6 +71,10 @@ func (b *EventBroadcaster) BroadcastChoreCompleted(chore *chModel.Chore, user *u
 
 	event := NewChoreCompletedEvent(chore, user, history, note)
 	event.ID = b.generateEventID()
+	event.SyncVersion = chore.SyncVersion
+	if history != nil && history.SyncVersion > event.SyncVersion {
+		event.SyncVersion = history.SyncVersion
+	}
 
 	b.service.BroadcastToCircle(chore.CircleID, event)
 }
@@ -80,6 +87,7 @@ func (b *EventBroadcaster) BroadcastChoreStatus(chore *chModel.Chore, user *uMod
 
 	event := NewChoreStatusChangedEvent(chore, user, changes, nil)
 	event.ID = b.generateEventID()
+	event.SyncVersion = chore.SyncVersion
 
 	b.service.BroadcastToCircle(chore.CircleID, event)
 }
@@ -92,30 +100,36 @@ func (b *EventBroadcaster) BroadcastChoreSkipped(chore *chModel.Chore, user *uMo
 
 	event := NewChoreSkippedEvent(chore, user, history, note)
 	event.ID = b.generateEventID()
+	event.SyncVersion = chore.SyncVersion
+	if history != nil && history.SyncVersion > event.SyncVersion {
+		event.SyncVersion = history.SyncVersion
+	}
 
 	b.service.BroadcastToCircle(chore.CircleID, event)
 }
 
 // BroadcastSubtaskUpdated broadcasts a subtask update event
-func (b *EventBroadcaster) BroadcastSubtaskUpdated(choreID, subtaskID int, completedAt *time.Time, user *uModel.User, circleID int) {
+func (b *EventBroadcaster) BroadcastSubtaskUpdated(choreID, subtaskID int, completedAt *time.Time, user *uModel.User, circleID int, syncVersion int64) {
 	if !b.service.config.Enabled {
 		return
 	}
 
 	event := NewSubtaskUpdatedEvent(choreID, subtaskID, completedAt, user, circleID)
 	event.ID = b.generateEventID()
+	event.SyncVersion = syncVersion
 
 	b.service.BroadcastToCircle(circleID, event)
 }
 
 // BroadcastSubtaskCompleted broadcasts a subtask completion event
-func (b *EventBroadcaster) BroadcastSubtaskCompleted(choreID, subtaskID int, completedAt *time.Time, user *uModel.User, circleID int) {
+func (b *EventBroadcaster) BroadcastSubtaskCompleted(choreID, subtaskID int, completedAt *time.Time, user *uModel.User, circleID int, syncVersion int64) {
 	if !b.service.config.Enabled {
 		return
 	}
 
 	event := NewSubtaskCompletedEvent(choreID, subtaskID, completedAt, user, circleID)
 	event.ID = b.generateEventID()
+	event.SyncVersion = syncVersion
 
 	b.service.BroadcastToCircle(circleID, event)
 }

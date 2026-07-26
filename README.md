@@ -223,6 +223,7 @@ These features are designed for self-hosted single-household deployments where c
 | `DT_SINGLE_CIRCLE_INSTANCE` | bool | `false` | Hides circle-management UI and disables join/leave/delete-member/accept-request endpoints. New OIDC users are added to a shared household circle (ID 1) instead of getting a personal circle. |
 | `DT_OAUTH2_ADMIN_GROUPS` | comma-separated strings | *(empty)* | OIDC group names that grant the `admin` role. |
 | `DT_OAUTH2_MANAGER_GROUPS` | comma-separated strings | *(empty)* | OIDC group names that grant the `manager` role. |
+| `DT_DISABLE_PASSWORD_AUTH` | bool | `false` | SSO-only: disables password login. |
 
 ### Role Resolution Rules
 
@@ -245,13 +246,15 @@ Group matching is **exact-string and case-sensitive**.
      - DT_SINGLE_CIRCLE_INSTANCE=true
      - DT_OAUTH2_ADMIN_GROUPS=donetick-admins
      - DT_OAUTH2_MANAGER_GROUPS=donetick-managers
+     - DT_DISABLE_PASSWORD_AUTH=true
    ```
 
 ---
 
 ## Contributing
+Contributions are welcome! If you want to work on something that is not already listed as an open, tagged issue, please open a [Discussion](https://github.com/donetick/donetick/discussions)  or reach out on [Discord](https://discord.gg/yyRDcwd3) first to ensure it aligns with our goals and to avoid any unnecessary effort.
 
-Contributions are welcome! If you want to work on something that is not listed as an issue, please open a [Discussion](https://github.com/donetick/donetick/discussions) first to ensure it aligns with our goals and to avoid any unnecessary effort!
+**Please note:** Pull Requests that are submitted without prior discussion or do not address an existing tagged issue will be deprioritized in the review queue.
 
 ## Code Formatting and Linting
 

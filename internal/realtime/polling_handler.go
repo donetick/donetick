@@ -5,12 +5,14 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"sync"
 	"time"
 
 	"donetick.com/core/config"
+	"donetick.com/core/internal/auth"
 	uModel "donetick.com/core/internal/user/model"
 	"donetick.com/core/logging"
 	"github.com/gin-gonic/gin"
@@ -25,7 +27,8 @@ type PollingHandler struct {
 	logger          *zap.SugaredLogger
 	// Rate limiting for SSE connections
 	AllowedOrigins map[string]bool
-	sseConnections map[string]time.Time // userID:IP -> last connection time
+	sseConnections map[string]time.Time // userID:IP -> last SSE connection time
+	sseTickets     map[string]time.Time // userID:IP -> last ticket mint time
 	sseMutex       sync.RWMutex
 }
 
@@ -39,7 +42,9 @@ func NewPollingHandler(
 		realTimeService: rts,
 		authMiddleware:  authMiddleware,
 		config:          config,
+		logger:          logging.DefaultLogger(),
 		sseConnections:  make(map[string]time.Time),
+		sseTickets:      make(map[string]time.Time),
 		AllowedOrigins:  make(map[string]bool),
 	}
 
@@ -59,10 +64,68 @@ func NewPollingHandler(
 	return h
 }
 
+// HandleSSETicket issues a short-lived, single-use ticket that native
+// EventSource clients exchange for an authenticated SSE connection. This
+// endpoint is protected by the standard JWT middleware, so the token is sent in
+// the Authorization header and never exposed in a URL.
+func (h *PollingHandler) HandleSSETicket(c *gin.Context) {
+	logger := logging.FromContext(c.Request.Context())
+
+	user, ok := auth.CurrentUser(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "Authentication required",
+			"code":  "AUTH_REQUIRED",
+		})
+		return
+	}
+
+	if !user.IsPlusMember() {
+		c.JSON(http.StatusForbidden, gin.H{
+			"error": "Access denied for non-plus members",
+			"code":  "ACCESS_DENIED",
+		})
+		return
+	}
+
+	// Throttle ticket minting per user+IP using a dedicated counter that is
+	// separate from the SSE-connection counter. This ensures that minting a
+	// ticket doesn't block the immediate follow-up /sse request, while still
+	// preventing a client from flooding /sse/ticket and exhausting TicketStore.
+	if !h.checkTicketRateLimit(user.ID, c.ClientIP()) {
+		c.JSON(http.StatusTooManyRequests, gin.H{
+			"error": "Rate limit exceeded",
+			"code":  "RATE_LIMIT_EXCEEDED",
+		})
+		return
+	}
+
+	ticket, err := h.authMiddleware.ticketStore.Issue(user.ID)
+	if err != nil {
+		logger.Errorw("Failed to issue SSE ticket", "userID", user.ID, "error", err)
+		if errors.Is(err, ErrTicketStoreFull) {
+			c.JSON(http.StatusServiceUnavailable, gin.H{
+				"error": "Real-time service is temporarily busy, please retry",
+				"code":  "TICKET_STORE_FULL",
+			})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to issue ticket",
+			"code":  "TICKET_ISSUE_FAILED",
+		})
+		return
+	}
+
+	h.recordTicketMint(user.ID, c.ClientIP())
+	c.JSON(http.StatusOK, gin.H{
+		"ticket":    ticket,
+		"expiresIn": int(ticketTTL.Seconds()),
+	})
+}
+
 // HandleSSE handles Server-Sent Events connections
 func (h *PollingHandler) HandleSSE(c *gin.Context) {
-	h.logger = logging.FromContext(c.Request.Context())
-
 	// Check if SSE is enabled
 	if !h.config.RealTimeConfig.Enabled || !h.config.RealTimeConfig.SSEEnabled {
 		c.JSON(http.StatusServiceUnavailable, gin.H{
@@ -94,7 +157,7 @@ func (h *PollingHandler) HandleSSE(c *gin.Context) {
 		return
 	}
 
-	// Rate limiting: check if the user is already connected
+	// Reconnect throttle: reject if the user reconnected too recently.
 	if !h.checkRateLimit(user.ID, c.ClientIP()) {
 		c.JSON(http.StatusTooManyRequests, gin.H{
 			"error": "Rate limit exceeded",
@@ -148,6 +211,10 @@ func (h *PollingHandler) HandleSSE(c *gin.Context) {
 		})
 		return
 	}
+
+	// Record connection time now so that even a very short-lived connection
+	// counts against the reconnect throttle.
+	h.updateConnectionTime(user.ID, c.ClientIP())
 
 	h.logger.Infow("SSE connection established",
 		"connectionId", connectionID,
@@ -344,7 +411,7 @@ func (h *PollingHandler) validateSSERequest(c *gin.Context, user *uModel.User) e
 	return nil
 }
 
-// checkRateLimit checks if the user has exceeded the rate limit for SSE connections
+// checkRateLimit checks if the user has exceeded the rate limit for SSE connections.
 func (h *PollingHandler) checkRateLimit(userID int, clientIP string) bool {
 	h.sseMutex.RLock()
 	key := fmt.Sprintf("%d:%s", userID, clientIP)
@@ -360,7 +427,33 @@ func (h *PollingHandler) checkRateLimit(userID int, clientIP string) bool {
 	return true
 }
 
-// updateConnectionTime updates the last connection time for rate limiting
+// checkTicketRateLimit checks if the user has exceeded the rate limit for ticket minting.
+// It uses a separate counter from the SSE-connection rate limit so that minting
+// a ticket does not prevent the subsequent /sse connection.
+func (h *PollingHandler) checkTicketRateLimit(userID int, clientIP string) bool {
+	h.sseMutex.RLock()
+	key := fmt.Sprintf("%d:%s", userID, clientIP)
+	lastMintTime, exists := h.sseTickets[key]
+	h.sseMutex.RUnlock()
+
+	if exists {
+		if time.Since(lastMintTime) < h.config.RealTimeConfig.MinConnectionInterval {
+			return false
+		}
+	}
+
+	return true
+}
+
+// recordTicketMint records the current time as the last ticket-mint time for rate limiting.
+func (h *PollingHandler) recordTicketMint(userID int, clientIP string) {
+	h.sseMutex.Lock()
+	key := fmt.Sprintf("%d:%s", userID, clientIP)
+	h.sseTickets[key] = time.Now().UTC()
+	h.sseMutex.Unlock()
+}
+
+// updateConnectionTime updates the last connection time for rate limiting.
 func (h *PollingHandler) updateConnectionTime(userID int, clientIP string) {
 	h.sseMutex.Lock()
 	key := fmt.Sprintf("%d:%s", userID, clientIP)
@@ -368,7 +461,7 @@ func (h *PollingHandler) updateConnectionTime(userID int, clientIP string) {
 	h.sseMutex.Unlock()
 }
 
-// cleanupStaleConnections removes stale SSE connections from the rate limiting map
+// cleanupStaleConnections removes stale entries from both rate-limiting maps.
 func (h *PollingHandler) cleanupStaleConnections() {
 	h.sseMutex.Lock()
 	defer h.sseMutex.Unlock()
@@ -379,40 +472,9 @@ func (h *PollingHandler) cleanupStaleConnections() {
 			delete(h.sseConnections, key)
 		}
 	}
-}
-
-// cleanupUserConnections removes stale connections for a specific user
-func (h *PollingHandler) cleanupUserConnections(userID int) {
-	// Get all connection pools and clean up user connections
-	stats := h.realTimeService.GetStats()
-	h.logger.Debugw("Cleaning up user connections",
-		"userId", userID,
-		"totalActiveConnections", stats.ActiveConnections,
-		"circlesActive", stats.CirclesActive)
-
-	// Instead of guessing circle IDs, get all pools from the service
-	// This is a bit hacky but necessary since we don't have direct access to pools
-	for circleID := 1; circleID <= 100; circleID++ {
-		pool := h.realTimeService.GetConnectionPool(circleID)
-		if pool != nil && !pool.IsEmpty() {
-			userConnections := pool.GetUserConnections(userID)
-			h.logger.Debugw("Found user connections in circle",
-				"userId", userID,
-				"circleId", circleID,
-				"connectionCount", len(userConnections))
-
-			for _, conn := range userConnections {
-				// For SSE connections, be more aggressive - remove connections older than 1 minute
-				if conn.Conn == nil && conn.IsStale(1*time.Minute) {
-					h.logger.Infow("Removing stale SSE connection",
-						"connectionId", conn.ID,
-						"userId", userID,
-						"circleId", circleID,
-						"lastActivity", conn.LastActivity)
-					pool.RemoveConnection(conn)
-					conn.Close()
-				}
-			}
+	for key, lastTime := range h.sseTickets {
+		if lastTime.Before(cutoff) {
+			delete(h.sseTickets, key)
 		}
 	}
 }

@@ -46,6 +46,7 @@ type Config struct {
 	FeatureLimits          FeatureLimitsConfig `mapstructure:"feature_limits" yaml:"feature_limits"`
 	Storage                StorageConfig       `mapstructure:"storage" yaml:"storage"`
 	SingleCircleInstance   bool                `mapstructure:"single_circle_instance" yaml:"single_circle_instance"`
+	DisablePasswordAuth    bool                `mapstructure:"disable_password_auth" yaml:"disable_password_auth"`
 	Info                   Info
 }
 
@@ -71,6 +72,20 @@ type StorageConfig struct {
 	// (e.g. via a bucket policy). Intended for self-hosted deployments
 	// that don't want the 7-day presigned URL ceiling.
 	PublicRead bool `mapstructure:"public_read" yaml:"public_read"`
+	// PublicBucketName is an optional separate bucket for publicly readable
+	// assets (e.g. profile photos). If empty, public uploads fall back to the
+	// private bucket (BucketName).
+	PublicBucketName string `mapstructure:"public_bucket_name" yaml:"public_bucket_name"`
+	// PublicBucketHost is the CDN / custom-domain host used to construct bare
+	// (unsigned) URLs for objects in PublicBucketName. Example: "pub.donetick.com".
+	// If empty, GetPublicURL falls back to a presigned URL from the private bucket.
+	PublicBucketHost string `mapstructure:"public_bucket_host" yaml:"public_bucket_host"`
+	// PathStyle forces path-style S3 addressing (endpoint/bucket/key)
+	// instead of the default virtual-hosted style (bucket.endpoint/key).
+	// Required for S3-compatible backends like MinIO that don't expose
+	// a DNS wildcard at `*.<endpoint-host>`, as well as for plain HTTP
+	// endpoints without matching TLS wildcard certs.
+	PathStyle bool `mapstructure:"path_style" yaml:"path_style"`
 }
 type DonetickCloudConfig struct {
 	GoogleClientID        string `mapstructure:"google_client_id" yaml:"google_client_id"`
@@ -95,7 +110,7 @@ type PushoverConfig struct {
 }
 
 type DatabaseConfig struct {
-	Type      string `mapstructure:"type" yaml:"type"`
+	Type      string `mapstructure:"type" yaml:"type" default:"sqlite"`
 	Host      string `mapstructure:"host" yaml:"host"`
 	Port      int    `mapstructure:"port" yaml:"port"`
 	User      string `mapstructure:"user" yaml:"user"`
@@ -112,12 +127,12 @@ type JwtConfig struct {
 }
 
 type ServerConfig struct {
-	Port             int           `mapstructure:"port" yaml:"port"`
+	Port             int           `mapstructure:"port" yaml:"port" default:"2021"`
 	RatePeriod       time.Duration `mapstructure:"rate_period" yaml:"rate_period" default:"60s"`
 	RateLimit        int           `mapstructure:"rate_limit" yaml:"rate_limit" default:"300"`
-	ReadTimeout      time.Duration `mapstructure:"read_timeout" yaml:"read_timeout"`
-	WriteTimeout     time.Duration `mapstructure:"write_timeout" yaml:"write_timeout"`
-	WebhookTimeout   time.Duration `mapstructure:"webhook_timeout" yaml:"webhook_timeout"`
+	ReadTimeout      time.Duration `mapstructure:"read_timeout" yaml:"read_timeout" default:"5s"`
+	WriteTimeout     time.Duration `mapstructure:"write_timeout" yaml:"write_timeout" default:"5s"`
+	WebhookTimeout   time.Duration `mapstructure:"webhook_timeout" yaml:"webhook_timeout" default:"5s"`
 	CorsAllowOrigins []string      `mapstructure:"cors_allow_origins" yaml:"cors_allow_origins"`
 	ServeFrontend    bool          `mapstructure:"serve_frontend" yaml:"serve_frontend"`
 	ServeSwagger     bool          `mapstructure:"serve_swagger" yaml:"serve_swagger"`
@@ -174,12 +189,20 @@ type FCMConfig struct {
 	ProjectID       string `json:"project_id" mapstructure:"project_id"`
 }
 type EmailConfig struct {
-	Email   string `mapstructure:"email"`
-	User    string `mapstructure:"user"`
-	Key     string `mapstructure:"key"`
-	Host    string `mapstructure:"host"`
-	Port    int    `mapstructure:"port"`
-	AppHost string `mapstructure:"appHost"`
+	Email     string `mapstructure:"email"`
+	User      string `mapstructure:"user"`
+	Key       string `mapstructure:"key"`
+	Host      string `mapstructure:"host"`
+	Port      int    `mapstructure:"port"`
+	AppHost   string `mapstructure:"appHost"`
+	LogRawURL bool   `mapstructure:"log_raw_url" yaml:"log_raw_url"`
+	// Provider selects which email sender implementation to use.
+	// "smtp" (default, empty also means smtp) uses host/port/user/key as SMTP creds.
+	// "smtp2go" uses the SMTP2Go HTTP API with `key` as the API key and the
+	// template IDs below.
+	Provider                string `mapstructure:"provider" yaml:"provider" default:"smtp"`
+	VerifyTemplateID        string `mapstructure:"verify_template_id" yaml:"verify_template_id"`
+	ResetPasswordTemplateID string `mapstructure:"reset_password_template_id" yaml:"reset_password_template_id"`
 }
 
 type OAuth2Config struct {
@@ -215,6 +238,7 @@ type RealTimeConfig struct {
 	EnableCompression     bool          `mapstructure:"enable_compression" yaml:"enable_compression" default:"true"`
 	EnableStats           bool          `mapstructure:"enable_stats" yaml:"enable_stats" default:"true"`
 	AllowedOrigins        []string      `mapstructure:"allowed_origins" yaml:"allowed_origins"`
+	MaxSSETickets         int           `mapstructure:"max_sse_tickets" yaml:"max_sse_tickets" default:"10000"`
 }
 
 type MFAConfig struct {
@@ -267,6 +291,7 @@ func NewConfig() *Config {
 			EnableCompression:     true,
 			EnableStats:           true,
 			AllowedOrigins:        []string{"*"},
+			MaxSSETickets:         10000,
 		},
 		Logging: LogConfig{
 			Level:       "info",
@@ -315,6 +340,8 @@ func LoadConfig() *Config {
 		viper.SetConfigName("prod")
 	case "selfhosted":
 		viper.SetConfigName("selfhosted")
+	case "r2":
+		viper.SetConfigName("r2")
 	default:
 		viper.SetConfigName("local")
 	}

@@ -35,11 +35,12 @@ const (
 
 // Event represents a real-time event to be sent to clients
 type Event struct {
-	Type      EventType   `json:"type"`
-	Timestamp time.Time   `json:"timestamp"`
-	CircleID  int         `json:"circleId"`
-	Data      interface{} `json:"data"`
-	ID        string      `json:"id,omitempty"`
+	Type        EventType   `json:"type"`
+	Timestamp   time.Time   `json:"timestamp"`
+	CircleID    int         `json:"circleId"`
+	SyncVersion int64       `json:"syncVersion"`
+	Data        interface{} `json:"data"`
+	ID          string      `json:"id,omitempty"`
 }
 
 // ChoreEventData contains data for chore-related events

@@ -14,6 +14,9 @@ type Resource struct {
 	APICommit              string           `json:"api_commit" binding:"omitempty"`
 	IsUserCreationDisabled bool             `json:"is_user_creation_disabled"`
 	SingleCircleInstance   bool             `json:"single_circle_instance"`
+	// DisablePasswordAuth tells the client to hide username/password login and
+	// signup, leaving only SSO (#438).
+	DisablePasswordAuth bool `json:"disable_password_auth"`
 }
 type identityProvider struct {
 	Auth_url  string `json:"auth_url" binding:"omitempty"`
@@ -43,10 +46,22 @@ func (h *Handler) getResource(c *gin.Context) {
 		APICommit:              h.config.Info.Commit,
 		IsUserCreationDisabled: h.config.IsUserCreationDisabled,
 		SingleCircleInstance:   h.config.SingleCircleInstance,
+		DisablePasswordAuth:    h.config.DisablePasswordAuth,
+	})
+}
+
+func (h *Handler) getHealth(c *gin.Context) {
+	c.JSON(200, gin.H{
+		"status":  "healthy",
+		"version": h.config.Info.Version,
+		"commit":  h.config.Info.Commit,
 	})
 }
 
 func Routes(r *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware, limiter *limiter.Limiter) {
+	// No-auth health check endpoint for container/orchestrator health checks.
+	r.GET("/health", h.getHealth)
+
 	resourceRoutes := r.Group("api/v1/resource")
 
 	resourceRoutes.GET("", h.getResource)

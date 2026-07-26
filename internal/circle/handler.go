@@ -25,7 +25,7 @@ type Handler struct {
 	userRepo             *uRepo.UserRepository
 	choreRepo            *chRepo.ChoreRepository
 	pointRepo            *pRepo.PointsRepository
-	signer               *storage.URLSignerS3
+	signer               storage.URLSigner
 	isDonetickDotCom     bool
 	maxCircleMembers     int
 	plusMaxCircleMembers int
@@ -33,7 +33,7 @@ type Handler struct {
 }
 
 func NewHandler(cr *cRepo.CircleRepository, ur *uRepo.UserRepository, c *chRepo.ChoreRepository, pr *pRepo.PointsRepository,
-	signer *storage.URLSignerS3, config *config.Config) *Handler {
+	signer storage.URLSigner, config *config.Config) *Handler {
 	return &Handler{
 		circleRepo:           cr,
 		userRepo:             ur,
@@ -191,6 +191,13 @@ func (h *Handler) LeaveCircle(c *gin.Context) {
 		return
 	}
 
+	if circleID != currentUser.CircleID {
+		c.JSON(400, gin.H{
+			"error": "circle_id must match your current circle",
+		})
+		return
+	}
+
 	orginalCircleID, err := h.circleRepo.GetUserOriginalCircle(c, currentUser.ID)
 	if err != nil {
 		log.Error("Error getting user original circle:", err)
@@ -234,7 +241,7 @@ func (h *Handler) LeaveCircle(c *gin.Context) {
 }
 
 func handleUserLeavingCircle(h *Handler, c *gin.Context, leavingUser *uModel.User, orginalCircleID int) error {
-	userAssignedCircleChores, err := h.choreRepo.GetChores(c, leavingUser.CircleID, leavingUser.ID, true, false)
+	userAssignedCircleChores, err := h.choreRepo.GetChores(c, leavingUser.CircleID, leavingUser.ID, true, nil, false)
 	if err != nil {
 		return err
 	}

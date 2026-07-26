@@ -44,6 +44,7 @@ import (
 	"donetick.com/core/internal/storage"
 	storageRepo "donetick.com/core/internal/storage/repo"
 	spRepo "donetick.com/core/internal/subtask/repo"
+	dsync "donetick.com/core/internal/sync"
 	"donetick.com/core/internal/thing"
 	tRepo "donetick.com/core/internal/thing/repo"
 	"donetick.com/core/internal/user"
@@ -71,6 +72,10 @@ func main() {
 		cfg.Logging.Development,
 	)
 	app := fx.New(
+		// Startup runs DB migrations synchronously in an OnStart hook. On large
+		// datasets the backfill migrations take well over fx's 15s default,
+		// which would abort startup and crash-loop. Give them room to finish.
+		fx.StartTimeout(15*time.Minute),
 		fx.Supply(cfg),
 		fx.Supply(logging.DefaultLogger().Desugar()),
 
@@ -109,8 +114,8 @@ func main() {
 		// Rate limiter
 		fx.Provide(utils.NewRateLimiter),
 
-		// add email sender:
-		fx.Provide(email.NewEmailSender),
+		// add email sender (implementation selected by email.provider config):
+		fx.Provide(email.NewSender),
 
 		// MFA services
 		fx.Provide(mfa.NewService),
@@ -158,20 +163,21 @@ func main() {
 		fx.Provide(payment.NewWebhook),
 		fx.Provide(chore.NewAPI),
 
+		// Sync:
+		fx.Provide(dsync.NewHandler),
+
 		// Frontend
 		fx.Provide(frontend.NewHandler),
 
 		// Docs
 		fx.Provide(docs.NewHandler),
 
-		// storage :
-		// is storage local or remote?
-		// fx.Provide(storage.NewLocalStorage),
-		// fx.Provide(storage.NewURLSignerLocal),
-		fx.Provide(storage.NewS3Storage),
-		fx.Provide(storage.NewURLSignerS3),
-
+		// storage: factory selects local vs S3 based on config.Storage.StorageType.
+		// Set storage_type: "local" in config for local dev, leave blank for S3.
+		fx.Provide(storage.NewStorage),
+		fx.Provide(storage.NewURLSigner),
 		fx.Provide(storage.NewHandler),
+		fx.Provide(storage.NewDraftCleanupService),
 		fx.Provide(storageRepo.NewStorageRepository),
 
 		// backup service
@@ -180,7 +186,9 @@ func main() {
 
 		// Real-time service and components
 		fx.Provide(realtime.NewRealTimeService),
+		fx.Provide(realtime.NewTicketStore),
 		fx.Provide(realtime.NewAuthMiddleware),
+		fx.Provide(realtime.NewPollingHandler),
 
 		// MCP server
 
@@ -203,7 +211,8 @@ func main() {
 			resource.Routes,
 			// backup.Routes,
 
-			realtime.Routes, // (router, rts, authMiddleware, pollingHandler)
+			dsync.Routes,
+			realtime.Routes, // (router, rtAuthMiddleware, pollingHandler, jwtAuth)
 
 			func(r *gin.Engine) {},
 		),
@@ -217,7 +226,7 @@ func main() {
 
 }
 
-func newServer(lc fx.Lifecycle, cfg *config.Config, db *gorm.DB, notifier *notifier.Scheduler, eventProducer *events.EventsProducer, mfaCleanup *mfa.CleanupService, authCleanup *auth.CleanupService, rts *realtime.RealTimeService) *gin.Engine {
+func newServer(lc fx.Lifecycle, cfg *config.Config, db *gorm.DB, notifier *notifier.Scheduler, eventProducer *events.EventsProducer, mfaCleanup *mfa.CleanupService, authCleanup *auth.CleanupService, rts *realtime.RealTimeService, draftCleanup *storage.DraftCleanupService, ticketStore *realtime.TicketStore) *gin.Engine {
 	// Set Gin mode based on logging configuration
 	if cfg.Logging.Development || strings.ToLower(cfg.Logging.Level) == "debug" {
 		gin.SetMode(gin.DebugMode)
@@ -279,6 +288,7 @@ func newServer(lc fx.Lifecycle, cfg *config.Config, db *gorm.DB, notifier *notif
 			eventProducer.Start(context.Background())
 			mfaCleanup.Start(context.Background())
 			authCleanup.Start(context.Background())
+			draftCleanup.Start(context.Background())
 
 			// Start real-time service
 			if err := rts.Start(ctx); err != nil {
@@ -310,6 +320,10 @@ func newServer(lc fx.Lifecycle, cfg *config.Config, db *gorm.DB, notifier *notif
 
 			mfaCleanup.Stop()
 			authCleanup.Stop()
+			draftCleanup.Stop()
+
+			// Stop the SSE ticket store cleanup goroutine
+			ticketStore.Stop()
 
 			// Shutdown HTTP server with timeout
 			shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

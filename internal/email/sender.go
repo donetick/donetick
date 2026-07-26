@@ -7,13 +7,33 @@ import (
 	"strings"
 
 	"donetick.com/core/config"
+	"donetick.com/core/logging"
 	gomail "gopkg.in/gomail.v2"
 )
 
 type EmailSender struct {
-	client   *gomail.Dialer
-	appHost  string
-	fromMail string
+	client    *gomail.Dialer
+	appHost   string
+	fromMail  string
+	logRawURL bool
+}
+
+// Sender is the interface consumed by callers so the concrete implementation
+// (SMTP vs an HTTP-API provider like SMTP2Go) can be swapped via config.
+type Sender interface {
+	SendResetPasswordEmail(c context.Context, to, code string) error
+	SendVerificationEmail(to, code string) error
+}
+
+// NewSender picks the email implementation based on email.provider.
+// Defaults to the SMTP sender so self-hosted behavior is unchanged.
+func NewSender(conf *config.Config) Sender {
+	switch conf.EmailConfig.Provider {
+	case "smtp2go":
+		return NewSMTP2GoSender(conf)
+	default:
+		return NewEmailSender(conf)
+	}
 }
 
 func NewEmailSender(conf *config.Config) *EmailSender {
@@ -29,9 +49,10 @@ func NewEmailSender(conf *config.Config) *EmailSender {
 
 	// auth := smtp.PlainAuth("", conf.EmailConfig.Email, conf.EmailConfig.Password, host)
 	return &EmailSender{
-		fromMail: conf.EmailConfig.Email,
-		client:   client,
-		appHost:  conf.EmailConfig.AppHost,
+		fromMail:  conf.EmailConfig.Email,
+		client:    client,
+		appHost:   conf.EmailConfig.AppHost,
+		logRawURL: conf.EmailConfig.LogRawURL,
 	}
 }
 
@@ -478,13 +499,16 @@ func (es *EmailSender) SendResetPasswordEmail(c context.Context, to, code string
 `
 	u := es.appHost + "/password/update?c=" + encodeEmailAndCode(to, code)
 
-	// logging.FromContext(c).Infof("Reset password URL: %s", u)
 	htmlBody = strings.Replace(htmlBody, "{{verifyURL}}", u, 1)
 
 	msg.SetBody("text/html", htmlBody)
 
 	err := es.client.DialAndSend(msg)
 	if err != nil {
+		if es.logRawURL {
+			logging.FromContext(c).Infof("\n\n\n=== PASSWORD RESET LINK ===\nUser: %s\nURL:  %s\n==================================================\n\n\n", to, u)
+			return nil
+		}
 		return err
 	}
 	return nil
@@ -498,11 +522,11 @@ func (es *EmailSender) SendResetPasswordEmail(c context.Context, to, code string
 // }
 func encodeEmailAndCode(email, code string) string {
 	data := email + ":" + code
-	return base64.StdEncoding.EncodeToString([]byte(data))
+	return base64.RawURLEncoding.EncodeToString([]byte(data))
 }
 
 func DecodeEmailAndCode(encoded string) (string, string, error) {
-	data, err := base64.StdEncoding.DecodeString(encoded)
+	data, err := base64.RawURLEncoding.DecodeString(encoded)
 	if err != nil {
 		return "", "", err
 	}

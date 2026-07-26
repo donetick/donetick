@@ -82,6 +82,10 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
+      - name: Resolve commit SHA
+        id: commit
+        run: echo "sha=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+
       - name: Extract Docker tags
         id: meta
         run: |
@@ -108,3 +112,4 @@ jobs:
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           build-args: |
             VERSION=${{ steps.resolve.outputs.tag }}
+            COMMIT=${{ steps.commit.outputs.sha }}

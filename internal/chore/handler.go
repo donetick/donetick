@@ -2363,7 +2363,7 @@ func (h *Handler) CompleteChore(c *gin.Context) {
 		return
 	}
 
-	nextAssignedTo, err := checkNextAssignee(chore, choreHistory, completedBy)
+	nextAssignedTo, err := checkNextAssignee(chore, choreHistory, completedBy, circleUsers)
 	if err != nil {
 		logging.FromContext(c).Error("Failed to check next assignee", "error", err)
 		c.JSON(500, gin.H{
@@ -3558,7 +3558,7 @@ func (h *Handler) ApproveChore(c *gin.Context) {
 		}
 	}
 
-	nextAssignedTo, err := checkNextAssignee(chore, allHistory, completedBy)
+	nextAssignedTo, err := checkNextAssignee(chore, allHistory, completedBy, circleUsers)
 	if err != nil {
 		c.JSON(500, gin.H{
 			"error": "Error checking next assignee",
@@ -3966,13 +3966,29 @@ func (h *Handler) updateTimer(c *gin.Context) { // TODO: Not used in Routes
 	})
 }
 
-func checkNextAssignee(chore *chModel.Chore, choresHistory []*chModel.ChoreHistory, performerID int) (*int, error) {
+func checkNextAssignee(chore *chModel.Chore, choresHistory []*chModel.ChoreHistory, performerID int, circleUsers []*circle.UserCircleDetail) (*int, error) {
 	// copy the history to avoid modifying the original:
 	history := make([]*chModel.ChoreHistory, len(choresHistory))
 	copy(history, choresHistory)
 
+	// "Anyone" chores carry no explicit assignees, so rotate across the whole circle rather
+	// than dropping the assignment: a nil result is persisted verbatim by CompleteChore/
+	// ApproveChore/SkipChore, and the notification planner only emits for an assigned user,
+	// so dropping it would silence the chore. no_assignee is excluded because nil is its
+	// intended result. Mirrors the create/edit validation, which treats an empty assignee
+	// list as the whole circle.
+	assignees := chore.Assignees
+	if len(assignees) == 0 && chore.AssignStrategy != chModel.AssignmentStrategyNoAssignee {
+		for _, circleUser := range circleUsers {
+			assignees = append(assignees, chModel.ChoreAssignees{
+				ChoreID: chore.ID,
+				UserID:  circleUser.UserID,
+			})
+		}
+	}
+
 	assigneesMap := map[int]bool{}
-	for _, assignee := range chore.Assignees {
+	for _, assignee := range assignees {
 		assigneesMap[assignee.UserID] = true
 	}
 	var nextAssignee *int
@@ -3987,7 +4003,7 @@ func checkNextAssignee(chore *chModel.Chore, choresHistory []*chModel.ChoreHisto
 	case chModel.AssignmentStrategyLeastAssigned:
 		// find the assignee with the least number of chores
 		assigneeChores := map[int]int{}
-		for _, performer := range chore.Assignees {
+		for _, performer := range assignees {
 			assigneeChores[performer.UserID] = 0
 		}
 		for _, history := range history {
@@ -4016,7 +4032,7 @@ func checkNextAssignee(chore *chModel.Chore, choresHistory []*chModel.ChoreHisto
 	case chModel.AssignmentStrategyLeastCompleted:
 		// find the assignee who has completed the least number of chores
 		assigneeChores := map[int]int{}
-		for _, performer := range chore.Assignees {
+		for _, performer := range assignees {
 			assigneeChores[performer.UserID] = 0
 		}
 		for _, history := range history {
@@ -4043,8 +4059,8 @@ func checkNextAssignee(chore *chModel.Chore, choresHistory []*chModel.ChoreHisto
 			nextAssignee = &bestAssignee
 		}
 	case chModel.AssignmentStrategyRandom:
-		if len(chore.Assignees) > 0 {
-			assigneeID := chore.Assignees[rand.Intn(len(chore.Assignees))].UserID
+		if len(assignees) > 0 {
+			assigneeID := assignees[rand.Intn(len(assignees))].UserID
 			nextAssignee = &assigneeID
 		}
 	case chModel.AssignmentStrategyNoAssignee:
@@ -4054,8 +4070,8 @@ func checkNextAssignee(chore *chModel.Chore, choresHistory []*chModel.ChoreHisto
 		nextAssignee = chore.AssignedTo
 	case chModel.AssignmentStrategyRandomExceptLastAssigned:
 		var lastAssigned *int = chore.AssignedTo
-		AssigneesCopy := make([]chModel.ChoreAssignees, len(chore.Assignees))
-		copy(AssigneesCopy, chore.Assignees)
+		AssigneesCopy := make([]chModel.ChoreAssignees, len(assignees))
+		copy(AssigneesCopy, assignees)
 		var removeLastAssigned []chModel.ChoreAssignees
 		if lastAssigned != nil {
 			removeLastAssigned = remove(AssigneesCopy, *lastAssigned)
@@ -4065,15 +4081,19 @@ func checkNextAssignee(chore *chModel.Chore, choresHistory []*chModel.ChoreHisto
 		if len(removeLastAssigned) > 0 {
 			assigneeID := removeLastAssigned[rand.Intn(len(removeLastAssigned))].UserID
 			nextAssignee = &assigneeID
+		} else {
+			// only candidate is the last assignee (e.g. a single-member circle), so keep
+			// them rather than dropping the assignment
+			nextAssignee = chore.AssignedTo
 		}
 	case chModel.AssignmentStrategyRoundRobin:
-		if len(chore.Assignees) == 0 {
+		if len(assignees) == 0 {
 			return chore.AssignedTo, fmt.Errorf("no assignees available")
 		}
 
 		// Find current assignee index
 		currentIndex := -1
-		for i, assignee := range chore.Assignees {
+		for i, assignee := range assignees {
 			if chore.AssignedTo != nil && assignee.UserID == *chore.AssignedTo {
 				currentIndex = i
 				break
@@ -4083,10 +4103,10 @@ func checkNextAssignee(chore *chModel.Chore, choresHistory []*chModel.ChoreHisto
 		// If current assignee is not found, start from the beginning
 		var assigneeID int
 		if currentIndex == -1 {
-			assigneeID = chore.Assignees[0].UserID
+			assigneeID = assignees[0].UserID
 		} else {
-			nextIndex := (currentIndex + 1) % len(chore.Assignees)
-			assigneeID = chore.Assignees[nextIndex].UserID
+			nextIndex := (currentIndex + 1) % len(assignees)
+			assigneeID = assignees[nextIndex].UserID
 		}
 		nextAssignee = &assigneeID
 	default:

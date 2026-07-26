@@ -353,7 +353,7 @@ func (h *API) CompleteChore(c *gin.Context) {
 		return
 	}
 
-	nextAssignedTo, err := checkNextAssignee(chore, choreHistory, performer)
+	nextAssignedTo, err := checkNextAssignee(chore, choreHistory, performer, circleUsers)
 	if err != nil {
 		log.Debugw("chore.api.CompleteChore failed to check next assignee", "error", err)
 		c.JSON(500, gin.H{

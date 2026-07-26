@@ -464,7 +464,17 @@ func (h *Handler) CreateChore(c *gin.Context) {
 		c.JSON(500, gin.H{"error": "Failed to retrieve circle users"})
 		return
 	}
-	for _, assignee := range choreReq.Assignees {
+
+	assignees := choreReq.Assignees
+	if len(assignees) == 0 {
+		for _, circleUser := range circleUsers {
+			assignees = append(assignees, chModel.ChoreAssignees{
+				UserID:  circleUser.UserID,
+				ChoreID: choreReq.ID,
+			})
+		}
+	}
+	for _, assignee := range assignees {
 		userFound := false
 		for _, circleUser := range circleUsers {
 			if assignee.UserID == circleUser.UserID {
@@ -479,6 +489,23 @@ func (h *Handler) CreateChore(c *gin.Context) {
 			return
 		}
 
+	}
+
+	//  validate assignedTo is one of the assignees (which are all in the circle):
+	if choreReq.AssignedTo != nil {
+		assigneeFound := false
+		for _, assignee := range assignees {
+			if assignee.UserID == *choreReq.AssignedTo {
+				assigneeFound = true
+				break
+			}
+		}
+		if !assigneeFound {
+			c.JSON(400, gin.H{
+				"error": "Assigned to not found in assignees",
+			})
+			return
+		}
 	}
 	// Remove the auto-assignment logic - if no assignee then keep no assignee
 
@@ -747,7 +774,18 @@ func (h *Handler) EditChore(c *gin.Context) {
 	//  validate assignedTo part of the assignees:
 	if choreReq.AssignedTo != nil {
 		assigneeFound := false
-		for _, assignee := range choreReq.Assignees {
+		// if we have assignees loop through them if we don't have any we default to circle as this task assigned to Anyone
+		assignees := choreReq.Assignees
+		if len(assignees) == 0 {
+			// everyone in the circle is considered an assignee, so we check if the assignedTo user is in the circle:
+			for _, circleUser := range circleUsers {
+				if circleUser.UserID == *choreReq.AssignedTo {
+					assigneeFound = true
+					break
+				}
+			}
+		}
+		for _, assignee := range assignees {
 			if assignee.UserID == *choreReq.AssignedTo {
 				assigneeFound = true
 				break

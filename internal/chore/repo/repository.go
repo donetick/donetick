@@ -119,8 +119,12 @@ func (r *ChoreRepository) UpdateChoreFields(ctx context.Context, choreID int, fi
 // nextSyncVersionRange atomically reserves a contiguous block of `count` sync
 // versions for a circle and returns the first (lowest) version in the range.
 func (r *ChoreRepository) nextSyncVersionRange(ctx context.Context, circleID int, count int) (int64, error) {
+	return r.nextSyncVersionRangeWithDB(ctx, r.db, circleID, count)
+}
+
+func (r *ChoreRepository) nextSyncVersionRangeWithDB(ctx context.Context, db *gorm.DB, circleID int, count int) (int64, error) {
 	var endVersion int64
-	err := r.db.WithContext(ctx).Raw(`
+	err := db.WithContext(ctx).Raw(`
 		INSERT INTO sync_cursors (circle_id, entity_type, max_version)
 		VALUES (?, ?, ?)
 		ON CONFLICT (circle_id, entity_type) DO UPDATE SET max_version = sync_cursors.max_version + ?
@@ -128,6 +132,37 @@ func (r *ChoreRepository) nextSyncVersionRange(ctx context.Context, circleID int
 		circleID, syncModel.EntityTypeChore, count, count,
 	).Scan(&endVersion).Error
 	return endVersion - int64(count) + 1, err
+}
+
+// SetProjectChoresPrivacy aligns is_private of every chore in a project with the
+// project's own flag, bumping each chore's sync_version so delta-sync clients pick
+// the change up. It runs on the provided tx (which may be r.db) so callers can keep
+// the project update and this propagation atomic.
+func (r *ChoreRepository) SetProjectChoresPrivacy(ctx context.Context, tx *gorm.DB, circleID int, projectID int, isPrivate bool) error {
+	var choreIDs []int
+	if err := tx.WithContext(ctx).Model(&chModel.Chore{}).
+		Where("project_id = ? AND circle_id = ? AND is_private != ?", projectID, circleID, isPrivate).
+		Pluck("id", &choreIDs).Error; err != nil {
+		return err
+	}
+	if len(choreIDs) == 0 {
+		return nil
+	}
+
+	startVersion, err := r.nextSyncVersionRangeWithDB(ctx, tx, circleID, len(choreIDs))
+	if err != nil {
+		return err
+	}
+
+	for offset, choreID := range choreIDs {
+		if err := tx.WithContext(ctx).Model(&chModel.Chore{}).Where("id = ?", choreID).Updates(map[string]interface{}{
+			"is_private":   isPrivate,
+			"sync_version": startVersion + int64(offset),
+		}).Error; err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (r *ChoreRepository) UpdateChores(c context.Context, chores []*chModel.Chore) error {

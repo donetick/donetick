@@ -6,6 +6,7 @@ import (
 	"donetick.com/core/internal/auth"
 	pModel "donetick.com/core/internal/project/model"
 	pRepo "donetick.com/core/internal/project/repo"
+	uRepo "donetick.com/core/internal/user/repo"
 	"github.com/gin-gonic/gin"
 )
 
@@ -227,4 +228,11 @@ func Routes(r *gin.Engine, h *Handler, multiAuthMiddleware *auth.MultiAuthMiddle
 		projectRoutes.PUT("/:id", h.updateProject)
 		projectRoutes.DELETE("/:id", h.deleteProject)
 	}
+}
+
+// ExternalAPI exposes the project list to long-lived integrations using an API token.
+func ExternalAPI(r *gin.Engine, h *Handler, userRepo *uRepo.UserRepository) {
+	projectRoutes := r.Group("eapi/v1/project")
+	projectRoutes.Use(auth.APITokenMiddleware(userRepo))
+	projectRoutes.GET("", h.getProjects)
 }

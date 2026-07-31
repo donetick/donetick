@@ -39,6 +39,29 @@ func NewHandler(stripeDB pDB.StripeDB, subscriptionDB pDB.SubscriptionDB, stripe
 	}
 }
 
+// priceForInterval finds the configured Stripe price matching the requested
+// billing interval ("month" or "year"). An unset Interval on a configured
+// price is treated as "year" for backward compatibility with configs written
+// before monthly plans existed.
+func (h *Handler) priceForInterval(interval string) config.StripePrices {
+	if interval == "" {
+		interval = "year"
+	}
+	for _, p := range h.prices {
+		priceInterval := p.Interval
+		if priceInterval == "" {
+			priceInterval = "year"
+		}
+		if priceInterval == interval {
+			return p
+		}
+	}
+	if len(h.prices) > 0 {
+		return h.prices[0]
+	}
+	return config.StripePrices{}
+}
+
 func (h *Handler) CreateSubscription(c *gin.Context) {
 	logger := logging.FromContext(c)
 	currentUser := auth.MustCurrentUser(c)
@@ -75,7 +98,15 @@ func (h *Handler) CreateSubscription(c *gin.Context) {
 			return
 		}
 	}
-	session, err := h.stripe.CreateSubscriptionCheckoutSession(c, customer.CustomerID, h.prices[0].PriceID)
+	interval := c.DefaultQuery("interval", "year")
+	price := h.priceForInterval(interval)
+	if price.PriceID == "" {
+		logger.Errorw("payment.handler.CreateSubscription no price configured", "interval", interval)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create checkout session"})
+		return
+	}
+
+	session, err := h.stripe.CreateSubscriptionCheckoutSession(c, customer.CustomerID, price.PriceID)
 	if err != nil {
 		logger.Errorw("payment.handler.CreateSubscription failed to create checkout session", "err", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create checkout session"})

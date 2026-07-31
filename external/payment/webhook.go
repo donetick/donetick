@@ -122,7 +122,20 @@ func (h *Webhook) StripeWebhook(c *gin.Context) {
 			return
 		}
 
-		expiredAt := time.Now().UTC().AddDate(1, 0, 0)
+		// Look up the actual current period end from Stripe rather than assuming
+		// a billing interval, so monthly and yearly plans both expire correctly.
+		var expiredAt time.Time
+		var productID string
+		if stripeSub, err := h.stripe.GetSubscription(s.Subscription.ID); err == nil && stripeSub != nil {
+			expiredAt = time.Unix(stripeSub.CurrentPeriodEnd, 0).UTC()
+			if stripeSub.Items != nil && len(stripeSub.Items.Data) > 0 && stripeSub.Items.Data[0].Price != nil {
+				productID = stripeSub.Items.Data[0].Price.ID
+			}
+		} else {
+			logger.Errorw("payment.webhook.Webhook failed to fetch subscription, defaulting expiry to 1 year", "subscription_id", s.Subscription.ID, "err", err)
+			expiredAt = time.Now().UTC().AddDate(1, 0, 0)
+		}
+
 		// Save to legacy table for backward compatibility
 		h.stripeDB.SaveSubscription(c, &model.StripeSubscription{
 			SubscriptionID: s.Subscription.ID,
@@ -140,6 +153,7 @@ func (h *Webhook) StripeWebhook(c *gin.Context) {
 				Provider:               model.SubscriptionProviderStripe,
 				ExternalSubscriptionID: s.Subscription.ID,
 				ExternalCustomerID:     s.Customer.ID,
+				ProductID:              productID,
 				Status:                 "active",
 				ExpiresAt:              &expiredAt,
 				CreatedAt:              time.Now().UTC(),
@@ -166,15 +180,10 @@ func (h *Webhook) StripeWebhook(c *gin.Context) {
 			SubscriptionID: inv.Subscription.ID,
 			ReceivedAt:     time.Now().UTC(),
 		}
-		expiredAt := time.Unix(int64(inv.PeriodEnd), 0)
-
-		if inv.PeriodEnd == inv.PeriodStart {
-			// on initial payment, the period end and start are the same
-			// so we add a year to the period end
-			logger.Debugw("payment.webhook.Webhook ignoring payment_succeeded for session checkout", "event", event.Type)
-
-		}
-		expiredAt = mInvoice.PeriodEnd.AddDate(1, 0, 0)
+		// Stripe already computes period_end from the subscription's actual
+		// billing interval (monthly or yearly), so use it directly instead of
+		// assuming a fixed interval.
+		expiredAt := mInvoice.PeriodEnd
 
 		h.stripeDB.SaveInvoice(c, mInvoice)
 		now := time.Now().UTC()

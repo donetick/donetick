@@ -52,6 +52,15 @@ func (s *StripeService) CancelSubscription(subscriptionID string) (*stripe.Subsc
 	return sub, nil
 }
 
+func (s *StripeService) GetSubscription(subscriptionID string) (*stripe.Subscription, error) {
+	stripe.Key = s.Key
+	sub, err := subscription.Get(subscriptionID, nil)
+	if err != nil {
+		return nil, err
+	}
+	return sub, nil
+}
+
 func (s *StripeService) CreateSubscriptionCheckoutSession(c context.Context, customerID string, priceID string) (*stripe.CheckoutSession, error) {
 	logger := logging.FromContext(c)
 	logger.Debugw("Creating subscription checkout session", "customerID", customerID, "priceID", priceID)

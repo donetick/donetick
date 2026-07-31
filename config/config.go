@@ -139,8 +139,9 @@ type StripeConfig struct {
 }
 
 type StripePrices struct {
-	PriceID string `mapstructure:"id"`
-	Name    string `mapstructure:"name"`
+	PriceID  string `mapstructure:"id"`
+	Name     string `mapstructure:"name"`
+	Interval string `mapstructure:"interval"` // "month" or "year"
 }
 
 type RevenueCatConfig struct {

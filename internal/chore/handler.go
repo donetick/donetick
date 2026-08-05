@@ -26,6 +26,7 @@ import (
 	nRepo "donetick.com/core/internal/notifier/repo"
 	nps "donetick.com/core/internal/notifier/service"
 	fcmService "donetick.com/core/internal/notifier/service/fcm"
+	pjRepo "donetick.com/core/internal/project/repo"
 	"donetick.com/core/internal/realtime"
 	storage "donetick.com/core/internal/storage"
 	storageModel "donetick.com/core/internal/storage/model"
@@ -58,6 +59,7 @@ type Handler struct {
 	storage         storage.Storage
 	realTimeService *realtime.RealTimeService
 	signer          storage.URLSigner
+	pjRepo          *pjRepo.ProjectRepository
 }
 
 func NewHandler(cr *chRepo.ChoreRepository, circleRepo *cRepo.CircleRepository, nt *notifier.Notifier,
@@ -68,9 +70,11 @@ func NewHandler(cr *chRepo.ChoreRepository, circleRepo *cRepo.CircleRepository, 
 	dr *dRepo.DeviceRepository,
 	stoRepo *storageRepo.StorageRepository,
 	signer storage.URLSigner,
-	rts *realtime.RealTimeService) *Handler {
+	rts *realtime.RealTimeService,
+	projectRepo *pjRepo.ProjectRepository) *Handler {
 	return &Handler{
 		choreRepo:       cr,
+		pjRepo:          projectRepo,
 		uRepo:           ur,
 		deviceRepo:      dr,
 		circleRepo:      circleRepo,
@@ -516,6 +520,12 @@ func (h *Handler) CreateChore(c *gin.Context) {
 	}
 
 	warnings := setCreateChoreDefaults(&choreReq)
+	if err := h.inheritProjectPrivacy(c, &choreReq, currentUser.ID, currentUser.CircleID); err != nil {
+		c.JSON(400, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
 	if !choreReq.Notification && choreReq.NotificationMetadata != nil {
 		warnings = append(warnings, "notificationMetadata provided while notification is false; ignoring metadata")
 		choreReq.NotificationMetadata = nil
@@ -865,6 +875,12 @@ func (h *Handler) EditChore(c *gin.Context) {
 	}
 
 	setEditChoreDefaults(&choreReq, oldChore)
+	if err := h.inheritProjectPrivacy(c, &choreReq, currentUser.ID, currentUser.CircleID); err != nil {
+		c.JSON(400, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
 
 	updatedChore := &chModel.Chore{ // TODO: Assignees are missing
 		ID:                     choreReq.ID,
@@ -1026,6 +1042,28 @@ func setEditChoreDefaults(choreReq *ChoreReq, oldChore *chModel.Chore) {
 	if choreReq.IsPrivate == nil {
 		choreReq.IsPrivate = &oldChore.IsPrivate
 	}
+}
+
+// inheritProjectPrivacy makes sure the project a chore is being placed in is visible
+// to the user, and forces the chore private when that project is private: a chore
+// inherits the privacy of its project, so the project flag always wins. Chores in a
+// public project (or in no project at all) keep their own flag.
+func (h *Handler) inheritProjectPrivacy(c *gin.Context, choreReq *ChoreReq, userID int, circleID int) error {
+	if choreReq.ProjectID == nil {
+		return nil
+	}
+
+	project, err := h.pjRepo.GetProjectByID(c, *choreReq.ProjectID, circleID)
+	// Don't tell apart "missing" from "not visible", it would leak private projects.
+	if err != nil || !project.CanView(userID) {
+		return errors.New("project not found")
+	}
+
+	if project.IsPrivate {
+		isPrivate := true
+		choreReq.IsPrivate = &isPrivate
+	}
+	return nil
 }
 
 func (h *Handler) deleteChoreFiles(ctx *gin.Context, choreID int) {

@@ -41,7 +41,7 @@ func (h *Handler) getProjects(c *gin.Context) {
 		return
 	}
 
-	projects, err := h.pRepo.GetCircleProjects(c, currentUser.CircleID)
+	projects, err := h.pRepo.GetCircleProjects(c, currentUser.CircleID, currentUser.ID)
 	if err != nil {
 		c.JSON(500, gin.H{
 			"error": "Error getting projects",
@@ -91,6 +91,7 @@ func (h *Handler) createProject(c *gin.Context) {
 		CircleID:    currentUser.CircleID,
 		CreatedBy:   currentUser.ID,
 		Icon:        req.Icon,
+		IsPrivate:   req.IsPrivate != nil && *req.IsPrivate,
 	}
 
 	if err := h.pRepo.CreateProject(c, project); err != nil {
@@ -154,7 +155,7 @@ func (h *Handler) updateProject(c *gin.Context) {
 		Icon:        req.Icon,
 	}
 
-	if err := h.pRepo.UpdateProject(c, project, currentUser.ID, currentUser.CircleID); err != nil {
+	if err := h.pRepo.UpdateProject(c, project, req.IsPrivate, currentUser.ID, currentUser.CircleID); err != nil {
 		c.JSON(500, gin.H{
 			"error": err.Error(),
 		})

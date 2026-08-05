@@ -846,10 +846,9 @@ func (h *Handler) EditChore(c *gin.Context) {
 		})
 		return
 	}
-	description := *choreReq.Description
-	if choreReq.Description == nil && oldChore.Description != nil {
-		description = ""
-
+	description := ""
+	if choreReq.Description != nil {
+		description = *choreReq.Description
 	}
 	if err := h.cleanUpUnreferencedFiles(c, currentUser.ID, storageModel.EntityTypeChoreDescription, choreReq.ID, description); err != nil { // TODO: this doesn't seem good, we clean up the request' file before adding it to the model
 		c.JSON(500, gin.H{

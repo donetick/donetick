@@ -716,17 +716,6 @@ func (h *Handler) EditChore(c *gin.Context) {
 		return
 	}
 
-	existedChoreAssignees, err := h.choreRepo.GetChoreAssignees(c, choreReq.ID)
-	if err != nil {
-		c.JSON(500, gin.H{
-			"error": "Error getting chore assignees",
-		})
-		return
-	}
-
-	var choreAssigneesToAdd []*chModel.ChoreAssignees
-	var choreAssigneesToDelete []*chModel.ChoreAssignees
-
 	//  filter assignees that not in the circle
 	for _, assignee := range choreReq.Assignees {
 		userFound := false
@@ -741,33 +730,6 @@ func (h *Handler) EditChore(c *gin.Context) {
 				"error": "Assignee not found in circle",
 			})
 			return
-		}
-		userAlreadyAssignee := false
-		for _, existedChoreAssignee := range existedChoreAssignees {
-			if existedChoreAssignee.UserID == assignee.UserID {
-				userAlreadyAssignee = true
-				break
-			}
-		}
-		if !userAlreadyAssignee {
-			choreAssigneesToAdd = append(choreAssigneesToAdd, &chModel.ChoreAssignees{
-				ChoreID: choreReq.ID,
-				UserID:  assignee.UserID,
-			})
-		}
-	}
-
-	//  remove assignees if they are not in the assignees list anymore
-	for _, existedChoreAssignee := range existedChoreAssignees {
-		userFound := false
-		for _, assignee := range choreReq.Assignees {
-			if existedChoreAssignee.UserID == assignee.UserID {
-				userFound = true
-				break
-			}
-		}
-		if !userFound {
-			choreAssigneesToDelete = append(choreAssigneesToDelete, existedChoreAssignee)
 		}
 	}
 
@@ -893,7 +855,11 @@ func (h *Handler) EditChore(c *gin.Context) {
 		Status:                 oldChore.Status,
 	}
 
-	if err := h.choreRepo.UpsertChore(c, updatedChore); err != nil {
+	assigneeIDs := make([]int, 0, len(choreReq.Assignees))
+	for _, assignee := range choreReq.Assignees {
+		assigneeIDs = append(assigneeIDs, assignee.UserID)
+	}
+	if err := h.choreRepo.UpdateChoreVisibility(c, updatedChore, assigneeIDs); err != nil {
 		c.JSON(500, gin.H{
 			"error": "Error adding chore",
 		})
@@ -947,25 +913,7 @@ func (h *Handler) EditChore(c *gin.Context) {
 		}
 	}
 
-	if len(choreAssigneesToAdd) > 0 {
-		err = h.choreRepo.UpdateChoreAssignees(c, choreAssigneesToAdd)
 
-		if err != nil {
-			c.JSON(500, gin.H{
-				"error": "Error updating chore assignees",
-			})
-			return
-		}
-	}
-	if len(choreAssigneesToDelete) > 0 {
-		err = h.choreRepo.DeleteChoreAssignees(c, choreAssigneesToDelete)
-		if err != nil {
-			c.JSON(500, gin.H{
-				"error": "Error deleting chore assignees",
-			})
-			return
-		}
-	}
 	if dueDatesDiffer(oldChore.NextDueDate, updatedChore.NextDueDate) {
 		historyEntry := &chModel.ChoreHistory{
 			ChoreID:     oldChore.ID,

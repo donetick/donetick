@@ -913,7 +913,8 @@ func (h *Handler) EditChore(c *gin.Context) {
 		}
 	}
 
-	if oldChore.NextDueDate != updatedChore.NextDueDate {
+
+	if dueDatesDiffer(oldChore.NextDueDate, updatedChore.NextDueDate) {
 		historyEntry := &chModel.ChoreHistory{
 			ChoreID:     oldChore.ID,
 			PerformedAt: &now,
@@ -961,7 +962,6 @@ func setEditChoreDefaults(choreReq *ChoreReq, oldChore *chModel.Chore) {
 	if choreReq.Frequency == nil {
 		choreReq.Frequency = &oldChore.Frequency
 	}
-
 	if choreReq.Priority == nil {
 		choreReq.Priority = &oldChore.Priority
 	}
@@ -973,6 +973,13 @@ func setEditChoreDefaults(choreReq *ChoreReq, oldChore *chModel.Chore) {
 	if choreReq.IsPrivate == nil {
 		choreReq.IsPrivate = &oldChore.IsPrivate
 	}
+}
+
+func dueDatesDiffer(oldDueDate, newDueDate *time.Time) bool {
+	if oldDueDate == nil || newDueDate == nil {
+		return oldDueDate != newDueDate
+	}
+	return !oldDueDate.Equal(*newDueDate)
 }
 
 func (h *Handler) deleteChoreFiles(ctx *gin.Context, choreID int) {

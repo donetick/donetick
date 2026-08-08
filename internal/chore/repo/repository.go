@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 	"time"
 
 	config "donetick.com/core/config"
@@ -63,6 +64,20 @@ func (r *ChoreRepository) nextSyncVersion(ctx context.Context, circleID int) (in
 	return r.nextSyncVersionWithDB(ctx, r.db, circleID)
 }
 
+// nextSyncVersionRangeWithDB atomically reserves count contiguous sync versions
+// and returns the first (lowest) version in the range.
+func (r *ChoreRepository) nextSyncVersionRangeWithDB(ctx context.Context, db *gorm.DB, circleID int, count int) (int64, error) {
+	var endVersion int64
+	err := db.WithContext(ctx).Raw(`
+		INSERT INTO sync_cursors (circle_id, entity_type, max_version)
+		VALUES (?, ?, ?)
+		ON CONFLICT (circle_id, entity_type) DO UPDATE SET max_version = sync_cursors.max_version + ?
+		RETURNING max_version`,
+		circleID, syncModel.EntityTypeChore, count, count,
+	).Scan(&endVersion).Error
+	return endVersion - int64(count) + 1, err
+}
+
 func (r *ChoreRepository) insertTombstone(ctx context.Context, tx *gorm.DB, circleID int, entityID int) (int64, error) {
 	// Use tx (not r.db) so the version increment and tombstone insert are atomic.
 	version, err := r.nextSyncVersionWithDB(ctx, tx, circleID)
@@ -88,6 +103,107 @@ func (r *ChoreRepository) UpsertChore(c context.Context, chore *chModel.Chore) e
 	chore.SyncVersion = nextVersion
 	return r.db.WithContext(c).Model(&chore).Save(chore).Error
 }
+
+func choreViewerSet(chore *chModel.Chore, assigneeIDs []int, circleUserIDs []int) map[int]struct{} {
+	viewers := make(map[int]struct{})
+	if !chore.IsPrivate {
+		for _, userID := range circleUserIDs {
+			viewers[userID] = struct{}{}
+		}
+		return viewers
+	}
+
+	viewers[chore.CreatedBy] = struct{}{}
+	for _, userID := range assigneeIDs {
+		viewers[userID] = struct{}{}
+	}
+	return viewers
+}
+
+// UpdateChoreVisibility atomically updates a chore and its complete assignee set,
+// recording a user-scoped tombstone for each circle member who loses visibility.
+func (r *ChoreRepository) UpdateChoreVisibility(ctx context.Context, chore *chModel.Chore, assigneeIDs []int) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		locked := tx.WithContext(ctx)
+		if r.dbType == "postgres" {
+			locked = locked.Clauses(clause.Locking{Strength: "UPDATE"})
+		}
+
+		var previousChore chModel.Chore
+		if err := locked.Where("id = ? AND circle_id = ?", chore.ID, chore.CircleID).First(&previousChore).Error; err != nil {
+			return err
+		}
+
+		var previousAssignees []chModel.ChoreAssignees
+		if err := locked.Where("chore_id = ?", chore.ID).Find(&previousAssignees).Error; err != nil {
+			return err
+		}
+		previousAssigneeIDs := make([]int, 0, len(previousAssignees))
+		for _, assignee := range previousAssignees {
+			previousAssigneeIDs = append(previousAssigneeIDs, assignee.UserID)
+		}
+
+		var circleUserIDs []int
+		if err := tx.WithContext(ctx).Table("user_circles").Where("circle_id = ? AND is_active = ?", chore.CircleID, true).Pluck("user_id", &circleUserIDs).Error; err != nil {
+			return err
+		}
+
+		previousViewers := choreViewerSet(&previousChore, previousAssigneeIDs, circleUserIDs)
+		newViewers := choreViewerSet(chore, assigneeIDs, circleUserIDs)
+		revokedUserIDs := make([]int, 0)
+		for userID := range previousViewers {
+			if _, stillVisible := newViewers[userID]; !stillVisible {
+				revokedUserIDs = append(revokedUserIDs, userID)
+			}
+		}
+		sort.Ints(revokedUserIDs)
+
+		firstVersion, err := r.nextSyncVersionRangeWithDB(ctx, tx, chore.CircleID, 1+len(revokedUserIDs))
+		if err != nil {
+			return err
+		}
+		chore.SyncVersion = firstVersion
+		if err := tx.WithContext(ctx).Save(chore).Error; err != nil {
+			return err
+		}
+
+		if err := tx.WithContext(ctx).Where("chore_id = ?", chore.ID).Delete(&chModel.ChoreAssignees{}).Error; err != nil {
+			return err
+		}
+		assignees := make([]chModel.ChoreAssignees, 0, len(assigneeIDs))
+		seenAssignees := make(map[int]struct{}, len(assigneeIDs))
+		for _, userID := range assigneeIDs {
+			if _, exists := seenAssignees[userID]; exists {
+				continue
+			}
+			seenAssignees[userID] = struct{}{}
+			assignees = append(assignees, chModel.ChoreAssignees{ChoreID: chore.ID, UserID: userID})
+		}
+		if len(assignees) > 0 {
+			if err := tx.WithContext(ctx).Create(&assignees).Error; err != nil {
+				return err
+			}
+		}
+
+		tombstones := make([]syncModel.Tombstone, 0, len(revokedUserIDs))
+		for offset, userID := range revokedUserIDs {
+			tombstones = append(tombstones, syncModel.Tombstone{
+				CircleID:    chore.CircleID,
+				EntityType:  syncModel.EntityTypeChore,
+				EntityID:    chore.ID,
+				UserID:      &userID,
+				SyncVersion: firstVersion + int64(offset) + 1,
+			})
+		}
+		if len(tombstones) > 0 {
+			if err := tx.WithContext(ctx).Create(&tombstones).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
 func (r *ChoreRepository) UpdateChorePriority(c context.Context, userID int, choreID int, priority int, circleID int) error {
 	nextVersion, err := r.nextSyncVersion(c, circleID)
 	if err != nil {
@@ -116,18 +232,8 @@ func (r *ChoreRepository) UpdateChoreFields(ctx context.Context, choreID int, fi
 	return r.db.WithContext(ctx).Model(&chModel.Chore{}).Where("id = ?", choreID).Updates(fields).Error
 }
 
-// nextSyncVersionRange atomically reserves a contiguous block of `count` sync
-// versions for a circle and returns the first (lowest) version in the range.
 func (r *ChoreRepository) nextSyncVersionRange(ctx context.Context, circleID int, count int) (int64, error) {
-	var endVersion int64
-	err := r.db.WithContext(ctx).Raw(`
-		INSERT INTO sync_cursors (circle_id, entity_type, max_version)
-		VALUES (?, ?, ?)
-		ON CONFLICT (circle_id, entity_type) DO UPDATE SET max_version = sync_cursors.max_version + ?
-		RETURNING max_version`,
-		circleID, syncModel.EntityTypeChore, count, count,
-	).Scan(&endVersion).Error
-	return endVersion - int64(count) + 1, err
+	return r.nextSyncVersionRangeWithDB(ctx, r.db, circleID, count)
 }
 
 func (r *ChoreRepository) UpdateChores(c context.Context, chores []*chModel.Chore) error {
@@ -233,12 +339,17 @@ func (r *ChoreRepository) GetArchivedChores(c context.Context, circleID int, use
 }
 
 func (r *ChoreRepository) DeleteChore(c context.Context, id int) (int64, error) {
-	var chore chModel.Chore
-	if err := r.db.WithContext(c).Select("id, circle_id").First(&chore, id).Error; err != nil {
-		return 0, err
-	}
 	var tombstoneSyncVersion int64
 	err := r.db.WithContext(c).Transaction(func(tx *gorm.DB) error {
+		query := tx.WithContext(c)
+		if r.dbType == "postgres" {
+			query = query.Clauses(clause.Locking{Strength: "UPDATE"})
+		}
+		var chore chModel.Chore
+		if err := query.Select("id, circle_id").First(&chore, id).Error; err != nil {
+			return err
+		}
+
 		// Delete all chore assignees
 		if err := tx.Where("chore_id = ?", id).Delete(&chModel.ChoreAssignees{}).Error; err != nil {
 			return err
@@ -1074,11 +1185,11 @@ func (r *ChoreRepository) DeleteTimeSession(c context.Context, sessionID int, ch
 
 }
 
-// GetTombstonesSince returns tombstones for a given circle and entity type with sync_version > since.
-func (r *ChoreRepository) GetTombstonesSince(c context.Context, circleID int, entityType syncModel.EntityType, since int64, limit int) ([]*syncModel.Tombstone, error) {
+// GetTombstonesSince returns global tombstones and tombstones scoped to userID.
+func (r *ChoreRepository) GetTombstonesSince(c context.Context, circleID int, entityType syncModel.EntityType, userID int, since int64, limit int) ([]*syncModel.Tombstone, error) {
 	var tombstones []*syncModel.Tombstone
 	query := r.db.WithContext(c).
-		Where("circle_id = ? AND entity_type = ? AND sync_version > ?", circleID, entityType, since).
+		Where("circle_id = ? AND entity_type = ? AND sync_version > ? AND (user_id IS NULL OR user_id = ?)", circleID, entityType, since, userID).
 		Order("sync_version asc")
 	if limit > 0 {
 		query = query.Limit(limit)

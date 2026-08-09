@@ -1143,31 +1143,6 @@ func (r *ChoreRepository) GetUserLastChoreAction(c context.Context, choreID int,
 	return &history, nil
 }
 
-// GetChoreStateBefore gets the chore state before a specific history entry
-func (r *ChoreRepository) GetChoreStateBefore(c context.Context, choreID int, beforeHistoryID int) (*chModel.ChoreHistory, error) {
-	var targetHistory chModel.ChoreHistory
-	if err := r.db.WithContext(c).First(&targetHistory, beforeHistoryID).Error; err != nil {
-		return nil, err
-	}
-
-	var previousHistory chModel.ChoreHistory
-	err := r.db.WithContext(c).
-		Where("chore_id = ? AND id < ? AND status IN (?)",
-			choreID,
-			beforeHistoryID,
-			[]chModel.ChoreHistoryStatus{
-				chModel.ChoreHistoryStatusCompleted,
-				chModel.ChoreHistoryStatusSkipped,
-			}).
-		Order("id desc").
-		First(&previousHistory).Error
-
-	if err != nil {
-		return nil, err // No previous history found
-	}
-	return &previousHistory, nil
-}
-
 // UndoChoreAction undoes a chore action by restoring previous state and removing the history entry
 func (r *ChoreRepository) UndoChoreAction(c context.Context, choreID int, historyID int, circleID int, previousAssignedTo *int, previousDueDate *time.Time) error {
 	nextVersion, err := r.nextSyncVersion(c, circleID)

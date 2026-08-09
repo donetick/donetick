@@ -90,7 +90,7 @@ func (r *ProjectRepository) UpdateProject(ctx context.Context, project *pModel.P
 			return nil
 		}
 
-		if err := r.choreRepo.SetProjectChoresPrivacy(ctx, tx, circleID, project.ID, *isPrivate); err != nil {
+		if err := r.choreRepo.SetProjectChoresPrivacy(ctx, tx, circleID, project.ID, existingProject.CreatedBy, *isPrivate); err != nil {
 			log.Error("Error propagating project privacy to chores", "error", err, "projectID", project.ID)
 			return err
 		}

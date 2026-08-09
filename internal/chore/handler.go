@@ -519,13 +519,16 @@ func (h *Handler) CreateChore(c *gin.Context) {
 		dueDate = &utcDate
 	}
 
-	warnings := setCreateChoreDefaults(&choreReq)
+	// Before the defaults, so a chore inheriting privacy from its project isn't warned
+	// about defaulting to public.
 	if err := h.inheritProjectPrivacy(c, &choreReq, currentUser.ID, currentUser.CircleID); err != nil {
 		c.JSON(400, gin.H{
 			"error": err.Error(),
 		})
 		return
 	}
+
+	warnings := setCreateChoreDefaults(&choreReq)
 	if !choreReq.Notification && choreReq.NotificationMetadata != nil {
 		warnings = append(warnings, "notificationMetadata provided while notification is false; ignoring metadata")
 		choreReq.NotificationMetadata = nil
@@ -734,6 +737,14 @@ func (h *Handler) EditChore(c *gin.Context) {
 		return
 	}
 
+	// Before the assignee diff below, so a private project can narrow the list down.
+	if err := h.inheritProjectPrivacy(c, &choreReq, currentUser.ID, currentUser.CircleID); err != nil {
+		c.JSON(400, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
+
 	var choreAssigneesToAdd []*chModel.ChoreAssignees
 	var choreAssigneesToDelete []*chModel.ChoreAssignees
 
@@ -876,12 +887,6 @@ func (h *Handler) EditChore(c *gin.Context) {
 	}
 
 	setEditChoreDefaults(&choreReq, oldChore)
-	if err := h.inheritProjectPrivacy(c, &choreReq, currentUser.ID, currentUser.CircleID); err != nil {
-		c.JSON(400, gin.H{
-			"error": err.Error(),
-		})
-		return
-	}
 
 	updatedChore := &chModel.Chore{ // TODO: Assignees are missing
 		ID:                     choreReq.ID,
@@ -1049,6 +1054,11 @@ func setEditChoreDefaults(choreReq *ChoreReq, oldChore *chModel.Chore) {
 // to the user, and forces the chore private when that project is private: a chore
 // inherits the privacy of its project, so the project flag always wins. Chores in a
 // public project (or in no project at all) keep their own flag.
+//
+// It also keeps the assignees of such a chore down to the project owner, the only
+// user who can see it: assigning it to anyone else is rejected, and "Anyone" (an
+// empty assignee list) resolves to the owner instead of the whole circle, so the
+// chore never rotates or notifies its way to someone who can't see it.
 func (h *Handler) inheritProjectPrivacy(c *gin.Context, choreReq *ChoreReq, userID int, circleID int) error {
 	if choreReq.ProjectID == nil {
 		return nil
@@ -1060,9 +1070,29 @@ func (h *Handler) inheritProjectPrivacy(c *gin.Context, choreReq *ChoreReq, user
 		return errors.New("project not found")
 	}
 
-	if project.IsPrivate {
-		isPrivate := true
-		choreReq.IsPrivate = &isPrivate
+	if !project.IsPrivate {
+		return nil
+	}
+
+	isPrivate := true
+	choreReq.IsPrivate = &isPrivate
+
+	for _, assignee := range choreReq.Assignees {
+		if assignee.UserID != project.CreatedBy {
+			return errors.New("chores in a private project can only be assigned to its owner")
+		}
+	}
+	if choreReq.AssignedTo != nil && *choreReq.AssignedTo != project.CreatedBy {
+		return errors.New("chores in a private project can only be assigned to its owner")
+	}
+
+	// "Anyone" would otherwise spread over the whole circle when rotating or notifying.
+	if len(choreReq.Assignees) == 0 && choreReq.AssignStrategy != chModel.AssignmentStrategyNoAssignee {
+		choreReq.Assignees = []chModel.ChoreAssignees{{ChoreID: choreReq.ID, UserID: project.CreatedBy}}
+		if choreReq.AssignedTo == nil {
+			owner := project.CreatedBy
+			choreReq.AssignedTo = &owner
+		}
 	}
 	return nil
 }

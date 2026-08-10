@@ -4362,23 +4362,13 @@ func (h *Handler) UndoChore(c *gin.Context) {
 
 	switch lastAction.Status {
 	case chModel.ChoreHistoryStatusCompleted, chModel.ChoreHistoryStatusSkipped:
-		// For completed/skipped, restore to the state before this completion
-		// Get the previous completion/skip to determine what the assignee and due date should be
-		previousHistory, err := h.choreRepo.GetChoreStateBefore(c, choreID, lastAction.ID)
-		if err != nil {
-			// No previous history found - restore to original state (assigned to original assignee)
-			if len(chore.Assignees) > 0 {
-				// Use the assignee from the action being undone as the original assignee
-				previousAssignedTo = lastAction.AssignedTo
-			}
-			previousDueDate = lastAction.DueDate
-			if chore.FrequencyType == chModel.FrequencyTypeOnce || chore.FrequencyType == chModel.FrequencyTypeNoRepeat || chore.FrequencyType == chModel.FrequencyTypeTrigger {
-				reactivateOneTimeChore = true
-			}
-		} else {
-			// Use the state from before this action
-			previousAssignedTo = previousHistory.AssignedTo
-			previousDueDate = previousHistory.DueDate
+		// lastAction.AssignedTo/DueDate are snapshots of the chore's state taken
+		// right before this action was applied (see CompleteChore/SkipChore), so
+		// they are exactly the state to restore on undo.
+		previousAssignedTo = lastAction.AssignedTo
+		previousDueDate = lastAction.DueDate
+		if chore.FrequencyType == chModel.FrequencyTypeOnce || chore.FrequencyType == chModel.FrequencyTypeNoRepeat || chore.FrequencyType == chModel.FrequencyTypeTrigger {
+			reactivateOneTimeChore = true
 		}
 
 	case chModel.ChoreHistoryStatusPendingApproval:

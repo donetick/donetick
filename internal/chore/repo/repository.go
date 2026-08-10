@@ -124,18 +124,21 @@ func choreViewerSet(chore *chModel.Chore, assigneeIDs []int, circleUserIDs []int
 // recording a user-scoped tombstone for each circle member who loses visibility.
 func (r *ChoreRepository) UpdateChoreVisibility(ctx context.Context, chore *chModel.Chore, assigneeIDs []int) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		locked := tx.WithContext(ctx)
-		if r.dbType == "postgres" {
-			locked = locked.Clauses(clause.Locking{Strength: "UPDATE"})
+		lockedQuery := func() *gorm.DB {
+			q := tx.WithContext(ctx)
+			if r.dbType == "postgres" {
+				q = q.Clauses(clause.Locking{Strength: "UPDATE"})
+			}
+			return q
 		}
 
 		var previousChore chModel.Chore
-		if err := locked.Where("id = ? AND circle_id = ?", chore.ID, chore.CircleID).First(&previousChore).Error; err != nil {
+		if err := lockedQuery().Where("id = ? AND circle_id = ?", chore.ID, chore.CircleID).First(&previousChore).Error; err != nil {
 			return err
 		}
 
 		var previousAssignees []chModel.ChoreAssignees
-		if err := locked.Where("chore_id = ?", chore.ID).Find(&previousAssignees).Error; err != nil {
+		if err := lockedQuery().Where("chore_id = ?", chore.ID).Find(&previousAssignees).Error; err != nil {
 			return err
 		}
 		previousAssigneeIDs := make([]int, 0, len(previousAssignees))

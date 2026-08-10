@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
 	"donetick.com/core/config"
 	chModel "donetick.com/core/internal/chore/model"
@@ -14,6 +15,8 @@ import (
 	uModel "donetick.com/core/internal/user/model"
 	"donetick.com/core/logging"
 )
+
+var httpClient = &http.Client{Timeout: 30 * time.Second}
 
 type DiscordNotifier struct {
 }
@@ -63,7 +66,7 @@ func (dn *DiscordNotifier) sendMessage(c context.Context, webhookURL string, mes
 		return err
 	}
 
-	resp, err := http.Post(webhookURL, "application/json", bytes.NewBuffer(jsonData))
+	resp, err := httpClient.Post(webhookURL, "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
 		log.Error("Error sending message to Discord:", err)
 		return err

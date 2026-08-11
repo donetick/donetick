@@ -989,12 +989,12 @@ func (r *ChoreRepository) GetChoreDetailByID(c context.Context, choreID int, cir
 	return &choreDetail, nil
 }
 
-func (r *ChoreRepository) ArchiveChore(c context.Context, choreID int, userID int, circleID int) error {
+func (r *ChoreRepository) ArchiveChore(c context.Context, choreID int, circleID int) error {
 	nextVersion, err := r.nextSyncVersion(c, circleID)
 	if err != nil {
 		return err
 	}
-	result := r.db.WithContext(c).Model(&chModel.Chore{}).Where("id = ? AND created_by = ? AND circle_id = ?", choreID, userID, circleID).Updates(map[string]interface{}{
+	result := r.db.WithContext(c).Model(&chModel.Chore{}).Where("id = ? AND circle_id = ?", choreID, circleID).Updates(map[string]interface{}{
 		"is_active":    false,
 		"sync_version": nextVersion,
 	})
@@ -1004,12 +1004,12 @@ func (r *ChoreRepository) ArchiveChore(c context.Context, choreID int, userID in
 	return result.Error
 }
 
-func (r *ChoreRepository) UnarchiveChore(c context.Context, choreID int, userID int, circleID int) error {
+func (r *ChoreRepository) UnarchiveChore(c context.Context, choreID int, circleID int) error {
 	nextVersion, err := r.nextSyncVersion(c, circleID)
 	if err != nil {
 		return err
 	}
-	result := r.db.WithContext(c).Model(&chModel.Chore{}).Where("id = ? AND created_by = ? AND circle_id = ?", choreID, userID, circleID).Updates(map[string]interface{}{
+	result := r.db.WithContext(c).Model(&chModel.Chore{}).Where("id = ? AND circle_id = ?", choreID, circleID).Updates(map[string]interface{}{
 		"is_active":    true,
 		"sync_version": nextVersion,
 	})

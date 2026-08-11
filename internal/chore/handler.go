@@ -1102,10 +1102,22 @@ func (h *Handler) DeleteChore(c *gin.Context) {
 		return
 	}
 	if chore.CreatedBy != currentUser.ID {
-		c.JSON(403, gin.H{
-			"error": "You are not allowed to delete this chore",
-		})
-		return
+		// Allow circle admins and managers to delete chores created by other
+		// members. See issue #760.
+		circleUsers, err := h.circleRepo.GetCircleUsers(c, currentUser.CircleID)
+		if err != nil {
+			logger.Error("Failed to retrieve circle users", "error", err)
+			c.JSON(500, gin.H{
+				"error": "Failed to retrieve circle users",
+			})
+			return
+		}
+		if !chore.CanDelete(currentUser.ID, circleUsers) {
+			c.JSON(403, gin.H{
+				"error": "You are not allowed to delete this chore",
+			})
+			return
+		}
 	}
 
 	// Collect file paths before deletion; the DeleteChore transaction removes the
@@ -2015,7 +2027,32 @@ func (h *Handler) ArchiveChore(c *gin.Context) {
 		return
 	}
 
-	err = h.choreRepo.ArchiveChore(c, id, currentUser.ID, currentUser.CircleID)
+	// Verify the user has permission to archive this chore (creator or
+	// circle admin/manager). See issue #760.
+	chore, err := h.choreRepo.GetChore(c, id, currentUser.ID, currentUser.CircleID)
+	if err != nil {
+		logger.Error("Failed to retrieve chore", "error", err)
+		c.JSON(500, gin.H{
+			"error": "Failed to retrieve chore",
+		})
+		return
+	}
+	circleUsers, err := h.circleRepo.GetCircleUsers(c, currentUser.CircleID)
+	if err != nil {
+		logger.Error("Failed to retrieve circle users", "error", err)
+		c.JSON(500, gin.H{
+			"error": "Failed to retrieve circle users",
+		})
+		return
+	}
+	if !chore.CanArchive(currentUser.ID, circleUsers) {
+		c.JSON(403, gin.H{
+			"error": "You are not allowed to archive this chore",
+		})
+		return
+	}
+
+	err = h.choreRepo.ArchiveChore(c, id, currentUser.CircleID)
 
 	if err != nil {
 		c.JSON(500, gin.H{
@@ -2079,7 +2116,32 @@ func (h *Handler) UnarchiveChore(c *gin.Context) {
 		})
 		return
 	}
-	err = h.choreRepo.UnarchiveChore(c, id, currentUser.ID, currentUser.CircleID)
+	// Verify the user has permission to unarchive this chore (creator or
+	// circle admin/manager). See issue #760.
+	chore, err := h.choreRepo.GetChore(c, id, currentUser.ID, currentUser.CircleID)
+	if err != nil {
+		logger.Error("Failed to retrieve chore", "error", err)
+		c.JSON(500, gin.H{
+			"error": "Failed to retrieve chore",
+		})
+		return
+	}
+	circleUsers, err := h.circleRepo.GetCircleUsers(c, currentUser.CircleID)
+	if err != nil {
+		logger.Error("Failed to retrieve circle users", "error", err)
+		c.JSON(500, gin.H{
+			"error": "Failed to retrieve circle users",
+		})
+		return
+	}
+	if !chore.CanArchive(currentUser.ID, circleUsers) {
+		c.JSON(403, gin.H{
+			"error": "You are not allowed to unarchive this chore",
+		})
+		return
+	}
+
+	err = h.choreRepo.UnarchiveChore(c, id, currentUser.CircleID)
 
 	if err != nil {
 		c.JSON(500, gin.H{

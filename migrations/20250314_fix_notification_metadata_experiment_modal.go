@@ -28,7 +28,7 @@ func (m MigrateFixNotificationMetadataExperimentModal20241212) Up(ctx context.Co
 	// Start a transaction
 	return db.Transaction(func(tx *gorm.DB) error {
 		if !tx.Migrator().HasColumn("chores", "notification_meta") {
-    	return nil
+			return nil
 		}
 
 		// Update all chore where notification metadata is a null stirng 'null' to empty json {}:

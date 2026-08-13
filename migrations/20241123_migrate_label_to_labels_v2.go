@@ -48,6 +48,10 @@ func (m MigrateLabels20241123) Up(ctx context.Context, db *gorm.DB) error {
 
 	// Start a transaction
 	return db.Transaction(func(tx *gorm.DB) error {
+		if !tx.Migrator().HasColumn("chores", "labels") {
+			return nil
+		}
+
 		// Get all chores with labels
 		var choreRecords []Chore
 		if err := tx.Table("chores").Select("id, labels, circle_id, created_by").Find(&choreRecords).Error; err != nil {

@@ -1031,18 +1031,32 @@ func (h *Handler) CreateLongLivedToken(c *gin.Context) {
 		return
 	}
 
-	timestamp := time.Now().UTC().Unix()
-	hashInput := fmt.Sprintf("%s:%d:%x", currentUser.Username, timestamp, randomBytes)
-	hash := sha256.Sum256([]byte(hashInput))
-	token := hex.EncodeToString(hash[:])
+	tokenBody := hex.EncodeToString(randomBytes)
 
-	tokenModel, err := h.userRepo.StoreAPIToken(c, currentUser.ID, req.Name, token)
+	tokenModel, err := h.userRepo.StoreAPIToken(c, currentUser.ID, req.Name, tokenBody, uModel.APITokenPrefix)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to store the token"})
 		return
 	}
 
-	response := gin.H{"res": tokenModel}
+	type createTokenResponse struct {
+		ID        int       `json:"id"`
+		Name      string    `json:"name"`
+		UserID    int       `json:"userId"`
+		Token     string    `json:"token"`
+		Prefix    *string   `json:"prefix"`
+		CreatedAt time.Time `json:"createdAt"`
+	}
+	resModel := createTokenResponse{
+		ID:        tokenModel.ID,
+		Name:      tokenModel.Name,
+		UserID:    tokenModel.UserID,
+		Token:     uModel.BuildFullToken(uModel.APITokenPrefix, tokenBody),
+		Prefix:    tokenModel.Prefix,
+		CreatedAt: tokenModel.CreatedAt,
+	}
+
+	response := gin.H{"res": resModel}
 
 	// If user has MFA enabled but didn't provide a code, suggest using MFA for enhanced security
 	if currentUser.MFAEnabled && req.MFACode == "" {
@@ -1051,6 +1065,8 @@ func (h *Handler) CreateLongLivedToken(c *gin.Context) {
 
 	c.JSON(http.StatusOK, response)
 }
+
+const tokenMask = "********" // Used for masking the token to display it after creation (8 asterisks)
 
 func (h *Handler) GetAllUserToken(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
@@ -1065,7 +1081,28 @@ func (h *Handler) GetAllUserToken(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"res": tokens})
+	type listTokenResponse struct {
+		ID          int       `json:"id"`
+		Name        string    `json:"name"`
+		UserID      int       `json:"userId"`
+		MaskedToken *string   `json:"maskedToken"`
+		CreatedAt   time.Time `json:"createdAt"`
+	}
+	resModels := make([]listTokenResponse, len(tokens))
+	for i := range tokens {
+		resModels[i] = listTokenResponse{
+			ID:        tokens[i].ID,
+			Name:      tokens[i].Name,
+			UserID:    tokens[i].UserID,
+			CreatedAt: tokens[i].CreatedAt,
+		}
+		if tokens[i].Prefix != nil && tokens[i].Suffix != nil {
+			maskedToken := fmt.Sprintf("%s%s%s", *tokens[i].Prefix, tokenMask, *tokens[i].Suffix)
+			resModels[i].MaskedToken = &maskedToken
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{"res": resModels})
 
 }
 

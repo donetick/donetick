@@ -208,6 +208,27 @@ type ChoreLiteReq struct { // TODO: Remove this when api is removed.
 	CreatedBy   *int    `json:"createdBy,omitempty"`
 }
 
+// CanDelete returns true if the user is the chore creator or an admin/manager
+// in the chore's circle. This allows circle administrators to manage chores
+// created by other members who may become unavailable.
+func (c *Chore) CanDelete(userID int, circleUsers []*cModel.UserCircleDetail) bool {
+	if userID == c.CreatedBy {
+		return true
+	}
+	for _, cu := range circleUsers {
+		if cu.UserID == userID && (cu.Role == cModel.UserRoleAdmin || cu.Role == cModel.UserRoleManager) {
+			return true
+		}
+	}
+	return false
+}
+
+// CanArchive returns true if the user is the chore creator or an admin/manager
+// in the chore's circle. Uses the same permission policy as CanDelete.
+func (c *Chore) CanArchive(userID int, circleUsers []*cModel.UserCircleDetail) bool {
+	return c.CanDelete(userID, circleUsers)
+}
+
 func (c *Chore) CanDeleteHistory(
 	userID int,
 	circleUsers []*cModel.UserCircleDetail,

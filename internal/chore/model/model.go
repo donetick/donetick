@@ -206,6 +206,7 @@ type ChoreLiteReq struct { // TODO: Remove this when api is removed.
 	ID          int     `json:"id"`
 	DueDate     string  `json:"dueDate"`
 	CreatedBy   *int    `json:"createdBy,omitempty"`
+	ProjectID   *int    `json:"projectId,omitempty"`
 }
 
 func (c *Chore) CanDeleteHistory(

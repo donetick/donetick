@@ -80,14 +80,18 @@ func (r *UserRepository) CreateUser(c context.Context, user *uModel.User) (*uMod
 }
 func (r *UserRepository) GetUserByUsername(c context.Context, username string) (*uModel.UserDetails, error) {
 	var user *uModel.UserDetails
+	// Usernames are stored canonicalised (see User.BeforeSave), so we normalise
+	// the lookup input the same way and keep a plain equality match that uses the
+	// unique index — this is what makes login case-insensitive.
+	username = uModel.NormalizeUsername(username)
 	if r.isDonetickDotCom {
 		now := time.Now().UTC()
-		if err := r.db.WithContext(c).Preload("UserNotificationTargets").Table("users u").Select("u.*, s.status as subscription, s.expires_at as expiration, c.webhook_url as webhook_url").Joins("left join subscriptions s on s.circle_id = u.circle_id AND s.status = 'active' AND (s.expires_at IS NULL OR s.expires_at > ?)", now).Joins("left join circles c on c.id = u.circle_id").Where("username = ?", username).First(&user).Error; err != nil {
+		if err := r.db.WithContext(c).Preload("UserNotificationTargets").Table("users u").Select("u.*, s.status as subscription, s.expires_at as expiration, c.webhook_url as webhook_url").Joins("left join subscriptions s on s.circle_id = u.circle_id AND s.status = 'active' AND (s.expires_at IS NULL OR s.expires_at > ?)", now).Joins("left join circles c on c.id = u.circle_id").Where("u.username = ?", username).First(&user).Error; err != nil {
 			return nil, err
 		}
 	} else {
-		// For self-hosted, first get the user without subscription/expiration fields
-		if err := r.db.WithContext(c).Preload("UserNotificationTargets").Table("users u").Select("u.*, c.webhook_url as webhook_url").Joins("left join circles c on c.id = u.circle_id").Where("username = ?", username).First(&user).Error; err != nil {
+		// For self-hosted, first get the user without subscription/expiration fields.
+		if err := r.db.WithContext(c).Preload("UserNotificationTargets").Table("users u").Select("u.*, c.webhook_url as webhook_url").Joins("left join circles c on c.id = u.circle_id").Where("u.username = ?", username).First(&user).Error; err != nil {
 			return nil, err
 		}
 		// Then manually set the subscription status and expiration for self-hosted users
@@ -171,13 +175,20 @@ func (r *UserRepository) UpdateUserCircle(c context.Context, userID, circleID in
 
 func (r *UserRepository) FindByEmail(c context.Context, email string) (*uModel.UserDetails, error) {
 	var user *uModel.UserDetails
-	if err := r.db.WithContext(c).Table("users u").Select("u.*, c.webhook_url as webhook_url").Joins("left join circles c on c.id = u.circle_id").Where("email = ?", email).First(&user).Error; err != nil {
+	// Emails are stored canonicalised (see User.BeforeSave), so an IdP returning
+	// a different-cased address still resolves to the existing account instead of
+	// provisioning a duplicate. Normalise the input and match by equality.
+	email = uModel.NormalizeEmail(email)
+	if err := r.db.WithContext(c).Table("users u").Select("u.*, c.webhook_url as webhook_url").Joins("left join circles c on c.id = u.circle_id").Where("u.email = ?", email).First(&user).Error; err != nil {
 		return nil, err
 	}
 	return user, nil
 }
 
 func (r *UserRepository) SetPasswordResetToken(c context.Context, email, token string) error {
+	// Store the canonical email so the token matches the (canonical) user row
+	// when it is later redeemed, regardless of the case used at either step.
+	email = uModel.NormalizeEmail(email)
 	// confirm user exists with email:
 	user, err := r.FindByEmail(c, email)
 	if err != nil {
@@ -198,6 +209,8 @@ func (r *UserRepository) SetPasswordResetToken(c context.Context, email, token s
 func (r *UserRepository) UpdatePasswordByToken(ctx context.Context, email string, token string, password string) error {
 	logger := logging.FromContext(ctx)
 
+	// Match against the canonical email that was stored when the token was issued.
+	email = uModel.NormalizeEmail(email)
 	logger.Debugw("account.db.UpdatePasswordByToken", "email", email)
 	upr := &uModel.UserPasswordReset{
 		Email: email,

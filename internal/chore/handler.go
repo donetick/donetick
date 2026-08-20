@@ -4486,6 +4486,7 @@ func Routes(router *gin.Engine, h *Handler, multiAuthMiddleware *auth.MultiAuthM
 		choresRoutes.PUT("/", h.EditChore)
 		choresRoutes.PUT("/:id/priority", h.UpdatePriority)
 		choresRoutes.POST("/", h.CreateChore)
+		choresRoutes.POST("/import/betidy", h.ImportBeTidy)
 		choresRoutes.GET("/:id", h.GetChore)
 		choresRoutes.PUT("/:id/subtask", h.UpdateSubtaskCompletedAt)
 		choresRoutes.GET("/:id/details", h.GetChoreDetail)

@@ -12,6 +12,7 @@ import (
 	"go.uber.org/zap/zapcore"
 
 	"github.com/mcuadros/go-defaults"
+	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 )
 
@@ -332,43 +333,70 @@ func LoadConfig() *Config {
 	// https://github.com/spf13/viper/issues/1895#issuecomment-3316091229
 	viper.SetOptions(viper.ExperimentalBindStruct())
 
-	// set the config name based on the environment:
-	switch env := os.Getenv("DT_ENV"); env {
-	case "local":
-		viper.SetConfigName("local")
-	case "prod":
-		viper.SetConfigName("prod")
-	case "selfhosted":
-		viper.SetConfigName("selfhosted")
-	case "r2":
-		viper.SetConfigName("r2")
-	default:
-		viper.SetConfigName("local")
-	}
-	// get logger and log the current environment:
-	fmt.Printf("--ConfigLoad config for environment: %s\n", os.Getenv("DT_ENV"))
 	viper.SetEnvPrefix("DT")
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 
-	viper.AddConfigPath("./config")
-	viper.SetConfigType("yaml")
+	if pflag.CommandLine.Lookup("config") == nil {
+		pflag.StringP("config", "c", "", "path to config file")
+	}
+	if !pflag.Parsed() {
+		pflag.Parse()
+	}
+	_ = viper.BindPFlag("config", pflag.CommandLine.Lookup("config"))
 
-	err := viper.ReadInConfig()
-	// print a useful error:
-	if err != nil {
-		var configNotFoundError viper.ConfigFileNotFoundError
-		if errors.As(err, &configNotFoundError) {
-			fmt.Printf("Config file not found, using defaults and environment variables")
-		} else {
-			fmt.Printf("Error reading config file: %v", err)
-			panic(err)
+	configPath := viper.GetString("config")
+
+	configLoaded := false
+	if configPath != "" {
+		if _, err := os.Stat(configPath); err == nil {
+			viper.SetConfigFile(configPath)
+			err = viper.ReadInConfig()
+			if err != nil {
+				fmt.Printf("Error reading config file: %v\n", err)
+				panic(err)
+			}
+			configLoaded = true
+			fmt.Printf("--ConfigLoad config from file: %s\n", configPath)
+		}
+	}
+
+	if !configLoaded {
+		// set the config name based on the environment:
+		switch env := os.Getenv("DT_ENV"); env {
+		case "local":
+			viper.SetConfigName("local")
+		case "prod":
+			viper.SetConfigName("prod")
+		case "selfhosted":
+			viper.SetConfigName("selfhosted")
+		case "r2":
+			viper.SetConfigName("r2")
+		default:
+			viper.SetConfigName("local")
+		}
+		// get logger and log the current environment:
+		fmt.Printf("--ConfigLoad config for environment: %s\n", os.Getenv("DT_ENV"))
+
+		viper.AddConfigPath("./config")
+		viper.SetConfigType("yaml")
+
+		err := viper.ReadInConfig()
+		// print a useful error:
+		if err != nil {
+			var configNotFoundError viper.ConfigFileNotFoundError
+			if errors.As(err, &configNotFoundError) {
+				fmt.Printf("Config file not found, using defaults and environment variables")
+			} else {
+				fmt.Printf("Error reading config file: %v", err)
+				panic(err)
+			}
 		}
 	}
 	// Override with environment variables if set:
 	viper.AutomaticEnv()
 
 	var config Config
-	err = viper.Unmarshal(&config)
+	err := viper.Unmarshal(&config)
 	if err != nil {
 		panic(err)
 	}

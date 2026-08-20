@@ -127,6 +127,7 @@ type JwtConfig struct {
 }
 
 type ServerConfig struct {
+	Host             string        `mapstructure:"host" yaml:"host"`
 	Port             int           `mapstructure:"port" yaml:"port" default:"2021"`
 	RatePeriod       time.Duration `mapstructure:"rate_period" yaml:"rate_period" default:"60s"`
 	RateLimit        int           `mapstructure:"rate_limit" yaml:"rate_limit" default:"300"`

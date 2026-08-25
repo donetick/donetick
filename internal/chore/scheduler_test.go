@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 	"time"
-
+	_ "time/tzdata"
 	chModel "donetick.com/core/internal/chore/model"
 )
 
@@ -660,5 +660,171 @@ func TestScheduleNextDueDateWeekPatterns(t *testing.T) {
 				t.Errorf("scheduleNextDueDate() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+// --- DST regression tests -------------------------------------------------
+//
+// Europe/Berlin switches CEST -> CET on 2026-10-25 and CET -> CEST on
+// 2026-03-29. A chore configured for a given local time of day must keep
+// that local time across both transitions.
+//
+// Note on constructing these cases: frequencyMetadata.Time must carry the
+// offset that was in effect when the chore was created, not the offset of
+// the base date. Deriving Time from the base date hides the bug, because
+// the UTC hour then happens to match.
+
+func TestScheduleNextDueDateDSTAutumnDaily(t *testing.T) {
+	berlin := mustLoadBerlin(t)
+
+	// Created in summer: 06:45 CEST == 04:45 UTC
+	createdAt := time.Date(2026, 7, 1, 6, 45, 0, 0, berlin)
+	// Last due the day before the transition
+	lastDue := time.Date(2026, 10, 24, 6, 45, 0, 0, berlin)
+
+	chore := chModel.Chore{
+		FrequencyType: chModel.FrequencyTypeDaily,
+		Frequency:     1,
+		NextDueDate:   timePtr(lastDue),
+		FrequencyMetadataV2: &chModel.FrequencyMetadata{
+			Time:     createdAt.Format(time.RFC3339),
+			Timezone: "Europe/Berlin",
+		},
+	}
+
+	got, err := scheduleNextDueDate(context.Background(), &chore, lastDue)
+	if err != nil {
+		t.Fatalf("scheduleNextDueDate() error = %v", err)
+	}
+	assertLocalTime(t, got, berlin, 2026, 10, 25, 6, 45)
+}
+
+func TestScheduleNextDueDateDSTAutumnDaysOfWeek(t *testing.T) {
+	berlin := mustLoadBerlin(t)
+
+	createdAt := time.Date(2026, 7, 1, 6, 45, 0, 0, berlin)
+	// Monday after the transition; the next occurrence is the one that drifts
+	lastDue := time.Date(2026, 10, 26, 6, 45, 0, 0, berlin)
+	monday := "monday"
+
+	chore := chModel.Chore{
+		FrequencyType: chModel.FrequencyTypeDayOfTheWeek,
+		Frequency:     1,
+		NextDueDate:   timePtr(lastDue),
+		FrequencyMetadataV2: &chModel.FrequencyMetadata{
+			Days:     []*string{&monday},
+			Time:     createdAt.Format(time.RFC3339),
+			Timezone: "Europe/Berlin",
+		},
+	}
+
+	got, err := scheduleNextDueDate(context.Background(), &chore, lastDue)
+	if err != nil {
+		t.Fatalf("scheduleNextDueDate() error = %v", err)
+	}
+	assertLocalTime(t, got, berlin, 2026, 11, 2, 6, 45)
+}
+
+func TestScheduleNextDueDateDSTSpringInterval(t *testing.T) {
+	berlin := mustLoadBerlin(t)
+
+	// Created in winter: 06:45 CET == 05:45 UTC
+	createdAt := time.Date(2026, 1, 15, 6, 45, 0, 0, berlin)
+	lastDue := time.Date(2026, 3, 27, 6, 45, 0, 0, berlin)
+	unit := "days"
+
+	chore := chModel.Chore{
+		FrequencyType: chModel.FrequencyTypeInterval,
+		Frequency:     3,
+		NextDueDate:   timePtr(lastDue),
+		FrequencyMetadataV2: &chModel.FrequencyMetadata{
+			Unit:     &unit,
+			Time:     createdAt.Format(time.RFC3339),
+			Timezone: "Europe/Berlin",
+		},
+	}
+
+	got, err := scheduleNextDueDate(context.Background(), &chore, lastDue)
+	if err != nil {
+		t.Fatalf("scheduleNextDueDate() error = %v", err)
+	}
+	// 27.03. + 3 days = 30.03., after the CET -> CEST transition
+	assertLocalTime(t, got, berlin, 2026, 3, 30, 6, 45)
+}
+
+// TestScheduleNextDueDateWithoutTimezoneUnchanged guards the backwards
+// compatible path: without a configured timezone the scheduler must behave
+// exactly as before, i.e. purely in UTC.
+func TestScheduleNextDueDateWithoutTimezoneUnchanged(t *testing.T) {
+	lastDue := time.Date(2026, 10, 19, 8, 30, 0, 0, time.UTC)
+	monday := "monday"
+
+	chore := chModel.Chore{
+		FrequencyType: chModel.FrequencyTypeDayOfTheWeek,
+		Frequency:     1,
+		NextDueDate:   timePtr(lastDue),
+		FrequencyMetadataV2: &chModel.FrequencyMetadata{
+			Days: []*string{&monday},
+			Time: lastDue.Format(time.RFC3339),
+			// no Timezone on purpose
+		},
+	}
+
+	got, err := scheduleNextDueDate(context.Background(), &chore, lastDue)
+	if err != nil {
+		t.Fatalf("scheduleNextDueDate() error = %v", err)
+	}
+	want := time.Date(2026, 10, 26, 8, 30, 0, 0, time.UTC)
+	if !got.Equal(want) {
+		t.Errorf("scheduleNextDueDate() = %v, want %v", got.UTC(), want)
+	}
+}
+
+// TestScheduleNextDueDateInvalidTimezoneFallsBackToUTC ensures a bad
+// timezone string does not break scheduling.
+func TestScheduleNextDueDateInvalidTimezoneFallsBackToUTC(t *testing.T) {
+	lastDue := time.Date(2026, 10, 19, 8, 30, 0, 0, time.UTC)
+	monday := "monday"
+
+	chore := chModel.Chore{
+		FrequencyType: chModel.FrequencyTypeDayOfTheWeek,
+		Frequency:     1,
+		NextDueDate:   timePtr(lastDue),
+		FrequencyMetadataV2: &chModel.FrequencyMetadata{
+			Days:     []*string{&monday},
+			Time:     lastDue.Format(time.RFC3339),
+			Timezone: "Not/AZone",
+		},
+	}
+
+	got, err := scheduleNextDueDate(context.Background(), &chore, lastDue)
+	if err != nil {
+		t.Fatalf("scheduleNextDueDate() error = %v", err)
+	}
+	want := time.Date(2026, 10, 26, 8, 30, 0, 0, time.UTC)
+	if !got.Equal(want) {
+		t.Errorf("scheduleNextDueDate() = %v, want %v", got.UTC(), want)
+	}
+}
+
+func mustLoadBerlin(t *testing.T) *time.Location {
+	t.Helper()
+	loc, err := time.LoadLocation("Europe/Berlin")
+	if err != nil {
+		t.Fatalf("loading Europe/Berlin failed despite embedded tzdata: %v", err)
+	}
+	return loc
+}
+
+func assertLocalTime(t *testing.T, got *time.Time, loc *time.Location,
+	year int, month time.Month, day, hour, minute int) {
+	t.Helper()
+	if got == nil {
+		t.Fatalf("scheduleNextDueDate() returned nil")
+	}
+	want := time.Date(year, month, day, hour, minute, 0, 0, loc)
+	if !got.Equal(want) {
+		t.Errorf("scheduleNextDueDate() = %v (local %v), want %v (local %v)",
+			got.UTC(), got.In(loc), want.UTC(), want)
 	}
 }

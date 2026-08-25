@@ -17,14 +17,23 @@ func scheduleNextDueDate(ctx context.Context, chore *chModel.Chore, completedDat
 		return nil, nil
 	}
 
+	// Evaluate the whole schedule in the chore's own timezone. Doing the
+	// arithmetic in UTC pins every recurrence to a fixed UTC hour, so the
+	// local time of a chore shifts by an hour on daylight saving transitions
+	// and stays wrong afterwards.
+	// choreLocation falls back to time.UTC when no timezone is configured,
+	// which keeps the behaviour unchanged for chores created before
+	// timezones were stored.
+	loc := choreLocation(ctx, chore)
+
 	var baseDate time.Time
 	if chore.NextDueDate != nil {
-		baseDate = chore.NextDueDate.UTC()
+		baseDate = chore.NextDueDate.In(loc)
 	} else {
-		baseDate = completedDate.UTC()
+		baseDate = completedDate.In(loc)
 	}
 	if chore.IsRolling {
-		baseDate = completedDate.UTC()
+		baseDate = completedDate.In(loc)
 	}
 
 	// Handle time-based frequencies, ensure time is in the future
@@ -37,14 +46,18 @@ func scheduleNextDueDate(ctx context.Context, chore *chModel.Chore, completedDat
 
 			// fallback to use the next due date time if available:
 			if chore.NextDueDate != nil {
-				t = chore.NextDueDate.UTC()
+				t = *chore.NextDueDate
 			} else {
-				t = time.Now().UTC()
+				t = time.Now()
 			}
 
 		}
-		t = t.UTC()
-		baseDate = time.Date(baseDate.Year(), baseDate.Month(), baseDate.Day(), t.Hour(), t.Minute(), t.Second(), 0, time.UTC)
+		t = t.In(loc)
+		// Note: for the one hour that a DST transition skips or repeats,
+		// time.Date normalises to a neighbouring instant. Go does not
+		// guarantee which one, but it does not error either, so a chore
+		// scheduled inside that hour still gets a valid due date.
+		baseDate = time.Date(baseDate.Year(), baseDate.Month(), baseDate.Day(), t.Hour(), t.Minute(), t.Second(), 0, loc)
 	}
 
 	switch chore.FrequencyType {
@@ -85,31 +98,14 @@ func scheduleNextDueDate(ctx context.Context, chore *chModel.Chore, completedDat
 
 		// Default to every_week if no pattern specified
 		if weekPattern == nil || *weekPattern == "" || *weekPattern == "every_week" {
-			// Get timezone for calculations - prefer chore timezone, fallback to UTC
-			var loc *time.Location
-			var err error
-			if chore.FrequencyMetadataV2.Timezone != "" {
-				loc, err = time.LoadLocation(chore.FrequencyMetadataV2.Timezone)
-				if err != nil {
-					log := logging.FromContext(ctx)
-					log.Error("error loading timezone from frequency metadata", "error", err, "timezone", chore.FrequencyMetadataV2.Timezone, "chore_id", chore.ID)
-					loc = time.UTC // fallback to UTC
-				}
-			} else {
-				loc = time.UTC
-			}
-
-			// Convert baseDate to the target timezone for weekday calculations
-			baseDateInTimezone := baseDate.In(loc)
-
-			// Find the next valid day of the week in the target timezone
+			// Find the next valid day of the week in the chore's timezone
 			for i := 1; i <= 7; i++ {
-				nextDueDateInTimezone := baseDateInTimezone.AddDate(0, 0, i)
-				nextDay := strings.ToLower(nextDueDateInTimezone.Weekday().String())
+				nextDueDate := baseDate.AddDate(0, 0, i)
+				nextDay := strings.ToLower(nextDueDate.Weekday().String())
 				for _, day := range chore.FrequencyMetadataV2.Days {
 					if strings.ToLower(*day) == nextDay {
 						// Convert back to UTC for storage
-						nextDueDateUTC := nextDueDateInTimezone.UTC()
+						nextDueDateUTC := nextDueDate.UTC()
 						return &nextDueDateUTC, nil
 					}
 				}
@@ -123,7 +119,8 @@ func scheduleNextDueDate(ctx context.Context, chore *chModel.Chore, completedDat
 			if len(occurrences) == 0 {
 				return nil, fmt.Errorf("week_of_month requires at least one occurrence")
 			}
-			return findNextDueDateForOccurrencePattern(baseDate, chore.FrequencyMetadataV2.Days, occurrences, true)
+			nextDueDate, err := findNextDueDateForOccurrencePattern(baseDate, chore.FrequencyMetadataV2.Days, occurrences, true)
+			return toUTC(nextDueDate, err)
 		}
 
 		// Handle week_of_quarter pattern
@@ -132,7 +129,8 @@ func scheduleNextDueDate(ctx context.Context, chore *chModel.Chore, completedDat
 			if len(occurrences) == 0 {
 				return nil, fmt.Errorf("week_of_quarter requires at least one occurrence")
 			}
-			return findNextDueDateForOccurrencePattern(baseDate, chore.FrequencyMetadataV2.Days, occurrences, false)
+			nextDueDate, err := findNextDueDateForOccurrencePattern(baseDate, chore.FrequencyMetadataV2.Days, occurrences, false)
+			return toUTC(nextDueDate, err)
 		}
 
 		return nil, fmt.Errorf("invalid week pattern: %s", *weekPattern)
@@ -177,11 +175,13 @@ func scheduleNextDueDate(ctx context.Context, chore *chModel.Chore, completedDat
 				targetDay = lastDayOfMonth
 			}
 
-			nextDueDate = time.Date(nextDueDate.Year(), time.Month(nextMonth), targetDay, nextDueDate.Hour(), nextDueDate.Minute(), 0, 0, time.UTC)
+			nextDueDate = time.Date(nextDueDate.Year(), time.Month(nextMonth), targetDay, nextDueDate.Hour(), nextDueDate.Minute(), 0, 0, loc)
 
 			for _, month := range chore.FrequencyMetadataV2.Months {
 				if strings.EqualFold(*month, time.Month(nextMonth).String()) {
-					return &nextDueDate, nil
+					// Convert back to UTC for storage
+					nextDueDateUTC := nextDueDate.UTC()
+					return &nextDueDateUTC, nil
 				}
 			}
 		}
@@ -190,7 +190,39 @@ func scheduleNextDueDate(ctx context.Context, chore *chModel.Chore, completedDat
 		return nil, fmt.Errorf("invalid frequency type: %s", chore.FrequencyType)
 	}
 
-	return &baseDate, nil
+	// Convert back to UTC for storage
+	baseDateUTC := baseDate.UTC()
+	return &baseDateUTC, nil
+}
+
+// choreLocation returns the time.Location a chore's schedule should be
+// evaluated in. It falls back to UTC when no timezone is configured or when
+// the configured timezone cannot be loaded, which preserves the previous
+// behaviour for chores created before timezones were stored.
+func choreLocation(ctx context.Context, chore *chModel.Chore) *time.Location {
+	if chore.FrequencyMetadataV2 == nil || chore.FrequencyMetadataV2.Timezone == "" {
+		return time.UTC
+	}
+	loc, err := time.LoadLocation(chore.FrequencyMetadataV2.Timezone)
+	if err != nil {
+		log := logging.FromContext(ctx)
+		log.Error("error loading timezone from frequency metadata",
+			"error", err,
+			"timezone", chore.FrequencyMetadataV2.Timezone,
+			"chore_id", chore.ID)
+		return time.UTC
+	}
+	return loc
+}
+
+// toUTC normalises a computed due date to UTC for storage, passing through
+// any error unchanged.
+func toUTC(t *time.Time, err error) (*time.Time, error) {
+	if err != nil || t == nil {
+		return t, err
+	}
+	utc := t.UTC()
+	return &utc, nil
 }
 
 // getOccurrences returns the occurrences from metadata, supporting both new and legacy formats

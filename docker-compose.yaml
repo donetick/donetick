@@ -1,3 +1,6 @@
+# This compose file is used for the hosted version of Donetick.
+# For self-hosting instructions, refer to the README
+# (https://github.com/donetick/donetick/blob/main/README.md).
 ---
 services:
   app:

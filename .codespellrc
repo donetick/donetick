@@ -1,6 +1,8 @@
 [codespell]
 # Ref: https://github.com/codespell-project/codespell#using-a-config-file
-skip = .git,.gitignore,.gitattributes,*.svg,go.sum,.codespellrc
+skip = .git,.git-meta,.gitignore,.gitattributes,*.svg,go.sum,go.mod,.codespellrc,frontend/dist
 check-hidden = true
-# ignore-regex = 
-# ignore-words-list =
+# Ignore camelCase and PascalCase code identifiers
+ignore-regex = \b[a-z]+[A-Z]\w*\b|\b[A-Z][a-z]+[A-Z]\w*\b
+# fo: vim modeline formatoptions flag in .goreleaser.yaml
+ignore-words-list = fo

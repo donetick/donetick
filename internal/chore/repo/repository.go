@@ -903,7 +903,7 @@ func (r *ChoreRepository) GetOverdueChoresForNotification(c context.Context, ove
 	return chores, nil
 }
 
-// a predue notfication is a notification send before the due date in 6 hours, 3 hours :
+// a predue notification is a notification send before the due date in 6 hours, 3 hours :
 func (r *ChoreRepository) GetPreDueChoresForNotification(c context.Context, preDueDuration time.Duration, everyDuration time.Duration) ([]*chModel.Chore, error) {
 	var chores []*chModel.Chore
 	query := r.db.WithContext(c).Table("chores").Select("chores.*, MAX(n.created_at) as max_notification_created_at").Joins("left join notifications n on n.chore_id = chores.id and n.scheduled_for = chores.next_due_date and n.type = 3")

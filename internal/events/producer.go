@@ -93,7 +93,7 @@ func (p *EventsProducer) processEvent(event Event) {
 		return
 	}
 
-	// Pring the event and the url:
+	// Print the event and the url:
 	p.logger.Debug("Sending event to webhook", "url", event.URL, "event", event)
 	p.logger.Debug("Event: ", event)
 

@@ -131,7 +131,7 @@ func NewAuthMiddleware(cfg *config.Config, userRepo *uRepo.UserRepository, mfaSe
 					WebhookURL: user.WebhookURL,
 				}, nil
 			case "3rdPartyAuth":
-				// we should only reach this stage if a handler mannually call authenticator with it's context:
+				// we should only reach this stage if a handler manually call authenticator with it's context:
 
 				var authObject *uModel.UserDetails
 				v := c.Value("user_account")

@@ -913,6 +913,27 @@ func (r *ChoreRepository) GetPreDueChoresForNotification(c context.Context, preD
 	return chores, nil
 }
 
+func (r *ChoreRepository) GetChoresDueForAutoSkip(c context.Context, cutoff time.Time) ([]*chModel.Chore, error) {
+	var chores []*chModel.Chore
+	if err := r.db.WithContext(c).
+		Model(&chModel.Chore{}).
+		Where("auto_skip_when_late = ?", true).
+		Where("is_active = ?", true).
+		Where("next_due_date IS NOT NULL AND next_due_date < ?", cutoff).
+		Where("status NOT IN ?", []chModel.Status{chModel.ChoreStatusPaused, chModel.ChoreStatusPendingApproval}).
+		Where("frequency_type NOT IN ?", []chModel.FrequencyType{
+			chModel.FrequencyTypeOnce,
+			chModel.FrequencyTypeNoRepeat,
+			chModel.FrequencyTypeTrigger,
+			chModel.FrequencyTypeAdaptive,
+		}).
+		Order("next_due_date asc").
+		Find(&chores).Error; err != nil {
+		return nil, err
+	}
+	return chores, nil
+}
+
 func readJSONBooleanField(dbType string, columnName string, fieldName string) clause.Expr {
 	if dbType == "postgres" {
 		return gorm.Expr("("+columnName+"::json->>?)::boolean", fieldName)

@@ -14,6 +14,7 @@ import (
 	"donetick.com/core/frontend"
 	auth "donetick.com/core/internal/auth"
 	"donetick.com/core/internal/auth/apple"
+	"donetick.com/core/internal/calendar"
 	"donetick.com/core/internal/chore"
 	chRepo "donetick.com/core/internal/chore/repo"
 	"donetick.com/core/internal/circle"
@@ -90,6 +91,7 @@ func main() {
 		fx.Provide(database.NewDatabase),
 		fx.Provide(chRepo.NewChoreRepository),
 		fx.Provide(chore.NewHandler),
+		fx.Provide(calendar.NewHandler),
 		fx.Provide(uRepo.NewUserRepository),
 		fx.Provide(user.NewDeletionService),
 		fx.Provide(user.NewHandler),
@@ -195,6 +197,7 @@ func main() {
 		// fx.Invoke(RunApp),
 		fx.Invoke(
 			chore.Routes,
+			calendar.Routes,
 			chore.APIs,
 			user.Routes,
 			circle.Routes,

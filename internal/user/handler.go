@@ -170,14 +170,30 @@ func (h *Handler) signUp(c *gin.Context) {
 		})
 		return
 	}
-	// var userCircle *circle.Circle
-	// var userRole string
-	userCircle, err := h.circleRepo.CreateCircle(c, &cModel.Circle{
-		Name:       signupReq.DisplayName + "'s circle",
-		CreatedAt:  time.Now().UTC(),
-		UpdatedAt:  time.Now().UTC(),
-		InviteCode: utils.GenerateInviteCode(c),
-	})
+	var userCircle *cModel.Circle
+	role := cModel.UserRoleAdmin
+	if h.singleCircleInstance {
+		// In single-circle mode, every signup joins the shared household circle
+		// (ID 1) instead of getting its own. The first signup bootstraps it.
+		userCircle, err = h.circleRepo.GetCircleByID(c, 1)
+		if err != nil {
+			userCircle, err = h.circleRepo.CreateCircle(c, &cModel.Circle{
+				Name:       "Home",
+				CreatedAt:  time.Now().UTC(),
+				UpdatedAt:  time.Now().UTC(),
+				InviteCode: utils.GenerateInviteCode(c),
+			})
+		} else {
+			role = cModel.UserRoleMember
+		}
+	} else {
+		userCircle, err = h.circleRepo.CreateCircle(c, &cModel.Circle{
+			Name:       signupReq.DisplayName + "'s circle",
+			CreatedAt:  time.Now().UTC(),
+			UpdatedAt:  time.Now().UTC(),
+			InviteCode: utils.GenerateInviteCode(c),
+		})
+	}
 
 	if err != nil {
 		c.JSON(500, gin.H{
@@ -189,7 +205,7 @@ func (h *Handler) signUp(c *gin.Context) {
 	if err := h.circleRepo.AddUserToCircle(c, &cModel.UserCircle{
 		UserID:    insertedUser.ID,
 		CircleID:  userCircle.ID,
-		Role:      "admin",
+		Role:      role,
 		IsActive:  true,
 		CreatedAt: time.Now().UTC(),
 		UpdatedAt: time.Now().UTC(),

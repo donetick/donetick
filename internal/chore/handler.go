@@ -1102,10 +1102,20 @@ func (h *Handler) DeleteChore(c *gin.Context) {
 		return
 	}
 	if chore.CreatedBy != currentUser.ID {
-		c.JSON(403, gin.H{
-			"error": "You are not allowed to delete this chore",
-		})
-		return
+		circleUsers, err := h.circleRepo.GetCircleUsers(c, currentUser.CircleID)
+		if err != nil {
+			logger.Error("Failed to retrieve circle users", "error", err)
+			c.JSON(500, gin.H{
+				"error": "Failed to retrieve circle users",
+			})
+			return
+		}
+		if !currentUser.IsAdminOrManager(circleUsers) {
+			c.JSON(403, gin.H{
+				"error": "You are not allowed to delete this chore",
+			})
+			return
+		}
 	}
 
 	// Collect file paths before deletion; the DeleteChore transaction removes the

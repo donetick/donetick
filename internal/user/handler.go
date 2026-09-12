@@ -1264,15 +1264,6 @@ func (h *Handler) updateProfilePhoto(c *gin.Context) {
 		return
 	}
 
-	// Resolve the URL before persisting. For S3 with a public bucket host this
-	// is a permanent bare URL; for local or unconfigured public bucket it is a
-	// raw path that SignIfLocal will sign on each read.
-	photoURL, err := h.storage.GetPublicURL(c, filename)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to resolve profile photo URL"})
-		return
-	}
-
 	// Clean up the previous profile photo when it is a locally-stored path.
 	// Full https:// URLs (OIDC picture claims or public-bucket URLs) are
 	// skipped — public-bucket objects accumulate until a future cleanup pass.
@@ -1290,14 +1281,20 @@ func (h *Handler) updateProfilePhoto(c *gin.Context) {
 		}
 	}
 
-	err = h.userRepo.UpdateUserImage(c, currentUser.ID, photoURL)
+	// Persist the raw storage key, not a resolved URL. GetPublicURL's private-
+	// bucket fallback returns an already-presigned URL capped at 7 days
+	// (AWS SigV4's maximum); baking that into the DB left the photo
+	// permanently broken once the signature expired, since SignIfLocal
+	// passes through anything starting with http(s):// unchanged instead of
+	// re-signing it. Storing the bare key lets SignIfLocal/Sign() produce a
+	// correct, fresh URL on every read — self-healing regardless of storage
+	// backend or PublicRead/PublicHost configuration.
+	err = h.userRepo.UpdateUserImage(c, currentUser.ID, filename)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update profile photo"})
 		return
 	}
-	// SignIfLocal passes through https:// URLs unchanged, so the response is
-	// correct regardless of whether a public bucket host is configured.
-	c.JSON(http.StatusOK, gin.H{"sign": h.signer.SignIfLocal(photoURL)})
+	c.JSON(http.StatusOK, gin.H{"sign": h.signer.SignIfLocal(filename)})
 }
 
 func (h *Handler) getStorageUsage(c *gin.Context) {

@@ -23,6 +23,7 @@ import (
 	lModel "donetick.com/core/internal/label/model"
 	lRepo "donetick.com/core/internal/label/repo"
 	"donetick.com/core/internal/notifier"
+	nModel "donetick.com/core/internal/notifier/model"
 	nRepo "donetick.com/core/internal/notifier/repo"
 	nps "donetick.com/core/internal/notifier/service"
 	fcmService "donetick.com/core/internal/notifier/service/fcm"
@@ -2309,6 +2310,12 @@ func (h *Handler) CompleteChore(c *gin.Context) {
 			broadcaster.BroadcastChoreUpdated(updatedChore, &effectiveUser.User, changes, note)
 		}
 
+		completerName := effectiveUser.DisplayName
+		if completerName == "" {
+			completerName = effectiveUser.Username
+		}
+		h.notifyAdminsOfPendingApproval(c, actualUser.CircleID, completerName, updatedChore)
+
 		c.JSON(200, gin.H{
 			"res":     updatedChore,
 			"message": "Chore completion submitted for approval",
@@ -3361,6 +3368,49 @@ func (h *Handler) DeleteTimeSession(c *gin.Context) {
 		})
 
 		return
+	}
+}
+
+// notifyAdminsOfPendingApproval fans out one Notification row per admin/manager's
+// registered delivery target when a completion is submitted for approval —
+// same shape used by reward.notifyAdminsOfRedemptionRequest for redemption
+// requests, and the same notifiableMembers filtering chore reminders already
+// apply (active member, has a configured platform + target). See issue #456.
+func (h *Handler) notifyAdminsOfPendingApproval(c *gin.Context, circleID int, completerName string, chore *chModel.Chore) {
+	circleUsers, err := h.circleRepo.GetCircleUsers(c, circleID)
+	if err != nil {
+		logging.FromContext(c).Error("Failed to fetch circle users for approval notification", "error", err)
+		return
+	}
+
+	text := fmt.Sprintf("%s marked \"%s\" done — needs your approval", completerName, chore.Name)
+	now := time.Now().UTC()
+
+	var notifications []*nModel.Notification
+	for _, member := range circleUsers {
+		if !(member.Role == circle.UserRoleAdmin || member.Role == circle.UserRoleManager) {
+			continue
+		}
+		if !member.IsActive || member.NotificationType == nModel.NotificationPlatformNone || member.TargetID == "" {
+			continue
+		}
+		notifications = append(notifications, &nModel.Notification{
+			ChoreID:      chore.ID,
+			CircleID:     circleID,
+			UserID:       member.UserID,
+			TargetID:     member.TargetID,
+			Text:         text,
+			TypeID:       member.NotificationType,
+			ScheduledFor: now,
+			CreatedAt:    now,
+		})
+	}
+
+	if len(notifications) == 0 {
+		return
+	}
+	if err := h.nRepo.BatchInsertNotifications(notifications); err != nil {
+		logging.FromContext(c).Error("Failed to insert approval-pending notifications", "error", err)
 	}
 }
 

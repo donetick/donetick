@@ -1,11 +1,15 @@
 package reward
 
 import (
+	"fmt"
 	"strconv"
+	"time"
 
 	auth "donetick.com/core/internal/auth"
 	circle "donetick.com/core/internal/circle/model"
 	cRepo "donetick.com/core/internal/circle/repo"
+	nModel "donetick.com/core/internal/notifier/model"
+	nRepo "donetick.com/core/internal/notifier/repo"
 	rModel "donetick.com/core/internal/reward/model"
 	rRepo "donetick.com/core/internal/reward/repo"
 	"donetick.com/core/logging"
@@ -31,12 +35,56 @@ type ResolveReq struct {
 type Handler struct {
 	rRepo      *rRepo.RewardRepository
 	circleRepo *cRepo.CircleRepository
+	nRepo      *nRepo.NotificationRepository
 }
 
-func NewHandler(rRepo *rRepo.RewardRepository, circleRepo *cRepo.CircleRepository) *Handler {
+func NewHandler(rRepo *rRepo.RewardRepository, circleRepo *cRepo.CircleRepository, nRepo *nRepo.NotificationRepository) *Handler {
 	return &Handler{
 		rRepo:      rRepo,
 		circleRepo: circleRepo,
+		nRepo:      nRepo,
+	}
+}
+
+// notifyAdminsOfRedemptionRequest fans out one Notification row per
+// admin/manager's registered delivery target, same shape as chore reminder
+// notifications (see notifier/service.notifiableMembers) — every member
+// without a configured platform/target is silently skipped since there's
+// nowhere to deliver it.
+func (h *Handler) notifyAdminsOfRedemptionRequest(c *gin.Context, circleID int, requesterName string, redemption *rModel.RewardRedemption) {
+	circleUsers, err := h.circleRepo.GetCircleUsers(c, circleID)
+	if err != nil {
+		logging.FromContext(c).Error("Failed to fetch circle users for redemption notification", "error", err)
+		return
+	}
+
+	text := fmt.Sprintf("%s requested to redeem \"%s\" for %d points", requesterName, redemption.RewardName, redemption.PointsCost)
+	now := time.Now().UTC()
+
+	var notifications []*nModel.Notification
+	for _, member := range circleUsers {
+		if !(member.Role == circle.UserRoleAdmin || member.Role == circle.UserRoleManager) {
+			continue
+		}
+		if !member.IsActive || member.NotificationType == nModel.NotificationPlatformNone || member.TargetID == "" {
+			continue
+		}
+		notifications = append(notifications, &nModel.Notification{
+			CircleID:     circleID,
+			UserID:       member.UserID,
+			TargetID:     member.TargetID,
+			Text:         text,
+			TypeID:       member.NotificationType,
+			ScheduledFor: now,
+			CreatedAt:    now,
+		})
+	}
+
+	if len(notifications) == 0 {
+		return
+	}
+	if err := h.nRepo.BatchInsertNotifications(notifications); err != nil {
+		logging.FromContext(c).Error("Failed to insert redemption request notifications", "error", err)
 	}
 }
 
@@ -217,6 +265,13 @@ func (h *Handler) redeemReward(c *gin.Context) {
 		c.JSON(500, gin.H{"error": "Error requesting redemption"})
 		return
 	}
+
+	requesterName := currentUser.DisplayName
+	if requesterName == "" {
+		requesterName = currentUser.Username
+	}
+	h.notifyAdminsOfRedemptionRequest(c, currentUser.CircleID, requesterName, redemption)
+
 	c.JSON(200, gin.H{"res": redemption})
 }
 

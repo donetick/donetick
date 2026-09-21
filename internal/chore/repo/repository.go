@@ -921,17 +921,39 @@ func readJSONBooleanField(dbType string, columnName string, fieldName string) cl
 }
 
 func (r *ChoreRepository) SetDueDate(c context.Context, choreID int, dueDate time.Time) error {
-	return r.db.WithContext(c).Model(&chModel.Chore{}).Where("id = ?", choreID).Updates(map[string]interface{}{
-		"next_due_date": dueDate,
-		"is_active":     true,
-	}).Error
+	return r.db.WithContext(c).Transaction(func(tx *gorm.DB) error {
+		var chore chModel.Chore
+		if err := tx.Select("circle_id").First(&chore, choreID).Error; err != nil {
+			return err
+		}
+		nextVersion, err := r.nextSyncVersionWithDB(c, tx, chore.CircleID)
+		if err != nil {
+			return err
+		}
+		return tx.Model(&chModel.Chore{}).Where("id = ?", choreID).Updates(map[string]interface{}{
+			"next_due_date": dueDate,
+			"is_active":     true,
+			"sync_version":  nextVersion,
+		}).Error
+	})
 }
 
 func (r *ChoreRepository) SetDueDateIfNotExisted(c context.Context, choreID int, dueDate time.Time) error {
-	return r.db.WithContext(c).Model(&chModel.Chore{}).Where("id = ? and next_due_date is null", choreID).Updates(map[string]interface{}{
-		"next_due_date": dueDate,
-		"is_active":     true,
-	}).Error
+	return r.db.WithContext(c).Transaction(func(tx *gorm.DB) error {
+		var chore chModel.Chore
+		if err := tx.Select("circle_id").First(&chore, choreID).Error; err != nil {
+			return err
+		}
+		nextVersion, err := r.nextSyncVersionWithDB(c, tx, chore.CircleID)
+		if err != nil {
+			return err
+		}
+		return tx.Model(&chModel.Chore{}).Where("id = ? and next_due_date is null", choreID).Updates(map[string]interface{}{
+			"next_due_date": dueDate,
+			"is_active":     true,
+			"sync_version":  nextVersion,
+		}).Error
+	})
 }
 
 func (r *ChoreRepository) GetChoreDetailByID(c context.Context, choreID int, circleID int, userID int) (*chModel.ChoreDetail, error) {

@@ -948,7 +948,7 @@ func (r *ChoreRepository) SetDueDateIfNotExisted(c context.Context, choreID int,
 		if err != nil {
 			return err
 		}
-		return tx.Model(&chModel.Chore{}).Where("id = ? and next_due_date is null", choreID).Updates(map[string]interface{}{
+		return tx.Model(&chModel.Chore{}).Where("id = ? and (next_due_date is null or is_active = ?)", choreID, false).Updates(map[string]interface{}{
 			"next_due_date": dueDate,
 			"is_active":     true,
 			"sync_version":  nextVersion,

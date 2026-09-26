@@ -7,7 +7,7 @@ on:
     branches: [ "main" ]
 
 env:
-  GOLANG_VERSION: '1.22'
+  GOLANG_VERSION: '1.24.3'
   GOLANGCI_LINT_VERSION: 'v1.64.8'
 
 jobs:

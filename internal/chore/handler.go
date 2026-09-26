@@ -729,14 +729,6 @@ func (h *Handler) EditChore(c *gin.Context) {
 		return
 	}
 
-	existedChoreAssignees, err := h.choreRepo.GetChoreAssignees(c, choreReq.ID)
-	if err != nil {
-		c.JSON(500, gin.H{
-			"error": "Error getting chore assignees",
-		})
-		return
-	}
-
 	// Before the assignee diff below, so a private project can narrow the list down.
 	if err := h.inheritProjectPrivacy(c, &choreReq, currentUser.ID, currentUser.CircleID); err != nil {
 		c.JSON(400, gin.H{
@@ -744,9 +736,6 @@ func (h *Handler) EditChore(c *gin.Context) {
 		})
 		return
 	}
-
-	var choreAssigneesToAdd []*chModel.ChoreAssignees
-	var choreAssigneesToDelete []*chModel.ChoreAssignees
 
 	//  filter assignees that not in the circle
 	for _, assignee := range choreReq.Assignees {
@@ -762,33 +751,6 @@ func (h *Handler) EditChore(c *gin.Context) {
 				"error": "Assignee not found in circle",
 			})
 			return
-		}
-		userAlreadyAssignee := false
-		for _, existedChoreAssignee := range existedChoreAssignees {
-			if existedChoreAssignee.UserID == assignee.UserID {
-				userAlreadyAssignee = true
-				break
-			}
-		}
-		if !userAlreadyAssignee {
-			choreAssigneesToAdd = append(choreAssigneesToAdd, &chModel.ChoreAssignees{
-				ChoreID: choreReq.ID,
-				UserID:  assignee.UserID,
-			})
-		}
-	}
-
-	//  remove assignees if they are not in the assignees list anymore
-	for _, existedChoreAssignee := range existedChoreAssignees {
-		userFound := false
-		for _, assignee := range choreReq.Assignees {
-			if existedChoreAssignee.UserID == assignee.UserID {
-				userFound = true
-				break
-			}
-		}
-		if !userFound {
-			choreAssigneesToDelete = append(choreAssigneesToDelete, existedChoreAssignee)
 		}
 	}
 
@@ -867,10 +829,9 @@ func (h *Handler) EditChore(c *gin.Context) {
 		})
 		return
 	}
-	description := *choreReq.Description
-	if choreReq.Description == nil && oldChore.Description != nil {
-		description = ""
-
+	description := ""
+	if choreReq.Description != nil {
+		description = *choreReq.Description
 	}
 	if err := h.cleanUpUnreferencedFiles(c, currentUser.ID, storageModel.EntityTypeChoreDescription, choreReq.ID, description); err != nil { // TODO: this doesn't seem good, we clean up the request' file before adding it to the model
 		c.JSON(500, gin.H{
@@ -915,7 +876,11 @@ func (h *Handler) EditChore(c *gin.Context) {
 		Status:                 oldChore.Status,
 	}
 
-	if err := h.choreRepo.UpsertChore(c, updatedChore); err != nil {
+	assigneeIDs := make([]int, 0, len(choreReq.Assignees))
+	for _, assignee := range choreReq.Assignees {
+		assigneeIDs = append(assigneeIDs, assignee.UserID)
+	}
+	if err := h.choreRepo.UpdateChoreVisibility(c, updatedChore, assigneeIDs); err != nil {
 		c.JSON(500, gin.H{
 			"error": "Error adding chore",
 		})
@@ -969,26 +934,8 @@ func (h *Handler) EditChore(c *gin.Context) {
 		}
 	}
 
-	if len(choreAssigneesToAdd) > 0 {
-		err = h.choreRepo.UpdateChoreAssignees(c, choreAssigneesToAdd)
 
-		if err != nil {
-			c.JSON(500, gin.H{
-				"error": "Error updating chore assignees",
-			})
-			return
-		}
-	}
-	if len(choreAssigneesToDelete) > 0 {
-		err = h.choreRepo.DeleteChoreAssignees(c, choreAssigneesToDelete)
-		if err != nil {
-			c.JSON(500, gin.H{
-				"error": "Error deleting chore assignees",
-			})
-			return
-		}
-	}
-	if oldChore.NextDueDate != updatedChore.NextDueDate {
+	if dueDatesDiffer(oldChore.NextDueDate, updatedChore.NextDueDate) {
 		historyEntry := &chModel.ChoreHistory{
 			ChoreID:     oldChore.ID,
 			PerformedAt: &now,
@@ -1036,7 +983,6 @@ func setEditChoreDefaults(choreReq *ChoreReq, oldChore *chModel.Chore) {
 	if choreReq.Frequency == nil {
 		choreReq.Frequency = &oldChore.Frequency
 	}
-
 	if choreReq.Priority == nil {
 		choreReq.Priority = &oldChore.Priority
 	}
@@ -1095,6 +1041,13 @@ func (h *Handler) inheritProjectPrivacy(c *gin.Context, choreReq *ChoreReq, user
 		}
 	}
 	return nil
+}
+
+func dueDatesDiffer(oldDueDate, newDueDate *time.Time) bool {
+	if oldDueDate == nil || newDueDate == nil {
+		return oldDueDate != newDueDate
+	}
+	return !oldDueDate.Equal(*newDueDate)
 }
 
 func (h *Handler) deleteChoreFiles(ctx *gin.Context, choreID int) {
@@ -4477,23 +4430,13 @@ func (h *Handler) UndoChore(c *gin.Context) {
 
 	switch lastAction.Status {
 	case chModel.ChoreHistoryStatusCompleted, chModel.ChoreHistoryStatusSkipped:
-		// For completed/skipped, restore to the state before this completion
-		// Get the previous completion/skip to determine what the assignee and due date should be
-		previousHistory, err := h.choreRepo.GetChoreStateBefore(c, choreID, lastAction.ID)
-		if err != nil {
-			// No previous history found - restore to original state (assigned to original assignee)
-			if len(chore.Assignees) > 0 {
-				// Use the assignee from the action being undone as the original assignee
-				previousAssignedTo = lastAction.AssignedTo
-			}
-			previousDueDate = lastAction.DueDate
-			if chore.FrequencyType == chModel.FrequencyTypeOnce || chore.FrequencyType == chModel.FrequencyTypeNoRepeat || chore.FrequencyType == chModel.FrequencyTypeTrigger {
-				reactivateOneTimeChore = true
-			}
-		} else {
-			// Use the state from before this action
-			previousAssignedTo = previousHistory.AssignedTo
-			previousDueDate = previousHistory.DueDate
+		// lastAction.AssignedTo/DueDate are snapshots of the chore's state taken
+		// right before this action was applied (see CompleteChore/SkipChore), so
+		// they are exactly the state to restore on undo.
+		previousAssignedTo = lastAction.AssignedTo
+		previousDueDate = lastAction.DueDate
+		if chore.FrequencyType == chModel.FrequencyTypeOnce || chore.FrequencyType == chModel.FrequencyTypeNoRepeat || chore.FrequencyType == chModel.FrequencyTypeTrigger {
+			reactivateOneTimeChore = true
 		}
 
 	case chModel.ChoreHistoryStatusPendingApproval:

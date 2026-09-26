@@ -108,6 +108,11 @@ func (r *ProjectRepository) UpdateProject(ctx context.Context, project *pModel.P
 
 	// Only creator or admin can update project (implement admin check based on your auth system)
 	if existingProject.CreatedBy != userID {
+		// A private project owned by someone else must look identical to a missing
+		// one, or its ID would leak that a private project exists there.
+		if !existingProject.CanView(userID) {
+			return errors.New("project not found")
+		}
 		return errors.New("user does not have permission to update this project")
 	}
 
@@ -166,6 +171,11 @@ func (r *ProjectRepository) DeleteProject(ctx context.Context, projectID int, us
 
 	// Check if user has permission to delete this project
 	if project.CreatedBy != userID {
+		// Same anti-enumeration rule as UpdateProject: a private project owned by
+		// someone else must look identical to a missing one.
+		if !project.CanView(userID) {
+			return errors.New("project not found")
+		}
 		return errors.New("user does not have permission to delete this project")
 	}
 

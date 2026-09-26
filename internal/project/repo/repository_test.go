@@ -152,3 +152,27 @@ func TestUpdateProjectKeepsPrivacyWhenFlagOmitted(t *testing.T) {
 		t.Error("chores should be untouched when the project flag doesn't change")
 	}
 }
+
+func TestUpdateAndDeleteProjectHidePrivateProjectExistenceFromOthers(t *testing.T) {
+	r, db := newTestRepo(t)
+
+	private := createTestProject(t, db, "theirs", testOwnerID, true)
+	public := createTestProject(t, db, "shared", testOwnerID, false)
+
+	isPrivate := false
+	err := r.UpdateProject(context.Background(), &pModel.Project{ID: private.ID, Name: private.Name}, &isPrivate, testOtherID, testCircleID)
+	if err == nil || err.Error() != "project not found" {
+		t.Errorf("UpdateProject on someone else's private project = %v, want \"project not found\"", err)
+	}
+
+	err = r.DeleteProject(context.Background(), private.ID, testOtherID, testCircleID)
+	if err == nil || err.Error() != "project not found" {
+		t.Errorf("DeleteProject on someone else's private project = %v, want \"project not found\"", err)
+	}
+
+	// A public project's existence isn't a secret, so the permission error stays distinct.
+	err = r.UpdateProject(context.Background(), &pModel.Project{ID: public.ID, Name: public.Name}, &isPrivate, testOtherID, testCircleID)
+	if err == nil || err.Error() != "user does not have permission to update this project" {
+		t.Errorf("UpdateProject on someone else's public project = %v, want permission error", err)
+	}
+}

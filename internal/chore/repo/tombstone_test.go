@@ -175,6 +175,46 @@ func TestUpdateChoreVisibilityPrivacyChanges(t *testing.T) {
 	})
 }
 
+func TestSetProjectChoresPrivacyRevokesNewlyUnauthorizedUsers(t *testing.T) {
+	t.Run("project goes private revokes non-owner circle members", func(t *testing.T) {
+		repository, db := newVisibilityTestRepository(t)
+		ownerID := 1
+		chore := &chModel.Chore{ID: 10, CircleID: 1, ProjectID: intPtr(5), CreatedBy: ownerID, IsPrivate: false}
+		seedVisibilityTest(t, db, chore, 2)
+
+		require.NoError(t, repository.SetProjectChoresPrivacy(context.Background(), db, 1, 5, ownerID, true))
+
+		var updated chModel.Chore
+		require.NoError(t, db.First(&updated, chore.ID).Error)
+		require.True(t, updated.IsPrivate)
+
+		var tombstones []syncModel.Tombstone
+		require.NoError(t, db.Order("sync_version asc").Find(&tombstones).Error)
+		revoked := make([]int, 0, len(tombstones))
+		for _, tomb := range tombstones {
+			require.Equal(t, chore.ID, tomb.EntityID)
+			revoked = append(revoked, *tomb.UserID)
+		}
+		// user 2 keeps its assignment trimmed away, users 3 and 4 lose circle-wide visibility.
+		require.ElementsMatch(t, []int{2, 3, 4}, revoked)
+	})
+
+	t.Run("project goes public issues no tombstones", func(t *testing.T) {
+		repository, db := newVisibilityTestRepository(t)
+		ownerID := 1
+		chore := &chModel.Chore{ID: 10, CircleID: 1, ProjectID: intPtr(5), CreatedBy: ownerID, IsPrivate: true}
+		seedVisibilityTest(t, db, chore, ownerID)
+
+		require.NoError(t, repository.SetProjectChoresPrivacy(context.Background(), db, 1, 5, ownerID, false))
+
+		var count int64
+		require.NoError(t, db.Model(&syncModel.Tombstone{}).Count(&count).Error)
+		require.Zero(t, count)
+	})
+}
+
+func intPtr(v int) *int { return &v }
+
 func TestUpdateChoreVisibilityRollsBackWhenTombstoneInsertFails(t *testing.T) {
 	repository, db := newVisibilityTestRepository(t)
 	chore := &chModel.Chore{ID: 10, CircleID: 1, CreatedBy: 1, IsPrivate: true, Name: "before"}

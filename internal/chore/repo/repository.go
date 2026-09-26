@@ -261,14 +261,17 @@ func (r *ChoreRepository) nextSyncVersionRange(ctx context.Context, circleID int
 type projectChore struct {
 	ID             int
 	IsPrivate      bool
+	CreatedBy      int
 	AssignedTo     *int
 	AssignStrategy chModel.AssignmentStrategy
 }
 
 // SetProjectChoresPrivacy aligns is_private of every chore in a project with the
-// project's own flag, bumping each chore's sync_version so delta-sync clients pick
-// the change up. It runs on the provided tx (which may be r.db) so callers can keep
-// the project update and this propagation atomic.
+// project's own flag, bumping each chore's sync_version and recording a
+// user-scoped tombstone for every circle member who loses visibility — the same
+// revocation contract UpdateChoreVisibility gives single-chore edits. It runs on
+// the provided tx (which may be r.db) so callers can keep the project update and
+// this propagation atomic.
 //
 // Turning a project private also narrows its chores down to the owner — the only
 // user who can still see them: assignees other than the owner are dropped, chores
@@ -278,7 +281,7 @@ type projectChore struct {
 func (r *ChoreRepository) SetProjectChoresPrivacy(ctx context.Context, tx *gorm.DB, circleID int, projectID int, ownerID int, isPrivate bool) error {
 	var chores []projectChore
 	if err := tx.WithContext(ctx).Model(&chModel.Chore{}).
-		Select("id, is_private, assigned_to, assign_strategy").
+		Select("id, is_private, created_by, assigned_to, assign_strategy").
 		Where("project_id = ? AND circle_id = ?", projectID, circleID).
 		Scan(&chores).Error; err != nil {
 		return err
@@ -292,15 +295,25 @@ func (r *ChoreRepository) SetProjectChoresPrivacy(ctx context.Context, tx *gorm.
 		choreIDs = append(choreIDs, chore.ID)
 	}
 
+	var circleUserIDs []int
+	if err := tx.WithContext(ctx).Table("user_circles").Where("circle_id = ? AND is_active = ?", circleID, true).Pluck("user_id", &circleUserIDs).Error; err != nil {
+		return err
+	}
+
+	var assignees []chModel.ChoreAssignees
+	if err := tx.WithContext(ctx).Where("chore_id IN ?", choreIDs).Find(&assignees).Error; err != nil {
+		return err
+	}
+	previousAssigneesByChore := map[int][]int{}
+	for _, assignee := range assignees {
+		previousAssigneesByChore[assignee.ChoreID] = append(previousAssigneesByChore[assignee.ChoreID], assignee.UserID)
+	}
+
 	// Only used when going private, to tell apart chores that need their assignees
 	// trimmed from the ones already down to the owner.
 	foreignAssignees := map[int]bool{}
 	ownerAssigned := map[int]bool{}
 	if isPrivate {
-		var assignees []chModel.ChoreAssignees
-		if err := tx.WithContext(ctx).Where("chore_id IN ?", choreIDs).Find(&assignees).Error; err != nil {
-			return err
-		}
 		for _, assignee := range assignees {
 			if assignee.UserID == ownerID {
 				ownerAssigned[assignee.ChoreID] = true
@@ -311,17 +324,20 @@ func (r *ChoreRepository) SetProjectChoresPrivacy(ctx context.Context, tx *gorm.
 	}
 
 	type choreUpdate struct {
-		chore   projectChore
-		fields  map[string]interface{}
-		addSelf bool
-		dropOld bool
+		chore        projectChore
+		fields       map[string]interface{}
+		addSelf      bool
+		dropOld      bool
+		revokedUsers []int
 	}
 	var updates []choreUpdate
+	totalRevocations := 0
 	for _, chore := range chores {
 		update := choreUpdate{chore: chore, fields: map[string]interface{}{}}
 		if chore.IsPrivate != isPrivate {
 			update.fields["is_private"] = isPrivate
 		}
+		newAssigneeIDs := previousAssigneesByChore[chore.ID]
 		if isPrivate {
 			update.dropOld = foreignAssignees[chore.ID]
 			// A chore with no assignee at all means "Anyone", which now resolves to the
@@ -334,22 +350,47 @@ func (r *ChoreRepository) SetProjectChoresPrivacy(ctx context.Context, tx *gorm.
 					update.fields["assigned_to"] = ownerID
 				}
 			}
+			if update.dropOld {
+				trimmed := make([]int, 0, len(newAssigneeIDs))
+				for _, userID := range newAssigneeIDs {
+					if userID == ownerID {
+						trimmed = append(trimmed, userID)
+					}
+				}
+				newAssigneeIDs = trimmed
+			}
+			if update.addSelf {
+				newAssigneeIDs = append(newAssigneeIDs, ownerID)
+			}
 		}
 		if len(update.fields) == 0 && !update.addSelf && !update.dropOld {
 			continue
 		}
+
+		previousViewers := choreViewerSet(&chModel.Chore{IsPrivate: chore.IsPrivate, CreatedBy: chore.CreatedBy}, previousAssigneesByChore[chore.ID], circleUserIDs)
+		newViewers := choreViewerSet(&chModel.Chore{IsPrivate: isPrivate, CreatedBy: chore.CreatedBy}, newAssigneeIDs, circleUserIDs)
+		for userID := range previousViewers {
+			if _, stillVisible := newViewers[userID]; !stillVisible {
+				update.revokedUsers = append(update.revokedUsers, userID)
+			}
+		}
+		sort.Ints(update.revokedUsers)
+		totalRevocations += len(update.revokedUsers)
+
 		updates = append(updates, update)
 	}
 	if len(updates) == 0 {
 		return nil
 	}
 
-	startVersion, err := r.nextSyncVersionRangeWithDB(ctx, tx, circleID, len(updates))
+	// One version per chore update, plus one per revocation tombstone, all from a
+	// single contiguous range so every row gets a distinct, increasing version.
+	nextVersion, err := r.nextSyncVersionRangeWithDB(ctx, tx, circleID, len(updates)+totalRevocations)
 	if err != nil {
 		return err
 	}
 
-	for offset, update := range updates {
+	for _, update := range updates {
 		if update.dropOld {
 			if err := tx.WithContext(ctx).
 				Where("chore_id = ? AND user_id != ?", update.chore.ID, ownerID).
@@ -365,10 +406,28 @@ func (r *ChoreRepository) SetProjectChoresPrivacy(ctx context.Context, tx *gorm.
 				return err
 			}
 		}
-		update.fields["sync_version"] = startVersion + int64(offset)
+		update.fields["sync_version"] = nextVersion
+		nextVersion++
 		if err := tx.WithContext(ctx).Model(&chModel.Chore{}).Where("id = ?", update.chore.ID).
 			Updates(update.fields).Error; err != nil {
 			return err
+		}
+
+		if len(update.revokedUsers) > 0 {
+			tombstones := make([]syncModel.Tombstone, 0, len(update.revokedUsers))
+			for _, userID := range update.revokedUsers {
+				tombstones = append(tombstones, syncModel.Tombstone{
+					CircleID:    circleID,
+					EntityType:  syncModel.EntityTypeChore,
+					EntityID:    update.chore.ID,
+					UserID:      &userID,
+					SyncVersion: nextVersion,
+				})
+				nextVersion++
+			}
+			if err := tx.WithContext(ctx).Create(&tombstones).Error; err != nil {
+				return err
+			}
 		}
 	}
 	return nil

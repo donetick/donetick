@@ -784,7 +784,6 @@ func (h *Handler) EditChore(c *gin.Context) {
 
 	// Remove the auto-assignment logic - if no assignee then keep no assignee
 	oldChore, err := h.choreRepo.GetChore(c, choreReq.ID, currentUser.ID, currentUser.CircleID)
-
 	if err != nil {
 		logger.Error("Failed to retrieve chore", "error", err)
 		c.JSON(500, gin.H{
@@ -934,7 +933,6 @@ func (h *Handler) EditChore(c *gin.Context) {
 		}
 	}
 
-
 	if dueDatesDiffer(oldChore.NextDueDate, updatedChore.NextDueDate) {
 		historyEntry := &chModel.ChoreHistory{
 			ChoreID:     oldChore.ID,
@@ -997,14 +995,16 @@ func setEditChoreDefaults(choreReq *ChoreReq, oldChore *chModel.Chore) {
 }
 
 // inheritProjectPrivacy makes sure the project a chore is being placed in is visible
-// to the user, and forces the chore private when that project is private: a chore
-// inherits the privacy of its project, so the project flag always wins. Chores in a
-// public project (or in no project at all) keep their own flag.
+// to the user, and makes the chore follow that project's privacy: a chore always
+// takes on the privacy of the project it's placed in, in both directions — moving a
+// private chore into a public project makes it public, and moving a public chore
+// into a private project makes it private. A chore in no project at all keeps its
+// own flag, since there's no project to inherit from.
 //
-// It also keeps the assignees of such a chore down to the project owner, the only
-// user who can see it: assigning it to anyone else is rejected, and "Anyone" (an
-// empty assignee list) resolves to the owner instead of the whole circle, so the
-// chore never rotates or notifies its way to someone who can't see it.
+// It also keeps the assignees of a chore in a private project down to the project
+// owner, the only user who can see it: assigning it to anyone else is rejected, and
+// "Anyone" (an empty assignee list) resolves to the owner instead of the whole
+// circle, so the chore never rotates or notifies its way to someone who can't see it.
 func (h *Handler) inheritProjectPrivacy(c *gin.Context, choreReq *ChoreReq, userID int, circleID int) error {
 	if choreReq.ProjectID == nil {
 		return nil
@@ -1016,12 +1016,12 @@ func (h *Handler) inheritProjectPrivacy(c *gin.Context, choreReq *ChoreReq, user
 		return errors.New("project not found")
 	}
 
+	isPrivate := project.IsPrivate
+	choreReq.IsPrivate = &isPrivate
+
 	if !project.IsPrivate {
 		return nil
 	}
-
-	isPrivate := true
-	choreReq.IsPrivate = &isPrivate
 
 	for _, assignee := range choreReq.Assignees {
 		if assignee.UserID != project.CreatedBy {

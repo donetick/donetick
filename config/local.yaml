@@ -48,6 +48,8 @@ scheduler_jobs:
   due_job: 30m
   overdue_job: 3h
   pre_due_job: 3h
+  auto_skip_job: 5m
+  auto_skip_grace_period: 0s
 email:
   host:
   port:

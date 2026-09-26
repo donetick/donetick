@@ -53,6 +53,7 @@ type Chore struct {
 	FrequencyMetadataV2    *FrequencyMetadata         `json:"frequencyMetadata" gorm:"column:frequency_meta_v2;type:json"`                            // Additional frequency information for v2 (if used)
 	NextDueDate            *time.Time                 `json:"nextDueDate" gorm:"column:next_due_date;index"`                                          // When the chore is due
 	IsRolling              bool                       `json:"isRolling" gorm:"column:is_rolling"`                                                     // Whether the chore is rolling
+	AutoSkipWhenLate       bool                       `json:"autoSkipWhenLate" gorm:"column:auto_skip_when_late;default:false"`                       // Whether an overdue occurrence is skipped automatically
 	AssignedTo             *int                       `json:"assignedTo" gorm:"column:assigned_to"`                                                   // Who the chore is assigned to
 	Assignees              []ChoreAssignees           `json:"assignees" gorm:"foreignkey:ChoreID;references:ID"`                                      // Assignees of the chore
 	AssignStrategy         AssignmentStrategy         `json:"assignStrategy" gorm:"column:assign_strategy"`                                           // How the chore is assigned

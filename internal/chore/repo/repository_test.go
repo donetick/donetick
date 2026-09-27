@@ -165,6 +165,30 @@ func TestGetChoreAppliesProjectPrivacy(t *testing.T) {
 	}
 }
 
+func TestCreateChoreWithAssigneesEnforcesCurrentProjectPrivacy(t *testing.T) {
+	r, db := newTestChoreRepo(t)
+	project := createProject(t, db, testOwnerID, true)
+	chore := &chModel.Chore{
+		Name:           "private",
+		CircleID:       testCircleID,
+		CreatedBy:      testOwnerID,
+		ProjectID:      &project.ID,
+		AssignStrategy: chModel.AssignmentStrategyRandom,
+	}
+
+	_, err := r.CreateChoreWithAssignees(context.Background(), chore, []int{testOtherID}, testOwnerID)
+	if err != nil {
+		t.Fatalf("CreateChoreWithAssignees failed: %v", err)
+	}
+	if !chore.IsPrivate {
+		t.Fatal("chore should inherit private project visibility")
+	}
+	if chore.AssignedTo == nil || *chore.AssignedTo != testOwnerID {
+		t.Fatalf("assigned_to = %v, want project owner", chore.AssignedTo)
+	}
+	assertAssignees(t, db, chore.ID, []int{testOwnerID})
+}
+
 func TestSetProjectChoresPrivacyNarrowsAssigneesToOwner(t *testing.T) {
 	r, db := newTestChoreRepo(t)
 	ctx := context.Background()

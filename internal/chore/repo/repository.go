@@ -10,6 +10,8 @@ import (
 	config "donetick.com/core/config"
 	chModel "donetick.com/core/internal/chore/model"
 	cModel "donetick.com/core/internal/circle/model"
+	nModel "donetick.com/core/internal/notifier/model"
+	pModel "donetick.com/core/internal/project/model"
 	storageModel "donetick.com/core/internal/storage/model"
 	stModel "donetick.com/core/internal/subtask/model"
 	syncModel "donetick.com/core/internal/sync/model"
@@ -137,9 +139,27 @@ func choreViewerSet(chore *chModel.Chore, assigneeIDs []int, circleUserIDs []int
 	return viewers
 }
 
+func projectAwareChoreViewerSet(chore *chModel.Chore, project *pModel.Project, assigneeIDs []int, circleUserIDs []int) map[int]struct{} {
+	if project != nil && project.IsPrivate {
+		return map[int]struct{}{project.CreatedBy: {}}
+	}
+	return choreViewerSet(chore, assigneeIDs, circleUserIDs)
+}
+
 // UpdateChoreVisibility atomically updates a chore and its complete assignee set,
 // recording a user-scoped tombstone for each circle member who loses visibility.
 func (r *ChoreRepository) UpdateChoreVisibility(ctx context.Context, chore *chModel.Chore, assigneeIDs []int) error {
+	return r.updateChoreVisibility(ctx, chore, assigneeIDs, nil)
+}
+
+// UpdateChoreVisibilityForUser additionally verifies the destination project is
+// visible to actingUserID. Project visibility is read under a lock so a concurrent
+// project privacy change cannot leave the chore with stale visibility or assignees.
+func (r *ChoreRepository) UpdateChoreVisibilityForUser(ctx context.Context, chore *chModel.Chore, assigneeIDs []int, actingUserID int) error {
+	return r.updateChoreVisibility(ctx, chore, assigneeIDs, &actingUserID)
+}
+
+func (r *ChoreRepository) updateChoreVisibility(ctx context.Context, chore *chModel.Chore, assigneeIDs []int, actingUserID *int) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		lockedQuery := func() *gorm.DB {
 			q := tx.WithContext(ctx)
@@ -149,9 +169,74 @@ func (r *ChoreRepository) UpdateChoreVisibility(ctx context.Context, chore *chMo
 			return q
 		}
 
+		// Discover project IDs first, then lock all projects in a stable order
+		// before locking the chore. Project privacy updates use the same
+		// project-before-chore order, avoiding a lock inversion deadlock.
+		var snapshot chModel.Chore
+		if err := tx.WithContext(ctx).Select("id, project_id").Where("id = ? AND circle_id = ?", chore.ID, chore.CircleID).First(&snapshot).Error; err != nil {
+			return err
+		}
+		projectIDSet := make(map[int]struct{}, 2)
+		if snapshot.ProjectID != nil {
+			projectIDSet[*snapshot.ProjectID] = struct{}{}
+		}
+		if chore.ProjectID != nil {
+			projectIDSet[*chore.ProjectID] = struct{}{}
+		}
+		projectIDs := make([]int, 0, len(projectIDSet))
+		for projectID := range projectIDSet {
+			projectIDs = append(projectIDs, projectID)
+		}
+		sort.Ints(projectIDs)
+		projectsByID := make(map[int]*pModel.Project, len(projectIDs))
+		if len(projectIDs) > 0 {
+			var projects []pModel.Project
+			if err := lockedQuery().Where("id IN ? AND circle_id = ?", projectIDs, chore.CircleID).Order("id ASC").Find(&projects).Error; err != nil {
+				return err
+			}
+			if len(projects) != len(projectIDs) {
+				return errors.New("project not found")
+			}
+			for i := range projects {
+				projectsByID[projects[i].ID] = &projects[i]
+			}
+		}
+
 		var previousChore chModel.Chore
 		if err := lockedQuery().Where("id = ? AND circle_id = ?", chore.ID, chore.CircleID).First(&previousChore).Error; err != nil {
 			return err
+		}
+		// The project cannot change between the snapshot and this lock without
+		// taking the chore lock; retry rather than reason from mismatched state.
+		if (snapshot.ProjectID == nil) != (previousChore.ProjectID == nil) ||
+			(snapshot.ProjectID != nil && *snapshot.ProjectID != *previousChore.ProjectID) {
+			return errors.New("chore project changed concurrently; retry")
+		}
+
+		var previousProject *pModel.Project
+		if previousChore.ProjectID != nil {
+			previousProject = projectsByID[*previousChore.ProjectID]
+		}
+
+		var destinationProject *pModel.Project
+		if chore.ProjectID != nil {
+			destinationProject = projectsByID[*chore.ProjectID]
+			if actingUserID != nil && !destinationProject.CanView(*actingUserID) {
+				return errors.New("project not found")
+			}
+
+			chore.IsPrivate = destinationProject.IsPrivate
+			chore.Project = destinationProject
+			if destinationProject.IsPrivate {
+				if chore.AssignStrategy == chModel.AssignmentStrategyNoAssignee {
+					assigneeIDs = nil
+					chore.AssignedTo = nil
+				} else {
+					assigneeIDs = []int{destinationProject.CreatedBy}
+					ownerID := destinationProject.CreatedBy
+					chore.AssignedTo = &ownerID
+				}
+			}
 		}
 
 		var previousAssignees []chModel.ChoreAssignees
@@ -168,8 +253,8 @@ func (r *ChoreRepository) UpdateChoreVisibility(ctx context.Context, chore *chMo
 			return err
 		}
 
-		previousViewers := choreViewerSet(&previousChore, previousAssigneeIDs, circleUserIDs)
-		newViewers := choreViewerSet(chore, assigneeIDs, circleUserIDs)
+		previousViewers := projectAwareChoreViewerSet(&previousChore, previousProject, previousAssigneeIDs, circleUserIDs)
+		newViewers := projectAwareChoreViewerSet(chore, destinationProject, assigneeIDs, circleUserIDs)
 		revokedUserIDs := make([]int, 0)
 		for userID := range previousViewers {
 			if _, stillVisible := newViewers[userID]; !stillVisible {
@@ -177,13 +262,22 @@ func (r *ChoreRepository) UpdateChoreVisibility(ctx context.Context, chore *chMo
 			}
 		}
 		sort.Ints(revokedUserIDs)
+		if len(revokedUserIDs) > 0 {
+			// Pending rows contain rendered text and may target users who just lost
+			// access. Remove them atomically; the handler regenerates authorized
+			// notifications after this transaction commits.
+			if err := tx.WithContext(ctx).Where("chore_id = ? AND is_sent = ?", chore.ID, false).
+				Delete(&nModel.Notification{}).Error; err != nil {
+				return err
+			}
+		}
 
 		firstVersion, err := r.nextSyncVersionRangeWithDB(ctx, tx, chore.CircleID, 1+len(revokedUserIDs))
 		if err != nil {
 			return err
 		}
 		chore.SyncVersion = firstVersion
-		if err := tx.WithContext(ctx).Save(chore).Error; err != nil {
+		if err := tx.WithContext(ctx).Omit("Project").Save(chore).Error; err != nil {
 			return err
 		}
 
@@ -363,12 +457,20 @@ func (r *ChoreRepository) SetProjectChoresPrivacy(ctx context.Context, tx *gorm.
 				newAssigneeIDs = append(newAssigneeIDs, ownerID)
 			}
 		}
-		if len(update.fields) == 0 && !update.addSelf && !update.dropOld {
-			continue
+		// The project visibility itself changed even if this chore row was already
+		// aligned. Every chore therefore needs a sync bump and revocation check.
+		var previousViewers, newViewers map[int]struct{}
+		if isPrivate {
+			// Public project -> private project: the old chore-level rule is replaced
+			// by owner-only project visibility.
+			previousViewers = choreViewerSet(&chModel.Chore{IsPrivate: chore.IsPrivate, CreatedBy: chore.CreatedBy}, previousAssigneesByChore[chore.ID], circleUserIDs)
+			newViewers = map[int]struct{}{ownerID: {}}
+		} else {
+			// Private project -> public project: only the owner could previously see
+			// any contained chore; all chores become public after propagation.
+			previousViewers = map[int]struct{}{ownerID: {}}
+			newViewers = choreViewerSet(&chModel.Chore{IsPrivate: false, CreatedBy: chore.CreatedBy}, newAssigneeIDs, circleUserIDs)
 		}
-
-		previousViewers := choreViewerSet(&chModel.Chore{IsPrivate: chore.IsPrivate, CreatedBy: chore.CreatedBy}, previousAssigneesByChore[chore.ID], circleUserIDs)
-		newViewers := choreViewerSet(&chModel.Chore{IsPrivate: isPrivate, CreatedBy: chore.CreatedBy}, newAssigneeIDs, circleUserIDs)
 		for userID := range previousViewers {
 			if _, stillVisible := newViewers[userID]; !stillVisible {
 				update.revokedUsers = append(update.revokedUsers, userID)
@@ -381,6 +483,16 @@ func (r *ChoreRepository) SetProjectChoresPrivacy(ctx context.Context, tx *gorm.
 	}
 	if len(updates) == 0 {
 		return nil
+	}
+
+	if isPrivate {
+		// Notifications contain rendered chore text and delivery targets. Remove
+		// pending rows before access is narrowed so they cannot disclose the chore
+		// after this transaction commits.
+		if err := tx.WithContext(ctx).Where("chore_id IN ? AND is_sent = ?", choreIDs, false).
+			Delete(&nModel.Notification{}).Error; err != nil {
+			return err
+		}
 	}
 
 	// One version per chore update, plus one per revocation tombstone, all from a
@@ -464,11 +576,73 @@ func (r *ChoreRepository) CreateChore(c context.Context, chore *chModel.Chore) (
 	return chore.ID, nil
 }
 
+// CreateChoreWithAssignees atomically creates a chore and its assignees while
+// holding the destination project's lock. This prevents a concurrent project
+// privacy change from missing the new chore or leaving stale foreign assignees.
+func (r *ChoreRepository) CreateChoreWithAssignees(ctx context.Context, chore *chModel.Chore, assigneeIDs []int, actingUserID int) (int, error) {
+	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if chore.ProjectID != nil {
+			query := tx.WithContext(ctx)
+			if r.dbType == "postgres" {
+				query = query.Clauses(clause.Locking{Strength: "UPDATE"})
+			}
+			var project pModel.Project
+			if err := query.Where("id = ? AND circle_id = ?", *chore.ProjectID, chore.CircleID).First(&project).Error; err != nil {
+				return errors.New("project not found")
+			}
+			if !project.CanView(actingUserID) {
+				return errors.New("project not found")
+			}
+			chore.IsPrivate = project.IsPrivate
+			if project.IsPrivate {
+				if chore.AssignStrategy == chModel.AssignmentStrategyNoAssignee {
+					assigneeIDs = nil
+					chore.AssignedTo = nil
+				} else {
+					assigneeIDs = []int{project.CreatedBy}
+					ownerID := project.CreatedBy
+					chore.AssignedTo = &ownerID
+				}
+			}
+		}
+
+		nextVersion, err := r.nextSyncVersionWithDB(ctx, tx, chore.CircleID)
+		if err != nil {
+			return err
+		}
+		chore.SyncVersion = nextVersion
+		if err := tx.WithContext(ctx).Omit("Project").Create(chore).Error; err != nil {
+			return err
+		}
+
+		seen := make(map[int]struct{}, len(assigneeIDs))
+		assignees := make([]chModel.ChoreAssignees, 0, len(assigneeIDs))
+		for _, userID := range assigneeIDs {
+			if _, duplicate := seen[userID]; duplicate {
+				continue
+			}
+			seen[userID] = struct{}{}
+			assignees = append(assignees, chModel.ChoreAssignees{ChoreID: chore.ID, UserID: userID})
+		}
+		if len(assignees) > 0 {
+			if err := tx.WithContext(ctx).Create(&assignees).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return 0, err
+	}
+	return chore.ID, nil
+}
+
 func (r *ChoreRepository) GetChore(c context.Context, choreID int, userID int, circleID int) (*chModel.Chore, error) {
 	var chore chModel.Chore
 	query := privacyJoins(r.db.WithContext(c).Model(&chModel.Chore{}), userID).
 		Preload("SubTasks", "chore_id = ?", choreID).
 		Preload("Assignees").
+		Preload("Project").
 		Preload("ThingChore").
 		Preload("LabelsV2").
 		Where("chores.id = ? AND chores.circle_id = ?", choreID, circleID).
@@ -1081,6 +1255,7 @@ func (r *ChoreRepository) GetOverdueChoresForNotification(c context.Context, ove
 
 	query := r.db.Debug().WithContext(c).
 		Table("chores").
+		Preload("Project").
 		Select("chores.*, MAX(n.created_at) as max_notification_created_at").
 		Joins("left join notifications n on n.chore_id = chores.id and n.type = 2").
 		Where("chores.is_active = ? AND chores.notification = ? AND chores.next_due_date < ? AND chores.next_due_date > ?", true, true, overdueTime, untilTime).
@@ -1098,7 +1273,7 @@ func (r *ChoreRepository) GetOverdueChoresForNotification(c context.Context, ove
 // a predue notfication is a notification send before the due date in 6 hours, 3 hours :
 func (r *ChoreRepository) GetPreDueChoresForNotification(c context.Context, preDueDuration time.Duration, everyDuration time.Duration) ([]*chModel.Chore, error) {
 	var chores []*chModel.Chore
-	query := r.db.WithContext(c).Table("chores").Select("chores.*, MAX(n.created_at) as max_notification_created_at").Joins("left join notifications n on n.chore_id = chores.id and n.scheduled_for = chores.next_due_date and n.type = 3")
+	query := r.db.WithContext(c).Table("chores").Preload("Project").Select("chores.*, MAX(n.created_at) as max_notification_created_at").Joins("left join notifications n on n.chore_id = chores.id and n.scheduled_for = chores.next_due_date and n.type = 3")
 	if err := query.Where("chores.is_active = ? and chores.notification = ? and chores.next_due_date > ? and chores.next_due_date < ?", true, true, time.Now().UTC(), time.Now().UTC().Add(everyDuration*2)).Where(readJSONBooleanField(r.dbType, "chores.notification_meta", "predue")).Having("MAX(n.created_at) is null or MAX(n.created_at) < ?", time.Now().UTC().Add(everyDuration)).Group("chores.id").Find(&chores).Error; err != nil {
 		return nil, err
 	}

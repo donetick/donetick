@@ -11,6 +11,7 @@ import (
 	syncModel "donetick.com/core/internal/sync/model"
 	"donetick.com/core/logging"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type ProjectRepository struct {
@@ -96,46 +97,49 @@ func (r *ProjectRepository) CreateProject(ctx context.Context, project *pModel.P
 func (r *ProjectRepository) UpdateProject(ctx context.Context, project *pModel.Project, isPrivate *bool, userID int, circleID int) error {
 	log := logging.FromContext(ctx)
 
-	// Check if user has permission to update this project
-	var existingProject pModel.Project
-	if err := r.db.WithContext(ctx).Where("id = ? AND circle_id = ?", project.ID, circleID).First(&existingProject).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return errors.New("project not found")
-		}
-		log.Error("Error finding project", "error", err)
-		return err
-	}
-
-	// Only creator or admin can update project (implement admin check based on your auth system)
-	if existingProject.CreatedBy != userID {
-		// A private project owned by someone else must look identical to a missing
-		// one, or its ID would leak that a private project exists there.
-		if !existingProject.CanView(userID) {
-			return errors.New("project not found")
-		}
-		return errors.New("user does not have permission to update this project")
-	}
-
-	if isPrivate == nil {
-		isPrivate = &existingProject.IsPrivate
-	}
-
-	updates := map[string]interface{}{
-		"name":        project.Name,
-		"description": project.Description,
-		"color":       project.Color,
-		"icon":        project.Icon,
-		"is_private":  *isPrivate,
-	}
-
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// Serialize privacy changes with chore moves that lock their destination
+		// project. Reading this inside the transaction also prevents two concurrent
+		// project updates from making propagation decisions from stale state.
+		var existingProject pModel.Project
+		query := tx.WithContext(ctx)
+		if tx.Dialector.Name() == "postgres" {
+			query = query.Clauses(clause.Locking{Strength: "UPDATE"})
+		}
+		if err := query.Where("id = ? AND circle_id = ?", project.ID, circleID).First(&existingProject).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return errors.New("project not found")
+			}
+			log.Error("Error finding project", "error", err)
+			return err
+		}
+
+		if existingProject.CreatedBy != userID {
+			if !existingProject.CanView(userID) {
+				return errors.New("project not found")
+			}
+			return errors.New("user does not have permission to update this project")
+		}
+
+		destinationPrivacy := existingProject.IsPrivate
+		if isPrivate != nil {
+			destinationPrivacy = *isPrivate
+		}
+		updates := map[string]interface{}{
+			"name":        project.Name,
+			"description": project.Description,
+			"color":       project.Color,
+			"icon":        project.Icon,
+			"is_private":  destinationPrivacy,
+		}
+
 		if err := tx.WithContext(ctx).Model(&pModel.Project{}).Where("id = ? AND circle_id = ?", project.ID, circleID).Updates(updates).Error; err != nil {
 			log.Error("Error updating project", "error", err)
 			return err
 		}
 
-		if existingProject.IsPrivate != *isPrivate {
-			if err := r.choreRepo.SetProjectChoresPrivacy(ctx, tx, circleID, project.ID, existingProject.CreatedBy, *isPrivate); err != nil {
+		if existingProject.IsPrivate != destinationPrivacy {
+			if err := r.choreRepo.SetProjectChoresPrivacy(ctx, tx, circleID, project.ID, existingProject.CreatedBy, destinationPrivacy); err != nil {
 				log.Error("Error propagating project privacy to chores", "error", err, "projectID", project.ID)
 				return err
 			}
@@ -156,56 +160,64 @@ func (r *ProjectRepository) UpdateProject(ctx context.Context, project *pModel.P
 func (r *ProjectRepository) DeleteProject(ctx context.Context, projectID int, userID int, circleID int) error {
 	log := logging.FromContext(ctx)
 
-	// Check if it's the default project
-	var project pModel.Project
-	if err := r.db.WithContext(ctx).Where("id = ? AND circle_id = ?", projectID, circleID).First(&project).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return errors.New("project not found")
-		}
-		return err
-	}
-
-	if project.IsDefault {
-		return errors.New("cannot delete default project")
-	}
-
-	// Check if user has permission to delete this project
-	if project.CreatedBy != userID {
-		// Same anti-enumeration rule as UpdateProject: a private project owned by
-		// someone else must look identical to a missing one.
-		if !project.CanView(userID) {
-			return errors.New("project not found")
-		}
-		return errors.New("user does not have permission to delete this project")
-	}
-
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		// Capture the affected chores before project_id is cleared.
+		// Serialize deletion with project privacy changes and chore creation/moves.
+		var project pModel.Project
+		query := tx.WithContext(ctx)
+		if tx.Dialector.Name() == "postgres" {
+			query = query.Clauses(clause.Locking{Strength: "UPDATE"})
+		}
+		if err := query.Where("id = ? AND circle_id = ?", projectID, circleID).First(&project).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return errors.New("project not found")
+			}
+			return err
+		}
+		if project.IsDefault {
+			return errors.New("cannot delete default project")
+		}
+		if project.CreatedBy != userID {
+			if !project.CanView(userID) {
+				return errors.New("project not found")
+			}
+			return errors.New("user does not have permission to delete this project")
+		}
+
+		// Removing the project would make a private chore fall back to chore-level
+		// visibility, which always includes its original creator. Refuse the
+		// operation when that would reveal a chore to somebody other than the
+		// project owner; callers can move or delete those chores explicitly first.
+		if project.IsPrivate {
+			var foreignCreatorCount int64
+			if err := tx.WithContext(ctx).Model(&chModel.Chore{}).
+				Where("project_id = ? AND circle_id = ? AND created_by != ?", projectID, circleID, project.CreatedBy).
+				Count(&foreignCreatorCount).Error; err != nil {
+				return err
+			}
+			if foreignCreatorCount > 0 {
+				return errors.New("cannot delete private project containing chores created by other users")
+			}
+		}
+
 		choreIDs, err := r.choreIDsInProject(ctx, tx, projectID, circleID)
 		if err != nil {
 			log.Error("Error getting chores for project", "error", err)
 			return err
 		}
-
-		// First, update all chores in this project to have no project (project_id = NULL)
-		if err := tx.Exec("UPDATE chores SET project_id = NULL WHERE project_id = ?", projectID).Error; err != nil {
+		if err := tx.WithContext(ctx).Model(&chModel.Chore{}).
+			Where("project_id = ? AND circle_id = ?", projectID, circleID).
+			Update("project_id", nil).Error; err != nil {
 			log.Error("Error updating chores when deleting project", "error", err)
 			return err
 		}
-
-		// Without a version bump the chores look unchanged to delta sync, so clients keep
-		// pointing them at a project that no longer exists and the chores disappear.
 		if err := r.bumpChoreSyncVersions(ctx, tx, circleID, choreIDs); err != nil {
 			log.Error("Error bumping chore sync versions when deleting project", "error", err)
 			return err
 		}
-
-		// Then delete the project
 		if err := tx.Where("id = ? AND circle_id = ?", projectID, circleID).Delete(&pModel.Project{}).Error; err != nil {
 			log.Error("Error deleting project", "error", err)
 			return err
 		}
-
 		return nil
 	})
 }

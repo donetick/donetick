@@ -153,6 +153,26 @@ func TestUpdateProjectKeepsPrivacyWhenFlagOmitted(t *testing.T) {
 	}
 }
 
+func TestDeletePrivateProjectRejectsAccessRestorationToForeignCreator(t *testing.T) {
+	r, db := newTestRepo(t)
+	project := createTestProject(t, db, "mine", testOwnerID, true)
+	chore := createTestChore(t, db, project.ID, true)
+	require := func(condition bool, message string, args ...interface{}) {
+		t.Helper()
+		if !condition {
+			t.Fatalf(message, args...)
+		}
+	}
+	require(db.Model(&chModel.Chore{}).Where("id = ?", chore.ID).Update("created_by", testOtherID).Error == nil, "failed to set foreign creator")
+
+	err := r.DeleteProject(context.Background(), project.ID, testOwnerID, testCircleID)
+	require(err != nil, "deleting project should fail")
+	require(err.Error() == "cannot delete private project containing chores created by other users", "unexpected error: %v", err)
+
+	var stored pModel.Project
+	require(db.First(&stored, project.ID).Error == nil, "project should still exist")
+}
+
 func TestUpdateAndDeleteProjectHidePrivateProjectExistenceFromOthers(t *testing.T) {
 	r, db := newTestRepo(t)
 

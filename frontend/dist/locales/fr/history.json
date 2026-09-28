@@ -1,0 +1,182 @@
+{
+  "edit": {
+    "title": "Modifier l'historique",
+    "completedDate": "Date de fin",
+    "note": "Note",
+    "additionalNotes": "Notes complémentaires",
+    "deleteTitle": "Supprimer l'entrée",
+    "deleteMessage": "Voulez-vous vraiment supprimer cette entrée d'historique ?"
+  },
+  "status": {
+    "inProgress": "En cours",
+    "completed": "Terminée",
+    "skipped": "Passée",
+    "pendingApproval": "En attente d'approbation",
+    "rejected": "Rejetée",
+    "missed": "Manquée",
+    "rescheduled": "Replanifiée",
+    "scheduled": "Planifiée"
+  },
+  "badge": {
+    "onTime": "À l'heure",
+    "onTimeLabel": "À l'heure"
+  },
+  "card": {
+    "wasDue": "Échéance prévue le {{date}}",
+    "daysBeforeDue_one": "{{count}} j avant l'échéance",
+    "daysBeforeDue_other": "{{count}} j avant l'échéance",
+    "daysAfterDue_one": "{{count}} j après l'échéance",
+    "daysAfterDue_other": "{{count}} j après l'échéance",
+    "hoursBeforeDue_one": "{{count}} h avant l'échéance",
+    "hoursBeforeDue_other": "{{count}} h avant l'échéance",
+    "hoursAfterDue_one": "{{count}} h après l'échéance",
+    "hoursAfterDue_other": "{{count}} h après l'échéance",
+    "assignedTo": "Assignée à {{name}}",
+    "points_one": "★ {{count}} point",
+    "points_other": "★ {{count}} points"
+  },
+  "detail": {
+    "title": "Détail de l'activité",
+    "openTask": "Ouvrir la tâche",
+    "editEntry": "Modifier l'entrée",
+    "performedBy": "Effectuée par",
+    "assignedTo": "Assignée à",
+    "lastUpdated": "Dernière mise à jour",
+    "duration": "Durée",
+    "pointsEarned": "Points gagnés",
+    "points_one": "{{count}} point",
+    "points_other": "{{count}} points",
+    "note": "Note"
+  },
+  "charts": {
+    "noData": "Aucune donnée disponible",
+    "noLabels": "Sans étiquette",
+    "unassigned": "Non assignée",
+    "unknownTask": "Tâche inconnue",
+    "late": "En retard",
+    "status": {
+      "title": "Statut",
+      "description": "Statut des tâches terminées"
+    },
+    "due": {
+      "title": "Date d'échéance",
+      "description": "Date d'échéance des tâches actuelles"
+    },
+    "priority": {
+      "title": "Priorité",
+      "description": "Tâches par priorité"
+    },
+    "labels": {
+      "title": "Étiquettes",
+      "description": "Tâches par étiquette"
+    },
+    "labelsDuration": {
+      "title": "Étiquettes (temps)",
+      "description": "Temps passé par étiquette (heures)"
+    },
+    "tasksTime": {
+      "title": "Tâches (temps)",
+      "description": "Temps passé par tâche (heures)"
+    },
+    "assigneeBreakdown": {
+      "title": "Par personne assignée",
+      "description": "Tâches regroupées par personne assignée"
+    }
+  },
+  "filter": {
+    "status": "Statut",
+    "pending": "En attente",
+    "labels": "Étiquettes",
+    "hasNotes": "Avec des notes",
+    "hasPoints": "Avec des points",
+    "timePeriod": "Période",
+    "user": "Utilisateur",
+    "completedBy": "Terminée par",
+    "completedAt": "Terminée le"
+  },
+  "period": {
+    "days_one": "{{count}} jour",
+    "days_other": "{{count}} jours",
+    "allTime": "Toute la période"
+  },
+  "search": {
+    "placeholder": "Rechercher dans l'historique...",
+    "clear": "Effacer la recherche"
+  },
+  "sort": {
+    "date": "Date de fin",
+    "updatedDate": "Date de mise à jour",
+    "performer": "Terminée par",
+    "status": "Statut",
+    "points": "Points"
+  },
+  "activities": {
+    "title": "Activités",
+    "subtitle": "Consultez les tâches terminées, passées ou manquées",
+    "emptyTitle": "Aucune activité sur cette période",
+    "emptyDescriptionEveryone": "Personne n'a terminé de tâche dans votre cercle {{period}}. Essayez une période plus longue ou un autre membre.",
+    "emptyDescriptionMember": "Aucune tâche terminée par {{name}} {{period}}. Essayez une période plus longue ou un autre membre.",
+    "periodSoFar": "jusqu'à présent",
+    "periodLastDays": "au cours des {{count}} derniers jours",
+    "unknownMember": "ce membre",
+    "searchPlaceholder": "Rechercher dans les activités...",
+    "sort": {
+      "date": "Date",
+      "name": "Nom de la tâche",
+      "status": "Statut",
+      "points": "Points"
+    }
+  },
+  "title": {
+    "summary": "Récapitulatif des tâches",
+    "activity": "Activité des tâches"
+  },
+  "noResults": {
+    "clear": "Effacer les filtres"
+  },
+  "toast": {
+    "updateQueued": {
+      "title": "Mise à jour de l'historique en attente",
+      "message": "Vous êtes hors ligne. La mise à jour de l'historique sera synchronisée une fois la connexion rétablie."
+    },
+    "updated": {
+      "title": "Historique mis à jour",
+      "message": "L'entrée d'historique a bien été mise à jour."
+    },
+    "deleteQueued": {
+      "title": "Suppression de l'historique en attente",
+      "message": "Vous êtes hors ligne. La suppression de l'historique sera synchronisée une fois la connexion rétablie."
+    },
+    "deleted": {
+      "title": "Entrée d'historique supprimée",
+      "message": "L'entrée d'historique a bien été supprimée."
+    }
+  },
+  "delete": {
+    "title": "Supprimer l'entrée d'historique",
+    "message": "Voulez-vous vraiment supprimer cette entrée d'historique ?"
+  },
+  "empty": {
+    "title": "Aucun historique pour le moment",
+    "description": "Chaque fois que cette tâche est terminée ou passée, l'entrée correspondante apparaît ici avec l'auteur et la date. Rien ne s'est encore passé.",
+    "backToTasks": "Retour aux tâches",
+    "noResultsTitle": "Aucun historique ne correspond à ces filtres",
+    "noResultsDescription": "L'historique contient des entrées, mais aucune ne correspond aux filtres actuellement appliqués."
+  },
+  "info": {
+    "allCompleted": "Tâches traitées",
+    "timesSuffix": "{{count}} fois",
+    "averageTiming": "Écart moyen à l'échéance",
+    "onTime": "À l'heure",
+    "longestDelay": "Retard maximal",
+    "neverLate": "Jamais en retard",
+    "completedMost": "Record de tâches terminées",
+    "unknown": "Inconnu",
+    "membersInvolved": "Membres impliqués",
+    "membersSuffix": "Membres : {{count}}",
+    "lastCompleted": "Dernière tâche terminée par"
+  },
+  "noteViewer": {
+    "updatedAt": "Mise à jour le {{date}}"
+  }
+}

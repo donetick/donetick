@@ -1,0 +1,690 @@
+{
+  "save": "Uložit",
+  "cancel": "Zrušit",
+  "delete": "Smazat",
+  "edit": "Upravit",
+  "close": "Zavřít",
+  "confirm": "Potvrdit",
+  "loading": "Načítání...",
+  "error": "Chyba",
+  "success": "Hotovo",
+  "warning": "Upozornění",
+  "colors": {
+    "Salmon": "Lososová",
+    "Teal": "Modrozelená",
+    "Sky Blue": "Nebesky modrá",
+    "Grape": "Hroznová",
+    "Sunshine": "Sluneční",
+    "Coral": "Korálová",
+    "Lavender": "Levandulová",
+    "Rose": "Růžová",
+    "Charcoal": "Uhlová",
+    "Sienna": "Siena",
+    "Mint": "Mátová",
+    "Amber": "Jantarová",
+    "Cobalt": "Kobaltová",
+    "Emerald": "Smaragdová",
+    "Peach": "Broskvová",
+    "Ocean": "Oceánová",
+    "Mustard": "Hořčicová",
+    "Ruby": "Rubínová",
+    "Periwinkle": "Barvínková",
+    "Turquoise": "Tyrkysová",
+    "Lime": "Limetková",
+    "Blush": "Pudrová",
+    "Ash": "Popelavá",
+    "Sand": "Písková"
+  },
+  "refresh": "Obnovit",
+  "copy": "Kopírovat",
+  "copied": "Zkopírováno!",
+  "settings": "Nastavení",
+  "yes": "Ano",
+  "no": "Ne",
+  "back": "Zpět",
+  "backToCalendar": "Zpět na kalendář",
+  "logout": "Odhlásit se",
+  "version": "Verze",
+  "navigation": {
+    "search": "Hledat",
+    "allTasks": "Úkoly",
+    "home": "Přehled",
+    "tasks": "Úkoly",
+    "more": "Více",
+    "mobileNavigation": "Hlavní navigace",
+    "archived": "Archiv",
+    "things": "Věci",
+    "labels": "Štítky",
+    "projects": "Projekty",
+    "filters": "Filtry",
+    "activities": "Aktivity",
+    "points": "Body",
+    "settings": "Nastavení",
+    "reportBug": "Nahlásit problém",
+    "openMenu": "Otevřít nabídku",
+    "collapseMenu": "Sbalit nabídku",
+    "expandMenu": "Rozbalit nabídku",
+    "primaryNavigation": "Hlavní navigace",
+    "profile": "Profil"
+  },
+  "search": {
+    "title": "Hledat",
+    "placeholder": "Hledat v Donetick",
+    "inputAriaLabel": "Hledat úkoly, historii, projekty, štítky a nastavení",
+    "deviceNote": "Hledá se v obsahu dostupném v tomto zařízení",
+    "escape": "",
+    "recent": "Nedávné",
+    "empty": {
+      "title": "Žádné přímé shody",
+      "subtitle": "Tímto hledáním můžete i tak vyfiltrovat seznam úkolů.",
+      "actionsSubtitle": "Neodpovídá žádný pohled ani akce. Stiskem Backspace budete hledat ve všem."
+    },
+    "groups": {
+      "tasks": "Úkoly",
+      "history": "Poznámky",
+      "projects": "Projekty",
+      "labels": "Štítky",
+      "people": "Lidé",
+      "settings": "Nastavení",
+      "actions": "Rychlé akce"
+    },
+    "actions": {
+      "quickAction": "Rychlá akce",
+      "navigation": "Navigace",
+      "createTask": "Vytvořit úkol",
+      "createLabel": "Vytvořit štítek",
+      "createProject": "Vytvořit projekt",
+      "createFilter": "Vytvořit filtr",
+      "viewAllTasks": "Zobrazit všechny úkoly",
+      "viewArchivedTasks": "Zobrazit archivované úkoly",
+      "viewThings": "Zobrazit věci",
+      "viewLabels": "Zobrazit štítky",
+      "viewProjects": "Zobrazit projekty",
+      "viewFilters": "Zobrazit filtry",
+      "viewActivities": "Zobrazit aktivity",
+      "viewPoints": "Zobrazit body",
+      "openSettings": "Otevřít nastavení",
+      "filterTasks": "Zobrazit úkoly odpovídající „{{query}}“",
+      "filterTasksSubtitle": "Filtrovat seznam úkolů"
+    },
+    "footer": {
+      "navigate": "Pohyb",
+      "open": "Otevřít",
+      "results_one": "{{count}} výsledek",
+      "results_other": "{{count}} výsledků",
+      "typeToSearch": "Pište pro hledání",
+      "slashHint": "/ pro přechod na pohled"
+    },
+    "modes": {
+      "actions": {
+        "label": "Přejít na",
+        "placeholder": "Přejít na pohled nebo akci"
+      }
+    }
+  },
+  "policyUpdate": {
+    "title": "Aktualizovali jsme Zásady ochrany osobních údajů a Podmínky",
+    "subtitle": "Věnujte prosím chvilku jejich přečtení. Dalším používáním Donetick přijímáte aktualizované dokumenty.",
+    "readPrivacy": "Zásady ochrany osobních údajů",
+    "readTerms": "Podmínky",
+    "acknowledge": "Rozumím"
+  },
+  "feedback": {
+    "later": "Možná později",
+    "sentiment": {
+      "title": "Jak jste s Donetick spokojeni?",
+      "subtitle": "Vaše odpověď nám pomůže rozhodnout, co vytvořit dál.",
+      "options": {
+        "love": "Miluju ho",
+        "okay": "Ujde to",
+        "issues": "Mám problémy"
+      }
+    },
+    "categories": {
+      "bugs": "Chyby",
+      "missingFeature": "Chybějící funkce",
+      "tooComplicated": "Příliš složité",
+      "slow": "Pomalé",
+      "notifications": "Oznámení",
+      "ai": "",
+      "other": "Jiné"
+    },
+    "details": {
+      "title": "Co bychom mohli zlepšit?",
+      "messageLabel": "Řekněte nám více",
+      "messagePlaceholder": "Co se stalo, nebo co by to zlepšilo?",
+      "contextNote": "Přiložíme verzi aplikace, zařízení a platformu, abychom mohli problémy zopakovat.",
+      "submit": "Odeslat zpětnou vazbu",
+      "contextNoteSelfHosted": "Používáte vlastní instanci, takže z vašeho serveru se nic neodesílá — otevřeme předvyplněné hlášení na GitHubu, které si můžete nejprve zkontrolovat a upravit.",
+      "submitSelfHosted": "Pokračovat na GitHub"
+    },
+    "review": {
+      "title": "Jsme rádi, že vás baví!",
+      "subtitle": "Hodnocení nebo hvězdička pomůže ostatním Donetick najít.",
+      "github": "Dát hvězdičku na GitHubu",
+      "appStore": "Ohodnotit v App Store",
+      "playStore": "Ohodnotit na Google Play"
+    },
+    "thanks": {
+      "title": "Děkujeme za zpětnou vazbu",
+      "subtitle": "Čteme každou odpověď a ovlivňuje to, na čem budeme dále pracovat."
+    },
+    "github": {
+      "title": "Nahlaste to na GitHubu",
+      "subtitle": "Předvyplnili jsme hlášení s vašimi poznámkami a informacemi o verzi. Zatím nic nebylo odesláno — zkontrolujte ho a odešlete, až budete připraveni.",
+      "open": "Otevřít hlášení"
+    }
+  },
+  "done": "Hotovo",
+  "clearAll": "Vymazat vše",
+  "upload": {
+    "quotaTitle": "Překročena kvóta úložiště",
+    "quotaMessage": "Překročili jste kvótu pro nahrávání souborů.",
+    "tooLargeTitle": "Soubor je příliš velký",
+    "tooLargeMessage": "Soubor, který se pokoušíte nahrát, je příliš velký.",
+    "deniedTitle": "Přístup odepřen",
+    "deniedMessage": "Nemáte oprávnění nahrávat soubory.",
+    "plusFeatureTitle": "Funkce Plus",
+    "plusFeatureMessage": "Nahrávání obrázků není v tarifu Basic k dispozici. Přejděte na Plus a přidávejte obrázky ke svému obsahu.",
+    "upgradeTitle": "Vyžadován upgrade",
+    "upgradeMessage": "Nahrávání obrázků je dostupné pouze pro účty Plus.",
+    "failedTitle": "Nahrávání se nezdařilo",
+    "failedMessage": "Obrázek se nepodařilo nahrát.",
+    "processingMessage": "Při zpracování obrázku došlo k chybě."
+  },
+  "getStarted": "Začínáme!",
+  "imageLoadFailed": "Obrázek se nepodařilo načíst.",
+  "typeHere": "Pište sem…",
+  "summaryOfChores": "Toto je souhrn vašich úkolů",
+  "loadingOffline": "Jste offline",
+  "loadingOfflineSub": "Toto není v režimu offline dostupné. Zkontrolujte připojení k internetu a zkuste to znovu.",
+  "loadingSlow": "Trvá to déle než obvykle. Možná nastal problém.",
+  "navigateBack": "Přejít zpět",
+  "bottomNav": "Spodní navigace",
+  "profile": "Profil",
+  "autocompletePlaceholder": "Pište sem...",
+  "errorScreen": {
+    "title": "Něco se pokazilo",
+    "fallback": "Došlo k neočekávané chybě. Zkuste stránku znovu načíst — obvykle to pomůže.",
+    "tryAgain": "Zkusit znovu",
+    "home": "Domů",
+    "login": "Přihlásit se",
+    "hideDetails": "Skrýt podrobnosti chyby",
+    "showDetails": "Zobrazit podrobnosti chyby",
+    "copyToClipboard": "Zkopírovat do schránky",
+    "copied": "Podrobnosti chyby zkopírovány do schránky",
+    "reportProblem": "Nahlásit tento problém",
+    "reportHint": "Pokud se to opakuje, pošlete nám prosím hlášení, abychom se na to mohli podívat.",
+    "collectingDetails": "Shromažďování podrobností o chybě…"
+  },
+  "userMenu": {
+    "actAsAnother": "Jednat jako jiný uživatel",
+    "stopImpersonating": "Ukončit zastupování",
+    "returnToAccount": "Vrátit se do svého účtu",
+    "accountPrefs": "Účet a předvolby",
+    "invitePeople": "Pozvat lidi",
+    "addMembers": "Přidat členy do kruhu",
+    "sidePanelSettings": "Nastavení postranního panelu",
+    "planFree": "Zdarma",
+    "planPlus": "",
+    "planPlusExpiring": "Plus (brzy vyprší)",
+    "switchUser": "Přepnout uživatele",
+    "impersonateUser": "Zastupovat uživatele",
+    "switchToLight": "Přepnout na světlý",
+    "switchToDark": "Přepnout na tmavý",
+    "unlockPremium": "Odemknout prémiové funkce",
+    "impersonating": "Zastupujete",
+    "toggleThemeAppearance": "Přepnout vzhled motivu",
+    "upgradeToPlus": "Přejít na Plus"
+  },
+  "realtime": {
+    "newTaskTitle": "Vytvořen nový úkol",
+    "connected": "Nyní dostáváte aktualizace v reálném čase.",
+    "errorTitle": "Chyba v reálném čase",
+    "parseTitle": "Chyba zprávy",
+    "parseMessage": "Zprávu ze serveru se nepodařilo zpracovat",
+    "disabledTitle": "Připojení dočasně vypnuto",
+    "failedTitle": "Připojení se nezdařilo",
+    "stateConnectionError": "Došlo k chybě připojení",
+    "stateAuthExpired": "Ověření vypršelo – obnovuje se token...",
+    "stateTokenRefreshed": "Token obnoven – znovu se připojuje...",
+    "stateRefreshInProgress": "Probíhá obnova tokenu – brzy se znovu připojí...",
+    "stateSessionExpired": "Relace vypršela – přihlaste se prosím znovu",
+    "stateAuthFailed": "Ověření se nezdařilo – přihlaste se prosím znovu",
+    "stateAuthError": "Chyba ověření – přihlaste se prosím znovu",
+    "stateTimeout": "Vypršel časový limit připojení – znovu se připojuje...",
+    "connectErrorTitle": "Chyba připojení",
+    "connectErrorMessage": "Nepodařilo se navázat připojení v reálném čase. Zkuste to prosím znovu."
+  },
+  "removeAll": "Odebrat vše",
+  "apply": "Použít",
+  "cancelAll": "Zrušit vše",
+  "backFromSearch": "Zpět z hledání",
+  "newVersionAvailable": "Je k dispozici nová verze. Aktualizujte kliknutím na tlačítko pro opětovné načtení.",
+  "notFound": {
+    "title": "Stránka nenalezena",
+    "description": "Tento odkaz nikam nevede. Možná byl přesunut, nebo je v adrese překlep.",
+    "goToMyTasks": "Přejít na mé úkoly",
+    "logIn": "Přihlásit se"
+  },
+  "pendingBadge": {
+    "completePending": "Dokončení čeká",
+    "skipPending": "Přeskočení čeká",
+    "updatePending": "Aktualizace čeká",
+    "createPending": "Vytvoření čeká",
+    "deletePending": "Smazání čeká",
+    "editHistoryPending": "Úprava historie čeká",
+    "deleteHistoryPending": "Smazání historie čeká",
+    "reschedulePending": "Přeplánování čeká",
+    "archivePending": "Archivace čeká",
+    "restorePending": "Obnovení čeká",
+    "startPending": "Spuštění čeká",
+    "pausePending": "Pozastavení čeká"
+  },
+  "sortAndFilter": {
+    "sortBy": "Řadit podle",
+    "ariaLabel": "Možnosti řazení a filtrování",
+    "title": "Řazení a filtr",
+    "ascending": "Vzestupně",
+    "descending": "Sestupně",
+    "filter": "Filtr"
+  },
+  "versionInfo": "",
+  "apiVersionUnavailable": "nedostupné",
+  "sync": {
+    "aria": "Otevřít stav synchronizace a sítě",
+    "allSynced": "Všechny změny synchronizovány",
+    "willSync": "Synchronizuje se po návratu online",
+    "cancelAll": "Zrušit vše",
+    "commandLabels": {
+      "createChore": "Vytvořit úkol",
+      "updateChore": "Aktualizovat úkol",
+      "updateChoreHistory": "Upravit historii",
+      "completeChore": "Dokončit úkol",
+      "skipChore": "Přeskočit úkol",
+      "startChore": "Spustit úkol",
+      "pauseChore": "Pozastavit úkol",
+      "deleteChore": "Smazat úkol",
+      "deleteChoreHistory": "Smazat historii",
+      "rescheduleChore": "Přeplánovat úkol",
+      "archiveChore": "Archivovat úkol",
+      "unarchiveChore": "Obnovit úkol",
+      "pendingAction": "Čekající akce"
+    },
+    "never": "Nikdy",
+    "justNow": "Právě teď",
+    "secondsAgo": "před {{count}} s",
+    "minutesAgo": "před {{count}} min",
+    "hoursAgo": "před {{count}} h",
+    "online": "",
+    "offline": "",
+    "syncing": "Synchronizace...",
+    "lastSync": "Poslední synchronizace: {{time}}",
+    "offlineSince": "Offline od {{duration}}",
+    "errorPrefix": "Chyba: {{message}}",
+    "pending": "Čekající ({{count}})",
+    "failed": "Neúspěšné ({{count}})",
+    "dismiss": "Zavřít",
+    "nextAutoSync": "Další automatická synchronizace za {{seconds}} s",
+    "checkingServer": "Kontrola serveru...",
+    "retryingIn": "Nový pokus za {{seconds}} s",
+    "syncNow": "Synchronizovat nyní",
+    "pendingSyncLabel_one": "{{count}} čekající akce k synchronizaci",
+    "pendingSyncLabel_other": "{{count}} čekajících akcí k synchronizaci",
+    "pendingActionsTitle": "Čekající akce",
+    "actionsWaitingToSync_one": "{{count}} akce čeká na synchronizaci.",
+    "actionsWaitingToSync_other": "{{count}} akcí čeká na synchronizaci.",
+    "cancelActionAria": "Zrušit {{label}}"
+  },
+  "attachments": "Přílohy",
+  "fileNumbered": "Soubor {{index}}",
+  "noAttachmentsTitle": "Žádné přílohy",
+  "noAttachmentsDescription": "Fotky a soubory přidané k tomuto úkolu se zobrazí zde.",
+  "kbSize": "{{size}} kB",
+  "onboarding": {
+    "sources": {
+      "speak": "Řekněte",
+      "snap": "Vyfoťte",
+      "type": "Napište"
+    },
+    "capture": {
+      "voiceCaption": "Data, štítky a body z vašich slov",
+      "deviceCaption": "Zpracováno ve vašem zařízení",
+      "typeCaption": "#štítky @lidé *body přímo při psaní",
+      "trashTitle": "♻️ Vynést odpadky",
+      "trashDue": "Termín zítra",
+      "trashRepeat": "Každé pondělí",
+      "homeLabel": "Domov",
+      "vehicleTitle": "🚗 Prodloužení registrace vozidla",
+      "vehicleDue": "Termín 3. 8.",
+      "acTitle": "💨 Vyměnit filtr klimatizace",
+      "acDue": "Termín pá",
+      "acRepeat": "Každé 3 měsíce"
+    },
+    "schedule": {
+      "fromDueDate": "Přeplánovat od termínu",
+      "fromCompletionDate": "Přeplánovat od data dokončení",
+      "due": "Termín",
+      "done": "Hotovo",
+      "next": "Další"
+    },
+    "nfc": {
+      "tagOnWasher": "Štítek na pračce",
+      "tapToOpen": "Klepnutím otevřete",
+      "swapFilter": "Vyměnit filtr pračky",
+      "done": "Hotovo",
+      "skip": "Přeskočit",
+      "startTimer": "Spustit časovač",
+      "waitingApproval": "{{name}} označil(a) jako hotové · čeká se na vás",
+      "approve": "Schválit",
+      "reject": "Zamítnout",
+      "completed": "Dokončeno",
+      "note": "Použit jemný program — filtr bude příště potřeba vyčistit.",
+      "metaJustNow": "Právě teď · ★ 5 b.",
+      "metaLastWeek": "Minulý týden · ★ 5 b."
+    },
+    "circle": {
+      "kitchenTitle": "Důkladný úklid kuchyně",
+      "kitchenDue": "Termín so",
+      "kitchenRepeat": "Každý týden",
+      "takesTurns": "Střídá se"
+    },
+    "turns": {
+      "binsTitle": "🗑️ Vystavit popelnice k silnici",
+      "binsDue": "Termín zítra",
+      "binsRepeat": "Každý týden",
+      "completed": "Dokončeno",
+      "metaJustNow": "Právě teď · ★ 5 b."
+    },
+    "widget": {
+      "schoolForms": "Školní formuláře",
+      "takeOutTrash": "Vynést odpadky",
+      "waterPlants": "Zalít květiny",
+      "today": "Dnes",
+      "left": "Zbývá {{count}}"
+    },
+    "reminders": {
+      "trashTitle": "Vynést odpadky",
+      "trashBody": "Termín za 30 minut · Svoz odpadu",
+      "finishedTitle": "Amálie dokončila Důkladný úklid kuchyně",
+      "finishedBody": "Jste na řadě příští sobotu"
+    },
+    "things": {
+      "waterBill": "Účet za vodu",
+      "acFilter": "Filtr klimatizace",
+      "trashDay": "Svoz odpadu",
+      "dogMedicine": "Léky pro psa",
+      "whoseTurn": "Kdo dnes vaří",
+      "monthly": "Měsíčně",
+      "everyThreeMonths": "Každé 3 měsíce",
+      "everyMonday": "Každé pondělí",
+      "daily": "Denně",
+      "weekly": "Týdně",
+      "tagBills": "Účty",
+      "tagHome": "Domov",
+      "tagPets": "Mazlíčci",
+      "tagCooking": "Vaření"
+    },
+    "slides": {
+      "problemTitle": "Přestaňte zapomínat na maličkosti",
+      "problemBody": "Donetick si pamatuje, kdy se to stalo naposledy a kdy je další termín. Aby nikdo jiný nemusel.",
+      "captureTitle": "Přidejte to dřív, než to zapomenete",
+      "captureBody": "Napište to, řekněte nahlas nebo vyfoťte. Donetick doplní termín, prioritu, štítky i to, kdo to má na starosti.",
+      "scheduleTitle": "Vrátí se přesně tehdy, kdy má",
+      "scheduleBody": "Každý týden, každé 3 měsíce nebo měsíc poté, co jste to skutečně udělali. Pozdní dokončení vám nerozhodí zbytek roku.",
+      "circleTitle": "Každý se dostane na řadu, žádné hádky",
+      "circleBody": "Střídejte se v pořadí, které zvolíte, nebo náhodně. Donetick si pamatuje, kdo byl naposledy, takže střídání je spravedlivé.",
+      "remindersTitle": "Připomínka přesně ve správnou chvíli a widgety!",
+      "remindersBody": "Nechte si připomenout blížící se termín nebo pošlete upozornění, když někdo na svůj úkol zapomene. Dnešní seznam máte i na domovské obrazovce."
+    },
+    "carousel": {
+      "skip": "Přeskočit",
+      "ariaLabel": "Co můžete s Donetick dělat",
+      "goToStep": "Přejít na krok {{number}}",
+      "slidePosition": "{{index}} z {{total}}",
+      "turnOnReminders": "Zapnout připomínky",
+      "notNow": "Teď ne",
+      "next": "Další"
+    },
+    "getStarted": {
+      "subtitleSignupEnabled": "Vytvořte si účet pro synchronizaci všude, nebo se přihlaste a pokračujte, kde jste skončili.",
+      "subtitleSignupDisabled": "Přihlaste se ke svému účtu a pokračujte, kde jste skončili.",
+      "createAccount": "Vytvořit účet",
+      "alreadyHaveAccount": "Už mám účet",
+      "signIn": "Přihlásit se",
+      "connectSelfHosted": "Připojit k vlastnímu serveru"
+    },
+    "heardAbout": {
+      "title": "Kde jste se o Donetick dozvěděli?",
+      "subtitle": "Pomůže nám to zjistit, co funguje. Zcela dobrovolné.",
+      "detailPlaceholder": "Napište nám kde",
+      "continue": "Pokračovat",
+      "skip": "Přeskočit",
+      "sources": {
+        "appStore": "",
+        "reddit": "Reddit nebo fórum",
+        "friend": "Přátelé nebo rodina",
+        "video": "YouTube nebo TikTok",
+        "search": "Vyhledávač",
+        "other": "Něco jiného"
+      }
+    },
+    "privacy": {
+      "title": "Pomozte nám vylepšit Donetick",
+      "subtitle": "Váš server, vaše data. Obě možnosti jsou vypnuté, dokud je sami nezapnete.",
+      "crashReportsLabel": "Sdílet hlášení o pádech",
+      "crashReportsDescription": "Když Donetick spadne, pošle nám chybu a to, co k ní vedlo (zařízení, verzi aplikace, obrazovku, na které jste byli), bez obsahu úkolů. Díky tomu odhalíme chyby, které se při našem testování nikdy neobjeví, a rychleji vydáme opravy.",
+      "analyticsLabel": "Sdílet anonymní analytiku používání",
+      "analyticsDescription": "Posílá anonymní události o používání: které funkce se používají a které ne, abychom věděli, co vytvořit dál, a nemuseli hádat. Žádný obsah úkolů, žádné osobní údaje, nic, co by vedlo k vám."
+    }
+  },
+  "errorReport": {
+    "titleBug": "Nahlásit problém",
+    "titleCrash": "Nahlásit tento problém",
+    "subtitleBug": "Popište nám, co se pokazilo, a technické podrobnosti přiložíme za vás.",
+    "subtitleCrash": "Jedna věta o tom, co jste dělali, z toho udělá něco, co můžeme skutečně opravit.",
+    "labelBug": "Co se pokazilo?",
+    "labelCrash": "Co jste dělali?",
+    "placeholderBug": "např. Dokončení úkolu ze seznamu neaktualizuje termín",
+    "placeholderCrash": "např. Klepl(a) jsem na úkol v Mých úkolech a obrazovka zbělala",
+    "email": "E-mail",
+    "emailOptional": "(volitelné — jen pokud chcete odpověď)",
+    "emailPlaceholder": "vy@example.com",
+    "showWhatGetsSent": "Zobrazit, co se odešle",
+    "hideWhatGetsSent": "Skrýt, co se odešle",
+    "copyDiagnostics": "Kopírovat diagnostiku",
+    "collecting": "Shromažďování diagnostiky…",
+    "privacyNote": "Nepřikládají se žádné názvy úkolů, poznámky ani přílohy.",
+    "send": "Odeslat hlášení",
+    "cancel": "Zrušit",
+    "notNow": "Teď ne",
+    "sentTitle": "Hlášení odesláno",
+    "sentBody": "Děkujeme! Jde to přímo k lidem, kteří to umí opravit.",
+    "reference": "",
+    "copyReference": "Kopírovat referenci",
+    "done": "Hotovo",
+    "githubTitle": "Dokončete na GitHubu",
+    "githubBody": "Nic nebylo odesláno. Předvyplnili jsme hlášení s vašimi poznámkami a diagnostikou — zkontrolujte ho a odešlete, až s ním budete spokojeni.",
+    "openIssue": "Otevřít předvyplněné hlášení",
+    "copied": "Zkopírováno",
+    "copyInstead": "Místo toho zkopírovat podrobnosti",
+    "close": "Zavřít"
+  },
+  "circleSetup": {
+    "inviteTitle": "Přiveďte svou partu",
+    "inviteSubtitle": "Každý, kdo se připojí k vašemu kruhu, vidí stejné úkoly, střídá se na řadě a vše se automaticky synchronizuje.",
+    "joinTitle": "Připojit se ke kruhu",
+    "joinSubtitle": "Zadejte kód, který jste dostali, a my odešleme žádost o připojení — vlastník kruhu ji jen musí schválit.",
+    "loadingCode": "Načítání…",
+    "copyCodeAria": "Kopírovat kód kruhu",
+    "copyLinkInstead": "Místo toho zkopírovat odkaz s pozvánkou",
+    "continue": "Pokračovat",
+    "joinInstead": "Místo toho se připojit k existujícímu kruhu",
+    "codePlaceholder": "Zadejte kód",
+    "joinButton": "Připojit se ke kruhu",
+    "back": "Zpět",
+    "codeCopied": "Kód zkopírován do schránky",
+    "linkCopied": "Odkaz zkopírován do schránky",
+    "requestSentTitle": "Žádost odeslána",
+    "requestSentBody": "Vaše žádost o připojení byla odeslána! Vlastník kruhu ji musí schválit, než uvidíte jeho úkoly. Jakmile budete členem, dostanete oznámení.",
+    "alreadyMember": "Už jste členem tohoto kruhu",
+    "joinFailed": "Připojení ke kruhu se nezdařilo"
+  },
+  "joinCircle": {
+    "title": "Jste zváni do kruhu",
+    "incompleteTitle": "Odkaz s pozvánkou je neúplný",
+    "incompleteSubtitle": "V tomto odkazu s pozvánkou chybí kód. Požádejte osobu, která vás pozvala, o nový odkaz.",
+    "goToDonetick": "Přejít na Donetick",
+    "signedOutSubtitle": "Pro pokračování se přihlaste nebo si vytvořte účet Donetick. Po přihlášení odešleme vaši žádost o připojení.",
+    "signIn": "Přihlásit se",
+    "createAccount": "Vytvořit účet",
+    "sendingTitle": "Odesíláme vaši žádost",
+    "sendingSubtitle": "Odesílání žádosti…",
+    "greetingSubtitle": "Dobrý den, {{name}}. Odešlete žádost a sdílejte úkoly tohoto kruhu s jeho členy.",
+    "adminReviewNote": "Než získáte přístup, správce kruhu vaši žádost posoudí.",
+    "sendRequest": "Odeslat žádost o připojení",
+    "requestSentTitle": "Žádost odeslána",
+    "requestSentBody": "Vaše žádost byla odeslána. Správce kruhu ji musí schválit, než získáte přístup ke kruhu a jeho úkolům. Po schválení vám dáme vědět.",
+    "gotIt": "Rozumím",
+    "alreadyMember": "Už jste členem tohoto kruhu",
+    "joinFailed": "Připojení ke kruhu se nezdařilo",
+    "requestError": "Žádost o připojení se nepodařilo odeslat. Zkuste to prosím znovu."
+  },
+  "selectUser": "Vybrat uživatele",
+  "closeDialog": "Zavřít dialog",
+  "activeFilterChips": {
+    "removeFilterAria": "Odebrat filtr {{label}}",
+    "addFilterCondition": "Přidat podmínku filtru",
+    "moreCount": "+{{count}} další"
+  },
+  "filterBar": {
+    "filtersButton": "Filtry",
+    "clearAllButton": "Vymazat vše",
+    "doneButton": "Hotovo",
+    "showResults_one": "Zobrazit {{count}} výsledek",
+    "showResults_other": "Zobrazit {{count}} výsledků",
+    "selectedCount": "Vybráno: {{count}}",
+    "dateRangeFallback": "Období",
+    "fromDate": "Od {{date}}",
+    "untilDate": "Do {{date}}",
+    "presetToday": "Dnes",
+    "presetYesterday": "Včera",
+    "presetThisWeek": "Tento týden",
+    "presetLast7Days": "Posledních 7 dní",
+    "presetThisMonth": "Tento měsíc",
+    "presetLast30Days": "Posledních 30 dní",
+    "presetLast3Months": "Poslední 3 měsíce"
+  },
+  "workspaceReady": {
+    "allSetNamed": "Vše je připraveno, {{name}}",
+    "allSet": "Vše je připraveno",
+    "subtitle": "Váš pracovní prostor je připraven. Tohle na vás čeká uvnitř.",
+    "continue": "Pokračovat",
+    "readyShared": "Sdílené úkoly pro celou domácnost",
+    "readyRecurring": "Opakování, která obstojí ve skutečném životě",
+    "readyCapture": "Zadávání hlasem, fotkou nebo textem",
+    "readyReminders": "Připomínky a widgety na domovské obrazovce"
+  },
+  "home": {
+    "customize": {
+      "action": "Přizpůsobit přehled"
+    },
+    "verdict": {
+      "late": {
+        "title_one": "{{count}} úkol vyžaduje pozornost.",
+        "title_other": "{{count}} úkolů vyžaduje pozornost."
+      },
+      "review": {
+        "title": "Něco čeká na kontrolu.",
+        "body_one": "{{count}} dokončený úkol čeká na schválení.",
+        "body_other": "{{count}} dokončených úkolů čeká na schválení."
+      },
+      "today": {
+        "title_one": "{{count}} úkol má termín dnes.",
+        "title_other": "{{count}} úkolů má termín dnes."
+      },
+      "clear": {
+        "title": "Máte vše hotovo.",
+        "body": "Na dnešek nic naplánováno, nic po termínu."
+      },
+      "firstRun": {
+        "title": "Pojďme přidat ten první.",
+        "body": "Přehled se naplní, jakmile začnete přidávat úkoly."
+      }
+    },
+    "triage": {
+      "overdue": "Po termínu",
+      "dueToday": "Termín dnes",
+      "needsReview": "Ke kontrole",
+      "comingUp": "Brzy",
+      "unplanned": "Nenaplánované",
+      "allClear": "Nic po termínu, nic nečeká"
+    },
+    "nextUp": {
+      "title": "Brzy",
+      "action": "Zobrazit vše"
+    },
+    "nextUpFallback": {
+      "title": "Na řadě",
+      "action": "Zobrazit vše"
+    },
+    "overdue": {
+      "title": "Po termínu",
+      "action": "Zobrazit vše"
+    },
+    "clear": {
+      "title": "Plánujte dopředu",
+      "body": "Projděte nadcházející úkoly, přeplánujte nebo přidejte další věc.",
+      "action": "Procházet všechny úkoly"
+    },
+    "firstTask": {
+      "title": "Přidejte svůj první úkol",
+      "description": "Napište ho, řekněte nebo naskenujte. Cokoli přidáte, se tu objeví, až to bude potřeba.",
+      "action": "Přidat úkol"
+    },
+    "review": {
+      "title": "Čeká na vaši kontrolu",
+      "pendingTitle": "Čeká na kontrolu",
+      "myPendingTitle": "Moje úkoly čekající na kontrolu",
+      "action": "Zkontrolovat vše"
+    },
+    "circle": {
+      "title": "Váš kruh",
+      "action": "Spravovat kruh",
+      "open_one": "{{count}} otevřený",
+      "open_other": "{{count}} otevřených",
+      "late_one": "{{count}} po termínu",
+      "late_other": "{{count}} po termínu",
+      "done_one": "{{count}} hotový",
+      "done_other": "{{count}} hotových",
+      "caughtUp": "Vše v pořádku",
+      "emptyTitle": "Zatím tu nikdo další není",
+      "emptyBody": "Pozvěte lidi, se kterými sdílíte domácí práce, a tahle obrazovka ukáže, kdo co má na starosti.",
+      "emptyAction": "Pozvat do kruhu"
+    },
+    "projects": {
+      "title": "Projekty",
+      "action": "Všechny projekty",
+      "tasks_one": "{{count}} úkol",
+      "tasks_other": "{{count}} úkolů",
+      "tasksOverdue_one": "{{count}} úkol, po termínu: {{overdue}}",
+      "tasksOverdue_other": "{{count}} úkolů, po termínu: {{overdue}}",
+      "tasksUnplanned_one": "{{count}} úkol, nenaplánované: {{unplanned}}",
+      "tasksUnplanned_other": "{{count}} úkolů, nenaplánované: {{unplanned}}",
+      "clear": "Vše v pořádku"
+    },
+    "filters": {
+      "title": "Filtry",
+      "action": "Všechny filtry",
+      "tasks_one": "{{count}} shoda",
+      "tasks_other": "{{count}} shod",
+      "clear": "Žádné shody"
+    },
+    "capture": {
+      "placeholder": "Přidat úkol…",
+      "add": "Přidat úkol",
+      "voice": "Zadat hlasem",
+      "scan": "Naskenovat úkol"
+    }
+  }
+}

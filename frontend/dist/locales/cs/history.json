@@ -1,0 +1,182 @@
+{
+  "edit": {
+    "title": "Upravit historii",
+    "completedDate": "Datum dokončení",
+    "note": "Poznámka",
+    "additionalNotes": "Další poznámky",
+    "deleteTitle": "Smazat historii",
+    "deleteMessage": "Opravdu chcete tuto historii smazat?"
+  },
+  "status": {
+    "inProgress": "Probíhá",
+    "completed": "Dokončeno",
+    "skipped": "Přeskočeno",
+    "pendingApproval": "Čeká na schválení",
+    "rejected": "Zamítnuto",
+    "missed": "Zmeškáno",
+    "rescheduled": "Přeplánováno",
+    "scheduled": "Naplánováno"
+  },
+  "badge": {
+    "onTime": "Včas",
+    "onTimeLabel": "Včas"
+  },
+  "card": {
+    "wasDue": "Termín byl {{date}}",
+    "daysBeforeDue_one": "{{count}} d před termínem",
+    "daysBeforeDue_other": "{{count}} d před termínem",
+    "daysAfterDue_one": "{{count}} d po termínu",
+    "daysAfterDue_other": "{{count}} d po termínu",
+    "hoursBeforeDue_one": "{{count}} h před termínem",
+    "hoursBeforeDue_other": "{{count}} h před termínem",
+    "hoursAfterDue_one": "{{count}} h po termínu",
+    "hoursAfterDue_other": "{{count}} h po termínu",
+    "assignedTo": "Přiřazeno: {{name}}",
+    "points_one": "★ {{count}} bod",
+    "points_other": "★ {{count}} bodů"
+  },
+  "detail": {
+    "title": "Podrobnosti aktivity",
+    "openTask": "Otevřít úkol",
+    "editEntry": "Upravit záznam",
+    "performedBy": "Provedl(a)",
+    "assignedTo": "Přiřazeno",
+    "lastUpdated": "Naposledy aktualizováno",
+    "duration": "Doba trvání",
+    "pointsEarned": "Získané body",
+    "points_one": "{{count}} bod",
+    "points_other": "{{count}} bodů",
+    "note": "Poznámka"
+  },
+  "charts": {
+    "noData": "Nejsou k dispozici žádná data",
+    "noLabels": "Bez štítků",
+    "unassigned": "Nepřiřazeno",
+    "unknownTask": "Neznámý úkol",
+    "late": "Pozdě",
+    "status": {
+      "title": "Stav",
+      "description": "Stav dokončených úkolů"
+    },
+    "due": {
+      "title": "Termín",
+      "description": "Termíny aktuálních úkolů"
+    },
+    "priority": {
+      "title": "Priorita",
+      "description": "Úkoly podle priority"
+    },
+    "labels": {
+      "title": "Štítky",
+      "description": "Úkoly podle štítků"
+    },
+    "labelsDuration": {
+      "title": "Štítky (čas)",
+      "description": "Strávený čas podle štítků (hodiny)"
+    },
+    "tasksTime": {
+      "title": "Úkoly (čas)",
+      "description": "Strávený čas u jednotlivých úkolů (hodiny)"
+    },
+    "assigneeBreakdown": {
+      "title": "podle řešitele",
+      "description": "Úkoly seskupené podle řešitele"
+    }
+  },
+  "filter": {
+    "status": "Stav",
+    "pending": "Čekající",
+    "labels": "Štítky",
+    "hasNotes": "Má poznámky",
+    "hasPoints": "Má body",
+    "timePeriod": "Období",
+    "user": "Uživatel",
+    "completedBy": "Dokončil(a)",
+    "completedAt": "Dokončeno"
+  },
+  "period": {
+    "days_one": "{{count}} den",
+    "days_other": "{{count}} dní",
+    "allTime": "Celkově"
+  },
+  "search": {
+    "placeholder": "Hledat v historii...",
+    "clear": "Vymazat hledání"
+  },
+  "sort": {
+    "date": "Datum dokončení",
+    "updatedDate": "Datum aktualizace",
+    "performer": "Dokončil(a)",
+    "status": "Stav",
+    "points": "Body"
+  },
+  "activities": {
+    "title": "Aktivity",
+    "subtitle": "Podívejte se, co bylo dokončeno, přeskočeno nebo zmeškáno",
+    "emptyTitle": "V tomto období žádná aktivita",
+    "emptyDescriptionEveryone": "Nikdo z vašeho kruhu nic nedokončil {{period}}. Zkuste delší období nebo jiného člena.",
+    "emptyDescriptionMember": "{{name}} nic nedokončil(a) {{period}}. Zkuste delší období nebo jiného člena.",
+    "periodSoFar": "zatím",
+    "periodLastDays": "za posledních {{count}} dní",
+    "unknownMember": "tento člen",
+    "searchPlaceholder": "Hledat aktivity...",
+    "sort": {
+      "date": "Datum",
+      "name": "Název úkolu",
+      "status": "Stav",
+      "points": "Body"
+    }
+  },
+  "title": {
+    "summary": "Souhrn úkolu",
+    "activity": "Aktivita úkolu"
+  },
+  "noResults": {
+    "clear": "Vymazat filtry"
+  },
+  "toast": {
+    "updateQueued": {
+      "title": "Úprava historie ve frontě",
+      "message": "Jste offline. Úprava historie se synchronizuje po obnovení připojení."
+    },
+    "updated": {
+      "title": "Historie aktualizována",
+      "message": "Záznam historie byl úspěšně aktualizován."
+    },
+    "deleteQueued": {
+      "title": "Smazání historie ve frontě",
+      "message": "Jste offline. Smazání historie se synchronizuje po obnovení připojení."
+    },
+    "deleted": {
+      "title": "Historie smazána",
+      "message": "Záznam historie byl úspěšně smazán."
+    }
+  },
+  "delete": {
+    "title": "Smazat záznam historie",
+    "message": "Opravdu chcete tento záznam historie smazat?"
+  },
+  "empty": {
+    "title": "Zatím žádná historie",
+    "description": "Pokaždé, když je tento úkol dokončen nebo přeskočen, objeví se zde i s tím, kdo a kdy to udělal. Zatím se nic nestalo.",
+    "backToTasks": "Zpět na úkoly",
+    "noResultsTitle": "Těmto filtrům neodpovídá žádná historie",
+    "noResultsDescription": "Historie tu je, ale nic z ní neodpovídá aktuálně zapnutým filtrům."
+  },
+  "info": {
+    "allCompleted": "Celkem dokončeno",
+    "timesSuffix": "{{count}}×",
+    "averageTiming": "Průměrné načasování",
+    "onTime": "Včas",
+    "longestDelay": "Nejdelší zpoždění",
+    "neverLate": "Nikdy pozdě",
+    "completedMost": "Nejčastěji dokončil(a)",
+    "unknown": "Neznámý",
+    "membersInvolved": "Zapojení členové",
+    "membersSuffix": "{{count}} členů",
+    "lastCompleted": "Naposledy dokončeno"
+  },
+  "noteViewer": {
+    "updatedAt": "Aktualizováno {{date}}"
+  }
+}

@@ -1,0 +1,82 @@
+{
+  "save": "حفظ",
+  "cancel": "إلغاء",
+  "delete": "حذف",
+  "edit": "تعديل",
+  "close": "إغلاق",
+  "confirm": "تأكيد",
+  "loading": "جارٍ التحميل...",
+  "error": "خطأ",
+  "success": "نجح",
+  "warning": "تحذير",
+  "refresh": "تحديث",
+  "copy": "نسخ",
+  "copied": "تم النسخ!",
+  "settings": "الإعدادات",
+  "yes": "نعم",
+  "no": "لا",
+  "back": "رجوع",
+  "backToCalendar": "العودة إلى التقويم",
+  "logout": "تسجيل الخروج",
+  "version": "النسخة",
+  "navigation": {
+    "search": "بحث",
+    "allTasks": "المهام",
+    "home": "نظرة عامة",
+    "archived": "المؤرشفة",
+    "things": "الأشياء",
+    "labels": "التسميات",
+    "projects": "المشاريع",
+    "filters": "الفلاتر",
+    "activities": "الأنشطة",
+    "points": "النقاط",
+    "settings": "الإعدادات",
+    "openMenu": "فتح القائمة",
+    "collapseMenu": "طي القائمة",
+    "expandMenu": "توسيع القائمة",
+    "primaryNavigation": "التنقل الرئيسي",
+    "profile": "الملف الشخصي"
+  },
+  "search": {
+    "title": "بحث",
+    "placeholder": "ابحث في Donetick",
+    "inputAriaLabel": "ابحث في المهام والسجل والمشاريع والتسميات والإعدادات",
+    "deviceNote": "يتم البحث في المحتوى المتوفر على هذا الجهاز",
+    "escape": "Esc",
+    "recent": "الأخيرة",
+    "empty": {
+      "title": "لا توجد نتائج مطابقة",
+      "subtitle": "لا يزال بإمكانك تصفية قائمة المهام باستخدام هذا البحث."
+    },
+    "groups": {
+      "tasks": "المهام",
+      "history": "الملاحظات",
+      "projects": "المشاريع",
+      "labels": "التسميات",
+      "people": "الأشخاص",
+      "settings": "الإعدادات",
+      "actions": "إجراءات سريعة"
+    },
+    "actions": {
+      "quickAction": "إجراء سريع",
+      "navigation": "التنقل",
+      "createTask": "إنشاء مهمة",
+      "viewAllTasks": "عرض جميع المهام",
+      "viewArchivedTasks": "عرض المهام المؤرشفة",
+      "openSettings": "فتح الإعدادات",
+      "filterTasks": "عرض المهام المطابقة لـ «{{query}}»",
+      "filterTasksSubtitle": "تصفية قائمة المهام"
+    },
+    "footer": {
+      "navigate": "تنقل",
+      "open": "فتح",
+      "results_zero": "لا توجد نتائج",
+      "results_one": "نتيجة واحدة",
+      "results_two": "نتيجتان",
+      "results_few": "{{count}} نتائج",
+      "results_many": "{{count}} نتيجة",
+      "results_other": "{{count}} نتيجة",
+      "typeToSearch": "اكتب للبحث"
+    }
+  }
+}

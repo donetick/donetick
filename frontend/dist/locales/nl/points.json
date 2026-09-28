@@ -1,0 +1,74 @@
+{
+  "redeem": "",
+  "redeemModal": {
+    "redeemButton": "",
+    "pointsAvailable": "",
+    "pointsToRedeem": "",
+    "placeholder": "",
+    "cannotExceed": "",
+    "quickAdd": "",
+    "aboutToRedeem": "",
+    "amount": "",
+    "remaining": ""
+  },
+  "leaderboard": {
+    "titlePoints": "",
+    "titleTasks": "",
+    "subtitlePoints": "",
+    "subtitleTasks": "",
+    "modePoints": "",
+    "modeTasks": "",
+    "you": "",
+    "tasksAndAvg": "",
+    "available": "",
+    "points_one": "",
+    "points_other": ""
+  },
+  "tabs": {
+    "short7d": "",
+    "short6m": "",
+    "shortAll": "",
+    "days7": "",
+    "months6": "",
+    "allTime": ""
+  },
+  "filter": {
+    "analysisTitle": "",
+    "title": "",
+    "showFor": "",
+    "timePeriod": ""
+  },
+  "cards": {
+    "available": {
+      "title": "",
+      "subtext": ""
+    },
+    "redeemed": {
+      "title": "",
+      "subtext": ""
+    },
+    "total": {
+      "title": "",
+      "subtext": ""
+    },
+    "period": {
+      "title": "",
+      "allTime": "",
+      "last6Months": "",
+      "lastDays_one": "",
+      "lastDays_other": ""
+    }
+  },
+  "summary": {
+    "showingFor": "",
+    "unknownUser": "",
+    "overThe": "",
+    "allTime": "",
+    "last6Months": "",
+    "lastDays_one": "",
+    "lastDays_other": ""
+  },
+  "trend": {
+    "title": ""
+  }
+}

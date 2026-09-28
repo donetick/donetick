@@ -1,0 +1,55 @@
+{
+  "builder": {
+    "errorName": "Bitte gib einen Filternamen ein",
+    "errorConditions": "Bitte konfiguriere mindestens eine Filterbedingung",
+    "editTitle": "Filter bearbeiten",
+    "newTitle": "Neuer Filter",
+    "addConditions": "Bedingungen hinzufügen, um Vorschau anzuzeigen",
+    "save": "Filter speichern",
+    "name": "Filtername",
+    "namePlaceholder": "z. B. Überfällige Aufgaben für Alice",
+    "color": "Farbe"
+  },
+  "nameExists": "Ein Filter mit diesem Namen ist bereits vorhanden",
+  "tasks_one": "{{count}} Aufgabe",
+  "tasks_other": "{{count}} Aufgaben",
+  "overdue": "{{count}} überfällig",
+  "noConditions": "Keine Bedingungen",
+  "condition_one": "{{count}} Bedingung",
+  "condition_other": "{{count}} Bedingungen",
+  "usedCount": "{{count}}x verwendet",
+  "delete": {
+    "title": "Filter löschen",
+    "message": "Möchtest du \"{{name}}\" wirklich löschen? Dies kann nicht rückgängig gemacht werden."
+  },
+  "empty": {
+    "title": "Noch keine gespeicherten Filter",
+    "description": "Speichere einmal eine Reihe von Bedingungen, z. B. „überfällig und mir zugewiesen“, und springe von überall direkt dorthin zurück.",
+    "createFilter": "Filter erstellen",
+    "noResultsTitle": "Keine passenden Filter",
+    "noResultsWithSearch": "Kein gespeicherter Filter passt zu \"{{search}}\".",
+    "noResultsDefault": "Kein gespeicherter Filter passt zum aktuellen Filter.",
+    "clearSearch": "Suche zurücksetzen",
+    "showAllFilters": "Alle Filter anzeigen"
+  },
+  "header": {
+    "title": "Filter",
+    "subtitle": "Speichere deine bevorzugten Filterkombinationen für schnellen Zugriff. Erstelle individuelle Ansichten, um Aufgaben schneller zu organisieren und zu finden."
+  },
+  "searchPlaceholder": "Filter durchsuchen",
+  "sort": {
+    "smart": "Intelligent",
+    "name": "",
+    "usage": "Nutzungsanzahl",
+    "lastUsed": "Zuletzt verwendet",
+    "created": "Erstellungsdatum"
+  },
+  "show": {
+    "title": "Anzeigen",
+    "all": "Alle Filter",
+    "pinned": "Angeheftet",
+    "unpinned": "Nicht angeheftet"
+  },
+  "pin": "Anheften",
+  "unpin": "Lösen"
+}

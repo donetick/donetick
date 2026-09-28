@@ -1,0 +1,182 @@
+{
+  "edit": {
+    "title": "Edit History",
+    "completedDate": "Completed Date",
+    "note": "Note",
+    "additionalNotes": "Additional Notes",
+    "deleteTitle": "Delete History",
+    "deleteMessage": "Are you sure you want to delete this history?"
+  },
+  "status": {
+    "inProgress": "In Progress",
+    "completed": "Completed",
+    "skipped": "Skipped",
+    "pendingApproval": "Pending Approval",
+    "rejected": "Rejected",
+    "missed": "Missed",
+    "rescheduled": "Rescheduled",
+    "scheduled": "Scheduled"
+  },
+  "badge": {
+    "onTime": "On Time",
+    "onTimeLabel": "On time"
+  },
+  "card": {
+    "wasDue": "Was due {{date}}",
+    "daysBeforeDue_one": "{{count}}d before due date",
+    "daysBeforeDue_other": "{{count}}d before due date",
+    "daysAfterDue_one": "{{count}}d after due date",
+    "daysAfterDue_other": "{{count}}d after due date",
+    "hoursBeforeDue_one": "{{count}}h before due date",
+    "hoursBeforeDue_other": "{{count}}h before due date",
+    "hoursAfterDue_one": "{{count}}h after due date",
+    "hoursAfterDue_other": "{{count}}h after due date",
+    "assignedTo": "Assigned to {{name}}",
+    "points_one": "★ {{count}} pt",
+    "points_other": "★ {{count}} pts"
+  },
+  "detail": {
+    "title": "Activity Detail",
+    "openTask": "Open Task",
+    "editEntry": "Edit Entry",
+    "performedBy": "Performed by",
+    "assignedTo": "Assigned to",
+    "lastUpdated": "Last updated",
+    "duration": "Duration",
+    "pointsEarned": "Points earned",
+    "points_one": "{{count}} pt",
+    "points_other": "{{count}} pts",
+    "note": "Note"
+  },
+  "charts": {
+    "noData": "No data available",
+    "noLabels": "No Labels",
+    "unassigned": "Unassigned",
+    "unknownTask": "Unknown Task",
+    "late": "Late",
+    "status": {
+      "title": "Status",
+      "description": "Completed tasks status"
+    },
+    "due": {
+      "title": "Due Date",
+      "description": "Current tasks due date"
+    },
+    "priority": {
+      "title": "Priority",
+      "description": "Tasks by priority"
+    },
+    "labels": {
+      "title": "Labels",
+      "description": "Tasks by labels"
+    },
+    "labelsDuration": {
+      "title": "Labels (time)",
+      "description": "Time spent by labels (hours)"
+    },
+    "tasksTime": {
+      "title": "Tasks (time)",
+      "description": "Time spent by individual tasks (hours)"
+    },
+    "assigneeBreakdown": {
+      "title": "by Assignee",
+      "description": "Tasks grouped by assignee"
+    }
+  },
+  "filter": {
+    "status": "Status",
+    "pending": "Pending",
+    "labels": "Labels",
+    "hasNotes": "Has Notes",
+    "hasPoints": "Has Points",
+    "timePeriod": "Time Period",
+    "user": "User",
+    "completedBy": "Completed By",
+    "completedAt": "Completed At"
+  },
+  "period": {
+    "days_one": "{{count}} Day",
+    "days_other": "{{count}} Days",
+    "allTime": "All Time"
+  },
+  "search": {
+    "placeholder": "Search history...",
+    "clear": "Clear search"
+  },
+  "sort": {
+    "date": "Completed date",
+    "updatedDate": "Updated date",
+    "performer": "Completed by",
+    "status": "Status",
+    "points": "Points"
+  },
+  "activities": {
+    "title": "Activities",
+    "subtitle": "See what's been completed, skipped, or missed",
+    "emptyTitle": "No activity in this range",
+    "emptyDescriptionEveryone": "Nothing was completed by anyone in your circle {{period}}. Try a wider time range or a different member.",
+    "emptyDescriptionMember": "Nothing was completed by {{name}} {{period}}. Try a wider time range or a different member.",
+    "periodSoFar": "so far",
+    "periodLastDays": "in the last {{count}} days",
+    "unknownMember": "this member",
+    "searchPlaceholder": "Search activities...",
+    "sort": {
+      "date": "Date",
+      "name": "Task name",
+      "status": "Status",
+      "points": "Points"
+    }
+  },
+  "title": {
+    "summary": "Task Summary",
+    "activity": "Task Activity"
+  },
+  "noResults": {
+    "clear": "Clear filters"
+  },
+  "toast": {
+    "updateQueued": {
+      "title": "History Update Queued",
+      "message": "You are offline. The history update will sync when connection is restored."
+    },
+    "updated": {
+      "title": "History Updated",
+      "message": "The history record has been updated successfully."
+    },
+    "deleteQueued": {
+      "title": "History Delete Queued",
+      "message": "You are offline. The history delete will sync when connection is restored."
+    },
+    "deleted": {
+      "title": "History Deleted",
+      "message": "The history record has been deleted successfully."
+    }
+  },
+  "delete": {
+    "title": "Delete History Record",
+    "message": "Are you sure you want to delete this history record?"
+  },
+  "empty": {
+    "title": "No history yet",
+    "description": "Every time this task gets completed or skipped, it lands here with who did it and when. Nothing has happened yet.",
+    "backToTasks": "Back to tasks",
+    "noResultsTitle": "No history matches these filters",
+    "noResultsDescription": "There is history here, but none of it fits the filters that are currently on."
+  },
+  "info": {
+    "allCompleted": "All Completed",
+    "timesSuffix": "{{count}} times",
+    "averageTiming": "Average Timing",
+    "onTime": "On time",
+    "longestDelay": "Longest Delay",
+    "neverLate": "Never late",
+    "completedMost": "Completed Most",
+    "unknown": "Unknown",
+    "membersInvolved": "Members Involved",
+    "membersSuffix": "{{count}} members",
+    "lastCompleted": "Last Completed"
+  },
+  "noteViewer": {
+    "updatedAt": "Updated at {{date}}"
+  }
+}

@@ -1,0 +1,74 @@
+{
+  "redeem": "Redeem Points",
+  "redeemModal": {
+    "redeemButton": "Redeem",
+    "pointsAvailable": "{{count}} points available",
+    "pointsToRedeem": "Points to Redeem",
+    "placeholder": "Enter points...",
+    "cannotExceed": "Cannot exceed available points",
+    "quickAdd": "Quick Add:",
+    "aboutToRedeem": "You are about to redeem",
+    "amount": "{{count}} points",
+    "remaining": "Remaining: {{count}} points"
+  },
+  "leaderboard": {
+    "titlePoints": "Points Leaderboard",
+    "titleTasks": "Tasks Leaderboard",
+    "subtitlePoints": "Rankings based on points earned during the selected time period",
+    "subtitleTasks": "Rankings based on tasks completed during the selected time period",
+    "modePoints": "Points",
+    "modeTasks": "Tasks",
+    "you": "You",
+    "tasksAndAvg": "{{tasks}} tasks • {{avg}} avg per task",
+    "available": "{{count}} available",
+    "points_one": "{{count}} point",
+    "points_other": "{{count}} points"
+  },
+  "tabs": {
+    "short7d": "7D",
+    "short6m": "6M",
+    "shortAll": "All",
+    "days7": "7 Days",
+    "months6": "6 Months",
+    "allTime": "All Time"
+  },
+  "filter": {
+    "analysisTitle": "Filter & Analysis",
+    "title": "Filter Points",
+    "showFor": "Show points for:",
+    "timePeriod": "Time period:"
+  },
+  "cards": {
+    "available": {
+      "title": "Available",
+      "subtext": "Ready to redeem"
+    },
+    "redeemed": {
+      "title": "Redeemed",
+      "subtext": "Previously used"
+    },
+    "total": {
+      "title": "Total",
+      "subtext": "All time earned"
+    },
+    "period": {
+      "title": "Period Points",
+      "allTime": "All time",
+      "last6Months": "Last 6 months",
+      "lastDays_one": "Last {{count}} day",
+      "lastDays_other": "Last {{count}} days"
+    }
+  },
+  "summary": {
+    "showingFor": "Showing points for",
+    "unknownUser": "Unknown User",
+    "overThe": "over the",
+    "allTime": "All Time",
+    "last6Months": "Last 6 Months",
+    "lastDays_one": "Last {{count}} Day",
+    "lastDays_other": "Last {{count}} Days"
+  },
+  "trend": {
+    "title": "Points Trend"
+  }
+}

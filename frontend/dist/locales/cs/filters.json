@@ -1,0 +1,55 @@
+{
+  "builder": {
+    "errorName": "Zadejte název filtru",
+    "errorConditions": "Nastavte alespoň jednu podmínku filtru",
+    "editTitle": "Upravit filtr",
+    "newTitle": "Nový filtr",
+    "addConditions": "Přidejte podmínky pro náhled",
+    "save": "Uložit filtr",
+    "name": "Název filtru",
+    "namePlaceholder": "např. Úkoly po termínu pro Alici",
+    "color": "Barva"
+  },
+  "nameExists": "Filtr s tímto názvem již existuje",
+  "tasks_one": "{{count}} úkol",
+  "tasks_other": "{{count}} úkolů",
+  "overdue": "{{count}} po termínu",
+  "noConditions": "Žádné podmínky",
+  "condition_one": "{{count}} podmínka",
+  "condition_other": "{{count}} podmínek",
+  "usedCount": "Použito {{count}}×",
+  "delete": {
+    "title": "Smazat filtr",
+    "message": "Opravdu chcete smazat „{{name}}“? Tuto akci nelze vrátit."
+  },
+  "empty": {
+    "title": "Zatím žádné uložené filtry",
+    "description": "Uložte si sadu podmínek, třeba „po termínu a přiřazené mně“, a vracejte se k ní odkudkoli jedním klepnutím.",
+    "createFilter": "Vytvořit filtr",
+    "noResultsTitle": "Žádné odpovídající filtry",
+    "noResultsWithSearch": "Hledání „{{search}}“ neodpovídá žádný uložený filtr.",
+    "noResultsDefault": "Aktuálnímu filtru neodpovídá žádný uložený filtr.",
+    "clearSearch": "Vymazat hledání",
+    "showAllFilters": "Zobrazit všechny filtry"
+  },
+  "header": {
+    "title": "Filtry",
+    "subtitle": "Uložte si oblíbené kombinace filtrů pro rychlý přístup. Vytvářejte vlastní pohledy a hledejte úkoly rychleji."
+  },
+  "searchPlaceholder": "Hledat filtry",
+  "sort": {
+    "smart": "Chytré",
+    "name": "Název",
+    "usage": "Počet použití",
+    "lastUsed": "Naposledy použito",
+    "created": "Datum vytvoření"
+  },
+  "show": {
+    "title": "Zobrazit",
+    "all": "Všechny filtry",
+    "pinned": "Připnuté",
+    "unpinned": "Nepřipnuté"
+  },
+  "pin": "Připnout",
+  "unpin": "Odepnout"
+}

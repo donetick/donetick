@@ -1,0 +1,182 @@
+{
+  "edit": {
+    "title": "Verlauf bearbeiten",
+    "completedDate": "Abschlussdatum",
+    "note": "Notiz",
+    "additionalNotes": "Zusätzliche Notizen",
+    "deleteTitle": "Verlauf löschen",
+    "deleteMessage": "Möchtest du diesen Verlauf wirklich löschen?"
+  },
+  "status": {
+    "inProgress": "In Bearbeitung",
+    "completed": "Abgeschlossen",
+    "skipped": "Übersprungen",
+    "pendingApproval": "Genehmigung ausstehend",
+    "rejected": "Abgelehnt",
+    "missed": "Verpasst",
+    "rescheduled": "Neu geplant",
+    "scheduled": "Geplant"
+  },
+  "badge": {
+    "onTime": "Pünktlich",
+    "onTimeLabel": "Pünktlich"
+  },
+  "card": {
+    "wasDue": "War am {{date}} fällig",
+    "daysBeforeDue_one": "{{count}} T. vor Fälligkeit",
+    "daysBeforeDue_other": "{{count}} T. vor Fälligkeit",
+    "daysAfterDue_one": "{{count}} T. nach Fälligkeit",
+    "daysAfterDue_other": "{{count}} T. nach Fälligkeit",
+    "hoursBeforeDue_one": "{{count}} Std. vor Fälligkeit",
+    "hoursBeforeDue_other": "{{count}} Std. vor Fälligkeit",
+    "hoursAfterDue_one": "{{count}} Std. nach Fälligkeit",
+    "hoursAfterDue_other": "{{count}} Std. nach Fälligkeit",
+    "assignedTo": "Zugewiesen an {{name}}",
+    "points_one": "★ {{count}} Punkt",
+    "points_other": "★ {{count}} Punkte"
+  },
+  "detail": {
+    "title": "Aktivitätsdetails",
+    "openTask": "Aufgabe öffnen",
+    "editEntry": "Eintrag bearbeiten",
+    "performedBy": "Ausgeführt von",
+    "assignedTo": "Zugewiesen an",
+    "lastUpdated": "Zuletzt aktualisiert",
+    "duration": "Dauer",
+    "pointsEarned": "Verdiente Punkte",
+    "points_one": "{{count}} Punkt",
+    "points_other": "{{count}} Punkte",
+    "note": "Notiz"
+  },
+  "charts": {
+    "noData": "Keine Daten verfügbar",
+    "noLabels": "Keine Labels",
+    "unassigned": "Nicht zugewiesen",
+    "unknownTask": "Unbekannte Aufgabe",
+    "late": "Verspätet",
+    "status": {
+      "title": "",
+      "description": "Status abgeschlossener Aufgaben"
+    },
+    "due": {
+      "title": "Fälligkeitsdatum",
+      "description": "Fälligkeitsdatum aktueller Aufgaben"
+    },
+    "priority": {
+      "title": "Priorität",
+      "description": "Aufgaben nach Priorität"
+    },
+    "labels": {
+      "title": "Beschriftungen",
+      "description": "Aufgaben nach Labels"
+    },
+    "labelsDuration": {
+      "title": "Labels (Zeit)",
+      "description": "Aufgewendete Zeit nach Labels (Stunden)"
+    },
+    "tasksTime": {
+      "title": "Aufgaben (Zeit)",
+      "description": "Aufgewendete Zeit je Aufgabe (Stunden)"
+    },
+    "assigneeBreakdown": {
+      "title": "nach Zuweisung",
+      "description": "Aufgaben nach zugewiesener Person gruppiert"
+    }
+  },
+  "filter": {
+    "status": "",
+    "pending": "Ausstehend",
+    "labels": "Beschriftungen",
+    "hasNotes": "Mit Notizen",
+    "hasPoints": "Mit Punkten",
+    "timePeriod": "Zeitraum",
+    "user": "Benutzer",
+    "completedBy": "Abgeschlossen von",
+    "completedAt": "Abgeschlossen am"
+  },
+  "period": {
+    "days_one": "{{count}} Tag",
+    "days_other": "{{count}} Tage",
+    "allTime": "Gesamter Zeitraum"
+  },
+  "search": {
+    "placeholder": "",
+    "clear": ""
+  },
+  "sort": {
+    "date": "",
+    "updatedDate": "",
+    "performer": "",
+    "status": "",
+    "points": ""
+  },
+  "activities": {
+    "title": "Aktivitäten",
+    "subtitle": "",
+    "emptyTitle": "Keine Aktivität in diesem Zeitraum",
+    "emptyDescriptionEveryone": "In deinem Kreis wurde {{period}} von niemandem etwas erledigt. Versuche einen größeren Zeitraum oder ein anderes Mitglied.",
+    "emptyDescriptionMember": "{{name}} hat {{period}} nichts erledigt. Versuche einen größeren Zeitraum oder ein anderes Mitglied.",
+    "periodSoFar": "bisher",
+    "periodLastDays": "in den letzten {{count}} Tagen",
+    "unknownMember": "diesem Mitglied",
+    "searchPlaceholder": "",
+    "sort": {
+      "date": "",
+      "name": "",
+      "status": "",
+      "points": ""
+    }
+  },
+  "title": {
+    "summary": "Aufgabenzusammenfassung",
+    "activity": "Aufgabenaktivität"
+  },
+  "noResults": {
+    "clear": "Filter löschen"
+  },
+  "toast": {
+    "updateQueued": {
+      "title": "Verlaufsaktualisierung eingereiht",
+      "message": "Du bist offline. Die Verlaufsaktualisierung wird synchronisiert, sobald die Verbindung wiederhergestellt ist."
+    },
+    "updated": {
+      "title": "Verlauf aktualisiert",
+      "message": "Der Verlaufseintrag wurde erfolgreich aktualisiert."
+    },
+    "deleteQueued": {
+      "title": "Löschen des Verlaufs eingereiht",
+      "message": "Du bist offline. Das Löschen des Verlaufs wird synchronisiert, sobald die Verbindung wiederhergestellt ist."
+    },
+    "deleted": {
+      "title": "Verlauf gelöscht",
+      "message": "Der Verlaufseintrag wurde erfolgreich gelöscht."
+    }
+  },
+  "delete": {
+    "title": "Verlaufseintrag löschen",
+    "message": "Möchtest du diesen Verlaufseintrag wirklich löschen?"
+  },
+  "empty": {
+    "title": "Noch kein Verlauf",
+    "description": "Jedes Mal, wenn diese Aufgabe erledigt oder übersprungen wird, landet sie hier mit Angabe von wem und wann. Bisher ist noch nichts passiert.",
+    "backToTasks": "Zurück zu den Aufgaben",
+    "noResultsTitle": "Kein Verlauf passt zu diesen Filtern",
+    "noResultsDescription": "Hier gibt es Verlaufseinträge, aber keiner davon passt zu den aktuell aktiven Filtern."
+  },
+  "info": {
+    "allCompleted": "Alle abgeschlossen",
+    "timesSuffix": "{{count}} Mal",
+    "averageTiming": "Durchschnittliche Zeit",
+    "onTime": "Pünktlich",
+    "longestDelay": "Längste Verzögerung",
+    "neverLate": "Nie verspätet",
+    "completedMost": "Am häufigsten abgeschlossen",
+    "unknown": "Unbekannt",
+    "membersInvolved": "Beteiligte Mitglieder",
+    "membersSuffix": "{{count}} Mitglieder",
+    "lastCompleted": "Zuletzt abgeschlossen"
+  },
+  "noteViewer": {
+    "updatedAt": "Aktualisiert am {{date}}"
+  }
+}

@@ -1,0 +1,723 @@
+{
+  "title": "Instellingen",
+  "common": {
+    "save": "Opslaan",
+    "cancel": "Annuleren",
+    "confirm": "Bevestigen",
+    "remove": "Verwijderen",
+    "delete": "Verwijderen",
+    "refresh": "Vernieuwen",
+    "loading": "Laden…",
+    "on": "Aan",
+    "off": "Uit",
+    "error": "Fout",
+    "success": "Gelukt",
+    "plusFeature": "Plus-functie",
+    "earlyAccess": "Vroege toegang"
+  },
+  "overview": {
+    "title": "Instellingen",
+    "subtitle": "Pas je ervaring aan en beheer je accountvoorkeuren",
+    "upgrade": {
+      "title": "Upgraden naar Plus",
+      "description": "Ontgrendel krachtige functies en werk productiever",
+      "button": "Nu upgraden",
+      "features": {
+        "richText": "Opgemaakte beschrijvingen",
+        "notifications": "Taakmeldingen",
+        "apiIntegrations": "API-integraties",
+        "advancedAutomation": "Geavanceerde automatisering"
+      }
+    },
+    "sections": {
+      "profile": {
+        "title": "Profielinstellingen",
+        "description": "Werk je profielgegevens, foto, weergavenaam en tijdzone bij."
+      },
+      "circle": {
+        "title": "Circle-instellingen",
+        "description": "Beheer je circle, nodig leden uit en handel deelnameverzoeken af."
+      },
+      "account": {
+        "title": "Accountinstellingen",
+        "description": "Beheer je abonnement, wijzig je wachtwoord en verwijder je account."
+      },
+      "subaccounts": {
+        "title": "Beheerde accounts",
+        "description": "Maak en beheer subaccounts die kunnen inloggen en toegewezen taken afronden."
+      },
+      "notifications": {
+        "title": "Meldingen",
+        "description": "Stel pushmeldingen, e-mailwaarschuwingen en meldingsbestemmingen voor taken in."
+      },
+      "mfa": {
+        "title": "Multifactorauthenticatie",
+        "description": "Voeg extra beveiliging toe met MFA via een authenticator-app."
+      },
+      "apitokens": {
+        "title": "API-tokens",
+        "description": "Genereer en beheer toegangstokens voor integraties van derden en API-toegang."
+      },
+      "storage": {
+        "title": "Opslaginstellingen",
+        "description": "Maak back-ups en herstel je gegevens, beheer lokale opslag en synchronisatie."
+      },
+      "layout": {
+        "title": "Indeling en navigatie",
+        "description": "Kies met welk scherm de app opent en welke snelkoppelingen en panelen eromheen staan."
+      },
+      "theme": {
+        "title": "Themavoorkeuren",
+        "description": "Kies je favoriete thema en stel de licht-/donkermodus in."
+      },
+      "localization": {
+        "title": "Lokalisatie",
+        "description": "Pas taal, datumnotatie, tijdnotatie en regionale voorkeuren aan."
+      },
+      "advanced": {
+        "title": "Geavanceerde instellingen",
+        "description": "Stel webhooks, realtime-updates en andere geavanceerde functies in."
+      },
+      "privacy": {
+        "title": "",
+        "description": ""
+      },
+      "developer": {
+        "title": "Ontwikkelaarsinstellingen",
+        "description": "Bekijk technische informatie over authenticatietokens, SSE-verbindingen en debuggegevens."
+      },
+      "feedback": {
+        "title": "Feedback sturen",
+        "description": "Laat ons weten hoe Donetick voor je werkt of vraag een functie aan."
+      },
+      "bugReport": {
+        "title": "Een bug melden",
+        "description": "Werkt er iets niet goed? Stuur ons de details samen met een technische momentopname."
+      },
+      "sidepanel": {
+        "title": "Zijpaneel aanpassen",
+        "description": "Pas de indeling en zichtbaarheid van de kaarten in het zijpaneel aan."
+      }
+    }
+  },
+  "profile": {
+    "title": "Profielinstellingen",
+    "description": "Werk je weergavenaam en profielfoto bij.",
+    "photoUpdated": "Foto bijgewerkt",
+    "photoUpdatedMessage": "Je profielfoto is bijgewerkt!",
+    "uploadFailed": "Uploaden mislukt",
+    "uploadFailedMessage": "Je foto kon niet worden geüpload. Probeer het opnieuw.",
+    "profileUpdated": "Profiel bijgewerkt",
+    "profileUpdatedMessage": "Je profielgegevens zijn opgeslagen!",
+    "updateFailed": "Bijwerken mislukt",
+    "updateFailedMessage": "Je profiel kon niet worden bijgewerkt. Controleer je verbinding en probeer het opnieuw.",
+    "changePhoto": "Foto wijzigen",
+    "editPhoto": "Profielfoto bewerken",
+    "displayName": "Weergavenaam",
+    "displayNamePlaceholder": "Voer je weergavenaam in",
+    "timezone": "Tijdzone",
+    "timezonePlaceholder": "Selecteer je tijdzone",
+    "save": "Opslaan",
+    "cancel": "Annuleren"
+  },
+  "circleSettings": {
+    "title": "Circle-instellingen",
+    "description": "Je account wordt automatisch aan een circle gekoppeld wanneer je er een aanmaakt of aan deelneemt. Nodig anderen eenvoudig uit door de unieke circle-code of link hieronder te delen. Je krijgt hieronder een melding als iemand aan je circle wil deelnemen.",
+    "memberOf": "Je maakt deel uit van {{name}}",
+    "yourCircleCode": "Je circle-code is:",
+    "copyCode": "Code kopiëren",
+    "shareInvite": "Uitnodiging delen",
+    "codeCopied": "Code gekopieerd naar klembord",
+    "linkCopied": "Uitnodigingslink gekopieerd naar klembord",
+    "myCircle": "mijn circle",
+    "shareTitle": "Kom bij {{name}} op Donetick",
+    "shareText": "Ik wil je uitnodigen om deel te nemen aan {{name}} op Donetick.",
+    "shareDialogTitle": "Circle-uitnodiging delen",
+    "leave": "Circle verlaten",
+    "leaveConfirmTitle": "Circle verlaten",
+    "leaveConfirmMessage": "Weet je zeker dat je je circle wilt verlaten?",
+    "leaveConfirmButton": "Verlaten",
+    "leftCircle": "Circle verlaten",
+    "leaveFailed": "Circle verlaten mislukt",
+    "circleMembers": "Circle-leden",
+    "you": "(Jij)",
+    "pendingApproval": "Wacht op goedkeuring",
+    "joinedOn": "Deelgenomen op {{date}}",
+    "requestedToJoin": "Deelnameverzoek {{date}}",
+    "roles": {
+      "member": "Lid",
+      "memberDescription": "Een gewoon lid van de circle",
+      "manager": "Beheerder",
+      "managerDescription": "Kan zich voordoen als gebruikers en namens hen handelen",
+      "admin": "",
+      "adminDescription": "Volledige toegang tot de circle"
+    },
+    "roleUpdateFailed": "Rol bijwerken mislukt",
+    "removeMemberTitle": "Lid verwijderen",
+    "removeMemberMessage": "Weet je zeker dat je {{name}} uit je circle wilt verwijderen?",
+    "memberRemoved": "Lid verwijderd",
+    "circleMemberRequests": "Deelnameverzoeken",
+    "lastUpdated": "Laatst bijgewerkt: {{time}}",
+    "refreshing": "Vernieuwen…",
+    "refreshFailed": "Deelnameverzoeken vernieuwen mislukt",
+    "wantsToJoin": "{{name}} wil deelnemen aan je circle.",
+    "accept": "Accepteren",
+    "acceptRequestTitle": "Deelnameverzoek accepteren",
+    "acceptRequestMessage": "Weet je zeker dat je {{name}} (gebruikersnaam: {{username}}) wilt toelaten tot je circle?",
+    "requestAccepted": "Verzoek geaccepteerd",
+    "or": "of",
+    "joinOtherDescription": "Wil je deelnemen aan de circle van iemand anders? Vraag om hun unieke circle-code of deelnamelink. Voer de code hieronder in om deel te nemen.",
+    "enterCircleCode": "Voer de circle-code in:",
+    "enterCodePlaceholder": "Voer code in",
+    "joinCircle": "Deelnemen aan circle",
+    "joinedPending": "Deelname gelukt, wacht tot de eigenaar van de circle je verzoek accepteert.",
+    "alreadyMember": "Je bent al lid van deze circle",
+    "joinFailed": "Deelnemen aan circle mislukt",
+    "copyLink": ""
+  },
+  "accountSettings": {
+    "title": "Accountinstellingen",
+    "description": "Wijzig je accountinstellingen, abonnement of wachtwoord",
+    "accountType": "Accounttype: {{type}}",
+    "free": "Gratis",
+    "plus": "",
+    "plusUntil": "Plus (tot {{date}})",
+    "activeDescription": "Je hebt momenteel een Plus-abonnement. Je abonnement wordt verlengd op {{date}}.",
+    "cancelledDescription": "Je hebt je abonnement opgezegd. Je account gaat op {{date}} terug naar het gratis abonnement.",
+    "freeDescription": "Je gebruikt momenteel het gratis abonnement. Upgrade naar Plus om meer functies te ontgrendelen.",
+    "upgrade": "Upgraden",
+    "cancel": "Opzeggen",
+    "password": "Wachtwoord:",
+    "changePassword": "Wachtwoord wijzigen",
+    "passwordChanged": "Wachtwoord gewijzigd",
+    "passwordChangeFailed": "Wachtwoord wijzigen mislukt",
+    "dangerZone": "Gevarenzone",
+    "dangerZoneDescription": "Zodra je je account verwijdert, is er geen weg terug. Weet het zeker.",
+    "deleteAccount": "Account verwijderen",
+    "accountDeleted": "Account verwijderd",
+    "subscriptionCancelled": "Abonnement opgezegd",
+    "subscriptionCancelFailed": "Abonnement opzeggen mislukt",
+    "purchase": {
+      "success": "Aankoop gelukt! Start de app opnieuw op om de Plus-functies te gebruiken.",
+      "storeConnection": "Verbindingsprobleem met de store. Controleer je netwerk en probeer het opnieuw.",
+      "notAllowed": "Aankopen zijn niet toegestaan op dit apparaat. Controleer de beperkingen van je apparaat.",
+      "unavailable": "Dit abonnement is niet beschikbaar. Probeer het later opnieuw.",
+      "alreadyProcessed": "Deze aankoop is al verwerkt. Neem contact op met support als je denkt dat dit een fout is.",
+      "receiptMissing": "Aankoopbewijs ontbreekt. Probeer opnieuw te kopen.",
+      "networkError": "Netwerkfout. Controleer je verbinding en probeer het opnieuw.",
+      "invalidReceipt": "Ongeldig aankoopbewijs. Neem contact op met support als dit blijft gebeuren.",
+      "pending": "De betaling wacht op goedkeuring. Je krijgt toegang zodra deze is goedgekeurd.",
+      "failed": "Aankoop mislukt: {{error}}. Probeer het opnieuw of neem contact op met support.",
+      "unknownError": "Onbekende fout"
+    }
+  },
+  "subaccounts": {
+    "title": "Beheerde accounts",
+    "description": "Beheer subaccounts. Gebruikers van subaccounts kunnen inloggen en toegewezen taken afronden.",
+    "notParentTitle": "Beheer van subaccounts",
+    "notParentMessage": "Alleen hoofdaccounts kunnen subaccounts beheren.",
+    "freePlanNotice": "Met het gratis abonnement is 1 subaccount mogelijk. Upgrade naar Plus voor maximaal 5 subaccounts.",
+    "count": "Subaccounts ({{count}})",
+    "add": "Subaccount toevoegen",
+    "loading": "Subaccounts laden…",
+    "emptyTitle": "Geen subaccounts",
+    "emptyDescription": "Maak subaccounts aan zodat teamleden kunnen inloggen en hun toegewezen taken kunnen afronden.",
+    "addFirst": "Voeg je eerste subaccount toe",
+    "username": "Gebruikersnaam: {{username}}",
+    "created": "Aangemaakt: {{date}}",
+    "changePassword": "Wachtwoord wijzigen",
+    "deleteAccount": "Account verwijderen",
+    "createdSuccess": "Subaccount ‘{{name}}’ is aangemaakt!",
+    "createFailed": "Subaccount aanmaken mislukt: {{error}}",
+    "createFailedGeneric": "Subaccount aanmaken mislukt",
+    "passwordUpdated": "Wachtwoord van subaccount bijgewerkt",
+    "passwordUpdateFailed": "Wachtwoord bijwerken mislukt: {{error}}",
+    "passwordUpdateFailedGeneric": "Wachtwoord bijwerken mislukt",
+    "deleteConfirmTitle": "Subaccount verwijderen",
+    "deleteConfirmMessage": "Weet je zeker dat je het subaccount ‘{{name}}’ wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+    "deleted": "Subaccount ‘{{name}}’ verwijderd",
+    "deleteFailed": "Subaccount verwijderen mislukt: {{error}}",
+    "deleteFailedGeneric": "Subaccount verwijderen mislukt",
+    "howItWorksTitle": "Hoe beheerde accounts werken",
+    "howItWorks1": "Beheerde accounts worden aangemaakt door het hoofdaccount – bedoeld voor mensen van wie je het account wilt kunnen verwijderen en het wachtwoord opnieuw wilt kunnen instellen.",
+    "howItWorks2": "Subaccounts kunnen inloggen met hun eigen gebruikersnaam en wachtwoord.",
+    "howItWorks3": "Beheerde accounts kunnen taken afronden, maar hebben beperkte beheerdersrechten",
+    "howItWorks4": "Beheerde accounts worden automatisch aan je circle toegevoegd"
+  },
+  "notifications": {
+    "title": "Meldingsinstellingen",
+    "deviceSection": "Apparaatmeldingen",
+    "deviceSectionDescription": "Beheer je apparaatmeldingen",
+    "deviceLabel": "Apparaatmelding",
+    "deviceHelper": "Ontvang een melding op je apparaat wanneer een taak verloopt",
+    "mobileOnly": "Deze functie is alleen beschikbaar op mobiele apparaten",
+    "testNotification": "Testmelding",
+    "testNotificationBody": "Je hebt binnenkort een taak die verloopt",
+    "dueTitle": "Melding bij vervaldatum",
+    "dueLabel": "Melding wanneer de taak verloopt",
+    "preDueTitle": "Melding vóór vervaldatum",
+    "preDueLabel": "Melding enkele uren voordat de taak verloopt",
+    "overdueTitle": "Melding bij achterstand",
+    "overdueLabel": "Melding wanneer de taak te laat is",
+    "pushLabel": "Pushmeldingen",
+    "pushHelper": "Ontvang herinneringen, aankondigingen en taaktoewijzingen via pushmeldingen",
+    "registeredDevices": "Geregistreerde apparaten ({{count}}/5)",
+    "registeredDevicesDescription": "Apparaten die zijn geregistreerd voor pushmeldingen van je account",
+    "currentDevice": "Huidig apparaat: {{platform}} {{model}}",
+    "currentDeviceNotRegistered": "Dit apparaat is niet geregistreerd voor pushmeldingen",
+    "limitReached": "Limiet bereikt",
+    "registerDevice": "Apparaat registreren",
+    "unknownDevice": "Onbekend apparaat",
+    "deviceCreatedAt": "Aangemaakt op: {{date}}",
+    "noDevices": "Geen apparaten geregistreerd voor pushmeldingen",
+    "customSection": "Aangepaste melding",
+    "customSectionDescription": "Meldingen via een ander platform zoals Telegram of Pushover",
+    "customLabel": "Aangepaste melding",
+    "customHelper": "Ontvang meldingen op een ander platform",
+    "targetNone": "Geen",
+    "targetTelegram": "",
+    "targetPushover": "",
+    "targetWebhooks": "",
+    "telegramBotHelpBefore": "Je moet eerst een bericht naar de bot sturen voordat Telegram-meldingen werken",
+    "telegramBotHelpAfter": "om een chat te starten",
+    "clickHere": "Klik hier",
+    "chatId": "Chat-ID",
+    "chatIdPlaceholder": "Gebruikers-ID / chat-ID",
+    "telegramChatIdHelpBefore": "Als je je chat-ID niet kent, start dan een chat met userinfobot; die stuurt je je chat-ID.",
+    "telegramChatIdHelpAfter": "om een chat met userinfobot te starten",
+    "userKey": "Gebruikerssleutel",
+    "userKeyPlaceholder": "Gebruikers-ID",
+    "chatIdRequired": "Chat-ID is verplicht",
+    "chatIdInvalid": "Ongeldige chat-ID",
+    "userKeyRequired": "Gebruikerssleutel is verplicht",
+    "targetUpdated": "Meldingsbestemming bijgewerkt",
+    "targetUpdateFailed": "Fout bij het bijwerken van de meldingsbestemming: {{error}}",
+    "deviceRegistered": "Apparaat geregistreerd voor pushmeldingen.",
+    "deviceLimitTitle": "Apparaatlimiet bereikt",
+    "deviceLimitMessage": "Je hebt het maximum van 5 geregistreerde apparaten bereikt. Verwijder eerst een apparaat voordat je dit registreert.",
+    "registrationFailedTitle": "Registratie mislukt",
+    "registrationFailedMessage": "Het apparaat kon niet automatisch worden geregistreerd. Probeer het opnieuw.",
+    "permissionRequiredTitle": "Toestemming vereist",
+    "permissionRequiredMessage": "Toestemming voor pushmeldingen is vereist om dit apparaat te registreren.",
+    "registrationInitiatedTitle": "Registratie gestart",
+    "registrationInitiatedMessage": "De registratie voor pushmeldingen is gestart. Het apparaat wordt automatisch geregistreerd.",
+    "registerDeviceFailed": "Apparaat registreren mislukt. Probeer het opnieuw.",
+    "permissionDeniedTitle": "Meldingstoestemming geweigerd",
+    "permissionDeniedMessage": "Je hebt meldingstoestemming geweigerd. Je kunt deze later inschakelen in de instellingen van je apparaat.",
+    "pushPermissionDeniedTitle": "Toestemming voor pushmeldingen geweigerd",
+    "pushPermissionDeniedMessage": "Pushmeldingen zijn uitgeschakeld. Je kunt ze indien nodig inschakelen in de instellingen van je apparaat.",
+    "unregisterFailed": "Apparaat afmelden mislukt"
+  },
+  "mfa": {
+    "title": "Multifactorauthenticatie",
+    "description": "Voeg extra beveiliging toe aan je account met multifactorauthenticatie (MFA). Wanneer dit is ingeschakeld, voer je bij het inloggen naast je wachtwoord een verificatiecode uit je authenticator-app in.",
+    "twoFactor": "Tweestapsverificatie",
+    "enabledSubtitle": "Je account is beveiligd met 2FA",
+    "disabledSubtitle": "Beveilig je account met een authenticator-app",
+    "enable": "Inschakelen",
+    "disable": "Uitschakelen",
+    "enabledSuccess": "MFA is ingeschakeld!",
+    "disabledSuccess": "MFA is uitgeschakeld!",
+    "errors": {
+      "qrGenerationFailed": "QR-code genereren mislukt",
+      "invalidResponse": "Ongeldig antwoord van de server. QR-code of sleutel ontbreekt.",
+      "notFound": "MFA-installatie-endpoint niet gevonden. Deze functie is mogelijk nog niet beschikbaar.",
+      "unauthorized": "Niet geautoriseerd. Log opnieuw in.",
+      "serverError": "Serverfout. Probeer het later opnieuw.",
+      "setupFailed": "MFA instellen mislukt ({{status}}). Probeer het opnieuw.",
+      "networkError": "Netwerkfout. Controleer je verbinding en probeer het opnieuw.",
+      "invalidCode": "Ongeldige verificatiecode. Probeer het opnieuw.",
+      "confirmFailed": "MFA bevestigen mislukt. Probeer het opnieuw.",
+      "disableFailed": "MFA uitschakelen mislukt. Probeer het opnieuw."
+    },
+    "setup": {
+      "title": "Multifactorauthenticatie instellen",
+      "addedAccount": "Ik heb het account toegevoegd",
+      "back": "Terug",
+      "verifyAndEnable": "Verifiëren en inschakelen",
+      "savedBackupCodes": "Ik heb mijn back-upcodes opgeslagen",
+      "step1Label": "Stap 1:",
+      "step1": "Scan de QR-code hieronder met je authenticator-app (Google Authenticator, Authy enz.)",
+      "qrAlt": "MFA-QR-code",
+      "qrFailed": "De QR-code kon niet worden gegenereerd. Probeer het opnieuw of gebruik de handmatige sleutel hieronder.",
+      "manualKey": "Handmatige sleutel:",
+      "step2Label": "Stap 2:",
+      "step2": "Voer de 6-cijferige verificatiecode uit je authenticator-app in",
+      "codePlaceholder": "Voer de 6-cijferige code in",
+      "successTitle": "MFA succesvol ingeschakeld!",
+      "backupCodesTitle": "Bewaar deze back-upcodes op een veilige plek",
+      "backupCodesDescription": "Met deze codes krijg je toegang tot je account als je je authenticator-apparaat kwijtraakt. Elke code kan maar één keer worden gebruikt."
+    },
+    "disableModal": {
+      "title": "Multifactorauthenticatie uitschakelen",
+      "warning": "Door MFA uit te schakelen wordt je account minder veilig. Weet je zeker dat je wilt doorgaan?",
+      "prompt": "Voer ter bevestiging een verificatiecode uit je authenticator-app in:",
+      "confirm": "MFA uitschakelen"
+    },
+    "backupCodesModal": {
+      "title": "Nieuwe back-upcodes",
+      "warning": "Je vorige back-upcodes zijn niet meer geldig. Bewaar deze nieuwe codes op een veilige plek. Elke code kan maar één keer worden gebruikt."
+    },
+    "generateCodes": ""
+  },
+  "apiTokens": {
+    "title": "API-tokens",
+    "accessToken": "Toegangstoken",
+    "description": "Maak een token om via de API dingen bij te werken die taken activeren",
+    "plusNotice": "API-tokens zijn niet beschikbaar in het basisabonnement. Upgrade naar Plus om API-tokens te genereren voor integratie met externe systemen en het automatiseren van je taken.",
+    "showToken": "Token tonen",
+    "hideToken": "Token verbergen",
+    "removeTitle": "Token verwijderen",
+    "removeMessage": "Weet je zeker dat je {{name}} wilt verwijderen?",
+    "removedTitle": "Verwijderd",
+    "removedMessage": "Het API-token is verwijderd",
+    "tokenCopied": "Token gekopieerd naar klembord",
+    "generateNew": "Nieuw token genereren",
+    "nameModalTitle": "Geef je nieuwe token een naam waaraan je het herkent.",
+    "generateToken": "Token genereren"
+  },
+  "storage": {
+    "title": "Opslaginstellingen",
+    "serverTitle": "Serveropslaggebruik",
+    "serverDescription": "Dit is de opslag die je account op onze servers gebruikt (bijvoorbeeld bestanden, afbeeldingen en geüploade gegevens).",
+    "usagePlaceholder": "-- MB gebruikt / -- MB totaal (--)",
+    "usage": "{{used}} MB gebruikt / {{total}} MB totaal ({{percent}}%)",
+    "basicPlanNotice": "Serveropslag is niet beschikbaar in het basisabonnement. Upgrade naar Plus om je serveropslaggebruik te volgen.",
+    "localTitleApp": "Lokale app-opslag en cache",
+    "localTitleBrowser": "Lokale browseropslag en cache",
+    "localDescription": "Dit zijn gegevens die lokaal in je browser worden opgeslagen voor snellere toegang. Wissen heeft geen invloed op je servergegevens, maar kan je uitloggen.",
+    "clearLocal": "Alle lokale opslag en cache wissen",
+    "clearLocalTitle": "Alle lokale opslag wissen",
+    "clearLocalMessage": "Weet je zeker dat je je lokale opslag en cache wilt wissen? Al je gegevens worden uit deze browser verwijderd en je moet opnieuw inloggen.",
+    "clearAll": "Alles wissen",
+    "appPreferences": "App-voorkeuren",
+    "deviceOnly": "Alleen dit apparaat",
+    "appPreferencesDescription": "Dit zijn voorkeuren en instellingen die de app lokaal op je apparaat opslaat. Wissen zet app-specifieke instellingen terug en kan je uitloggen, maar heeft geen invloed op je servergegevens.",
+    "clearPreferences": "App-voorkeuren wissen",
+    "clearPreferencesTitle": "App-voorkeuren wissen",
+    "clearPreferencesMessage": "Weet je zeker dat je alle app-voorkeuren wilt wissen? Je app-instellingen worden teruggezet en je moet mogelijk opnieuw inloggen."
+  },
+  "sidepanel": {
+    "title": "Zijpaneel aanpassen",
+    "description": "Bepaal welke kaarten in het zijpaneel verschijnen en in welke volgorde. Sleep om te herschikken of wissel de zichtbaarheid van elke kaart.",
+    "resetToDefaults": "Standaardwaarden herstellen",
+    "resetHelper": "Hiermee worden de standaardzichtbaarheid en -volgorde van alle kaarten hersteld.",
+    "cards": {
+      "welcome": {
+        "name": "Gebruiker wisselen",
+        "description": "Laat admins/beheerders taken bekijken als andere gebruikers"
+      },
+      "smartInsights": {
+        "name": "Slimme inzichten",
+        "description": "Snelle acties op basis van je taken"
+      },
+      "assignees": {
+        "name": "Taken per toegewezen persoon",
+        "description": "Groepeert taken op basis van aan wie ze zijn toegewezen"
+      },
+      "calendar": {
+        "name": "Kalenderweergave",
+        "description": "Toont taken in kalendervorm"
+      },
+      "activities": {
+        "name": "Recente activiteiten",
+        "description": "Toont recent afgeronde taken en activiteiten"
+      },
+      "weeklyGoals": {
+        "name": "Weekdoelen",
+        "description": "Toont wekelijkse voortgang en gezinsstatistieken"
+      }
+    },
+    "heading": "Zijpaneelinstellingen",
+    "detailedDescription": ""
+  },
+  "homeSections": {
+    "title": "",
+    "description": "",
+    "resetToDefaults": "",
+    "resetHelper": "",
+    "sections": {
+      "greeting": {
+        "name": "",
+        "description": ""
+      },
+      "glance": {
+        "name": "",
+        "description": ""
+      },
+      "circle": {
+        "name": "",
+        "description": ""
+      },
+      "review": {
+        "name": "",
+        "description": ""
+      },
+      "overdue": {
+        "name": "",
+        "description": ""
+      },
+      "nextUp": {
+        "name": "",
+        "description": ""
+      },
+      "filters": {
+        "name": "",
+        "description": ""
+      },
+      "projects": {
+        "name": "",
+        "description": ""
+      }
+    },
+    "detailedDescription": ""
+  },
+  "layout": {
+    "title": "Indeling en navigatie",
+    "detailedDescription": "Kies met welk scherm de app opent en welke snelkoppelingen en panelen eromheen staan.",
+    "defaultView": {
+      "title": "Standaardweergave",
+      "description": "Kies met welk scherm de app opent.",
+      "options": {
+        "home": {
+          "name": "Overzicht",
+          "description": "Een samenvatting van wat vandaag je aandacht vraagt, met snel toevoegen"
+        },
+        "tasks": {
+          "name": "Takenlijst",
+          "description": "De volledige takenlijst met filters, zoeken en groeperen"
+        }
+      }
+    },
+    "bottomNav": {
+      "title": "Onderste navigatie",
+      "description": "Kies maximaal {{max}} snelkoppelingen voor de onderste navigatiebalk op mobiel en sleep om ze te ordenen. ‘Meer’ blijft altijd het laatste item en opent het volledige menu.",
+      "resetToDefaults": "Standaardwaarden herstellen",
+      "resetHelper": "Hiermee worden de standaardsnelkoppelingen en -volgorde van de onderste navigatie hersteld."
+    },
+    "sidepanel": {
+      "title": "Zijpaneel"
+    }
+  },
+  "theme": {
+    "title": "Themavoorkeuren",
+    "description": "Bepaal hoe de site er voor jou uitziet. Kies één thema of synchroniseer met je systeem om automatisch te wisselen tussen dag- en nachtthema.",
+    "themeMode": "Themamodus",
+    "light": "Licht",
+    "dark": "Donker",
+    "system": "Systeem"
+  },
+  "localization": {
+    "title": "Lokalisatie",
+    "description": "Pas taal, datumnotatie en regionale voorkeuren voor je account aan.",
+    "language": "Taal",
+    "languageDescription": "Selecteer je voorkeurstaal",
+    "rtlNotice": "Deze taal wordt van rechts naar links (RTL) geschreven",
+    "dateFormat": "Datumnotatie",
+    "dateFormatDescription": "Kies hoe datums in de hele applicatie worden weergegeven",
+    "timeFormat": "Tijdnotatie",
+    "timeFormatDescription": "Kies de 12- of 24-uursnotatie",
+    "preview": "Voorbeeld: {{value}}",
+    "12hour": "12-uurs (AM/PM)",
+    "24hour": "24-uurs",
+    "firstDayOfWeek": "Eerste dag van de week",
+    "firstDayOfWeekDescription": "Kies met welke dag je week begint",
+    "sunday": "Zondag",
+    "monday": "Maandag",
+    "saturday": "Zaterdag",
+    "helpTranslate": "",
+    "formats": {
+      "mdy": "MM/DD/JJJJ (VS)",
+      "dmy": "DD-MM-JJJJ (Europa)",
+      "ymd": "JJJJ-MM-DD (ISO)",
+      "long": "Lange notatie (bijv. 1 januari 2024)",
+      "short": "Korte notatie (bijv. 1 jan. 2024)"
+    },
+    "descriptionLong": ""
+  },
+  "advanced": {
+    "title": "Geavanceerde instellingen",
+    "description": "Stel geavanceerde functies in zoals webhooks en realtime-updates voor meer productiviteit.",
+    "offlineTitle": "Offlineondersteuning",
+    "offlineDescription": "Blijf Donetick gebruiken als je offline bent op dit apparaat of in deze browser. Je wijzigingen worden lokaal opgeslagen en gesynchroniseerd zodra je weer online bent.",
+    "offlineToggle": "Offlineondersteuning inschakelen",
+    "offlineHelper": "Uitschakelen verwijdert niet-gesynchroniseerde offlinewijzigingen en opgeslagen offlinegegevens van dit apparaat of deze browser.",
+    "offlineEnabled": "Offlinemodus ingeschakeld voor dit apparaat/deze browser",
+    "offlineDisabled": "Offlinemodus uitgeschakeld en lokale gegevens gewist",
+    "offlineDisabledPartial": "De offlinemodus is uitgeschakeld, maar er kunnen nog lokale gegevens zijn opgeslagen",
+    "offlineDisableTitle": "Offlinemodus uitschakelen",
+    "offlineDisableMessage": "Als je de offlinemodus uitschakelt, worden niet-gesynchroniseerde offlinewijzigingen en opgeslagen offlinegegevens op dit apparaat of in deze browser verwijderd. Wil je doorgaan?",
+    "offlineDisableConfirm": "Uitschakelen en gegevens wissen",
+    "webhookTitle": "Webhook-integratie",
+    "webhookDescription": "Met webhooks kun je realtime-meldingen naar andere diensten sturen wanneer er iets gebeurt in je circle. Stel een webhook-URL in om realtime-updates te ontvangen.",
+    "webhookPlusNotice": "Webhook-meldingen zijn niet beschikbaar in het basisabonnement. Upgrade naar Plus om realtime-updates via webhooks te ontvangen.",
+    "webhookToggle": "Webhook inschakelen",
+    "webhookHelper": "Schakel webhook-meldingen in voor updates van taken en dingen.",
+    "webhookURL": "Webhook-URL",
+    "webhookUpdated": "Webhook-URL bijgewerkt",
+    "webhookUpdateFailed": "Webhook-URL bijwerken mislukt",
+    "realtimeTitle": "Realtime-updates",
+    "realtimeDescription": "Bepaal hoe je live-updates ontvangt wanneer taken en activiteiten in je circle veranderen.",
+    "realtime": {
+      "toggleLabel": "Realtime-updates inschakelen",
+      "title": "Realtime-updates",
+      "subtitle": "Ontvang direct meldingen wanneer taken worden bijgewerkt",
+      "statusLabel": "",
+      "basicPlan": "Realtime-updates zijn niet beschikbaar in het basisabonnement. Upgrade naar Plus om direct meldingen te ontvangen wanneer taken worden bijgewerkt.",
+      "disabled": "Realtime-updates staan uit. Schakel ze in om live wijzigingen te zien wanneer jij of andere circle-leden taken afronden, overslaan of wijzigen.",
+      "connected": "Realtime-updates werken. Je ziet live wijzigingen wanneer jij of andere circle-leden taken afronden, overslaan of wijzigen.",
+      "connecting": "Verbinden met realtime-updates…",
+      "errored": "Realtime-updates staan aan maar werken niet: {{error}}",
+      "notConnected": "Realtime-updates staan aan maar er is momenteel geen verbinding.",
+      "basicPlanNotice": "Realtime-updates zijn niet beschikbaar in het basisabonnement. Upgrade naar Plus om direct meldingen te ontvangen wanneer jij of andere circle-leden taken afronden, overslaan of wijzigen."
+    }
+  },
+  "privacyAnalytics": {
+    "title": "",
+    "description": "",
+    "analyticsToggle": "",
+    "analyticsHelper": "",
+    "crashToggle": "",
+    "crashHelper": "",
+    "footnote": ""
+  },
+  "subscription": {
+    "sessionFailed": "",
+    "errorTitle": "",
+    "errorMessage": "",
+    "subscribe": "",
+    "cancelAnytime": "",
+    "description": "",
+    "whatsIncluded": "",
+    "mostPopular": "",
+    "featureNotifications": "",
+    "featureRichText": "",
+    "featureThingTriggers": "",
+    "featureApiTokens": "",
+    "featureImageUploads": "",
+    "featureAutomation": "",
+    "planYearly": ""
+  },
+  "childUsers": {
+    "errNameRequired": "",
+    "errNameMin": "",
+    "errNameMax": "",
+    "errNameChars": "",
+    "errPasswordRequired": "",
+    "errPasswordLength": "",
+    "errPasswordMatch": "",
+    "errDisplayNameMax": "",
+    "createTitle": "",
+    "createDescription": "",
+    "createButton": "",
+    "nameLabel": "",
+    "namePlaceholder": "",
+    "displayNameLabel": "",
+    "displayNamePlaceholder": "",
+    "passwordLabel": "",
+    "passwordPlaceholder": "",
+    "confirmPasswordLabel": "",
+    "confirmPasswordPlaceholder": ""
+  },
+  "passwordChange": {
+    "minLength": "",
+    "maxLength": "",
+    "description": "",
+    "mismatch": "",
+    "newPassword": "",
+    "newPasswordPlaceholder": "",
+    "confirmPassword": "",
+    "confirmPasswordPlaceholder": ""
+  },
+  "payment": {
+    "cancelledTitle": "",
+    "cancelledRedirect": "",
+    "successTitle": "",
+    "successRedirect": ""
+  },
+  "developer": {
+    "tokenRefreshed": "",
+    "endpointCalled": "",
+    "clearDbCleared": "",
+    "clearDbDone": "",
+    "intro": "",
+    "refreshCookieNote": "",
+    "noReconnectInfo": "",
+    "noTimeoutInfo": "",
+    "noDebugInfo": ""
+  },
+  "backup": {
+    "keyRequired": "",
+    "created": "",
+    "createFailed": "",
+    "selectFile": "",
+    "restored": "",
+    "restoreFailed": "",
+    "readFailed": "",
+    "createIntro": "",
+    "keyPlaceholder": "",
+    "includeAssets": "",
+    "warningLabel": "",
+    "restoreWarning": "",
+    "restoreKeyPlaceholder": "",
+    "title": "",
+    "createTab": "",
+    "restoreTab": "",
+    "creating": "",
+    "restoring": ""
+  },
+  "deletion": {
+    "passwordRequired": "",
+    "passwordAndDelete": "",
+    "failed": "",
+    "passwordPlaceholder": "",
+    "transferIntro": "",
+    "selectOwner": "",
+    "confirmPrompt": "",
+    "typeDelete": "",
+    "warningLead": "",
+    "warningIntro": "",
+    "removesProfile": "",
+    "removesChores": "",
+    "removesTokens": "",
+    "removesStorage": "",
+    "removesPoints": "",
+    "removesCircles": "",
+    "passwordToContinue": "",
+    "circleLabel": "",
+    "newOwner": "",
+    "logoutNotice": "",
+    "passwordLabel": "",
+    "typeToConfirm": ""
+  },
+  "realtime": {
+    "titleSse": "",
+    "subtitleSse": ""
+  },
+  "nativeCancel": {
+    "title": "",
+    "dismiss": "",
+    "cancelViaStore": "",
+    "cancelDesktop": "",
+    "intro": "",
+    "iosHeading": "",
+    "iosStep1": "",
+    "iosStep2": "",
+    "iosStep3": "",
+    "iosStep4": "",
+    "iosStep5": "",
+    "iosNote": "",
+    "androidHeading": "",
+    "androidStep1": "",
+    "androidStep2": "",
+    "androidStep3": "",
+    "androidStep4": "",
+    "androidStep5": "",
+    "androidStep6": "",
+    "androidNote": "",
+    "webHeading": "",
+    "webBody": "",
+    "webNote": "",
+    "footer": ""
+  }
+}

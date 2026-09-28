@@ -1,0 +1,71 @@
+{
+  "shared": "",
+  "delete": {
+    "title": "",
+    "message": ""
+  },
+  "loadError": "",
+  "search": {
+    "placeholder": "",
+    "noResultsTitle": "",
+    "noResultsDescription": "",
+    "noFilterResultsDescription": "",
+    "clear": "",
+    "showAll": ""
+  },
+  "detail": {
+    "taskCount_one": "",
+    "taskCount_other": "",
+    "labelActions": "",
+    "filters": {
+      "all": "",
+      "overdue": "",
+      "today": "",
+      "undated": ""
+    },
+    "noMatchingStatus": "",
+    "clearFilters": "",
+    "searchPlaceholder": "",
+    "emptyTitle": "",
+    "emptyDescription": "",
+    "browseTasks": "",
+    "noResultsTitle": "",
+    "noResultsDescription": "",
+    "notFoundTitle": "",
+    "notFoundDescription": "",
+    "backToLabels": ""
+  },
+  "blurb": "",
+  "modal": {
+    "errorEmptyName": "",
+    "errorDuplicate": "",
+    "errorNoColor": "",
+    "saveFailedTitle": "",
+    "saveFailedMessage": "",
+    "name": "",
+    "editTitle": "",
+    "addTitle": "",
+    "color": "",
+    "saveChanges": "",
+    "addLabel": "",
+    "colorAriaSelect": ""
+  },
+  "picker": {
+    "label": "",
+    "createLabel": "",
+    "labelsCount_one": "",
+    "labelsCount_other": ""
+  },
+  "view": {
+    "emptyTitle": "",
+    "emptyDescription": "",
+    "createLabel": "",
+    "filterTitle": "",
+    "sortName": "",
+    "sortColor": "",
+    "sortRecent": "",
+    "filterAll": "",
+    "filterMine": "",
+    "filterShared": ""
+  }
+}

@@ -1,0 +1,74 @@
+{
+  "redeem": "Uplatnit body",
+  "redeemModal": {
+    "redeemButton": "Uplatnit",
+    "pointsAvailable": "Dostupné body: {{count}}",
+    "pointsToRedeem": "Body k uplatnění",
+    "placeholder": "Zadejte body...",
+    "cannotExceed": "Nelze překročit dostupné body",
+    "quickAdd": "Rychle přidat:",
+    "aboutToRedeem": "Chystáte se uplatnit",
+    "amount": "{{count}} b.",
+    "remaining": "Zbývá: {{count}} b."
+  },
+  "leaderboard": {
+    "titlePoints": "Žebříček bodů",
+    "titleTasks": "Žebříček úkolů",
+    "subtitlePoints": "Pořadí podle bodů získaných ve zvoleném období",
+    "subtitleTasks": "Pořadí podle úkolů splněných ve zvoleném období",
+    "modePoints": "Body",
+    "modeTasks": "Úkoly",
+    "you": "Vy",
+    "tasksAndAvg": "Úkoly: {{tasks}} • průměrně {{avg}} na úkol",
+    "available": "Dostupné: {{count}}",
+    "points_one": "{{count}} bod",
+    "points_other": "{{count}} bodů"
+  },
+  "tabs": {
+    "short7d": "7 d",
+    "short6m": "6 m",
+    "shortAll": "Vše",
+    "days7": "7 dní",
+    "months6": "6 měsíců",
+    "allTime": "Celkově"
+  },
+  "filter": {
+    "analysisTitle": "Filtr a analýza",
+    "title": "Filtrovat body",
+    "showFor": "Zobrazit body pro:",
+    "timePeriod": "Období:"
+  },
+  "cards": {
+    "available": {
+      "title": "Dostupné",
+      "subtext": "Připraveno k uplatnění"
+    },
+    "redeemed": {
+      "title": "Uplatněné",
+      "subtext": "Dříve použité"
+    },
+    "total": {
+      "title": "Celkem",
+      "subtext": "Získáno celkově"
+    },
+    "period": {
+      "title": "Body za období",
+      "allTime": "Celkově",
+      "last6Months": "Posledních 6 měsíců",
+      "lastDays_one": "Poslední {{count}} den",
+      "lastDays_other": "Posledních {{count}} dní"
+    }
+  },
+  "summary": {
+    "showingFor": "Zobrazeny body pro",
+    "unknownUser": "Neznámý uživatel",
+    "overThe": "za období",
+    "allTime": "celkově",
+    "last6Months": "posledních 6 měsíců",
+    "lastDays_one": "poslední {{count}} den",
+    "lastDays_other": "posledních {{count}} dní"
+  },
+  "trend": {
+    "title": "Vývoj bodů"
+  }
+}

@@ -1,0 +1,72 @@
+{
+  "iconPicker": {
+    "chooseIcon": "اختر أيقونة المشروع",
+    "availableIcons": "الأيقونات المتاحة"
+  },
+  "icons": {
+    "FolderOpen": "مجلد",
+    "Work": "العمل",
+    "Home": "المنزل",
+    "School": "المدرسة",
+    "BusinessCenter": "الأعمال",
+    "Code": "الكود",
+    "Build": "بناء",
+    "Palette": "تصميم",
+    "SportsSoccer": "الرياضة",
+    "FitnessCenter": "اللياقة",
+    "ShoppingCart": "التسوق",
+    "Restaurant": "الطعام",
+    "Flight": "السفر",
+    "Book": "دراسة",
+    "MusicNote": "الموسيقى",
+    "PhotoCamera": "صورة",
+    "Games": "ألعاب",
+    "Science": "العلوم",
+    "AccountBalance": "المالية",
+    "LocalHospital": "الصحة",
+    "DirectionsCar": "تلقائي",
+    "Pets": "الحيوانات الأليفة",
+    "Garden": "حديقة",
+    "Computer": "التكنولوجيا"
+  },
+  "defaultChip": "الافتراضي",
+  "tasks_one": "مهمة {{count}}",
+  "tasks_other": "مهام {{count}}",
+  "shared": "مشترك",
+  "delete": {
+    "title": "حذف المشروع",
+    "message": "هل أنت متأكد من أنك تريد حذف \"{{name}}\"؟ سيؤدي هذا إلى إزالة المشروع ولكن الاحتفاظ بجميع المهام (سوف ينتقلون إلى المشروع الافتراضي)."
+  },
+  "loadError": "فشل تحميل المشاريع. الرجاء المحاولة مرة أخرى.",
+  "search": {
+    "placeholder": "البحث عن المشاريع",
+    "noResultsTitle": "لا توجد مشاريع مطابقة",
+    "noResultsDescription": "لا يوجد مشروع يطابق \"{{searchTerm}}\".",
+    "noFilterResultsDescription": "لا يوجد مشروع يطابق الفلتر الحالي.",
+    "clear": "مسح البحث",
+    "showAll": "إظهار جميع المشاريع"
+  },
+  "blurb": "قم بتنظيم مهامك في مشاريع. قم بإنشاء مساحات عمل مخصصة للحفاظ على المهام الخاصة بك منظمة وسهلة الوصول.",
+  "defaultDescription": "جميع المهام بدون مشروع محدد",
+  "selector": {
+    "title": "المشاريع",
+    "createNew": "إنشاء مشروع جديد",
+    "createNewDescription": "إضافة مساحة عمل مخصصة لمشروع",
+    "manage": "إدارة المشاريع",
+    "manageDescription": "عرض وتحرير وتنظيم جميع المشاريع",
+    "currentProjectTitle": "المشروع الحالي: {{project}} (Ctrl+E)",
+    "builtInWorkspace": "مساحة عمل المشروع المدمجة"
+  },
+  "modal": {
+    "errorNameRequired": "اسم المشروع مطلوب",
+    "errorUpdate": "فشل تحديث المشروع",
+    "errorCreate": "فشل إنشاء المشروع",
+    "namePlaceholder": "أدخل اسم المشروع...",
+    "descriptionPlaceholder": "وصف المشروع الاختياري...",
+    "nameLabel": "اسم المشروع",
+    "descriptionLabel": "الوصف",
+    "iconLabel": "أيقونة المشروع",
+    "selectIcon": "اختر أيقونة",
+    "colorLabel": "لون المشروع"
+  }
+}

@@ -1,0 +1,72 @@
+{
+  "iconPicker": {
+    "chooseIcon": "Choose Project Icon",
+    "availableIcons": "Available Icons"
+  },
+  "icons": {
+    "FolderOpen": "Folder",
+    "Work": "Work",
+    "Home": "Home",
+    "School": "School",
+    "BusinessCenter": "Business",
+    "Code": "Code",
+    "Build": "Build",
+    "Palette": "Design",
+    "SportsSoccer": "Sports",
+    "FitnessCenter": "Fitness",
+    "ShoppingCart": "Shopping",
+    "Restaurant": "Food",
+    "Flight": "Travel",
+    "Book": "Study",
+    "MusicNote": "Music",
+    "PhotoCamera": "Photo",
+    "Games": "Games",
+    "Science": "Science",
+    "AccountBalance": "Finance",
+    "LocalHospital": "Health",
+    "DirectionsCar": "Auto",
+    "Pets": "Pets",
+    "Garden": "Garden",
+    "Computer": "Tech"
+  },
+  "defaultChip": "Default",
+  "tasks_one": "{{count}} task",
+  "tasks_other": "{{count}} tasks",
+  "shared": "Shared",
+  "delete": {
+    "title": "Delete Project",
+    "message": "Are you sure you want to delete \"{{name}}\"? This will remove the project but keep all tasks (they'll move to the Default Project)."
+  },
+  "loadError": "Failed to load projects. Please try again.",
+  "search": {
+    "placeholder": "Search projects",
+    "noResultsTitle": "No projects match",
+    "noResultsDescription": "No project matches \"{{searchTerm}}\".",
+    "noFilterResultsDescription": "No project matches the current filter.",
+    "clear": "Clear search",
+    "showAll": "Show all projects"
+  },
+  "blurb": "Organize your tasks into projects. Create custom workspaces to keep your tasks organized and easily accessible.",
+  "defaultDescription": "All tasks without a specific project",
+  "selector": {
+    "title": "Projects",
+    "createNew": "Create New Project",
+    "createNewDescription": "Add a custom project workspace",
+    "manage": "Manage Projects",
+    "manageDescription": "View, edit, and organize all projects",
+    "currentProjectTitle": "Current project: {{project}} (Ctrl+E)",
+    "builtInWorkspace": "Built-in project workspace"
+  },
+  "modal": {
+    "errorNameRequired": "Project name is required",
+    "errorUpdate": "Failed to update project",
+    "errorCreate": "Failed to create project",
+    "namePlaceholder": "Enter project name...",
+    "descriptionPlaceholder": "Optional project description...",
+    "nameLabel": "Project Name",
+    "descriptionLabel": "Description",
+    "iconLabel": "Project Icon",
+    "selectIcon": "Select Icon",
+    "colorLabel": "Project Color"
+  }
+}

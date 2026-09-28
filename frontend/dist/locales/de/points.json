@@ -1,0 +1,74 @@
+{
+  "redeem": "Punkte einlösen",
+  "redeemModal": {
+    "redeemButton": "Einlösen",
+    "pointsAvailable": "{{count}} Punkte verfügbar",
+    "pointsToRedeem": "Einzulösende Punkte",
+    "placeholder": "Punkte eingeben...",
+    "cannotExceed": "Darf die verfügbaren Punkte nicht überschreiten",
+    "quickAdd": "Schnellauswahl:",
+    "aboutToRedeem": "Du bist dabei, Punkte einzulösen:",
+    "amount": "{{count}} Punkte",
+    "remaining": "Verbleibend: {{count}} Punkte"
+  },
+  "leaderboard": {
+    "titlePoints": "Punkte-Rangliste",
+    "titleTasks": "Aufgaben-Rangliste",
+    "subtitlePoints": "Rangliste nach den im ausgewählten Zeitraum verdienten Punkten",
+    "subtitleTasks": "Rangliste nach den im ausgewählten Zeitraum abgeschlossenen Aufgaben",
+    "modePoints": "Punkte",
+    "modeTasks": "Aufgaben",
+    "you": "Du",
+    "tasksAndAvg": "{{tasks}} Aufgaben • Ø {{avg}} pro Aufgabe",
+    "available": "{{count}} verfügbar",
+    "points_one": "{{count}} Punkt",
+    "points_other": "{{count}} Punkte"
+  },
+  "tabs": {
+    "short7d": "7 T.",
+    "short6m": "6 Mon.",
+    "shortAll": "Alle",
+    "days7": "7 Tage",
+    "months6": "6 Monate",
+    "allTime": "Gesamter Zeitraum"
+  },
+  "filter": {
+    "analysisTitle": "Filter & Analyse",
+    "title": "Punkte filtern",
+    "showFor": "Punkte anzeigen für:",
+    "timePeriod": "Zeitraum:"
+  },
+  "cards": {
+    "available": {
+      "title": "Verfügbar",
+      "subtext": "Zum Einlösen bereit"
+    },
+    "redeemed": {
+      "title": "Eingelöst",
+      "subtext": "Bereits verwendet"
+    },
+    "total": {
+      "title": "Gesamt",
+      "subtext": "Insgesamt verdient"
+    },
+    "period": {
+      "title": "Punkte im Zeitraum",
+      "allTime": "Gesamter Zeitraum",
+      "last6Months": "Letzte 6 Monate",
+      "lastDays_one": "Letzter {{count}} Tag",
+      "lastDays_other": "Letzte {{count}} Tage"
+    }
+  },
+  "summary": {
+    "showingFor": "Punkte werden angezeigt für",
+    "unknownUser": "Unbekannter Benutzer",
+    "overThe": "im Zeitraum",
+    "allTime": "Gesamter Zeitraum",
+    "last6Months": "Letzte 6 Monate",
+    "lastDays_one": "Letzter {{count}} Tag",
+    "lastDays_other": "Letzte {{count}} Tage"
+  },
+  "trend": {
+    "title": "Punkteverlauf"
+  }
+}

@@ -1,0 +1,71 @@
+{
+  "shared": "Geteilt",
+  "delete": {
+    "title": "Label löschen",
+    "message": "Möchtest du dieses Label wirklich löschen? Es wird von allen Aufgaben entfernt."
+  },
+  "loadError": "Labels konnten nicht geladen werden. Bitte versuche es erneut.",
+  "search": {
+    "placeholder": "Labels durchsuchen",
+    "noResultsTitle": "Keine passenden Labels",
+    "noResultsDescription": "Kein Label passt zu „{{searchTerm}}“.",
+    "noFilterResultsDescription": "Kein Label entspricht dem aktuellen Filter.",
+    "clear": "Suche löschen",
+    "showAll": "Alle Labels anzeigen"
+  },
+  "detail": {
+    "taskCount_one": "{{count}} Aufgabe",
+    "taskCount_other": "{{count}} Aufgaben",
+    "labelActions": "Label-Aktionen",
+    "filters": {
+      "all": "Alle",
+      "overdue": "Überfällig",
+      "today": "Heute",
+      "undated": "Kein Datum"
+    },
+    "noMatchingStatus": "Keine Aufgabe mit diesem Label hat derzeit diesen Status.",
+    "clearFilters": "Alle Aufgaben anzeigen",
+    "searchPlaceholder": "Aufgaben mit diesem Label durchsuchen",
+    "emptyTitle": "Keine Aufgaben mit diesem Label",
+    "emptyDescription": "Noch ist nichts mit „{{label}}“ gekennzeichnet. Füge das Label einer Aufgabe hinzu, dann erscheint sie hier.",
+    "browseTasks": "Aufgaben durchsuchen",
+    "noResultsTitle": "Keine passenden Aufgaben",
+    "noResultsDescription": "Keine Aufgabe mit diesem Label passt zu „{{searchTerm}}“.",
+    "notFoundTitle": "Label nicht gefunden",
+    "notFoundDescription": "Dieses Label wurde möglicherweise gelöscht oder wird nicht mehr mit dir geteilt.",
+    "backToLabels": "Zurück zu den Labels"
+  },
+  "blurb": "Verwalte deine Labels und organisiere deine Aufgaben übersichtlich. Labels werden automatisch mit deinem Kreis geteilt, wenn sie für eine geteilte Aufgabe verwendet werden.",
+  "modal": {
+    "errorEmptyName": "Name darf nicht leer sein",
+    "errorDuplicate": "Ein Label mit diesem Namen ist bereits vorhanden",
+    "errorNoColor": "Bitte wähle eine Farbe aus",
+    "saveFailedTitle": "Label konnte nicht gespeichert werden",
+    "saveFailedMessage": "Label konnte nicht gespeichert werden. Bitte versuche es erneut.",
+    "name": "",
+    "editTitle": "Label bearbeiten",
+    "addTitle": "Label hinzufügen",
+    "color": "Farbe",
+    "saveChanges": "Änderungen speichern",
+    "addLabel": "Label hinzufügen",
+    "colorAriaSelect": "{{color}} auswählen"
+  },
+  "picker": {
+    "label": "",
+    "createLabel": "Label erstellen",
+    "labelsCount_one": "{{count}} Label",
+    "labelsCount_other": "{{count}} Labels"
+  },
+  "view": {
+    "emptyTitle": "Noch keine Labels",
+    "emptyDescription": "Labels gruppieren Aufgaben in deinem Kreis, z. B. „Küche“ oder „Rechnungen“, sodass du mit einem Tipp danach filtern kannst.",
+    "createLabel": "Label erstellen",
+    "filterTitle": "Anzeigen",
+    "sortName": "",
+    "sortColor": "Farbe",
+    "sortRecent": "Zuletzt erstellt",
+    "filterAll": "Alle Labels",
+    "filterMine": "Von mir erstellt",
+    "filterShared": "Mit mir geteilt"
+  }
+}

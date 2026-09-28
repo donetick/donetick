@@ -1,0 +1,71 @@
+{
+  "blurb": "Gestiona tus etiquetas y organiza tus tareas eficazmente. Las etiquetas se compartirán automáticamente con tu círculo si se usan en una tarea compartida.",
+  "delete": {
+    "message": "¿Estás seguro de que quieres eliminar esta etiqueta? Se eliminará de todas las tareas.",
+    "title": "Eliminar Etiqueta"
+  },
+  "detail": {
+    "backToLabels": "Volver a etiquetas",
+    "browseTasks": "Explorar tareas",
+    "clearFilters": "Mostrar todas las tareas",
+    "emptyDescription": "Nada etiquetado como \"{{label}}\" todavía. Añade la etiqueta a una tarea y aparecerá aquí.",
+    "emptyTitle": "No hay tareas con esta etiqueta",
+    "filters": {
+      "all": "Todas",
+      "overdue": "Vencidas",
+      "today": "Hoy",
+      "undated": "Sin fecha"
+    },
+    "labelActions": "Acciones de etiqueta",
+    "noMatchingStatus": "Ninguna tarea en esta etiqueta se encuentra en ese estado ahora mismo.",
+    "noResultsDescription": "Ninguna tarea en esta etiqueta coincide con \"{{searchTerm}}\".",
+    "noResultsTitle": "Ninguna tarea coincide",
+    "notFoundDescription": "Es posible que esta etiqueta haya sido eliminada o ya no esté compartida contigo.",
+    "notFoundTitle": "Etiqueta no encontrada",
+    "searchPlaceholder": "Buscar tareas en esta etiqueta",
+    "taskCount_one": "{{count}} tarea",
+    "taskCount_other": "{{count}} tareas"
+  },
+  "loadError": "Error al cargar las etiquetas. Por favor, inténtalo de nuevo.",
+  "modal": {
+    "addLabel": "Añadir Etiqueta",
+    "addTitle": "Añadir Etiqueta",
+    "color": "Color",
+    "colorAriaSelect": "Seleccionar {{color}}",
+    "editTitle": "Editar Etiqueta",
+    "errorDuplicate": "Ya existe una etiqueta con este nombre",
+    "errorEmptyName": "El nombre no puede estar vacío",
+    "errorNoColor": "Por favor, selecciona un color",
+    "name": "Nombre",
+    "saveChanges": "Guardar Cambios",
+    "saveFailedMessage": "No se pudo guardar la etiqueta. Por favor, inténtalo de nuevo.",
+    "saveFailedTitle": "Error al guardar la etiqueta"
+  },
+  "picker": {
+    "createLabel": "Crear etiqueta",
+    "label": "Etiquetas",
+    "labelsCount_one": "{{count}} etiqueta",
+    "labelsCount_other": "{{count}} etiquetas"
+  },
+  "search": {
+    "clear": "Limpiar búsqueda",
+    "noFilterResultsDescription": "Ninguna etiqueta coincide con el filtro actual.",
+    "noResultsDescription": "Ninguna etiqueta coincide con \"{{searchTerm}}\".",
+    "noResultsTitle": "Ninguna etiqueta coincide",
+    "placeholder": "Buscar etiquetas",
+    "showAll": "Mostrar todas las etiquetas"
+  },
+  "shared": "Compartida",
+  "view": {
+    "createLabel": "Crear una etiqueta",
+    "emptyDescription": "Las etiquetas agrupan tareas en tu círculo, como \"cocina\" o \"facturas\", para que puedas filtrarlas con un solo toque.",
+    "emptyTitle": "Aún no hay etiquetas",
+    "filterAll": "Todas las etiquetas",
+    "filterMine": "Creadas por mí",
+    "filterShared": "Compartidas conmigo",
+    "filterTitle": "Mostrar",
+    "sortColor": "Color",
+    "sortName": "Nombre",
+    "sortRecent": "Creadas recientemente"
+  }
+}

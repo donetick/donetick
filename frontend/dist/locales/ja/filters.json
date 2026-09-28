@@ -1,0 +1,55 @@
+{
+  "builder": {
+    "errorName": "",
+    "errorConditions": "",
+    "editTitle": "",
+    "newTitle": "",
+    "addConditions": "",
+    "save": "",
+    "name": "",
+    "namePlaceholder": "",
+    "color": ""
+  },
+  "nameExists": "",
+  "tasks_one": "",
+  "tasks_other": "",
+  "overdue": "",
+  "noConditions": "",
+  "condition_one": "",
+  "condition_other": "",
+  "usedCount": "",
+  "delete": {
+    "title": "",
+    "message": ""
+  },
+  "empty": {
+    "title": "",
+    "description": "",
+    "createFilter": "",
+    "noResultsTitle": "",
+    "noResultsWithSearch": "",
+    "noResultsDefault": "",
+    "clearSearch": "",
+    "showAllFilters": ""
+  },
+  "header": {
+    "title": "",
+    "subtitle": ""
+  },
+  "searchPlaceholder": "",
+  "sort": {
+    "smart": "",
+    "name": "",
+    "usage": "",
+    "lastUsed": "",
+    "created": ""
+  },
+  "show": {
+    "title": "",
+    "all": "",
+    "pinned": "",
+    "unpinned": ""
+  },
+  "pin": "",
+  "unpin": ""
+}

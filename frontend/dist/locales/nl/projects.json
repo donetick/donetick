@@ -1,0 +1,72 @@
+{
+  "iconPicker": {
+    "chooseIcon": "",
+    "availableIcons": ""
+  },
+  "icons": {
+    "FolderOpen": "",
+    "Work": "",
+    "Home": "",
+    "School": "",
+    "BusinessCenter": "",
+    "Code": "",
+    "Build": "",
+    "Palette": "",
+    "SportsSoccer": "",
+    "FitnessCenter": "",
+    "ShoppingCart": "",
+    "Restaurant": "",
+    "Flight": "",
+    "Book": "",
+    "MusicNote": "",
+    "PhotoCamera": "",
+    "Games": "",
+    "Science": "",
+    "AccountBalance": "",
+    "LocalHospital": "",
+    "DirectionsCar": "",
+    "Pets": "",
+    "Garden": "",
+    "Computer": ""
+  },
+  "defaultChip": "",
+  "tasks_one": "",
+  "tasks_other": "",
+  "shared": "",
+  "delete": {
+    "title": "",
+    "message": ""
+  },
+  "loadError": "",
+  "search": {
+    "placeholder": "",
+    "noResultsTitle": "",
+    "noResultsDescription": "",
+    "noFilterResultsDescription": "",
+    "clear": "",
+    "showAll": ""
+  },
+  "blurb": "",
+  "defaultDescription": "",
+  "selector": {
+    "title": "",
+    "createNew": "",
+    "createNewDescription": "",
+    "manage": "",
+    "manageDescription": "",
+    "currentProjectTitle": "",
+    "builtInWorkspace": ""
+  },
+  "modal": {
+    "errorNameRequired": "",
+    "errorUpdate": "",
+    "errorCreate": "",
+    "namePlaceholder": "",
+    "descriptionPlaceholder": "",
+    "nameLabel": "",
+    "descriptionLabel": "",
+    "iconLabel": "",
+    "selectIcon": "",
+    "colorLabel": ""
+  }
+}

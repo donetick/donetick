@@ -1,0 +1,72 @@
+{
+  "iconPicker": {
+    "chooseIcon": "Vyberte ikonu projektu",
+    "availableIcons": "Dostupné ikony"
+  },
+  "icons": {
+    "FolderOpen": "Složka",
+    "Work": "Práce",
+    "Home": "Domov",
+    "School": "Škola",
+    "BusinessCenter": "Byznys",
+    "Code": "Kód",
+    "Build": "Stavba",
+    "Palette": "",
+    "SportsSoccer": "Sport",
+    "FitnessCenter": "",
+    "ShoppingCart": "Nákupy",
+    "Restaurant": "Jídlo",
+    "Flight": "Cestování",
+    "Book": "Studium",
+    "MusicNote": "Hudba",
+    "PhotoCamera": "Foto",
+    "Games": "Hry",
+    "Science": "Věda",
+    "AccountBalance": "",
+    "LocalHospital": "Zdraví",
+    "DirectionsCar": "",
+    "Pets": "Mazlíčci",
+    "Garden": "Zahrada",
+    "Computer": "Technika"
+  },
+  "defaultChip": "Výchozí",
+  "tasks_one": "{{count}} úkol",
+  "tasks_other": "{{count}} úkolů",
+  "shared": "Sdílený",
+  "delete": {
+    "title": "Smazat projekt",
+    "message": "Opravdu chcete smazat „{{name}}“? Projekt bude odstraněn, ale všechny úkoly zůstanou (přesunou se do výchozího projektu)."
+  },
+  "loadError": "Projekty se nepodařilo načíst. Zkuste to prosím znovu.",
+  "search": {
+    "placeholder": "Hledat projekty",
+    "noResultsTitle": "Žádné odpovídající projekty",
+    "noResultsDescription": "Hledání „{{searchTerm}}“ neodpovídá žádný projekt.",
+    "noFilterResultsDescription": "Aktuálnímu filtru neodpovídá žádný projekt.",
+    "clear": "Vymazat hledání",
+    "showAll": "Zobrazit všechny projekty"
+  },
+  "blurb": "Organizujte úkoly do projektů. Vytvářejte vlastní pracovní prostory, aby byly úkoly přehledné a snadno dostupné.",
+  "defaultDescription": "Všechny úkoly bez konkrétního projektu",
+  "selector": {
+    "title": "Projekty",
+    "createNew": "Vytvořit nový projekt",
+    "createNewDescription": "Přidat vlastní pracovní prostor projektu",
+    "manage": "Spravovat projekty",
+    "manageDescription": "Zobrazit, upravit a uspořádat všechny projekty",
+    "currentProjectTitle": "Aktuální projekt: {{project}} (Ctrl+E)",
+    "builtInWorkspace": "Vestavěný pracovní prostor projektu"
+  },
+  "modal": {
+    "errorNameRequired": "Název projektu je povinný",
+    "errorUpdate": "Projekt se nepodařilo aktualizovat",
+    "errorCreate": "Projekt se nepodařilo vytvořit",
+    "namePlaceholder": "Zadejte název projektu...",
+    "descriptionPlaceholder": "Volitelný popis projektu...",
+    "nameLabel": "Název projektu",
+    "descriptionLabel": "Popis",
+    "iconLabel": "Ikona projektu",
+    "selectIcon": "Vybrat ikonu",
+    "colorLabel": "Barva projektu"
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "builder": {
+    "errorName": "Please enter a filter name",
+    "errorConditions": "Please configure at least one filter condition",
+    "editTitle": "Edit Filter",
+    "newTitle": "New Filter",
+    "addConditions": "Add conditions to preview",
+    "save": "Save Filter",
+    "name": "Filter Name",
+    "namePlaceholder": "e.g. Overdue tasks for Alice",
+    "color": "Color"
+  },
+  "nameExists": "A filter with this name already exists",
+  "tasks_one": "{{count}} task",
+  "tasks_other": "{{count}} tasks",
+  "overdue": "{{count}} overdue",
+  "noConditions": "No conditions",
+  "condition_one": "{{count}} condition",
+  "condition_other": "{{count}} conditions",
+  "usedCount": "Used {{count}}x",
+  "delete": {
+    "title": "Delete Filter",
+    "message": "Are you sure you want to delete \"{{name}}\"? This cannot be undone."
+  },
+  "empty": {
+    "title": "No saved filters yet",
+    "description": "Save a set of conditions once, like \"overdue and assigned to me\", and jump straight back to it from anywhere.",
+    "createFilter": "Create a filter",
+    "noResultsTitle": "No filters match",
+    "noResultsWithSearch": "No saved filter matches \"{{search}}\".",
+    "noResultsDefault": "No saved filter matches the current filter.",
+    "clearSearch": "Clear search",
+    "showAllFilters": "Show all filters"
+  },
+  "header": {
+    "title": "Filters",
+    "subtitle": "Save your favorite filter combinations for quick access. Create custom views to organize and find tasks faster."
+  },
+  "searchPlaceholder": "Search filters",
+  "sort": {
+    "smart": "Smart",
+    "name": "Name",
+    "usage": "Usage count",
+    "lastUsed": "Last used",
+    "created": "Created date"
+  },
+  "show": {
+    "title": "Show",
+    "all": "All filters",
+    "pinned": "Pinned",
+    "unpinned": "Not pinned"
+  },
+  "pin": "Pin",
+  "unpin": "Unpin"
+}

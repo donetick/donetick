@@ -1,0 +1,14 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.donetick.app",
+      "sha256_cert_fingerprints": [
+        "EF:45:27:40:A2:D2:11:E4:27:AB:9A:7A:C6:E1:3B:CA:D4:DE:6A:0A:C3:81:05:58:D8:89:F1:FA:4E:CB:44:F3",
+        "67:0B:E5:30:FB:8A:7F:E6:9A:54:51:7F:06:AA:B0:1D:1A:26:61:5B:2A:60:53:4A:31:75:72:DA:F6:FA:EC:5A",
+        "FE:C5:97:91:7E:9F:5F:56:ED:19:B5:78:D6:5C:2F:EF:FE:6F:84:CC:56:77:BE:BB:80:5F:89:3F:F4:68:63:FD"
+      ]
+    }
+  }
+]

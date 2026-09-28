@@ -1,0 +1,690 @@
+{
+  "save": "",
+  "cancel": "",
+  "delete": "",
+  "edit": "",
+  "close": "",
+  "confirm": "",
+  "loading": "",
+  "error": "",
+  "success": "",
+  "warning": "",
+  "colors": {
+    "Salmon": "",
+    "Teal": "",
+    "Sky Blue": "",
+    "Grape": "",
+    "Sunshine": "",
+    "Coral": "",
+    "Lavender": "",
+    "Rose": "",
+    "Charcoal": "",
+    "Sienna": "",
+    "Mint": "",
+    "Amber": "",
+    "Cobalt": "",
+    "Emerald": "",
+    "Peach": "",
+    "Ocean": "",
+    "Mustard": "",
+    "Ruby": "",
+    "Periwinkle": "",
+    "Turquoise": "",
+    "Lime": "",
+    "Blush": "",
+    "Ash": "",
+    "Sand": ""
+  },
+  "refresh": "",
+  "copy": "",
+  "copied": "",
+  "settings": "",
+  "yes": "",
+  "no": "",
+  "back": "",
+  "backToCalendar": "",
+  "logout": "",
+  "version": "",
+  "navigation": {
+    "search": "搜索",
+    "allTasks": "任务",
+    "home": "概览",
+    "tasks": "",
+    "more": "",
+    "mobileNavigation": "",
+    "archived": "",
+    "things": "",
+    "labels": "",
+    "projects": "",
+    "filters": "",
+    "activities": "",
+    "points": "",
+    "settings": "",
+    "reportBug": "Report a Bug",
+    "openMenu": "打开菜单",
+    "collapseMenu": "收起菜单",
+    "expandMenu": "展开菜单",
+    "primaryNavigation": "主导航",
+    "profile": "个人资料"
+  },
+  "search": {
+    "title": "搜索",
+    "placeholder": "搜索 Donetick",
+    "inputAriaLabel": "搜索任务、历史、项目、标签和设置",
+    "deviceNote": "正在搜索此设备上可用的内容",
+    "escape": "",
+    "recent": "最近",
+    "empty": {
+      "title": "没有直接匹配的结果",
+      "subtitle": "你仍然可以用此搜索筛选任务列表。",
+      "actionsSubtitle": ""
+    },
+    "groups": {
+      "tasks": "任务",
+      "history": "备注",
+      "projects": "项目",
+      "labels": "标签",
+      "people": "成员",
+      "settings": "设置",
+      "actions": "快捷操作"
+    },
+    "actions": {
+      "quickAction": "快捷操作",
+      "navigation": "导航",
+      "createTask": "创建任务",
+      "createLabel": "",
+      "createProject": "",
+      "createFilter": "",
+      "viewAllTasks": "查看所有任务",
+      "viewArchivedTasks": "查看已归档任务",
+      "viewThings": "",
+      "viewLabels": "",
+      "viewProjects": "",
+      "viewFilters": "",
+      "viewActivities": "",
+      "viewPoints": "",
+      "openSettings": "打开设置",
+      "filterTasks": "显示匹配“{{query}}”的任务",
+      "filterTasksSubtitle": "筛选任务列表"
+    },
+    "footer": {
+      "navigate": "导航",
+      "open": "打开",
+      "results_one": "",
+      "results_other": "{{count}} 个结果",
+      "typeToSearch": "输入以搜索",
+      "slashHint": ""
+    },
+    "modes": {
+      "actions": {
+        "label": "",
+        "placeholder": ""
+      }
+    }
+  },
+  "policyUpdate": {
+    "title": "",
+    "subtitle": "",
+    "readPrivacy": "",
+    "readTerms": "",
+    "acknowledge": ""
+  },
+  "feedback": {
+    "later": "",
+    "sentiment": {
+      "title": "",
+      "subtitle": "",
+      "options": {
+        "love": "",
+        "okay": "",
+        "issues": ""
+      }
+    },
+    "categories": {
+      "bugs": "",
+      "missingFeature": "",
+      "tooComplicated": "",
+      "slow": "",
+      "notifications": "",
+      "ai": "",
+      "other": ""
+    },
+    "details": {
+      "title": "",
+      "messageLabel": "",
+      "messagePlaceholder": "",
+      "contextNote": "",
+      "submit": "",
+      "contextNoteSelfHosted": "",
+      "submitSelfHosted": ""
+    },
+    "review": {
+      "title": "",
+      "subtitle": "",
+      "github": "",
+      "appStore": "",
+      "playStore": ""
+    },
+    "thanks": {
+      "title": "",
+      "subtitle": ""
+    },
+    "github": {
+      "title": "",
+      "subtitle": "",
+      "open": ""
+    }
+  },
+  "done": "",
+  "clearAll": "",
+  "upload": {
+    "quotaTitle": "",
+    "quotaMessage": "",
+    "tooLargeTitle": "",
+    "tooLargeMessage": "",
+    "deniedTitle": "",
+    "deniedMessage": "",
+    "plusFeatureTitle": "",
+    "plusFeatureMessage": "",
+    "upgradeTitle": "",
+    "upgradeMessage": "",
+    "failedTitle": "",
+    "failedMessage": "",
+    "processingMessage": ""
+  },
+  "getStarted": "",
+  "imageLoadFailed": "",
+  "typeHere": "",
+  "summaryOfChores": "",
+  "loadingOffline": "",
+  "loadingOfflineSub": "",
+  "loadingSlow": "",
+  "navigateBack": "",
+  "bottomNav": "",
+  "profile": "",
+  "autocompletePlaceholder": "",
+  "errorScreen": {
+    "title": "",
+    "fallback": "",
+    "tryAgain": "",
+    "home": "",
+    "login": "",
+    "hideDetails": "",
+    "showDetails": "",
+    "copyToClipboard": "",
+    "copied": "",
+    "reportProblem": "",
+    "reportHint": "",
+    "collectingDetails": ""
+  },
+  "userMenu": {
+    "actAsAnother": "",
+    "stopImpersonating": "",
+    "returnToAccount": "",
+    "accountPrefs": "",
+    "invitePeople": "",
+    "addMembers": "",
+    "sidePanelSettings": "",
+    "planFree": "",
+    "planPlus": "",
+    "planPlusExpiring": "",
+    "switchUser": "",
+    "impersonateUser": "",
+    "switchToLight": "",
+    "switchToDark": "",
+    "unlockPremium": "",
+    "impersonating": "",
+    "toggleThemeAppearance": "",
+    "upgradeToPlus": ""
+  },
+  "realtime": {
+    "newTaskTitle": "",
+    "connected": "",
+    "errorTitle": "",
+    "parseTitle": "",
+    "parseMessage": "",
+    "disabledTitle": "",
+    "failedTitle": "",
+    "stateConnectionError": "",
+    "stateAuthExpired": "",
+    "stateTokenRefreshed": "",
+    "stateRefreshInProgress": "",
+    "stateSessionExpired": "",
+    "stateAuthFailed": "",
+    "stateAuthError": "",
+    "stateTimeout": "",
+    "connectErrorTitle": "",
+    "connectErrorMessage": ""
+  },
+  "removeAll": "",
+  "apply": "",
+  "cancelAll": "",
+  "backFromSearch": "",
+  "newVersionAvailable": "",
+  "notFound": {
+    "title": "",
+    "description": "",
+    "goToMyTasks": "",
+    "logIn": ""
+  },
+  "pendingBadge": {
+    "completePending": "",
+    "skipPending": "",
+    "updatePending": "",
+    "createPending": "",
+    "deletePending": "",
+    "editHistoryPending": "",
+    "deleteHistoryPending": "",
+    "reschedulePending": "",
+    "archivePending": "",
+    "restorePending": "",
+    "startPending": "",
+    "pausePending": ""
+  },
+  "sortAndFilter": {
+    "sortBy": "",
+    "ariaLabel": "",
+    "title": "",
+    "ascending": "",
+    "descending": "",
+    "filter": ""
+  },
+  "versionInfo": "",
+  "apiVersionUnavailable": "",
+  "sync": {
+    "aria": "",
+    "allSynced": "",
+    "willSync": "",
+    "cancelAll": "",
+    "commandLabels": {
+      "createChore": "",
+      "updateChore": "",
+      "updateChoreHistory": "",
+      "completeChore": "",
+      "skipChore": "",
+      "startChore": "",
+      "pauseChore": "",
+      "deleteChore": "",
+      "deleteChoreHistory": "",
+      "rescheduleChore": "",
+      "archiveChore": "",
+      "unarchiveChore": "",
+      "pendingAction": ""
+    },
+    "never": "",
+    "justNow": "",
+    "secondsAgo": "",
+    "minutesAgo": "",
+    "hoursAgo": "",
+    "online": "",
+    "offline": "",
+    "syncing": "",
+    "lastSync": "",
+    "offlineSince": "",
+    "errorPrefix": "",
+    "pending": "",
+    "failed": "",
+    "dismiss": "",
+    "nextAutoSync": "",
+    "checkingServer": "",
+    "retryingIn": "",
+    "syncNow": "",
+    "pendingSyncLabel_one": "",
+    "pendingSyncLabel_other": "",
+    "pendingActionsTitle": "",
+    "actionsWaitingToSync_one": "",
+    "actionsWaitingToSync_other": "",
+    "cancelActionAria": ""
+  },
+  "attachments": "",
+  "fileNumbered": "",
+  "noAttachmentsTitle": "",
+  "noAttachmentsDescription": "",
+  "kbSize": "",
+  "onboarding": {
+    "sources": {
+      "speak": "",
+      "snap": "",
+      "type": ""
+    },
+    "capture": {
+      "voiceCaption": "",
+      "deviceCaption": "",
+      "typeCaption": "",
+      "trashTitle": "",
+      "trashDue": "",
+      "trashRepeat": "",
+      "homeLabel": "",
+      "vehicleTitle": "",
+      "vehicleDue": "",
+      "acTitle": "",
+      "acDue": "",
+      "acRepeat": ""
+    },
+    "schedule": {
+      "fromDueDate": "",
+      "fromCompletionDate": "",
+      "due": "",
+      "done": "",
+      "next": ""
+    },
+    "nfc": {
+      "tagOnWasher": "",
+      "tapToOpen": "",
+      "swapFilter": "",
+      "done": "",
+      "skip": "",
+      "startTimer": "",
+      "waitingApproval": "",
+      "approve": "",
+      "reject": "",
+      "completed": "",
+      "note": "",
+      "metaJustNow": "",
+      "metaLastWeek": ""
+    },
+    "circle": {
+      "kitchenTitle": "",
+      "kitchenDue": "",
+      "kitchenRepeat": "",
+      "takesTurns": ""
+    },
+    "turns": {
+      "binsTitle": "",
+      "binsDue": "",
+      "binsRepeat": "",
+      "completed": "",
+      "metaJustNow": ""
+    },
+    "widget": {
+      "schoolForms": "",
+      "takeOutTrash": "",
+      "waterPlants": "",
+      "today": "",
+      "left": ""
+    },
+    "reminders": {
+      "trashTitle": "",
+      "trashBody": "",
+      "finishedTitle": "",
+      "finishedBody": ""
+    },
+    "things": {
+      "waterBill": "",
+      "acFilter": "",
+      "trashDay": "",
+      "dogMedicine": "",
+      "whoseTurn": "",
+      "monthly": "",
+      "everyThreeMonths": "",
+      "everyMonday": "",
+      "daily": "",
+      "weekly": "",
+      "tagBills": "",
+      "tagHome": "",
+      "tagPets": "",
+      "tagCooking": ""
+    },
+    "slides": {
+      "problemTitle": "",
+      "problemBody": "",
+      "captureTitle": "",
+      "captureBody": "",
+      "scheduleTitle": "",
+      "scheduleBody": "",
+      "circleTitle": "",
+      "circleBody": "",
+      "remindersTitle": "",
+      "remindersBody": ""
+    },
+    "carousel": {
+      "skip": "",
+      "ariaLabel": "",
+      "goToStep": "",
+      "slidePosition": "",
+      "turnOnReminders": "",
+      "notNow": "",
+      "next": ""
+    },
+    "getStarted": {
+      "subtitleSignupEnabled": "",
+      "subtitleSignupDisabled": "",
+      "createAccount": "",
+      "alreadyHaveAccount": "",
+      "signIn": "",
+      "connectSelfHosted": ""
+    },
+    "heardAbout": {
+      "title": "",
+      "subtitle": "",
+      "detailPlaceholder": "",
+      "continue": "",
+      "skip": "",
+      "sources": {
+        "appStore": "",
+        "reddit": "",
+        "friend": "",
+        "video": "",
+        "search": "",
+        "other": ""
+      }
+    },
+    "privacy": {
+      "title": "",
+      "subtitle": "",
+      "crashReportsLabel": "",
+      "crashReportsDescription": "",
+      "analyticsLabel": "",
+      "analyticsDescription": ""
+    }
+  },
+  "errorReport": {
+    "titleBug": "",
+    "titleCrash": "",
+    "subtitleBug": "",
+    "subtitleCrash": "",
+    "labelBug": "",
+    "labelCrash": "",
+    "placeholderBug": "",
+    "placeholderCrash": "",
+    "email": "",
+    "emailOptional": "",
+    "emailPlaceholder": "",
+    "showWhatGetsSent": "",
+    "hideWhatGetsSent": "",
+    "copyDiagnostics": "",
+    "collecting": "",
+    "privacyNote": "",
+    "send": "",
+    "cancel": "",
+    "notNow": "",
+    "sentTitle": "",
+    "sentBody": "",
+    "reference": "",
+    "copyReference": "",
+    "done": "",
+    "githubTitle": "",
+    "githubBody": "",
+    "openIssue": "",
+    "copied": "",
+    "copyInstead": "",
+    "close": ""
+  },
+  "circleSetup": {
+    "inviteTitle": "",
+    "inviteSubtitle": "",
+    "joinTitle": "",
+    "joinSubtitle": "",
+    "loadingCode": "",
+    "copyCodeAria": "",
+    "copyLinkInstead": "",
+    "continue": "",
+    "joinInstead": "",
+    "codePlaceholder": "",
+    "joinButton": "",
+    "back": "",
+    "codeCopied": "",
+    "linkCopied": "",
+    "requestSentTitle": "",
+    "requestSentBody": "",
+    "alreadyMember": "",
+    "joinFailed": ""
+  },
+  "joinCircle": {
+    "title": "",
+    "incompleteTitle": "",
+    "incompleteSubtitle": "",
+    "goToDonetick": "",
+    "signedOutSubtitle": "",
+    "signIn": "",
+    "createAccount": "",
+    "sendingTitle": "",
+    "sendingSubtitle": "",
+    "greetingSubtitle": "",
+    "adminReviewNote": "",
+    "sendRequest": "",
+    "requestSentTitle": "",
+    "requestSentBody": "",
+    "gotIt": "",
+    "alreadyMember": "",
+    "joinFailed": "",
+    "requestError": ""
+  },
+  "selectUser": "",
+  "closeDialog": "",
+  "activeFilterChips": {
+    "removeFilterAria": "",
+    "addFilterCondition": "",
+    "moreCount": ""
+  },
+  "filterBar": {
+    "filtersButton": "",
+    "clearAllButton": "",
+    "doneButton": "",
+    "showResults_one": "",
+    "showResults_other": "",
+    "selectedCount": "",
+    "dateRangeFallback": "",
+    "fromDate": "",
+    "untilDate": "",
+    "presetToday": "",
+    "presetYesterday": "",
+    "presetThisWeek": "",
+    "presetLast7Days": "",
+    "presetThisMonth": "",
+    "presetLast30Days": "",
+    "presetLast3Months": ""
+  },
+  "workspaceReady": {
+    "allSetNamed": "",
+    "allSet": "",
+    "subtitle": "",
+    "continue": "",
+    "readyShared": "",
+    "readyRecurring": "",
+    "readyCapture": "",
+    "readyReminders": ""
+  },
+  "home": {
+    "customize": {
+      "action": ""
+    },
+    "verdict": {
+      "late": {
+        "title_one": "",
+        "title_other": ""
+      },
+      "review": {
+        "title": "",
+        "body_one": "",
+        "body_other": ""
+      },
+      "today": {
+        "title_one": "",
+        "title_other": ""
+      },
+      "clear": {
+        "title": "",
+        "body": ""
+      },
+      "firstRun": {
+        "title": "",
+        "body": ""
+      }
+    },
+    "triage": {
+      "overdue": "",
+      "dueToday": "",
+      "needsReview": "",
+      "comingUp": "",
+      "unplanned": "",
+      "allClear": ""
+    },
+    "nextUp": {
+      "title": "",
+      "action": ""
+    },
+    "nextUpFallback": {
+      "title": "",
+      "action": ""
+    },
+    "overdue": {
+      "title": "",
+      "action": ""
+    },
+    "clear": {
+      "title": "",
+      "body": "",
+      "action": ""
+    },
+    "firstTask": {
+      "title": "",
+      "description": "",
+      "action": ""
+    },
+    "review": {
+      "title": "",
+      "pendingTitle": "",
+      "myPendingTitle": "",
+      "action": ""
+    },
+    "circle": {
+      "title": "",
+      "action": "",
+      "open_one": "",
+      "open_other": "",
+      "late_one": "",
+      "late_other": "",
+      "done_one": "",
+      "done_other": "",
+      "caughtUp": "",
+      "emptyTitle": "",
+      "emptyBody": "",
+      "emptyAction": ""
+    },
+    "projects": {
+      "title": "",
+      "action": "",
+      "tasks_one": "",
+      "tasks_other": "",
+      "tasksOverdue_one": "",
+      "tasksOverdue_other": "",
+      "tasksUnplanned_one": "",
+      "tasksUnplanned_other": "",
+      "clear": ""
+    },
+    "filters": {
+      "title": "",
+      "action": "",
+      "tasks_one": "",
+      "tasks_other": "",
+      "clear": ""
+    },
+    "capture": {
+      "placeholder": "",
+      "add": "",
+      "voice": "",
+      "scan": ""
+    }
+  }
+}

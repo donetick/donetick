@@ -1,0 +1,71 @@
+{
+  "shared": "Shared",
+  "delete": {
+    "title": "Delete Label",
+    "message": "Are you sure you want to delete this label? This will remove the label from all tasks."
+  },
+  "loadError": "Failed to load labels. Please try again.",
+  "search": {
+    "placeholder": "Search labels",
+    "noResultsTitle": "No labels match",
+    "noResultsDescription": "No label matches \"{{searchTerm}}\".",
+    "noFilterResultsDescription": "No label matches the current filter.",
+    "clear": "Clear search",
+    "showAll": "Show all labels"
+  },
+  "detail": {
+    "taskCount_one": "{{count}} task",
+    "taskCount_other": "{{count}} tasks",
+    "labelActions": "Label actions",
+    "filters": {
+      "all": "All",
+      "overdue": "Overdue",
+      "today": "Today",
+      "undated": "No date"
+    },
+    "noMatchingStatus": "No task in this label is in that state right now.",
+    "clearFilters": "Show all tasks",
+    "searchPlaceholder": "Search tasks in this label",
+    "emptyTitle": "No tasks with this label",
+    "emptyDescription": "Nothing is tagged \"{{label}}\" yet. Add the label to a task and it will show up here.",
+    "browseTasks": "Browse tasks",
+    "noResultsTitle": "No tasks match",
+    "noResultsDescription": "No task in this label matches \"{{searchTerm}}\".",
+    "notFoundTitle": "Label not found",
+    "notFoundDescription": "This label may have been deleted or is no longer shared with you.",
+    "backToLabels": "Back to labels"
+  },
+  "blurb": "Manage your labels and organize your tasks effectively. Labels will be automatically shared with your circle if they are used on a shared task.",
+  "modal": {
+    "errorEmptyName": "Name cannot be empty",
+    "errorDuplicate": "Label with this name already exists",
+    "errorNoColor": "Please select a color",
+    "saveFailedTitle": "Failed to save label",
+    "saveFailedMessage": "Unable to save label. Please try again.",
+    "name": "Name",
+    "editTitle": "Edit Label",
+    "addTitle": "Add Label",
+    "color": "Color",
+    "saveChanges": "Save Changes",
+    "addLabel": "Add Label",
+    "colorAriaSelect": "Select {{color}}"
+  },
+  "picker": {
+    "label": "Labels",
+    "createLabel": "Create label",
+    "labelsCount_one": "{{count}} label",
+    "labelsCount_other": "{{count}} labels"
+  },
+  "view": {
+    "emptyTitle": "No labels yet",
+    "emptyDescription": "Labels group tasks across your circle, like \"kitchen\" or \"bills\", so you can filter down to them in one tap.",
+    "createLabel": "Create a label",
+    "filterTitle": "Show",
+    "sortName": "Name",
+    "sortColor": "Color",
+    "sortRecent": "Recently created",
+    "filterAll": "All labels",
+    "filterMine": "Created by me",
+    "filterShared": "Shared with me"
+  }
+}

@@ -1,0 +1,690 @@
+{
+  "save": "Enregistrer",
+  "cancel": "Annuler",
+  "delete": "Supprimer",
+  "edit": "Modifier",
+  "close": "Fermer",
+  "confirm": "Confirmer",
+  "loading": "Chargement...",
+  "error": "Erreur",
+  "success": "Succès",
+  "warning": "Avertissement",
+  "colors": {
+    "Salmon": "Saumon",
+    "Teal": "Bleu canard",
+    "Sky Blue": "Bleu ciel",
+    "Grape": "Raisin",
+    "Sunshine": "Soleil",
+    "Coral": "Corail",
+    "Lavender": "Lavande",
+    "Rose": "Rose",
+    "Charcoal": "Anthracite",
+    "Sienna": "Terre de Sienne",
+    "Mint": "Menthe",
+    "Amber": "Ambre",
+    "Cobalt": "Cobalt",
+    "Emerald": "Émeraude",
+    "Peach": "Pêche",
+    "Ocean": "Océan",
+    "Mustard": "Moutarde",
+    "Ruby": "Rubis",
+    "Periwinkle": "Pervenche",
+    "Turquoise": "Turquoise",
+    "Lime": "Vert citron",
+    "Blush": "Rose poudré",
+    "Ash": "Cendre",
+    "Sand": "Sable"
+  },
+  "refresh": "Actualiser",
+  "copy": "Copier",
+  "copied": "Copié !",
+  "settings": "Paramètres",
+  "yes": "Oui",
+  "no": "Non",
+  "back": "Retour",
+  "backToCalendar": "Retour au calendrier",
+  "logout": "Déconnexion",
+  "version": "Version",
+  "navigation": {
+    "search": "Recherche",
+    "allTasks": "Tâches",
+    "home": "Aperçu",
+    "tasks": "Tâches",
+    "more": "Menu",
+    "mobileNavigation": "Navigation principale",
+    "archived": "Archivées",
+    "things": "Objets",
+    "labels": "Étiquettes",
+    "projects": "Projets",
+    "filters": "Filtres",
+    "activities": "Activités",
+    "points": "Points",
+    "settings": "Paramètres",
+    "reportBug": "Signaler un problème",
+    "openMenu": "Ouvrir le menu",
+    "collapseMenu": "Réduire le menu",
+    "expandMenu": "Développer le menu",
+    "primaryNavigation": "Navigation principale",
+    "profile": "Profil"
+  },
+  "search": {
+    "title": "Recherche",
+    "placeholder": "Rechercher dans Donetick",
+    "inputAriaLabel": "Rechercher des tâches, l'historique, des projets, des étiquettes et des paramètres",
+    "deviceNote": "Recherche dans le contenu disponible sur cet appareil",
+    "escape": "Échap",
+    "recent": "Récents",
+    "empty": {
+      "title": "Aucune correspondance directe",
+      "subtitle": "Vous pouvez tout de même filtrer la liste des tâches avec cette recherche.",
+      "actionsSubtitle": "Aucune vue ni action ne correspond. Appuyez sur Retour arrière pour tout rechercher."
+    },
+    "groups": {
+      "tasks": "Tâches",
+      "history": "Remarques",
+      "projects": "Projets",
+      "labels": "Étiquettes",
+      "people": "Personnes",
+      "settings": "Paramètres",
+      "actions": "Actions rapides"
+    },
+    "actions": {
+      "quickAction": "Action rapide",
+      "navigation": "Navigation",
+      "createTask": "Créer une tâche",
+      "createLabel": "Créer une étiquette",
+      "createProject": "Créer un projet",
+      "createFilter": "Créer un filtre",
+      "viewAllTasks": "Voir toutes les tâches",
+      "viewArchivedTasks": "Voir les tâches archivées",
+      "viewThings": "Voir les objets",
+      "viewLabels": "Voir les étiquettes",
+      "viewProjects": "Voir les projets",
+      "viewFilters": "Voir les filtres",
+      "viewActivities": "Voir les activités",
+      "viewPoints": "Voir les points",
+      "openSettings": "Ouvrir les paramètres",
+      "filterTasks": "Afficher les tâches correspondant à « {{query}} »",
+      "filterTasksSubtitle": "Filtrer la liste des tâches"
+    },
+    "footer": {
+      "navigate": "Naviguer",
+      "open": "Ouvrir",
+      "results_one": "{{count}} résultat",
+      "results_other": "{{count}} résultats",
+      "typeToSearch": "Saisissez du texte pour rechercher",
+      "slashHint": "/ pour aller à une vue"
+    },
+    "modes": {
+      "actions": {
+        "label": "Aller à",
+        "placeholder": "Aller à une vue ou une action"
+      }
+    }
+  },
+  "policyUpdate": {
+    "title": "Nous avons mis à jour notre politique de confidentialité et nos conditions",
+    "subtitle": "Prenez un moment pour les consulter. En continuant à utiliser Donetick, vous acceptez les documents mis à jour.",
+    "readPrivacy": "Politique de confidentialité",
+    "readTerms": "Conditions d'utilisation",
+    "acknowledge": "J'ai compris"
+  },
+  "feedback": {
+    "later": "Peut-être plus tard",
+    "sentiment": {
+      "title": "Donetick vous convient-il ?",
+      "subtitle": "Votre réponse nous aide à décider de ce qu'il faut construire ensuite.",
+      "options": {
+        "love": "J'adore",
+        "okay": "C'est ok",
+        "issues": "Problèmes rencontrés"
+      }
+    },
+    "categories": {
+      "bugs": "Anomalies",
+      "missingFeature": "Fonctionnalités manquantes",
+      "tooComplicated": "Trop compliqué",
+      "slow": "Lent",
+      "notifications": "Notifications",
+      "ai": "IA",
+      "other": "Autres"
+    },
+    "details": {
+      "title": "Que pouvons-nous améliorer ?",
+      "messageLabel": "Dites-nous-en plus",
+      "messagePlaceholder": "Que s'est-il passé, ou qu'est-ce qui pourrait être amélioré ?",
+      "contextNote": "Nous joindrons la version de l'application, votre appareil et votre plateforme afin de pouvoir reproduire les problèmes.",
+      "submit": "Envoyer vos remarques",
+      "contextNoteSelfHosted": "Vous êtes sur une instance autohébergée, donc rien n'est envoyé depuis votre serveur — nous allons ouvrir un problème GitHub prérempli que vous pouvez examiner et modifier si besoin.",
+      "submitSelfHosted": "Continuer sur GitHub"
+    },
+    "review": {
+      "title": "Nous sommes ravis que vous l'appréciez !",
+      "subtitle": "Une note ou une étoile aide d'autres personnes à découvrir Donetick.",
+      "github": "Mettez une étoile sur GitHub",
+      "appStore": "Évaluer sur l'App Store",
+      "playStore": "Évaluer sur Google Play"
+    },
+    "thanks": {
+      "title": "Merci pour votre retour",
+      "subtitle": "Nous lisons chaque réponse, et elle oriente la suite de notre travail."
+    },
+    "github": {
+      "title": "Signaler sur GitHub",
+      "subtitle": "Nous avons prérempli un ticket avec vos remarques et les détails de version. Rien n'a encore été envoyé — relisez-le et publiez-le quand vous le souhaitez.",
+      "open": "Ouvrir un ticket"
+    }
+  },
+  "done": "Terminé",
+  "clearAll": "Tout effacer",
+  "upload": {
+    "quotaTitle": "Quota de stockage dépassé",
+    "quotaMessage": "Vous avez dépassé votre quota d'envoi de fichiers.",
+    "tooLargeTitle": "Fichier trop volumineux",
+    "tooLargeMessage": "Le fichier que vous essayez d'envoyer est trop volumineux.",
+    "deniedTitle": "Autorisation refusée",
+    "deniedMessage": "Vous n'avez pas l'autorisation d'envoyer des fichiers.",
+    "plusFeatureTitle": "Fonctionnalité Plus",
+    "plusFeatureMessage": "L'envoi d'images n'est pas disponible avec la formule Basic. Passez à Plus pour ajouter des images à vos contenus.",
+    "upgradeTitle": "Changement de formule requis",
+    "upgradeMessage": "L'envoi d'images est réservé aux comptes Plus.",
+    "failedTitle": "Échec de l'envoi",
+    "failedMessage": "Échec de l'envoi de l'image.",
+    "processingMessage": "Une erreur s'est produite pendant le traitement de l'image."
+  },
+  "getStarted": "Commencer !",
+  "imageLoadFailed": "Échec du chargement de l'image.",
+  "typeHere": "Saisissez du texte ici...",
+  "summaryOfChores": "Voici un résumé de vos tâches",
+  "loadingOffline": "Vous êtes hors ligne",
+  "loadingOfflineSub": "Ce contenu n'est pas disponible hors ligne. Vérifiez votre connexion Internet et réessayez.",
+  "loadingSlow": "Cela prend plus de temps que d'habitude. Il y a peut-être un problème.",
+  "navigateBack": "Revenir en arrière",
+  "bottomNav": "Navigation du bas",
+  "profile": "Profil",
+  "autocompletePlaceholder": "Saisissez du texte ici...",
+  "errorScreen": {
+    "title": "Une erreur est survenue",
+    "fallback": "Une erreur inattendue s'est produite. Essayez de recharger la page — cela suffit généralement.",
+    "tryAgain": "Réessayer",
+    "home": "Accueil",
+    "login": "Connexion",
+    "hideDetails": "Masquer les détails de l'erreur",
+    "showDetails": "Afficher les détails de l'erreur",
+    "copyToClipboard": "Copier dans le presse-papiers",
+    "copied": "Détails de l'erreur copiés dans le presse-papiers",
+    "reportProblem": "Signaler ce problème",
+    "reportHint": "Si cela se reproduit, envoyez-nous un rapport pour que nous puissions examiner le problème.",
+    "collectingDetails": "Collecte des détails de l'erreur..."
+  },
+  "userMenu": {
+    "actAsAnother": "Agir en tant qu'un autre utilisateur",
+    "stopImpersonating": "Quitter l'identité empruntée",
+    "returnToAccount": "Revenir à votre compte",
+    "accountPrefs": "Compte et préférences",
+    "invitePeople": "Inviter des personnes",
+    "addMembers": "Ajouter des membres à votre cercle",
+    "sidePanelSettings": "Paramètres du panneau latéral",
+    "planFree": "Basic",
+    "planPlus": "Plus",
+    "planPlusExpiring": "Plus (expire bientôt)",
+    "switchUser": "Changer d'utilisateur",
+    "impersonateUser": "Emprunter une identité",
+    "switchToLight": "Passer au thème clair",
+    "switchToDark": "Passer au thème sombre",
+    "unlockPremium": "Débloquer les fonctionnalités Plus",
+    "impersonating": "Identité empruntée",
+    "toggleThemeAppearance": "Changer l'apparence du thème",
+    "upgradeToPlus": "Passer à Plus"
+  },
+  "realtime": {
+    "newTaskTitle": "Nouvelle tâche créée",
+    "connected": "Vous recevez désormais les mises à jour en temps réel.",
+    "errorTitle": "Erreur en temps réel",
+    "parseTitle": "Erreur de message",
+    "parseMessage": "Échec de l'analyse du message du serveur",
+    "disabledTitle": "Connexion temporairement désactivée",
+    "failedTitle": "Échec de la connexion",
+    "stateConnectionError": "Une erreur de connexion s'est produite",
+    "stateAuthExpired": "Authentification expirée — actualisation du jeton...",
+    "stateTokenRefreshed": "Jeton actualisé — reconnexion...",
+    "stateRefreshInProgress": "Actualisation du jeton en cours — reconnexion imminente...",
+    "stateSessionExpired": "Session expirée — veuillez vous reconnecter",
+    "stateAuthFailed": "Échec de l'authentification — veuillez vous reconnecter",
+    "stateAuthError": "Erreur d'authentification — veuillez vous reconnecter",
+    "stateTimeout": "Délai de connexion dépassé — reconnexion...",
+    "connectErrorTitle": "Erreur de connexion",
+    "connectErrorMessage": "Impossible d'établir la connexion en temps réel. Veuillez réessayer."
+  },
+  "removeAll": "Tout retirer",
+  "apply": "Appliquer",
+  "cancelAll": "Tout annuler",
+  "backFromSearch": "Quitter la recherche",
+  "newVersionAvailable": "Une nouvelle version est disponible. Cliquez sur le bouton Actualiser pour mettre à jour.",
+  "notFound": {
+    "title": "Page introuvable",
+    "description": "Ce lien ne mène nulle part. Il a peut-être changé, ou l'adresse contient une faute de frappe.",
+    "goToMyTasks": "Aller à mes tâches",
+    "logIn": "Se connecter"
+  },
+  "pendingBadge": {
+    "completePending": "Fin de tâche en attente",
+    "skipPending": "Passage en attente",
+    "updatePending": "Modification en attente",
+    "createPending": "Création en attente",
+    "deletePending": "Suppression en attente",
+    "editHistoryPending": "Modification de l'historique en attente",
+    "deleteHistoryPending": "Suppression de l'historique en attente",
+    "reschedulePending": "Replanification en attente",
+    "archivePending": "Archivage en attente",
+    "restorePending": "Restauration en attente",
+    "startPending": "Démarrage en attente",
+    "pausePending": "Mise en pause en attente"
+  },
+  "sortAndFilter": {
+    "sortBy": "Trier par",
+    "ariaLabel": "Options de tri et de filtrage",
+    "title": "Tri et filtres",
+    "ascending": "Croissant",
+    "descending": "Décroissant",
+    "filter": "Filtrer"
+  },
+  "versionInfo": "V{{version}} (API : {{apiVersion}})",
+  "apiVersionUnavailable": "indisponible",
+  "sync": {
+    "aria": "Ouvrir l'état de synchronisation et du réseau",
+    "allSynced": "Toutes les modifications sont synchronisées",
+    "willSync": "Synchronisation dès le retour en ligne",
+    "cancelAll": "Tout annuler",
+    "commandLabels": {
+      "createChore": "Créer la tâche",
+      "updateChore": "Modifier la tâche",
+      "updateChoreHistory": "Modifier l'historique",
+      "completeChore": "Terminer la tâche",
+      "skipChore": "Passer la tâche",
+      "startChore": "Démarrer la tâche",
+      "pauseChore": "Mettre la tâche en pause",
+      "deleteChore": "Supprimer la tâche",
+      "deleteChoreHistory": "Supprimer l'historique",
+      "rescheduleChore": "Replanifier la tâche",
+      "archiveChore": "Archiver la tâche",
+      "unarchiveChore": "Restaurer la tâche",
+      "pendingAction": "Action en attente"
+    },
+    "never": "jamais",
+    "justNow": "à l'instant",
+    "secondsAgo": "il y a {{count}} s",
+    "minutesAgo": "il y a {{count}} min",
+    "hoursAgo": "il y a {{count}} h",
+    "online": "En ligne",
+    "offline": "Hors ligne",
+    "syncing": "Synchronisation...",
+    "lastSync": "Dernière synchronisation : {{time}}",
+    "offlineSince": "Hors ligne — {{duration}}",
+    "errorPrefix": "Erreur : {{message}}",
+    "pending": "En attente ({{count}})",
+    "failed": "Échecs ({{count}})",
+    "dismiss": "Ignorer",
+    "nextAutoSync": "Prochaine synchronisation automatique dans {{seconds}} s",
+    "checkingServer": "Vérification du serveur...",
+    "retryingIn": "Nouvelle tentative dans {{seconds}} s",
+    "syncNow": "Synchroniser maintenant",
+    "pendingSyncLabel_one": "{{count}} action en attente de synchronisation",
+    "pendingSyncLabel_other": "{{count}} actions en attente de synchronisation",
+    "pendingActionsTitle": "Actions en attente",
+    "actionsWaitingToSync_one": "{{count}} action en attente de synchronisation.",
+    "actionsWaitingToSync_other": "{{count}} actions en attente de synchronisation.",
+    "cancelActionAria": "Annuler {{label}}"
+  },
+  "attachments": "Pièces jointes",
+  "fileNumbered": "Fichier {{index}}",
+  "noAttachmentsTitle": "Aucune pièce jointe",
+  "noAttachmentsDescription": "Les photos et fichiers ajoutés à cette tâche apparaîtront ici.",
+  "kbSize": "{{size}} Ko",
+  "onboarding": {
+    "sources": {
+      "speak": "Dicter",
+      "snap": "Photographier",
+      "type": "Saisir"
+    },
+    "capture": {
+      "voiceCaption": "Dates, étiquettes et points extraits de vos paroles",
+      "deviceCaption": "Lecture sur votre appareil",
+      "typeCaption": "#étiquettes @personnes *points à la saisie",
+      "trashTitle": "♻️ Sortir les poubelles",
+      "trashDue": "Échéance demain",
+      "trashRepeat": "Tous les lundis",
+      "homeLabel": "Maison",
+      "vehicleTitle": "🚗 Contrôle technique",
+      "vehicleDue": "Échéance le 3 août",
+      "acTitle": "💨 Changer le filtre de la climatisation",
+      "acDue": "Échéance ven.",
+      "acRepeat": "Tous les 3 mois"
+    },
+    "schedule": {
+      "fromDueDate": "Replanifier depuis la date d'échéance",
+      "fromCompletionDate": "Replanifier depuis la date de fin",
+      "due": "Échéance",
+      "done": "Terminé",
+      "next": "Suivante"
+    },
+    "nfc": {
+      "tagOnWasher": "Tag sur le lave-linge",
+      "tapToOpen": "Approchez pour ouvrir",
+      "swapFilter": "Changer le filtre du lave-linge",
+      "done": "Terminé",
+      "skip": "Passer",
+      "startTimer": "Démarrer le minuteur",
+      "waitingApproval": "{{name}} l'a marquée terminée · en attente de votre validation",
+      "approve": "Approuver",
+      "reject": "Refuser",
+      "completed": "Terminée",
+      "note": "Cycle délicat utilisé — le filtre sera à nettoyer la prochaine fois.",
+      "metaJustNow": "À l'instant · ★ 5 pts",
+      "metaLastWeek": "La semaine dernière · ★ 5 pts"
+    },
+    "circle": {
+      "kitchenTitle": "Grand ménage de la cuisine",
+      "kitchenDue": "Échéance sam.",
+      "kitchenRepeat": "Toutes les semaines",
+      "takesTurns": "À tour de rôle"
+    },
+    "turns": {
+      "binsTitle": "🗑️ Sortir les poubelles sur le trottoir",
+      "binsDue": "Échéance demain",
+      "binsRepeat": "Toutes les semaines",
+      "completed": "Terminée",
+      "metaJustNow": "À l'instant · ★ 5 pts"
+    },
+    "widget": {
+      "schoolForms": "Papiers de l'école",
+      "takeOutTrash": "Sortir les poubelles",
+      "waterPlants": "Arroser les plantes",
+      "today": "Aujourd'hui",
+      "left": "encore {{count}}"
+    },
+    "reminders": {
+      "trashTitle": "Sortir les poubelles",
+      "trashBody": "Échéance dans 30 minutes · Soir des poubelles",
+      "finishedTitle": "Amalie a terminé le grand ménage de la cuisine",
+      "finishedBody": "C'est votre tour samedi prochain"
+    },
+    "things": {
+      "waterBill": "Facture d'eau",
+      "acFilter": "Filtre de climatisation",
+      "trashDay": "Jour des poubelles",
+      "dogMedicine": "Médicament du chien",
+      "whoseTurn": "À qui de cuisiner",
+      "monthly": "Tous les mois",
+      "everyThreeMonths": "Tous les 3 mois",
+      "everyMonday": "Tous les lundis",
+      "daily": "Tous les jours",
+      "weekly": "Toutes les semaines",
+      "tagBills": "Factures",
+      "tagHome": "Maison",
+      "tagPets": "Animaux",
+      "tagCooking": "Cuisine"
+    },
+    "slides": {
+      "problemTitle": "Ne plus oublier les petites choses",
+      "problemBody": "Donetick retient la dernière fois que c'est arrivé, et la prochaine échéance. Plus personne n'a à y penser.",
+      "captureTitle": "Ajoutez-le avant de l'oublier",
+      "captureBody": "Écrivez-le, dites-le à voix haute ou prenez une photo. Donetick renseigne la date d'échéance, la priorité, les étiquettes et la personne assignée.",
+      "scheduleTitle": "La tâche revient exactement quand il faut",
+      "scheduleBody": "Toutes les semaines, tous les 3 mois, ou un mois après l'avoir réellement faite. Terminer en retard ne décale pas tout le reste de l'année.",
+      "circleTitle": "Chacun son tour, fini les disputes",
+      "circleBody": "Alternez dans l'ordre de votre choix, ou au hasard. Donetick retient qui est passé en dernier, pour que les tours restent équitables.",
+      "remindersTitle": "Un rappel au bon moment, et des widgets !",
+      "remindersBody": "Recevez un rappel avant une échéance, ou envoyez un petit rappel quand quelqu'un oublie la sienne. La liste du jour s'affiche aussi sur votre écran d'accueil."
+    },
+    "carousel": {
+      "skip": "Ignorer",
+      "ariaLabel": "Ce que vous pouvez faire avec Donetick",
+      "goToStep": "Aller à l'étape {{number}}",
+      "slidePosition": "{{index}} sur {{total}}",
+      "turnOnReminders": "Activer les rappels",
+      "notNow": "Plus tard",
+      "next": "Suivant"
+    },
+    "getStarted": {
+      "subtitleSignupEnabled": "Créez un compte pour synchroniser partout, ou connectez-vous pour reprendre où vous en étiez.",
+      "subtitleSignupDisabled": "Connectez-vous à votre compte pour reprendre où vous en étiez.",
+      "createAccount": "Créer un compte",
+      "alreadyHaveAccount": "J'ai déjà un compte",
+      "signIn": "Se connecter",
+      "connectSelfHosted": "Se connecter à un serveur autohébergé"
+    },
+    "heardAbout": {
+      "title": "Comment avez-vous connu Donetick ?",
+      "subtitle": "Cela nous aide à savoir ce qui fonctionne. C'est entièrement facultatif.",
+      "detailPlaceholder": "Dites-nous où",
+      "continue": "Continuer",
+      "skip": "Ignorer",
+      "sources": {
+        "appStore": "App Store / Google Play",
+        "reddit": "Reddit ou un forum",
+        "friend": "Amis ou famille",
+        "video": "YouTube ou TikTok",
+        "search": "Moteur de recherche",
+        "other": "Autre chose"
+      }
+    },
+    "privacy": {
+      "title": "Aidez-nous à améliorer Donetick",
+      "subtitle": "Votre serveur, vos données. Ces deux options restent désactivées tant que vous ne les activez pas.",
+      "crashReportsLabel": "Partager les rapports de plantage",
+      "crashReportsDescription": "Quand Donetick plante, nous recevons l'erreur et ce qui l'a provoquée (appareil, version de l'application, écran affiché), sans aucun contenu de tâche. C'est ainsi que nous repérons les anomalies qui n'apparaissent jamais dans nos propres tests et que nous corrigeons plus vite.",
+      "analyticsLabel": "Partager des statistiques d'utilisation anonymes",
+      "analyticsDescription": "Envoyez des événements d'utilisation anonymes — quelles fonctionnalités servent, lesquelles sont ignorées — pour que nous sachions quoi construire ensuite au lieu de le deviner. Aucun contenu de tâche, aucune donnée personnelle, rien qui remonte jusqu'à vous."
+    }
+  },
+  "errorReport": {
+    "titleBug": "Signaler un problème",
+    "titleCrash": "Signaler ce problème",
+    "subtitleBug": "Dites-nous ce qui n'a pas fonctionné ; nous joindrons les détails techniques pour vous.",
+    "subtitleCrash": "Une phrase sur ce que vous étiez en train de faire suffit à en faire un problème que nous pouvons vraiment corriger.",
+    "labelBug": "Qu'est-ce qui n'a pas fonctionné ?",
+    "labelCrash": "Que faisiez-vous ?",
+    "placeholderBug": "p. ex. Terminer une tâche depuis la liste ne met pas à jour la date d'échéance",
+    "placeholderCrash": "p. ex. J'ai appuyé sur une tâche dans « Mes tâches » et l'écran est devenu blanc",
+    "email": "E-mail",
+    "emailOptional": "(facultatif — uniquement si vous souhaitez une réponse)",
+    "emailPlaceholder": "vous@exemple.com",
+    "showWhatGetsSent": "Afficher ce qui sera envoyé",
+    "hideWhatGetsSent": "Masquer ce qui sera envoyé",
+    "copyDiagnostics": "Copier les diagnostics",
+    "collecting": "Collecte des diagnostics...",
+    "privacyNote": "Aucun nom de tâche, note ou pièce jointe n'est inclus.",
+    "send": "Envoyer le rapport",
+    "cancel": "Annuler",
+    "notNow": "Plus tard",
+    "sentTitle": "Rapport envoyé",
+    "sentBody": "Merci ! Il part directement vers les personnes capables de corriger le problème.",
+    "reference": "Référence",
+    "copyReference": "Copier la référence",
+    "done": "Terminé",
+    "githubTitle": "Terminer sur GitHub",
+    "githubBody": "Rien n'a été envoyé. Nous avons prérempli un ticket avec vos remarques et les diagnostics — relisez-le et publiez-le quand il vous convient.",
+    "openIssue": "Ouvrir le ticket prérempli",
+    "copied": "Copié",
+    "copyInstead": "Copier les détails à la place",
+    "close": "Fermer"
+  },
+  "circleSetup": {
+    "inviteTitle": "Invitez votre entourage",
+    "inviteSubtitle": "Toutes les personnes qui rejoignent votre cercle voient les mêmes tâches, prennent leur tour et restent synchronisées automatiquement.",
+    "joinTitle": "Rejoindre un cercle",
+    "joinSubtitle": "Saisissez le code qui vous a été communiqué et nous enverrons une demande d'adhésion — le propriétaire du cercle n'aura plus qu'à l'approuver.",
+    "loadingCode": "Chargement...",
+    "copyCodeAria": "Copier le code de cercle",
+    "copyLinkInstead": "Copier le lien d'invitation à la place",
+    "continue": "Continuer",
+    "joinInstead": "Rejoindre plutôt un cercle existant",
+    "codePlaceholder": "Saisissez le code",
+    "joinButton": "Rejoindre le cercle",
+    "back": "Retour",
+    "codeCopied": "Code copié dans le presse-papiers",
+    "linkCopied": "Lien copié dans le presse-papiers",
+    "requestSentTitle": "Demande envoyée",
+    "requestSentBody": "Votre demande d'adhésion a été envoyée ! Le propriétaire du cercle devra l'approuver avant que vous puissiez voir ses tâches. Vous recevrez une notification dès que vous serez membre.",
+    "alreadyMember": "Vous êtes déjà membre de ce cercle",
+    "joinFailed": "Impossible de rejoindre le cercle"
+  },
+  "joinCircle": {
+    "title": "Invitation à rejoindre un cercle",
+    "incompleteTitle": "Lien d'invitation incomplet",
+    "incompleteSubtitle": "Il manque un code à ce lien d'invitation. Demandez un nouveau lien à la personne qui vous l'a transmis.",
+    "goToDonetick": "Aller à Donetick",
+    "signedOutSubtitle": "Connectez-vous ou créez un compte Donetick pour continuer. Nous enverrons votre demande d'adhésion une fois la connexion effectuée.",
+    "signIn": "Se connecter",
+    "createAccount": "Créer un compte",
+    "sendingTitle": "Envoi de votre demande",
+    "sendingSubtitle": "Envoi de votre demande...",
+    "greetingSubtitle": "Bonjour {{name}}. Envoyez une demande pour partager les tâches de ce cercle avec ses membres.",
+    "adminReviewNote": "Un administrateur du cercle examinera votre demande avant de vous donner accès.",
+    "sendRequest": "Envoyer la demande d'adhésion",
+    "requestSentTitle": "Demande envoyée",
+    "requestSentBody": "Votre demande a été envoyée. Un administrateur du cercle devra l'approuver avant que vous puissiez accéder au cercle et à ses tâches. Nous vous préviendrons dès qu'elle sera approuvée.",
+    "gotIt": "J'ai compris",
+    "alreadyMember": "Vous êtes déjà membre de ce cercle",
+    "joinFailed": "Impossible de rejoindre le cercle",
+    "requestError": "Impossible d'envoyer votre demande d'adhésion. Veuillez réessayer."
+  },
+  "selectUser": "Sélectionner un utilisateur",
+  "closeDialog": "Fermer la boîte de dialogue",
+  "activeFilterChips": {
+    "removeFilterAria": "Retirer le filtre {{label}}",
+    "addFilterCondition": "Ajouter une condition de filtre",
+    "moreCount": "+{{count}} de plus"
+  },
+  "filterBar": {
+    "filtersButton": "Filtres",
+    "clearAllButton": "Tout effacer",
+    "doneButton": "Terminé",
+    "showResults_one": "Afficher {{count}} résultat",
+    "showResults_other": "Afficher {{count}} résultats",
+    "selectedCount": "Sélection : {{count}}",
+    "dateRangeFallback": "Plage de dates",
+    "fromDate": "À partir du {{date}}",
+    "untilDate": "Jusqu'au {{date}}",
+    "presetToday": "Aujourd'hui",
+    "presetYesterday": "Hier",
+    "presetThisWeek": "Cette semaine",
+    "presetLast7Days": "7 derniers jours",
+    "presetThisMonth": "Ce mois-ci",
+    "presetLast30Days": "30 derniers jours",
+    "presetLast3Months": "3 derniers mois"
+  },
+  "workspaceReady": {
+    "allSetNamed": "Tout est prêt, {{name}}",
+    "allSet": "Tout est prêt",
+    "subtitle": "Votre espace de travail est prêt. Voici ce qui vous attend.",
+    "continue": "Continuer",
+    "readyShared": "Des tâches partagées pour toute la maison",
+    "readyRecurring": "Des récurrences qui résistent à la vraie vie",
+    "readyCapture": "La saisie par la voix, la photo ou le texte",
+    "readyReminders": "Des rappels et des widgets sur l'écran d'accueil"
+  },
+  "home": {
+    "customize": {
+      "action": "Personnaliser l'aperçu"
+    },
+    "verdict": {
+      "late": {
+        "title_one": "{{count}} tâche demande votre attention.",
+        "title_other": "{{count}} tâches demandent votre attention."
+      },
+      "review": {
+        "title": "Des tâches attendent une approbation.",
+        "body_one": "{{count}} tâche terminée attend d'être approuvée.",
+        "body_other": "{{count}} tâches terminées attendent d'être approuvées."
+      },
+      "today": {
+        "title_one": "{{count}} tâche à échéance aujourd'hui.",
+        "title_other": "{{count}} tâches à échéance aujourd'hui."
+      },
+      "clear": {
+        "title": "Tout est à jour.",
+        "body": "Rien de prévu aujourd'hui, rien en retard."
+      },
+      "firstRun": {
+        "title": "Commençons par une première tâche.",
+        "body": "L'aperçu se remplit à mesure que vous ajoutez des tâches."
+      }
+    },
+    "triage": {
+      "overdue": "En retard",
+      "dueToday": "Échéance aujourd'hui",
+      "needsReview": "À approuver",
+      "comingUp": "À venir",
+      "unplanned": "Sans échéance",
+      "allClear": "Rien en retard, rien en attente"
+    },
+    "nextUp": {
+      "title": "À venir",
+      "action": "Tout voir"
+    },
+    "nextUpFallback": {
+      "title": "Prochaines tâches",
+      "action": "Tout voir"
+    },
+    "overdue": {
+      "title": "En retard",
+      "action": "Tout voir"
+    },
+    "clear": {
+      "title": "Prendre de l'avance",
+      "body": "Parcourez les tâches à venir, replanifiez-les ou ajoutez la suivante.",
+      "action": "Parcourir toutes les tâches"
+    },
+    "firstTask": {
+      "title": "Ajoutez votre première tâche",
+      "description": "Tapez-la, dictez-la ou scannez-la. Tout ce que vous ajoutez apparaît ici au moment de vous en occuper.",
+      "action": "Ajouter une tâche"
+    },
+    "review": {
+      "title": "En attente de votre approbation",
+      "pendingTitle": "En attente d'approbation",
+      "myPendingTitle": "Mes tâches en attente d'approbation",
+      "action": "Tout examiner"
+    },
+    "circle": {
+      "title": "Votre cercle",
+      "action": "Gérer le cercle",
+      "open_one": "{{count}} à faire",
+      "open_other": "{{count}} à faire",
+      "late_one": "{{count}} en retard",
+      "late_other": "{{count}} en retard",
+      "done_one": "{{count}} terminée",
+      "done_other": "{{count}} terminées",
+      "caughtUp": "Rien à faire",
+      "emptyTitle": "Personne d'autre pour l'instant",
+      "emptyBody": "Invitez les personnes avec qui vous partagez les tâches : cet écran montrera qui s'occupe de quoi.",
+      "emptyAction": "Inviter dans votre cercle"
+    },
+    "projects": {
+      "title": "Projets",
+      "action": "Tous les projets",
+      "tasks_one": "{{count}} tâche",
+      "tasks_other": "{{count}} tâches",
+      "tasksOverdue_one": "{{count}} tâche, dont {{overdue}} en retard",
+      "tasksOverdue_other": "{{count}} tâches, dont {{overdue}} en retard",
+      "tasksUnplanned_one": "{{count}} tâche, dont {{unplanned}} sans échéance",
+      "tasksUnplanned_other": "{{count}} tâches, dont {{unplanned}} sans échéance",
+      "clear": "Rien à faire"
+    },
+    "filters": {
+      "title": "Filtres",
+      "action": "Tous les filtres",
+      "tasks_one": "{{count}} résultat",
+      "tasks_other": "{{count}} résultats",
+      "clear": "Aucun résultat"
+    },
+    "capture": {
+      "placeholder": "Ajouter une tâche...",
+      "add": "Ajouter une tâche",
+      "voice": "Saisir à la voix",
+      "scan": "Scanner pour créer une tâche"
+    }
+  }
+}

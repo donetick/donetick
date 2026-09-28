@@ -1,0 +1,690 @@
+{
+  "save": "Guardar",
+  "cancel": "Cancelar",
+  "delete": "Eliminar",
+  "edit": "Editar",
+  "close": "Cerrar",
+  "confirm": "Confirmar",
+  "loading": "Cargando...",
+  "error": "Error",
+  "success": "Éxito",
+  "warning": "Advertencia",
+  "colors": {
+    "Salmon": "Salmón",
+    "Teal": "Verde azulado",
+    "Sky Blue": "Azul cielo",
+    "Grape": "Uva",
+    "Sunshine": "Sol",
+    "Coral": "",
+    "Lavender": "Lavanda",
+    "Rose": "Rosa",
+    "Charcoal": "Carbón",
+    "Sienna": "Sena",
+    "Mint": "Menta",
+    "Amber": "Ámbar",
+    "Cobalt": "Cobalto",
+    "Emerald": "Esmeralda",
+    "Peach": "Melocotón",
+    "Ocean": "Océano",
+    "Mustard": "Mostaza",
+    "Ruby": "Rubí",
+    "Periwinkle": "Pervinca",
+    "Turquoise": "Turquesa",
+    "Lime": "Lima",
+    "Blush": "Rubor",
+    "Ash": "Ceniza",
+    "Sand": "Arena"
+  },
+  "refresh": "Actualizar",
+  "copy": "Copiar",
+  "copied": "¡Copiado!",
+  "settings": "Ajustes",
+  "yes": "Sí",
+  "no": "No",
+  "back": "Atrás",
+  "backToCalendar": "Volver al Calendario",
+  "logout": "Cerrar Sesión",
+  "version": "Versión",
+  "navigation": {
+    "search": "Buscar",
+    "allTasks": "Tareas",
+    "home": "Resumen",
+    "tasks": "",
+    "more": "",
+    "mobileNavigation": "",
+    "archived": "Archivadas",
+    "things": "Objetos",
+    "labels": "Etiquetas",
+    "projects": "Proyectos",
+    "filters": "Filtros",
+    "activities": "Actividades",
+    "points": "Puntos",
+    "settings": "Ajustes",
+    "reportBug": "Informar de un problema",
+    "openMenu": "Abrir menú",
+    "collapseMenu": "Contraer menú",
+    "expandMenu": "Expandir menú",
+    "primaryNavigation": "Navegación principal",
+    "profile": "Perfil"
+  },
+  "search": {
+    "title": "Buscar",
+    "placeholder": "Buscar tareas, acciones...",
+    "inputAriaLabel": "Buscar tareas, historial, proyectos, etiquetas y ajustes",
+    "deviceNote": "Se busca en el contenido disponible en este dispositivo",
+    "escape": "",
+    "recent": "Búsquedas recientes",
+    "empty": {
+      "title": "Sin coincidencias directas",
+      "subtitle": "You can still Filtro the Tarea list with this search.",
+      "actionsSubtitle": "Ninguna vista o acción coincide. Presiona retroceso para buscar en todo."
+    },
+    "groups": {
+      "tasks": "Tareas",
+      "history": "notas",
+      "projects": "Proyectos",
+      "labels": "Etiquetas",
+      "people": "Personas",
+      "settings": "Ajustes",
+      "actions": "Acciones rápidas"
+    },
+    "actions": {
+      "quickAction": "Acción rápida",
+      "navigation": "Navegación",
+      "createTask": "Crear a Tarea",
+      "createLabel": "Crear una etiqueta",
+      "createProject": "Crear un proyecto",
+      "createFilter": "Crear un filtro",
+      "viewAllTasks": "Ver todas las tareas",
+      "viewArchivedTasks": "Ver tareas archivadas",
+      "viewThings": "Ver objetos",
+      "viewLabels": "Ver etiquetas",
+      "viewProjects": "Ver proyectos",
+      "viewFilters": "Ver filtros",
+      "viewActivities": "Ver actividades",
+      "viewPoints": "Ver puntos",
+      "openSettings": "Open Ajustes",
+      "filterTasks": "Mostrar tareas que coincidan con «{{query}}»",
+      "filterTasksSubtitle": "Filtro the Tarea list"
+    },
+    "footer": {
+      "navigate": "Navegar",
+      "open": "Abrir",
+      "results_one": "{{count}} resultado",
+      "results_other": "{{count}} resultados",
+      "typeToSearch": "Escribe para buscar",
+      "slashHint": "/ para ir a una vista"
+    },
+    "modes": {
+      "actions": {
+        "label": "Ir a",
+        "placeholder": "Ir a una vista o acción"
+      }
+    }
+  },
+  "policyUpdate": {
+    "title": "Actualización de Política de Privacidad",
+    "subtitle": "Por favor, tómate un momento para revisarlos. Al continuar usando Donetick, aceptas los documentos actualizados.",
+    "readPrivacy": "Política de Privacidad",
+    "readTerms": "Términos",
+    "acknowledge": "Entendido"
+  },
+  "feedback": {
+    "later": "Quizás más tarde",
+    "sentiment": {
+      "title": "¿Qué tal te está funcionando Donetick?",
+      "subtitle": "Tu respuesta nos ayuda a decidir qué construir a continuación.",
+      "options": {
+        "love": "Me encanta",
+        "okay": "Está bien",
+        "issues": "Tengo problemas"
+      }
+    },
+    "categories": {
+      "bugs": "Errores",
+      "missingFeature": "Función faltante",
+      "tooComplicated": "Demasiado complicado",
+      "slow": "Lento",
+      "notifications": "Notificaciones",
+      "ai": "IA",
+      "other": "Otro"
+    },
+    "details": {
+      "title": "",
+      "messageLabel": "",
+      "messagePlaceholder": "",
+      "contextNote": "",
+      "submit": "",
+      "contextNoteSelfHosted": "You're on a self-hosted instance, so nothing is sent from your server — we'll open a pre-filled GitHub issue you can review and Editar first.",
+      "submitSelfHosted": ""
+    },
+    "review": {
+      "title": "",
+      "subtitle": "",
+      "github": "",
+      "appStore": "",
+      "playStore": ""
+    },
+    "thanks": {
+      "title": "",
+      "subtitle": ""
+    },
+    "github": {
+      "title": "",
+      "subtitle": "We've filled in an issue with your notas and version details. Nothing has been sent yet — review it and post when you're ready.",
+      "open": ""
+    }
+  },
+  "done": "Hecho",
+  "clearAll": "Limpiar todo",
+  "upload": {
+    "quotaTitle": "",
+    "quotaMessage": "",
+    "tooLargeTitle": "",
+    "tooLargeMessage": "",
+    "deniedTitle": "",
+    "deniedMessage": "",
+    "plusFeatureTitle": "",
+    "plusFeatureMessage": "Image uploads are not available in the Basic plan. Upgrade to Plus to Añadir images to your content.",
+    "upgradeTitle": "",
+    "upgradeMessage": "",
+    "failedTitle": "",
+    "failedMessage": "",
+    "processingMessage": ""
+  },
+  "getStarted": "Comenzar",
+  "imageLoadFailed": "Error al cargar la imagen",
+  "typeHere": "Escribe aquí...",
+  "summaryOfChores": "Resumen de tareas",
+  "loadingOffline": "Cargando en modo sin conexión...",
+  "loadingOfflineSub": "Los datos pueden estar desactualizados.",
+  "loadingSlow": "Cargando... esto está tardando un poco más de lo habitual.",
+  "navigateBack": "Navegar hacia atrás",
+  "bottomNav": "Navegación Inferior",
+  "profile": "",
+  "autocompletePlaceholder": "Escribe aquí...",
+  "errorScreen": {
+    "title": "Algo salió mal",
+    "fallback": "",
+    "tryAgain": "Reintentar",
+    "home": "",
+    "login": "",
+    "hideDetails": "",
+    "showDetails": "Mostrar detalles del error",
+    "copyToClipboard": "",
+    "copied": "",
+    "reportProblem": "",
+    "reportHint": "",
+    "collectingDetails": ""
+  },
+  "userMenu": {
+    "actAsAnother": "Actuar como otro usuario",
+    "stopImpersonating": "",
+    "returnToAccount": "",
+    "accountPrefs": "Cuenta y preferencias",
+    "invitePeople": "Invitar a personas",
+    "addMembers": "Añadir miembros a tu círculo",
+    "sidePanelSettings": "Ajustes del panel lateral",
+    "planFree": "",
+    "planPlus": "",
+    "planPlusExpiring": "",
+    "switchUser": "",
+    "impersonateUser": "Suplantar usuario",
+    "switchToLight": "Cambiar a modo claro",
+    "switchToDark": "Cambiar a modo oscuro",
+    "unlockPremium": "",
+    "impersonating": "",
+    "toggleThemeAppearance": "Alternar apariencia del tema",
+    "upgradeToPlus": ""
+  },
+  "realtime": {
+    "newTaskTitle": "New Tarea Created",
+    "connected": "Conectado en tiempo real",
+    "errorTitle": "",
+    "parseTitle": "",
+    "parseMessage": "",
+    "disabledTitle": "",
+    "failedTitle": "",
+    "stateConnectionError": "",
+    "stateAuthExpired": "",
+    "stateTokenRefreshed": "",
+    "stateRefreshInProgress": "",
+    "stateSessionExpired": "",
+    "stateAuthFailed": "",
+    "stateAuthError": "",
+    "stateTimeout": "",
+    "connectErrorTitle": "",
+    "connectErrorMessage": ""
+  },
+  "removeAll": "Eliminar todo",
+  "apply": "Aplicar",
+  "cancelAll": "Cancelar todo",
+  "backFromSearch": "Volver de la búsqueda",
+  "newVersionAvailable": "Nueva versión disponible",
+  "notFound": {
+    "title": "Página No Encontrada",
+    "description": "La página que buscas no existe o ha sido movida.",
+    "goToMyTasks": "Ir a mis tareas",
+    "logIn": ""
+  },
+  "pendingBadge": {
+    "completePending": "Complete Pendiente",
+    "skipPending": "Omisión pendiente",
+    "updatePending": "Update Pendiente",
+    "createPending": "Crear Pendiente",
+    "deletePending": "Eliminar Pendiente",
+    "editHistoryPending": "Editar Historial Pendiente",
+    "deleteHistoryPending": "Eliminar Historial Pendiente",
+    "reschedulePending": "Reschedule Pendiente",
+    "archivePending": "Archivo pendiente",
+    "restorePending": "Restore Pendiente",
+    "startPending": "Start Pendiente",
+    "pausePending": "Pause Pendiente"
+  },
+  "sortAndFilter": {
+    "sortBy": "Ordenar por",
+    "ariaLabel": "Sort and Filtro options",
+    "title": "Sort & Filtro",
+    "ascending": "Ascendente",
+    "descending": "Descendente",
+    "filter": "Filtro"
+  },
+  "versionInfo": "Información de versión",
+  "apiVersionUnavailable": "no disponible",
+  "sync": {
+    "aria": "Open sync and network estado",
+    "allSynced": "",
+    "willSync": "",
+    "cancelAll": "Cancelar All",
+    "commandLabels": {
+      "createChore": "Crear Tarea",
+      "updateChore": "Update Tarea",
+      "updateChoreHistory": "Editar Historial",
+      "completeChore": "Complete Tarea",
+      "skipChore": "Omitir tarea",
+      "startChore": "Start Tarea",
+      "pauseChore": "Pause Tarea",
+      "deleteChore": "Eliminar Tarea",
+      "deleteChoreHistory": "Eliminar Historial",
+      "rescheduleChore": "Reschedule Tarea",
+      "archiveChore": "Archivar tarea",
+      "unarchiveChore": "Restore Tarea",
+      "pendingAction": "Pendiente action"
+    },
+    "never": "",
+    "justNow": "Ahora mismo",
+    "secondsAgo": "",
+    "minutesAgo": "",
+    "hoursAgo": "",
+    "online": "",
+    "offline": "Sin conexión",
+    "syncing": "Sincronizando...",
+    "lastSync": "",
+    "offlineSince": "",
+    "errorPrefix": "",
+    "pending": "Pendiente ({{count}})",
+    "failed": "",
+    "dismiss": "",
+    "nextAutoSync": "",
+    "checkingServer": "",
+    "retryingIn": "",
+    "syncNow": "",
+    "pendingSyncLabel_one": "{{count}} Pendiente action to sync",
+    "pendingSyncLabel_other": "{{count}} Pendiente actions to sync",
+    "pendingActionsTitle": "Pendiente actions",
+    "actionsWaitingToSync_one": "",
+    "actionsWaitingToSync_other": "",
+    "cancelActionAria": "Cancelar {{label}}"
+  },
+  "attachments": "Archivos adjuntos",
+  "fileNumbered": "Archivo {{number}}",
+  "noAttachmentsTitle": "Sin archivos adjuntos",
+  "noAttachmentsDescription": "No hay archivos o imágenes adjuntas a esta tarea.",
+  "kbSize": "",
+  "onboarding": {
+    "sources": {
+      "speak": "",
+      "snap": "",
+      "type": ""
+    },
+    "capture": {
+      "voiceCaption": "Dates, Etiquetas and Puntos from your words",
+      "deviceCaption": "",
+      "typeCaption": "#Etiquetas @people *Puntos as you type",
+      "trashTitle": "",
+      "trashDue": "",
+      "trashRepeat": "",
+      "homeLabel": "",
+      "vehicleTitle": "",
+      "vehicleDue": "",
+      "acTitle": "💨 Change the AC Filtro",
+      "acDue": "",
+      "acRepeat": ""
+    },
+    "schedule": {
+      "fromDueDate": "Reschedule from fecha de vencimiento",
+      "fromCompletionDate": "",
+      "due": "",
+      "done": "",
+      "next": ""
+    },
+    "nfc": {
+      "tagOnWasher": "",
+      "tapToOpen": "",
+      "swapFilter": "Swap the washer Filtro",
+      "done": "",
+      "skip": "Omitir",
+      "startTimer": "Start Temporizador",
+      "waitingApproval": "",
+      "approve": "",
+      "reject": "",
+      "completed": "Completada",
+      "note": "Used the delicate cycle — Filtro needs a clean next time.",
+      "metaJustNow": "Ahora mismo · ★ 5 pts",
+      "metaLastWeek": ""
+    },
+    "circle": {
+      "kitchenTitle": "",
+      "kitchenDue": "",
+      "kitchenRepeat": "",
+      "takesTurns": ""
+    },
+    "turns": {
+      "binsTitle": "",
+      "binsDue": "",
+      "binsRepeat": "",
+      "completed": "Completada",
+      "metaJustNow": "Ahora mismo · ★ 5 pts"
+    },
+    "widget": {
+      "schoolForms": "",
+      "takeOutTrash": "",
+      "waterPlants": "",
+      "today": "Hoy",
+      "left": ""
+    },
+    "reminders": {
+      "trashTitle": "",
+      "trashBody": "",
+      "finishedTitle": "",
+      "finishedBody": ""
+    },
+    "things": {
+      "waterBill": "",
+      "acFilter": "AC Filtro",
+      "trashDay": "",
+      "dogMedicine": "",
+      "whoseTurn": "",
+      "monthly": "",
+      "everyThreeMonths": "",
+      "everyMonday": "",
+      "daily": "",
+      "weekly": "",
+      "tagBills": "",
+      "tagHome": "",
+      "tagPets": "",
+      "tagCooking": ""
+    },
+    "slides": {
+      "problemTitle": "Stop forgetting the little Objetos",
+      "problemBody": "",
+      "captureTitle": "Añadir it before you forget it",
+      "captureBody": "Escríbela, dilos en alto o toma una foto. Donetick rellena la fecha de vencimiento, la prioridad, las etiquetas y a quién le toca.",
+      "scheduleTitle": "",
+      "scheduleBody": "",
+      "circleTitle": "",
+      "circleBody": "",
+      "remindersTitle": "¡Avisos justo cuando importa y widgets!",
+      "remindersBody": "Recibe un recordatorio antes del vencimiento o envía un aviso cuando a alguien se le olvide. La lista de hoy también está en tu pantalla de inicio."
+    },
+    "carousel": {
+      "skip": "Omitir",
+      "ariaLabel": "",
+      "goToStep": "",
+      "slidePosition": "",
+      "turnOnReminders": "",
+      "notNow": "",
+      "next": ""
+    },
+    "getStarted": {
+      "subtitleSignupEnabled": "Crear an account to sync everywhere, or sign in and pick up where you left off.",
+      "subtitleSignupDisabled": "",
+      "createAccount": "Crear an account",
+      "alreadyHaveAccount": "",
+      "signIn": "",
+      "connectSelfHosted": ""
+    },
+    "heardAbout": {
+      "title": "",
+      "subtitle": "",
+      "detailPlaceholder": "",
+      "continue": "",
+      "skip": "Omitir",
+      "sources": {
+        "appStore": "",
+        "reddit": "",
+        "friend": "",
+        "video": "",
+        "search": "Buscar engine",
+        "other": ""
+      }
+    },
+    "privacy": {
+      "title": "",
+      "subtitle": "Your server, your data. Both of these are off from this Punto unless you turn them on.",
+      "crashReportsLabel": "",
+      "crashReportsDescription": "Cuando Donetick falle, envíanos el error y lo que condujo a él (dispositivo, versión de la app, pantalla) sin contenido de tareas.",
+      "analyticsLabel": "",
+      "analyticsDescription": "Send anonymous usage events which features get used, which get ignored so we know what to build next instead of guessing. No Tarea content, no personal data, nothing tied back to you."
+    }
+  },
+  "errorReport": {
+    "titleBug": "Informar de un problema",
+    "titleCrash": "Informar de este problema",
+    "subtitleBug": "Cuéntanos qué salió mal y adjuntaremos los detalles técnicos.",
+    "subtitleCrash": "Una frase sobre lo que estabas haciendo nos ayuda a solucionarlo.",
+    "labelBug": "¿Qué salió mal?",
+    "labelCrash": "¿Qué estabas haciendo?",
+    "placeholderBug": "ej. Al completar una tarea de la lista no se actualiza la fecha de vencimiento",
+    "placeholderCrash": "ej. Toqué una tarea en Mis tareas y la pantalla se quedó en blanco",
+    "email": "Correo electrónico",
+    "emailOptional": "(opcional — solo si deseas respuesta)",
+    "emailPlaceholder": "tu@ejemplo.com",
+    "showWhatGetsSent": "Mostrar qué se envía",
+    "hideWhatGetsSent": "Ocultar lo que se envía",
+    "copyDiagnostics": "Copiar diagnósticos",
+    "collecting": "Recopilando diagnósticos…",
+    "privacyNote": "No se incluyen nombres de tareas, notas ni archivos adjuntos.",
+    "send": "Enviar informe",
+    "cancel": "Cancelar",
+    "notNow": "Ahora no",
+    "sentTitle": "Informe enviado",
+    "sentBody": "¡Gracias! Esto va directamente a quienes pueden solucionarlo.",
+    "reference": "Referencia",
+    "copyReference": "Copiar referencia",
+    "done": "Hecho",
+    "githubTitle": "Finalizar en GitHub",
+    "githubBody": "No se ha enviado nada. Hemos rellenado un problema con tus notas y diagnósticos — revísalo y publícalo cuando quieras.",
+    "openIssue": "Abrir problema precompletado",
+    "copied": "Copiado",
+    "copyInstead": "Copiar detalles en su lugar",
+    "close": "Cerrar"
+  },
+  "circleSetup": {
+    "inviteTitle": "Trae a tu equipo",
+    "inviteSubtitle": "Todos los que se unen a tu Círculo ven las mismas tareas, toman su propio turno y se mantienen sincronizados automáticamente.",
+    "joinTitle": "Unirse a un círculo",
+    "joinSubtitle": "Introduce el código que te dieron y enviaremos una solicitud para unirte; el propietario del círculo solo necesita aprobarla.",
+    "loadingCode": "Cargando…",
+    "copyCodeAria": "Copiar código del círculo",
+    "copyLinkInstead": "Copiar enlace de invitación en su lugar",
+    "continue": "Continuar",
+    "joinInstead": "Unirse a un círculo existente en su lugar",
+    "codePlaceholder": "Introduce el código",
+    "joinButton": "Unirse al Círculo",
+    "back": "Atrás",
+    "codeCopied": "Código copiado al portapapeles",
+    "linkCopied": "Enlace copiado al portapapeles",
+    "requestSentTitle": "Solicitud Enviada",
+    "requestSentBody": "¡Tu solicitud de unión ha sido enviada! El propietario del círculo deberá aprobarla antes de que puedas ver sus tareas. Recibirás una notificación una vez dentro.",
+    "alreadyMember": "Ya eres miembro de este círculo",
+    "joinFailed": "Error al unirse al círculo"
+  },
+  "joinCircle": {
+    "title": "You're invited to join a Círculo",
+    "incompleteTitle": "",
+    "incompleteSubtitle": "",
+    "goToDonetick": "",
+    "signedOutSubtitle": "Sign in or Crear a Donetick account to continue. We'll send your join request once you're signed in.",
+    "signIn": "",
+    "createAccount": "Crear an account",
+    "sendingTitle": "",
+    "sendingSubtitle": "",
+    "greetingSubtitle": "Hola {{name}}. Envía una solicitud para compartir las tareas de este círculo con sus miembros.",
+    "adminReviewNote": "A Círculo admin will review your request before you get access.",
+    "sendRequest": "",
+    "requestSentTitle": "",
+    "requestSentBody": "Tu solicitud ha sido enviada. Un administrador del círculo deberá aprobarla antes de que puedas acceder al círculo y a sus tareas. Te notificaremos cuando se apruebe.",
+    "gotIt": "",
+    "alreadyMember": "You are already a Miembro of this Círculo",
+    "joinFailed": "Failed to join Círculo",
+    "requestError": ""
+  },
+  "selectUser": "Seleccionar usuario",
+  "closeDialog": "Cerrar diálogo",
+  "activeFilterChips": {
+    "removeFilterAria": "Eliminar filtro {{label}}",
+    "addFilterCondition": "Añadir condición de filtro",
+    "moreCount": "+{{count}} más"
+  },
+  "filterBar": {
+    "filtersButton": "Filtros",
+    "clearAllButton": "Limpiar all",
+    "doneButton": "",
+    "showResults_one": "Mostrar {{count}} resultado",
+    "showResults_other": "Mostrar {{count}} resultados",
+    "selectedCount": "",
+    "dateRangeFallback": "",
+    "fromDate": "",
+    "untilDate": "",
+    "presetToday": "Hoy",
+    "presetYesterday": "Ayer",
+    "presetThisWeek": "",
+    "presetLast7Days": "",
+    "presetThisMonth": "",
+    "presetLast30Days": "",
+    "presetLast3Months": ""
+  },
+  "workspaceReady": {
+    "allSetNamed": "",
+    "allSet": "",
+    "subtitle": "",
+    "continue": "",
+    "readyShared": "Tareas compartidas para toda la casa",
+    "readyRecurring": "",
+    "readyCapture": "",
+    "readyReminders": ""
+  },
+  "home": {
+    "customize": {
+      "action": ""
+    },
+    "verdict": {
+      "late": {
+        "title_one": "",
+        "title_other": ""
+      },
+      "review": {
+        "title": "",
+        "body_one": "",
+        "body_other": ""
+      },
+      "today": {
+        "title_one": "",
+        "title_other": ""
+      },
+      "clear": {
+        "title": "",
+        "body": ""
+      },
+      "firstRun": {
+        "title": "",
+        "body": ""
+      }
+    },
+    "triage": {
+      "overdue": "",
+      "dueToday": "",
+      "needsReview": "",
+      "comingUp": "",
+      "unplanned": "",
+      "allClear": ""
+    },
+    "nextUp": {
+      "title": "",
+      "action": ""
+    },
+    "nextUpFallback": {
+      "title": "",
+      "action": ""
+    },
+    "overdue": {
+      "title": "",
+      "action": ""
+    },
+    "clear": {
+      "title": "",
+      "body": "",
+      "action": ""
+    },
+    "firstTask": {
+      "title": "",
+      "description": "",
+      "action": ""
+    },
+    "review": {
+      "title": "",
+      "pendingTitle": "",
+      "myPendingTitle": "",
+      "action": ""
+    },
+    "circle": {
+      "title": "",
+      "action": "",
+      "open_one": "",
+      "open_other": "",
+      "late_one": "",
+      "late_other": "",
+      "done_one": "",
+      "done_other": "",
+      "caughtUp": "",
+      "emptyTitle": "",
+      "emptyBody": "",
+      "emptyAction": ""
+    },
+    "projects": {
+      "title": "",
+      "action": "",
+      "tasks_one": "",
+      "tasks_other": "",
+      "tasksOverdue_one": "",
+      "tasksOverdue_other": "",
+      "tasksUnplanned_one": "",
+      "tasksUnplanned_other": "",
+      "clear": ""
+    },
+    "filters": {
+      "title": "",
+      "action": "",
+      "tasks_one": "",
+      "tasks_other": "",
+      "clear": ""
+    },
+    "capture": {
+      "placeholder": "",
+      "add": "",
+      "voice": "",
+      "scan": ""
+    }
+  }
+}

@@ -1,0 +1,72 @@
+{
+  "iconPicker": {
+    "chooseIcon": "Choisir l'icône du projet",
+    "availableIcons": "Icônes disponibles"
+  },
+  "icons": {
+    "FolderOpen": "Dossier",
+    "Work": "Travail",
+    "Home": "Maison",
+    "School": "École",
+    "BusinessCenter": "Entreprise",
+    "Code": "Code",
+    "Build": "Construction",
+    "Palette": "Design",
+    "SportsSoccer": "Sports",
+    "FitnessCenter": "Fitness",
+    "ShoppingCart": "Achats",
+    "Restaurant": "Cuisine",
+    "Flight": "Voyage",
+    "Book": "Études",
+    "MusicNote": "Musique",
+    "PhotoCamera": "Photo",
+    "Games": "Jeux",
+    "Science": "Sciences",
+    "AccountBalance": "Finance",
+    "LocalHospital": "Santé",
+    "DirectionsCar": "Auto",
+    "Pets": "Animaux",
+    "Garden": "Jardin",
+    "Computer": "Technologie"
+  },
+  "defaultChip": "Par défaut",
+  "tasks_one": "{{count}} tâche",
+  "tasks_other": "{{count}} tâches",
+  "shared": "Partagé",
+  "delete": {
+    "title": "Supprimer le projet",
+    "message": "Voulez-vous vraiment supprimer « {{name}} » ? Le projet sera supprimé, mais les tâches seront conservées (elles seront déplacées vers le projet par défaut)."
+  },
+  "loadError": "Impossible de charger les projets. Veuillez réessayer.",
+  "search": {
+    "placeholder": "Rechercher des projets",
+    "noResultsTitle": "Aucun projet correspondant",
+    "noResultsDescription": "Aucun projet ne correspond à « {{searchTerm}} ».",
+    "noFilterResultsDescription": "Aucun projet ne correspond au filtre actuel.",
+    "clear": "Effacer la recherche",
+    "showAll": "Afficher tous les projets"
+  },
+  "blurb": "Organisez vos tâches en projets. Créez des espaces de travail personnalisés pour garder vos tâches structurées et faciles d'accès.",
+  "defaultDescription": "Toutes les tâches sans projet spécifique",
+  "selector": {
+    "title": "Projets",
+    "createNew": "Créer un projet",
+    "createNewDescription": "Ajouter un espace de travail personnalisé",
+    "manage": "Gérer les projets",
+    "manageDescription": "Afficher, modifier et organiser tous les projets",
+    "currentProjectTitle": "Projet actuel : {{project}} (Ctrl+E)",
+    "builtInWorkspace": "Espace de travail intégré"
+  },
+  "modal": {
+    "errorNameRequired": "Le nom du projet est obligatoire",
+    "errorUpdate": "Échec de la mise à jour du projet",
+    "errorCreate": "Échec de la création du projet",
+    "namePlaceholder": "Saisissez le nom du projet...",
+    "descriptionPlaceholder": "Description facultative du projet...",
+    "nameLabel": "Nom du projet",
+    "descriptionLabel": "Description",
+    "iconLabel": "Icône du projet",
+    "selectIcon": "Sélectionner une icône",
+    "colorLabel": "Couleur du projet"
+  }
+}

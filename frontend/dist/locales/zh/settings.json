@@ -1,0 +1,723 @@
+{
+  "title": "设置",
+  "common": {
+    "save": "保存",
+    "cancel": "取消",
+    "confirm": "确认",
+    "remove": "移除",
+    "delete": "删除",
+    "refresh": "刷新",
+    "loading": "加载中…",
+    "on": "开",
+    "off": "关",
+    "error": "错误",
+    "success": "成功",
+    "plusFeature": "Plus 功能",
+    "earlyAccess": "抢先体验"
+  },
+  "overview": {
+    "title": "设置",
+    "subtitle": "定制你的使用体验并管理账户偏好",
+    "upgrade": {
+      "title": "升级到 Plus",
+      "description": "解锁强大功能，提升你的效率",
+      "button": "立即升级",
+      "features": {
+        "richText": "富文本描述",
+        "notifications": "任务通知",
+        "apiIntegrations": "API 集成",
+        "advancedAutomation": "高级自动化"
+      }
+    },
+    "sections": {
+      "profile": {
+        "title": "个人资料设置",
+        "description": "更新你的个人资料、头像、显示名称和时区偏好。"
+      },
+      "circle": {
+        "title": "圈子设置",
+        "description": "管理你的圈子、邀请成员并处理加入请求。"
+      },
+      "account": {
+        "title": "账户设置",
+        "description": "管理订阅、修改密码以及删除账户。"
+      },
+      "subaccounts": {
+        "title": "受管账户",
+        "description": "创建和管理子账户，让他们登录并完成分配的任务。"
+      },
+      "notifications": {
+        "title": "通知",
+        "description": "配置推送通知、邮件提醒以及任务的通知目标。"
+      },
+      "mfa": {
+        "title": "多重身份验证",
+        "description": "通过身份验证器应用启用 MFA，为账户增加一层安全保护。"
+      },
+      "apitokens": {
+        "title": "API 令牌",
+        "description": "生成和管理用于第三方集成与 API 访问的访问令牌。"
+      },
+      "storage": {
+        "title": "存储设置",
+        "description": "备份和恢复数据，管理本地存储与同步偏好。"
+      },
+      "layout": {
+        "title": "布局与导航",
+        "description": "选择应用打开时显示的页面，以及围绕它的快捷方式和面板。"
+      },
+      "theme": {
+        "title": "主题偏好",
+        "description": "选择你喜欢的主题并配置深色／浅色模式。"
+      },
+      "localization": {
+        "title": "本地化",
+        "description": "自定义语言、日期格式、时间格式和区域偏好。"
+      },
+      "advanced": {
+        "title": "高级设置",
+        "description": "配置 Webhook、实时更新以及其他高级功能。"
+      },
+      "privacy": {
+        "title": "",
+        "description": ""
+      },
+      "developer": {
+        "title": "开发者设置",
+        "description": "查看身份验证令牌、SSE 连接和调试数据等技术信息。"
+      },
+      "feedback": {
+        "title": "发送反馈",
+        "description": "告诉我们 Donetick 用起来如何，或提出功能建议。"
+      },
+      "bugReport": {
+        "title": "报告问题",
+        "description": "有什么不对劲吗？把详情和技术快照一起发给我们。"
+      },
+      "sidepanel": {
+        "title": "侧边栏自定义",
+        "description": "自定义侧边栏中卡片的布局和显示状态。"
+      }
+    }
+  },
+  "profile": {
+    "title": "个人资料设置",
+    "description": "更新你的显示名称和头像。",
+    "photoUpdated": "头像已更新",
+    "photoUpdatedMessage": "你的头像已成功更新！",
+    "uploadFailed": "上传失败",
+    "uploadFailedMessage": "无法上传你的照片，请重试。",
+    "profileUpdated": "资料已更新",
+    "profileUpdatedMessage": "你的个人资料已成功保存！",
+    "updateFailed": "更新失败",
+    "updateFailedMessage": "无法更新你的资料，请检查网络后重试。",
+    "changePhoto": "更换头像",
+    "editPhoto": "编辑头像",
+    "displayName": "显示名称",
+    "displayNamePlaceholder": "输入你的显示名称",
+    "timezone": "时区",
+    "timezonePlaceholder": "选择你的时区",
+    "save": "保存",
+    "cancel": "取消"
+  },
+  "circleSettings": {
+    "title": "Circle settings",
+    "description": "Your account is automatically connected to a Circle when you create or join one. Easily invite friends by sharing the unique Circle code or link below. You'll receive a notification below when someone requests to join your Circle. If you'd like to leave, simply hit the 'Leave Circle' button.",
+    "memberOf": "你是 {{name}} 的成员",
+    "yourCircleCode": "你的圈子代码是：",
+    "copyCode": "复制代码",
+    "shareInvite": "分享邀请",
+    "codeCopied": "Circle code copied!",
+    "linkCopied": "Circle link copied!",
+    "myCircle": "我的圈子",
+    "shareTitle": "在 Donetick 加入 {{name}}",
+    "shareText": "我想邀请你加入 Donetick 上的 {{name}}。",
+    "shareDialogTitle": "分享圈子邀请",
+    "leave": "退出圈子",
+    "leaveConfirmTitle": "退出圈子",
+    "leaveConfirmMessage": "Are you sure you want to leave this circle?",
+    "leaveConfirmButton": "退出",
+    "leftCircle": "已成功退出圈子",
+    "leaveFailed": "退出圈子失败",
+    "circleMembers": "圈子成员",
+    "you": "（你）",
+    "pendingApproval": "等待审批",
+    "joinedOn": "加入于 {{date}}",
+    "requestedToJoin": "申请加入 {{date}}",
+    "roles": {
+      "member": "成员",
+      "memberDescription": "圈子的普通成员",
+      "manager": "管理者",
+      "managerDescription": "可以以其他用户身份操作并代其执行",
+      "admin": "管理员",
+      "adminDescription": "对圈子拥有完全权限"
+    },
+    "roleUpdateFailed": "更新角色失败",
+    "removeMemberTitle": "移除成员",
+    "removeMemberMessage": "确定要将 {{name}} 移出你的圈子吗？",
+    "memberRemoved": "已成功移除成员",
+    "circleMemberRequests": "圈子加入请求",
+    "lastUpdated": "上次更新：{{time}}",
+    "refreshing": "正在刷新…",
+    "refreshFailed": "刷新加入请求失败",
+    "wantsToJoin": "{{name}} 想加入你的圈子。",
+    "accept": "接受",
+    "acceptRequestTitle": "接受加入请求",
+    "acceptRequestMessage": "确定要接受 {{name}}（用户名：{{username}}）加入你的圈子吗？",
+    "requestAccepted": "已成功接受请求",
+    "or": "或",
+    "joinOtherDescription": "想加入别人的圈子？向对方索取专属圈子代码或加入链接，然后在下方输入代码即可加入。",
+    "enterCircleCode": "输入圈子代码：",
+    "enterCodePlaceholder": "输入代码",
+    "joinCircle": "Join a Circle",
+    "joinedPending": "已成功加入圈子，请等待圈主接受你的请求。",
+    "alreadyMember": "你已经是该圈子的成员",
+    "joinFailed": "加入圈子失败",
+    "copyLink": ""
+  },
+  "accountSettings": {
+    "title": "账户设置",
+    "description": "修改你的账户设置、套餐类型或密码",
+    "accountType": "账户类型：{{type}}",
+    "free": "免费版",
+    "plus": "",
+    "plusUntil": "Plus（至 {{date}}）",
+    "activeDescription": "你当前已订阅 Plus 套餐，订阅将于 {{date}} 续期。",
+    "cancelledDescription": "你已取消订阅，账户将于 {{date}} 降级为免费套餐。",
+    "freeDescription": "你当前使用的是免费套餐。升级到 Plus 可解锁更多功能。",
+    "upgrade": "升级",
+    "cancel": "取消订阅",
+    "password": "Password",
+    "changePassword": "修改密码",
+    "passwordChanged": "密码修改成功",
+    "passwordChangeFailed": "密码修改失败",
+    "dangerZone": "危险操作",
+    "dangerZoneDescription": "账户一旦删除便无法恢复，请谨慎操作。",
+    "deleteAccount": "删除账户",
+    "accountDeleted": "账户已成功删除",
+    "subscriptionCancelled": "订阅已取消",
+    "subscriptionCancelFailed": "取消订阅失败",
+    "purchase": {
+      "success": "购买成功！请重启应用以使用 Plus 功能。",
+      "storeConnection": "应用商店连接异常，请检查网络后重试。",
+      "notAllowed": "此设备不允许购买，请检查设备的限制设置。",
+      "unavailable": "此订阅暂不可用，请稍后再试。",
+      "alreadyProcessed": "此次购买已处理。如果你认为这是错误，请联系客服。",
+      "receiptMissing": "缺少购买凭据，请重新尝试购买。",
+      "networkError": "网络错误，请检查网络连接后重试。",
+      "invalidReceipt": "购买凭据无效。如果问题持续存在，请联系客服。",
+      "pending": "付款正在等待审核，通过后你将获得访问权限。",
+      "failed": "购买失败：{{error}}。请重试或联系客服。",
+      "unknownError": "未知错误"
+    }
+  },
+  "subaccounts": {
+    "title": "受管账户",
+    "description": "管理子账户。子账户用户可以登录并完成分配给他们的任务。",
+    "notParentTitle": "子账户管理",
+    "notParentMessage": "只有主账户才能管理子账户。",
+    "freePlanNotice": "免费套餐限 1 个子账户。升级到 Plus 最多可拥有 5 个子账户。",
+    "count": "子账户（{{count}}）",
+    "add": "添加子账户",
+    "loading": "正在加载子账户…",
+    "emptyTitle": "暂无子账户",
+    "emptyDescription": "创建子账户，让团队成员可以登录并完成分配给他们的任务。",
+    "addFirst": "添加第一个子账户",
+    "username": "用户名：{{username}}",
+    "created": "创建于：{{date}}",
+    "changePassword": "修改密码",
+    "deleteAccount": "删除账户",
+    "createdSuccess": "子账户“{{name}}”创建成功！",
+    "createFailed": "创建子账户失败：{{error}}",
+    "createFailedGeneric": "创建子账户失败",
+    "passwordUpdated": "子账户密码更新成功",
+    "passwordUpdateFailed": "更新密码失败：{{error}}",
+    "passwordUpdateFailedGeneric": "更新密码失败",
+    "deleteConfirmTitle": "删除子账户",
+    "deleteConfirmMessage": "确定要删除子账户“{{name}}”吗？此操作无法撤销。",
+    "deleted": "子账户“{{name}}”已成功删除",
+    "deleteFailed": "删除子账户失败：{{error}}",
+    "deleteFailedGeneric": "删除子账户失败",
+    "howItWorksTitle": "受管账户如何运作",
+    "howItWorks1": "受管账户由主账户创建，适用于你希望能够删除其账户并重置其密码的用户。",
+    "howItWorks2": "子账户可以使用自己的用户名和密码登录。",
+    "howItWorks3": "受管账户可以完成任务，但管理权限有限",
+    "howItWorks4": "受管账户会自动加入你的圈子"
+  },
+  "notifications": {
+    "title": "通知设置",
+    "deviceSection": "设备通知",
+    "deviceSectionDescription": "管理你的设备通知",
+    "deviceLabel": "设备通知",
+    "deviceHelper": "任务到期时在设备上接收通知",
+    "mobileOnly": "此功能仅在移动设备上可用",
+    "testNotification": "测试通知",
+    "testNotificationBody": "你有一项任务即将到期",
+    "dueTitle": "到期通知",
+    "dueLabel": "任务到期时通知",
+    "preDueTitle": "到期前通知",
+    "preDueLabel": "任务到期前几小时通知",
+    "overdueTitle": "逾期通知",
+    "overdueLabel": "任务逾期时通知",
+    "pushLabel": "推送通知",
+    "pushHelper": "通过推送通知接收提醒、公告和任务分配",
+    "registeredDevices": "已注册设备（{{count}}/5）",
+    "registeredDevicesDescription": "已注册接收你账户推送通知的设备",
+    "currentDevice": "当前设备：{{platform}} {{model}}",
+    "currentDeviceNotRegistered": "此设备尚未注册推送通知",
+    "limitReached": "已达上限",
+    "registerDevice": "注册设备",
+    "unknownDevice": "未知设备",
+    "deviceCreatedAt": "创建于：{{date}}",
+    "noDevices": "尚无设备注册推送通知",
+    "customSection": "自定义通知",
+    "customSectionDescription": "通过 Telegram、Pushover 等其他平台接收通知",
+    "customLabel": "自定义通知",
+    "customHelper": "在其他平台上接收通知",
+    "targetNone": "无",
+    "targetTelegram": "",
+    "targetPushover": "",
+    "targetWebhooks": "Webhook",
+    "telegramBotHelpBefore": "你需要先向机器人发送一条消息，Telegram 通知才能生效",
+    "telegramBotHelpAfter": "开始聊天",
+    "clickHere": "点击这里",
+    "chatId": "",
+    "chatIdPlaceholder": "用户 ID / Chat ID",
+    "telegramChatIdHelpBefore": "如果你不知道自己的 Chat ID，可以和 userinfobot 开始聊天，它会告诉你。",
+    "telegramChatIdHelpAfter": "与 userinfobot 开始聊天",
+    "userKey": "用户密钥",
+    "userKeyPlaceholder": "用户 ID",
+    "chatIdRequired": "Chat ID 为必填项",
+    "chatIdInvalid": "Chat ID 无效",
+    "userKeyRequired": "用户密钥为必填项",
+    "targetUpdated": "通知目标已更新",
+    "targetUpdateFailed": "更新通知目标时出错：{{error}}",
+    "deviceRegistered": "设备已成功注册推送通知。",
+    "deviceLimitTitle": "已达设备数量上限",
+    "deviceLimitMessage": "你已达到 5 台已注册设备的上限。请先移除一台设备，再注册此设备。",
+    "registrationFailedTitle": "注册失败",
+    "registrationFailedMessage": "无法自动注册设备，请重试。",
+    "permissionRequiredTitle": "需要授权",
+    "permissionRequiredMessage": "注册此设备需要推送通知权限。",
+    "registrationInitiatedTitle": "已开始注册",
+    "registrationInitiatedMessage": "推送通知注册已开始，设备将自动完成注册。",
+    "registerDeviceFailed": "注册设备失败，请重试。",
+    "permissionDeniedTitle": "通知权限被拒绝",
+    "permissionDeniedMessage": "你拒绝了通知权限。之后可以在设备设置中重新开启。",
+    "pushPermissionDeniedTitle": "推送通知权限被拒绝",
+    "pushPermissionDeniedMessage": "推送通知已关闭。如有需要，可在设备设置中重新开启。",
+    "unregisterFailed": "取消注册设备失败"
+  },
+  "mfa": {
+    "title": "多重身份验证",
+    "description": "使用多重身份验证（MFA）为账户增加一层安全保护。开启后，登录时除密码外，还需输入身份验证器应用中的验证码。",
+    "twoFactor": "两步验证",
+    "enabledSubtitle": "你的账户已启用两步验证保护",
+    "disabledSubtitle": "使用身份验证器应用保护你的账户",
+    "enable": "开启",
+    "disable": "关闭",
+    "enabledSuccess": "MFA 已成功开启！",
+    "disabledSuccess": "MFA 已成功关闭！",
+    "errors": {
+      "qrGenerationFailed": "无法生成二维码",
+      "invalidResponse": "服务器响应无效，缺少二维码或密钥。",
+      "notFound": "未找到 MFA 设置接口，此功能可能尚未开放。",
+      "unauthorized": "未授权，请重新登录。",
+      "serverError": "服务器错误，请稍后再试。",
+      "setupFailed": "设置 MFA 失败（{{status}}），请重试。",
+      "networkError": "网络错误，请检查网络连接后重试。",
+      "invalidCode": "验证码无效，请重试。",
+      "confirmFailed": "确认 MFA 失败，请重试。",
+      "disableFailed": "关闭 MFA 失败，请重试。"
+    },
+    "setup": {
+      "title": "设置多重身份验证",
+      "addedAccount": "我已添加账户",
+      "back": "返回",
+      "verifyAndEnable": "验证并开启",
+      "savedBackupCodes": "我已保存备用代码",
+      "step1Label": "第 1 步：",
+      "step1": "用身份验证器应用（Google Authenticator、Authy 等）扫描下方二维码",
+      "qrAlt": "MFA 二维码",
+      "qrFailed": "无法生成二维码，请重试或使用下方的手动输入密钥。",
+      "manualKey": "手动输入密钥：",
+      "step2Label": "第 2 步：",
+      "step2": "输入身份验证器应用中的 6 位验证码",
+      "codePlaceholder": "输入 6 位验证码",
+      "successTitle": "MFA 已成功开启！",
+      "backupCodesTitle": "请将这些备用代码保存在安全的地方",
+      "backupCodesDescription": "如果你丢失了身份验证器设备，可以使用这些代码访问账户。每个代码只能使用一次。"
+    },
+    "disableModal": {
+      "title": "关闭多重身份验证",
+      "warning": "关闭 MFA 会降低账户的安全性。确定要继续吗？",
+      "prompt": "请输入身份验证器应用中的验证码以确认：",
+      "confirm": "关闭 MFA"
+    },
+    "backupCodesModal": {
+      "title": "新的备用代码",
+      "warning": "你之前的备用代码已失效。请将这些新代码保存在安全的地方。每个代码只能使用一次。"
+    },
+    "generateCodes": ""
+  },
+  "apiTokens": {
+    "title": "API 令牌",
+    "accessToken": "访问令牌",
+    "description": "创建令牌，通过 API 更新可触发任务的物件",
+    "plusNotice": "基础套餐不支持 API 令牌。升级到 Plus 即可生成 API 令牌，用于对接外部系统并实现任务自动化。",
+    "showToken": "显示令牌",
+    "hideToken": "隐藏令牌",
+    "removeTitle": "移除令牌",
+    "removeMessage": "确定要移除 {{name}} 吗？",
+    "removedTitle": "已移除",
+    "removedMessage": "API 令牌已移除",
+    "tokenCopied": "令牌已复制到剪贴板",
+    "generateNew": "生成新令牌",
+    "nameModalTitle": "给新令牌起个名字，方便你日后识别。",
+    "generateToken": "生成令牌"
+  },
+  "storage": {
+    "title": "存储设置",
+    "serverTitle": "服务器存储用量",
+    "serverDescription": "这是你的账户在我们服务器上占用的存储空间（例如你上传的文件、图片和数据）。",
+    "usagePlaceholder": "已用 -- MB / 共 -- MB（--）",
+    "usage": "已用 {{used}} MB / 共 {{total}} MB（{{percent}}%）",
+    "basicPlanNotice": "基础套餐不支持服务器存储。升级到 Plus 即可查看服务器存储用量。",
+    "localTitleApp": "应用本地存储与缓存",
+    "localTitleBrowser": "浏览器本地存储与缓存",
+    "localDescription": "这是为了加快访问速度而保存在浏览器本地的数据。清除不会影响服务器上的数据，但可能会退出登录。",
+    "clearLocal": "清除全部本地存储与缓存",
+    "clearLocalTitle": "清除全部本地存储",
+    "clearLocalMessage": "确定要清除本地存储和缓存吗？这会移除此浏览器中的所有数据，并需要重新登录。",
+    "clearAll": "全部清除",
+    "appPreferences": "应用偏好设置",
+    "deviceOnly": "仅本设备",
+    "appPreferencesDescription": "这是应用保存在本设备上的偏好和设置。清除后应用相关设置会被重置，可能需要重新登录，但不会影响服务器上的数据。",
+    "clearPreferences": "清除应用偏好设置",
+    "clearPreferencesTitle": "清除应用偏好设置",
+    "clearPreferencesMessage": "确定要清除全部应用偏好设置吗？这会重置你的应用设置，并可能需要重新登录。"
+  },
+  "sidepanel": {
+    "title": "侧边栏自定义",
+    "description": "Customize the layout and visibility of cards in the sidepanel. This section is only available on large screen devices such as tablets and desktops.",
+    "resetToDefaults": "恢复默认",
+    "resetHelper": "这会将所有卡片的显示状态和顺序恢复为默认值。",
+    "cards": {
+      "welcome": {
+        "name": "切换用户",
+        "description": "让管理员／管理者以其他用户的视角查看任务"
+      },
+      "smartInsights": {
+        "name": "智能洞察",
+        "description": "基于你的任务提供快捷操作"
+      },
+      "assignees": {
+        "name": "按负责人查看任务",
+        "description": "按任务的负责人进行分组"
+      },
+      "calendar": {
+        "name": "日历视图",
+        "description": "以日历形式显示任务"
+      },
+      "activities": {
+        "name": "近期动态",
+        "description": "显示最近完成的任务和动态"
+      },
+      "weeklyGoals": {
+        "name": "每周目标",
+        "description": "显示每周进度和家庭完成情况统计"
+      }
+    },
+    "heading": "侧边栏设置",
+    "detailedDescription": ""
+  },
+  "homeSections": {
+    "title": "",
+    "description": "",
+    "resetToDefaults": "",
+    "resetHelper": "",
+    "sections": {
+      "greeting": {
+        "name": "",
+        "description": ""
+      },
+      "glance": {
+        "name": "",
+        "description": ""
+      },
+      "circle": {
+        "name": "",
+        "description": ""
+      },
+      "review": {
+        "name": "",
+        "description": ""
+      },
+      "overdue": {
+        "name": "",
+        "description": ""
+      },
+      "nextUp": {
+        "name": "",
+        "description": ""
+      },
+      "filters": {
+        "name": "",
+        "description": ""
+      },
+      "projects": {
+        "name": "",
+        "description": ""
+      }
+    },
+    "detailedDescription": ""
+  },
+  "layout": {
+    "title": "布局与导航",
+    "detailedDescription": "选择应用打开时显示的页面，以及围绕它的快捷方式和面板。",
+    "defaultView": {
+      "title": "默认视图",
+      "description": "选择应用打开时显示的页面。",
+      "options": {
+        "home": {
+          "name": "概览",
+          "description": "今天需要你处理的内容摘要，并支持快速添加"
+        },
+        "tasks": {
+          "name": "任务列表",
+          "description": "包含筛选、搜索和分组的完整任务列表"
+        }
+      }
+    },
+    "bottomNav": {
+      "title": "底部导航",
+      "description": "最多选择 {{max}} 个快捷方式放入手机底部导航栏，拖动可调整顺序。“更多”始终是最后一项，用于打开完整菜单。",
+      "resetToDefaults": "恢复默认",
+      "resetHelper": "这会将底部导航的快捷方式和顺序恢复为默认值。"
+    },
+    "sidepanel": {
+      "title": "侧边栏"
+    }
+  },
+  "theme": {
+    "title": "Theme preferences",
+    "description": "选择站点的外观。可以固定使用某个主题，也可以与系统同步，在日间和夜间主题之间自动切换。",
+    "themeMode": "主题模式",
+    "light": "浅色",
+    "dark": "深色",
+    "system": "跟随系统"
+  },
+  "localization": {
+    "title": "本地化",
+    "description": "自定义账户的语言、日期格式和区域偏好。",
+    "language": "语言",
+    "languageDescription": "选择你偏好的语言",
+    "rtlNotice": "该语言使用从右到左（RTL）的书写方向",
+    "dateFormat": "日期格式",
+    "dateFormatDescription": "选择应用中日期的显示方式",
+    "timeFormat": "时间格式",
+    "timeFormatDescription": "选择 12 小时制或 24 小时制",
+    "preview": "预览：{{value}}",
+    "12hour": "12 小时制（AM/PM）",
+    "24hour": "24 小时制",
+    "firstDayOfWeek": "每周第一天",
+    "firstDayOfWeekDescription": "选择一周从星期几开始",
+    "sunday": "星期日",
+    "monday": "星期一",
+    "saturday": "星期六",
+    "helpTranslate": "",
+    "formats": {
+      "mdy": "MM/DD/YYYY（美国）",
+      "dmy": "DD/MM/YYYY（欧洲）",
+      "ymd": "YYYY-MM-DD（ISO）",
+      "long": "长格式（例如：2024年1月1日）",
+      "short": "短格式（例如：2024年1月1日）"
+    },
+    "descriptionLong": ""
+  },
+  "advanced": {
+    "title": "高级设置",
+    "description": "配置 Webhook、实时更新等高级功能，进一步提升效率。",
+    "offlineTitle": "离线支持",
+    "offlineDescription": "在此设备／浏览器上离线时也能继续使用 Donetick。你的更改会保存在本地，恢复联网后自动同步。",
+    "offlineToggle": "启用离线支持",
+    "offlineHelper": "关闭后，将移除此设备／浏览器上未同步的离线更改和已保存的离线数据。",
+    "offlineEnabled": "已为此设备／浏览器启用离线模式",
+    "offlineDisabled": "已关闭离线模式并清除本地数据",
+    "offlineDisabledPartial": "离线模式已关闭，但可能仍有部分本地数据保留",
+    "offlineDisableTitle": "关闭离线模式",
+    "offlineDisableMessage": "关闭离线模式会移除此设备／浏览器上未同步的离线更改和已保存的离线数据。确定要继续吗？",
+    "offlineDisableConfirm": "关闭并清除数据",
+    "webhookTitle": "Webhook 集成",
+    "webhookDescription": "Webhook 可以在你的圈子中发生事件时，向其他服务实时发送通知。配置 Webhook URL 即可接收实时更新。",
+    "webhookPlusNotice": "基础套餐不支持 Webhook 通知。升级到 Plus 即可通过 Webhook 接收实时更新。",
+    "webhookToggle": "启用 Webhook",
+    "webhookHelper": "为任务和物件的更新启用 Webhook 通知。",
+    "webhookURL": "",
+    "webhookUpdated": "Webhook URL 更新成功",
+    "webhookUpdateFailed": "更新 Webhook URL 失败",
+    "realtimeTitle": "实时更新",
+    "realtimeDescription": "设置当圈子中的任务和动态发生变化时，你如何接收实时更新。",
+    "realtime": {
+      "toggleLabel": "启用实时更新",
+      "title": "实时更新",
+      "subtitle": "任务更新时立即收到通知",
+      "statusLabel": "状态：",
+      "basicPlan": "基础套餐不支持实时更新。升级到 Plus 即可在任务更新时立即收到通知。",
+      "disabled": "实时更新已关闭。开启后，当你或其他圈子成员完成、跳过或修改任务时，即可看到实时变化。",
+      "connected": "实时更新运行正常。当你或其他圈子成员完成、跳过或修改任务时，你会看到实时变化。",
+      "connecting": "正在连接实时更新…",
+      "errored": "实时更新已开启但未正常工作：{{error}}",
+      "notConnected": "实时更新已开启，但当前未连接。",
+      "basicPlanNotice": "基础套餐不支持实时更新。升级到 Plus，当你或其他圈子成员完成、跳过或修改任务时即可立即收到通知。"
+    }
+  },
+  "privacyAnalytics": {
+    "title": "",
+    "description": "",
+    "analyticsToggle": "",
+    "analyticsHelper": "",
+    "crashToggle": "",
+    "crashHelper": "",
+    "footnote": ""
+  },
+  "subscription": {
+    "sessionFailed": "",
+    "errorTitle": "",
+    "errorMessage": "",
+    "subscribe": "",
+    "cancelAnytime": "",
+    "description": "",
+    "whatsIncluded": "",
+    "mostPopular": "",
+    "featureNotifications": "",
+    "featureRichText": "",
+    "featureThingTriggers": "",
+    "featureApiTokens": "",
+    "featureImageUploads": "",
+    "featureAutomation": "",
+    "planYearly": ""
+  },
+  "childUsers": {
+    "errNameRequired": "",
+    "errNameMin": "",
+    "errNameMax": "",
+    "errNameChars": "",
+    "errPasswordRequired": "",
+    "errPasswordLength": "",
+    "errPasswordMatch": "",
+    "errDisplayNameMax": "",
+    "createTitle": "",
+    "createDescription": "",
+    "createButton": "",
+    "nameLabel": "",
+    "namePlaceholder": "",
+    "displayNameLabel": "",
+    "displayNamePlaceholder": "",
+    "passwordLabel": "",
+    "passwordPlaceholder": "",
+    "confirmPasswordLabel": "",
+    "confirmPasswordPlaceholder": ""
+  },
+  "passwordChange": {
+    "minLength": "",
+    "maxLength": "",
+    "description": "",
+    "mismatch": "",
+    "newPassword": "",
+    "newPasswordPlaceholder": "",
+    "confirmPassword": "",
+    "confirmPasswordPlaceholder": ""
+  },
+  "payment": {
+    "cancelledTitle": "",
+    "cancelledRedirect": "",
+    "successTitle": "",
+    "successRedirect": ""
+  },
+  "developer": {
+    "tokenRefreshed": "",
+    "endpointCalled": "",
+    "clearDbCleared": "",
+    "clearDbDone": "",
+    "intro": "",
+    "refreshCookieNote": "",
+    "noReconnectInfo": "",
+    "noTimeoutInfo": "",
+    "noDebugInfo": ""
+  },
+  "backup": {
+    "keyRequired": "",
+    "created": "",
+    "createFailed": "",
+    "selectFile": "",
+    "restored": "",
+    "restoreFailed": "",
+    "readFailed": "",
+    "createIntro": "",
+    "keyPlaceholder": "",
+    "includeAssets": "",
+    "warningLabel": "",
+    "restoreWarning": "",
+    "restoreKeyPlaceholder": "",
+    "title": "",
+    "createTab": "",
+    "restoreTab": "",
+    "creating": "",
+    "restoring": ""
+  },
+  "deletion": {
+    "passwordRequired": "",
+    "passwordAndDelete": "",
+    "failed": "",
+    "passwordPlaceholder": "",
+    "transferIntro": "",
+    "selectOwner": "",
+    "confirmPrompt": "",
+    "typeDelete": "",
+    "warningLead": "",
+    "warningIntro": "",
+    "removesProfile": "",
+    "removesChores": "",
+    "removesTokens": "",
+    "removesStorage": "",
+    "removesPoints": "",
+    "removesCircles": "",
+    "passwordToContinue": "",
+    "circleLabel": "",
+    "newOwner": "",
+    "logoutNotice": "",
+    "passwordLabel": "",
+    "typeToConfirm": ""
+  },
+  "realtime": {
+    "titleSse": "",
+    "subtitleSse": ""
+  },
+  "nativeCancel": {
+    "title": "",
+    "dismiss": "",
+    "cancelViaStore": "",
+    "cancelDesktop": "",
+    "intro": "",
+    "iosHeading": "",
+    "iosStep1": "",
+    "iosStep2": "",
+    "iosStep3": "",
+    "iosStep4": "",
+    "iosStep5": "",
+    "iosNote": "",
+    "androidHeading": "",
+    "androidStep1": "",
+    "androidStep2": "",
+    "androidStep3": "",
+    "androidStep4": "",
+    "androidStep5": "",
+    "androidStep6": "",
+    "androidNote": "",
+    "webHeading": "",
+    "webBody": "",
+    "webNote": "",
+    "footer": ""
+  }
+}

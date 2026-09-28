@@ -1,0 +1,71 @@
+{
+  "shared": "Partagée",
+  "delete": {
+    "title": "Supprimer l'étiquette",
+    "message": "Voulez-vous vraiment supprimer cette étiquette ? Elle sera retirée de toutes les tâches."
+  },
+  "loadError": "Impossible de charger les étiquettes. Veuillez réessayer.",
+  "search": {
+    "placeholder": "Rechercher des étiquettes",
+    "noResultsTitle": "Aucune étiquette correspondante",
+    "noResultsDescription": "Aucune étiquette ne correspond à « {{searchTerm}} ».",
+    "noFilterResultsDescription": "Aucune étiquette ne correspond au filtre actuel.",
+    "clear": "Effacer la recherche",
+    "showAll": "Afficher toutes les étiquettes"
+  },
+  "detail": {
+    "taskCount_one": "{{count}} tâche",
+    "taskCount_other": "{{count}} tâches",
+    "labelActions": "Actions sur l'étiquette",
+    "filters": {
+      "all": "Toutes",
+      "overdue": "En retard",
+      "today": "Aujourd'hui",
+      "undated": "Sans date"
+    },
+    "noMatchingStatus": "Aucune tâche portant cette étiquette ne se trouve actuellement dans cet état.",
+    "clearFilters": "Afficher toutes les tâches",
+    "searchPlaceholder": "Rechercher des tâches portant cette étiquette",
+    "emptyTitle": "Aucune tâche portant cette étiquette",
+    "emptyDescription": "Aucune tâche ne porte encore l'étiquette « {{label}} ». Ajoutez-la à une tâche pour que celle-ci apparaisse ici.",
+    "browseTasks": "Parcourir les tâches",
+    "noResultsTitle": "Aucune tâche correspondante",
+    "noResultsDescription": "Aucune tâche portant cette étiquette ne correspond à « {{searchTerm}} ».",
+    "notFoundTitle": "Étiquette introuvable",
+    "notFoundDescription": "Cette étiquette a peut-être été supprimée ou n'est plus partagée avec vous.",
+    "backToLabels": "Retour aux étiquettes"
+  },
+  "blurb": "Gérez vos étiquettes et organisez efficacement vos tâches. Une étiquette est automatiquement partagée avec votre cercle dès qu'elle est utilisée sur une tâche partagée.",
+  "modal": {
+    "errorEmptyName": "Le nom ne peut pas être vide",
+    "errorDuplicate": "Une étiquette portant ce nom existe déjà",
+    "errorNoColor": "Sélectionnez une couleur",
+    "saveFailedTitle": "Échec de l'enregistrement de l'étiquette",
+    "saveFailedMessage": "Impossible d'enregistrer l'étiquette. Veuillez réessayer.",
+    "name": "Nom",
+    "editTitle": "Modifier l'étiquette",
+    "addTitle": "Ajouter une étiquette",
+    "color": "Couleur",
+    "saveChanges": "Enregistrer les modifications",
+    "addLabel": "Ajouter une étiquette",
+    "colorAriaSelect": "Sélectionner {{color}}"
+  },
+  "picker": {
+    "label": "Étiquettes",
+    "createLabel": "Créer une étiquette",
+    "labelsCount_one": "{{count}} étiquette",
+    "labelsCount_other": "{{count}} étiquettes"
+  },
+  "view": {
+    "emptyTitle": "Aucune étiquette pour le moment",
+    "emptyDescription": "Les étiquettes regroupent les tâches de votre cercle, comme « cuisine » ou « factures », afin de les filtrer en un geste.",
+    "createLabel": "Créer une étiquette",
+    "filterTitle": "Afficher",
+    "sortName": "Nom",
+    "sortColor": "Couleur",
+    "sortRecent": "Créées récemment",
+    "filterAll": "Toutes les étiquettes",
+    "filterMine": "Créées par moi",
+    "filterShared": "Partagées avec moi"
+  }
+}

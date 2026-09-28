@@ -1,0 +1,723 @@
+{
+  "title": "Nastavení",
+  "common": {
+    "save": "Uložit",
+    "cancel": "Zrušit",
+    "confirm": "Potvrdit",
+    "remove": "Odebrat",
+    "delete": "Smazat",
+    "refresh": "Obnovit",
+    "loading": "Načítání...",
+    "on": "Zapnuto",
+    "off": "Vypnuto",
+    "error": "Chyba",
+    "success": "Hotovo",
+    "plusFeature": "Funkce Plus",
+    "earlyAccess": "Předběžný přístup"
+  },
+  "overview": {
+    "title": "Nastavení",
+    "subtitle": "Přizpůsobte si aplikaci a spravujte předvolby svého účtu",
+    "upgrade": {
+      "title": "Přejít na Plus",
+      "description": "Odemkněte výkonné funkce, které zvýší vaši produktivitu",
+      "button": "Přejít nyní",
+      "features": {
+        "richText": "Formátované popisy",
+        "notifications": "Oznámení k úkolům",
+        "apiIntegrations": "Integrace přes API",
+        "advancedAutomation": "Pokročilá automatizace"
+      }
+    },
+    "sections": {
+      "profile": {
+        "title": "Nastavení profilu",
+        "description": "Upravte údaje profilu, fotku, zobrazované jméno a časové pásmo."
+      },
+      "circle": {
+        "title": "Nastavení kruhu",
+        "description": "Spravujte svůj kruh, zvěte členy a vyřizujte žádosti o připojení."
+      },
+      "account": {
+        "title": "Nastavení účtu",
+        "description": "Spravujte předplatné, změňte heslo a možnosti smazání účtu."
+      },
+      "subaccounts": {
+        "title": "Spravované účty",
+        "description": "Vytvářejte a spravujte podúčty, které se mohou přihlásit a plnit přiřazené úkoly."
+      },
+      "notifications": {
+        "title": "Oznámení",
+        "description": "Nastavte push oznámení, e-mailová upozornění a cíle oznámení k úkolům."
+      },
+      "mfa": {
+        "title": "Vícefázové ověření",
+        "description": "Přidejte další vrstvu zabezpečení pomocí MFA s ověřovací aplikací."
+      },
+      "apitokens": {
+        "title": "API tokeny",
+        "description": "Generujte a spravujte přístupové tokeny pro integrace třetích stran a přístup k API."
+      },
+      "storage": {
+        "title": "Nastavení úložiště",
+        "description": "Zálohujte a obnovujte data, spravujte místní úložiště a synchronizaci."
+      },
+      "layout": {
+        "title": "Rozvržení a navigace",
+        "description": "Vyberte obrazovku, kterou aplikace otevře, a zkratky i panely kolem ní."
+      },
+      "theme": {
+        "title": "Předvolby motivu",
+        "description": "Zvolte preferovaný motiv a nastavte tmavý/světlý režim."
+      },
+      "localization": {
+        "title": "Lokalizace",
+        "description": "Nastavte jazyk, formát data a času a regionální předvolby."
+      },
+      "advanced": {
+        "title": "Pokročilá nastavení",
+        "description": "Nastavte webhooky, aktualizace v reálném čase a další pokročilé funkce pro vyšší produktivitu."
+      },
+      "privacy": {
+        "title": "Soukromí a analytika",
+        "description": "Ovládejte anonymní analytiku používání a hlášení o pádech."
+      },
+      "developer": {
+        "title": "Nastavení pro vývojáře",
+        "description": "Zobrazte technické informace o ověřovacích tokenech, připojeních SSE a ladicí data."
+      },
+      "feedback": {
+        "title": "Poslat zpětnou vazbu",
+        "description": "Dejte nám vědět, jak vám Donetick vyhovuje, nebo navrhněte funkci."
+      },
+      "bugReport": {
+        "title": "Nahlásit problém",
+        "description": "Popište nám, co nefunguje, a technické podrobnosti přiložíme za vás."
+      },
+      "sidepanel": {
+        "title": "Přizpůsobení postranního panelu",
+        "description": "Upravte rozložení a viditelnost karet v postranním panelu."
+      }
+    }
+  },
+  "profile": {
+    "title": "Nastavení profilu",
+    "description": "Upravte své zobrazované jméno a profilovou fotku.",
+    "photoUpdated": "Fotka aktualizována",
+    "photoUpdatedMessage": "Vaše profilová fotka byla úspěšně aktualizována!",
+    "uploadFailed": "Nahrávání se nezdařilo",
+    "uploadFailedMessage": "Fotku se nepodařilo nahrát. Zkuste to prosím znovu.",
+    "profileUpdated": "Profil aktualizován",
+    "profileUpdatedMessage": "Údaje vašeho profilu byly úspěšně uloženy!",
+    "updateFailed": "Aktualizace se nezdařila",
+    "updateFailedMessage": "Profil nelze aktualizovat. Zkontrolujte připojení a zkuste to znovu.",
+    "changePhoto": "Změnit fotku",
+    "editPhoto": "Upravit profilovou fotku",
+    "displayName": "Zobrazované jméno",
+    "displayNamePlaceholder": "Zadejte své zobrazované jméno",
+    "timezone": "Časové pásmo",
+    "timezonePlaceholder": "Vyberte své časové pásmo",
+    "save": "Uložit",
+    "cancel": "Zrušit"
+  },
+  "circleSettings": {
+    "title": "Nastavení kruhu",
+    "description": "Váš účet se automaticky připojí ke kruhu, když ho vytvoříte nebo se k němu přidáte. Přátele snadno pozvete sdílením jedinečného kódu nebo odkazu kruhu níže. Když někdo požádá o připojení k vašemu kruhu, dostanete oznámení níže.",
+    "memberOf": "Jste součástí kruhu {{name}}",
+    "yourCircleCode": "Kód vašeho kruhu:",
+    "copyCode": "Kopírovat kód",
+    "shareInvite": "Sdílet pozvánku",
+    "codeCopied": "Kód zkopírován do schránky",
+    "linkCopied": "Odkaz s pozvánkou zkopírován do schránky",
+    "myCircle": "můj kruh",
+    "shareTitle": "Připojte se ke kruhu {{name}} v Donetick",
+    "shareText": "Rád(a) bych vás pozval(a) do kruhu {{name}} v Donetick.",
+    "shareDialogTitle": "Sdílet pozvánku do kruhu",
+    "leave": "Opustit kruh",
+    "leaveConfirmTitle": "Opustit kruh",
+    "leaveConfirmMessage": "Opravdu chcete opustit svůj kruh?",
+    "leaveConfirmButton": "Opustit",
+    "leftCircle": "Kruh byl úspěšně opuštěn",
+    "leaveFailed": "Kruh se nepodařilo opustit",
+    "circleMembers": "Členové kruhu",
+    "you": "(Vy)",
+    "pendingApproval": "Čeká na schválení",
+    "joinedOn": "Připojen(a) {{date}}",
+    "requestedToJoin": "Žádost o připojení {{date}}",
+    "roles": {
+      "member": "Člen",
+      "memberDescription": "Běžný člen kruhu",
+      "manager": "Manažer",
+      "managerDescription": "Může zastupovat uživatele a jednat jejich jménem",
+      "admin": "Správce",
+      "adminDescription": "Plný přístup ke kruhu"
+    },
+    "roleUpdateFailed": "Roli se nepodařilo aktualizovat",
+    "removeMemberTitle": "Odebrat člena",
+    "removeMemberMessage": "Opravdu chcete odebrat uživatele {{name}} z vašeho kruhu?",
+    "memberRemoved": "Člen byl úspěšně odebrán",
+    "circleMemberRequests": "Žádosti o členství v kruhu",
+    "lastUpdated": "Naposledy aktualizováno: {{time}}",
+    "refreshing": "Obnovování...",
+    "refreshFailed": "Žádosti o členství se nepodařilo obnovit",
+    "wantsToJoin": "{{name}} se chce připojit k vašemu kruhu.",
+    "accept": "Přijmout",
+    "acceptRequestTitle": "Přijmout žádost o členství",
+    "acceptRequestMessage": "Opravdu chcete přijmout uživatele {{name}} (uživatelské jméno: {{username}}) do svého kruhu?",
+    "requestAccepted": "Žádost byla úspěšně přijata",
+    "or": "nebo",
+    "joinOtherDescription": "Chcete se připojit ke kruhu někoho jiného? Požádejte ho o jedinečný kód nebo odkaz kruhu. Kód zadejte níže a připojte se k jeho kruhu.",
+    "enterCircleCode": "Zadejte kód kruhu:",
+    "enterCodePlaceholder": "Zadejte kód",
+    "joinCircle": "Připojit se ke kruhu",
+    "joinedPending": "Žádost o připojení ke kruhu odeslána, počkejte, až ji vlastník kruhu přijme.",
+    "alreadyMember": "Už jste členem tohoto kruhu",
+    "joinFailed": "Připojení ke kruhu se nezdařilo",
+    "copyLink": "Kopírovat odkaz"
+  },
+  "accountSettings": {
+    "title": "Nastavení účtu",
+    "description": "Změňte nastavení účtu, jeho typ nebo heslo",
+    "accountType": "Typ účtu: {{type}}",
+    "free": "Zdarma",
+    "plus": "",
+    "plusUntil": "Plus (do {{date}})",
+    "activeDescription": "Aktuálně máte předplatné Plus. Vaše předplatné se obnoví {{date}}.",
+    "cancelledDescription": "Zrušili jste předplatné. Váš účet bude {{date}} převeden na tarif Zdarma.",
+    "freeDescription": "Aktuálně používáte tarif Zdarma. Přejděte na Plus a odemkněte další funkce.",
+    "upgrade": "Přejít na Plus",
+    "cancel": "Zrušit",
+    "password": "Heslo:",
+    "changePassword": "Změnit heslo",
+    "passwordChanged": "Heslo bylo úspěšně změněno",
+    "passwordChangeFailed": "Změna hesla se nezdařila",
+    "dangerZone": "Nebezpečná zóna",
+    "dangerZoneDescription": "Jakmile účet smažete, není cesty zpět. Buďte si prosím jisti.",
+    "deleteAccount": "Smazat účet",
+    "accountDeleted": "Účet byl úspěšně smazán",
+    "subscriptionCancelled": "Předplatné zrušeno",
+    "subscriptionCancelFailed": "Předplatné se nepodařilo zrušit",
+    "purchase": {
+      "success": "Nákup proběhl úspěšně! Restartujte prosím aplikaci pro přístup k funkcím Plus.",
+      "storeConnection": "Problém s připojením k obchodu. Zkontrolujte síť a zkuste to znovu.",
+      "notAllowed": "Nákupy nejsou na tomto zařízení povoleny. Zkontrolujte omezení zařízení.",
+      "unavailable": "Toto předplatné není k dispozici. Zkuste to prosím později.",
+      "alreadyProcessed": "Tento nákup již byl zpracován. Pokud si myslíte, že jde o chybu, kontaktujte podporu.",
+      "receiptMissing": "Chybí doklad o nákupu. Zkuste nákup provést znovu.",
+      "networkError": "Chyba sítě. Zkontrolujte připojení a zkuste to znovu.",
+      "invalidReceipt": "Neplatný doklad o nákupu. Pokud problém přetrvává, kontaktujte podporu.",
+      "pending": "Platba čeká na schválení. Přístup získáte po schválení.",
+      "failed": "Nákup se nezdařil: {{error}}. Zkuste to znovu nebo kontaktujte podporu.",
+      "unknownError": "Neznámá chyba"
+    }
+  },
+  "subaccounts": {
+    "title": "Spravované účty",
+    "description": "Spravujte podúčty. Uživatelé podúčtů se mohou přihlásit a plnit přiřazené úkoly.",
+    "notParentTitle": "Správa podúčtů",
+    "notParentMessage": "Podúčty mohou spravovat pouze hlavní uživatelé.",
+    "freePlanNotice": "V tarifu Zdarma je povolen 1 podúčet. Přejděte na Plus a získejte až 5 podúčtů.",
+    "count": "Podúčty ({{count}})",
+    "add": "Přidat podúčet",
+    "loading": "Načítání podúčtů...",
+    "emptyTitle": "Žádné podúčty",
+    "emptyDescription": "Vytvořte podúčty, aby se členové týmu mohli přihlásit a plnit přiřazené úkoly.",
+    "addFirst": "Přidat první podúčet",
+    "username": "Uživatelské jméno: {{username}}",
+    "created": "Vytvořeno: {{date}}",
+    "changePassword": "Změnit heslo",
+    "deleteAccount": "Smazat účet",
+    "createdSuccess": "Podúčet „{{name}}“ byl úspěšně vytvořen!",
+    "createFailed": "Podúčet se nepodařilo vytvořit: {{error}}",
+    "createFailedGeneric": "Podúčet se nepodařilo vytvořit",
+    "passwordUpdated": "Heslo podúčtu bylo úspěšně aktualizováno",
+    "passwordUpdateFailed": "Heslo se nepodařilo aktualizovat: {{error}}",
+    "passwordUpdateFailedGeneric": "Heslo se nepodařilo aktualizovat",
+    "deleteConfirmTitle": "Smazat podúčet",
+    "deleteConfirmMessage": "Opravdu chcete smazat podúčet „{{name}}“? Tuto akci nelze vrátit.",
+    "deleted": "Podúčet „{{name}}“ byl úspěšně smazán",
+    "deleteFailed": "Podúčet se nepodařilo smazat: {{error}}",
+    "deleteFailedGeneric": "Podúčet se nepodařilo smazat",
+    "howItWorksTitle": "Jak spravované účty fungují",
+    "howItWorks1": "Spravované účty vytváří hlavní uživatel. Jsou určeny pro uživatele, u kterých chcete mít možnost účet smazat a obnovit heslo.",
+    "howItWorks2": "Podúčty se mohou přihlásit vlastním uživatelským jménem a heslem.",
+    "howItWorks3": "Spravované účty mohou plnit úkoly, ale mají omezená administrátorská oprávnění",
+    "howItWorks4": "Spravované účty jsou automaticky přidány do vašeho kruhu"
+  },
+  "notifications": {
+    "title": "Nastavení oznámení",
+    "deviceSection": "Oznámení v zařízení",
+    "deviceSectionDescription": "Spravujte oznámení v zařízení",
+    "deviceLabel": "Oznámení v zařízení",
+    "deviceHelper": "Dostávat oznámení v zařízení, když má úkol termín",
+    "mobileOnly": "Tato funkce je dostupná pouze na mobilních zařízeních",
+    "testNotification": "Testovací oznámení",
+    "testNotificationBody": "Brzy máte termín úkolu",
+    "dueTitle": "Oznámení v termínu",
+    "dueLabel": "Oznámení, když má úkol termín",
+    "preDueTitle": "Oznámení před termínem",
+    "preDueLabel": "Oznámení několik hodin před termínem úkolu",
+    "overdueTitle": "Oznámení po termínu",
+    "overdueLabel": "Oznámení, když je úkol po termínu",
+    "pushLabel": "Push oznámení",
+    "pushHelper": "Dostávat připomenutí, oznámení a přiřazení úkolů prostřednictvím push oznámení",
+    "registeredDevices": "Registrovaná zařízení ({{count}}/5)",
+    "registeredDevicesDescription": "Zařízení registrovaná k příjmu push oznámení pro váš účet",
+    "currentDevice": "Aktuální zařízení: {{platform}} {{model}}",
+    "currentDeviceNotRegistered": "Toto zařízení není registrováno pro push oznámení",
+    "limitReached": "Dosažen limit",
+    "registerDevice": "Registrovat zařízení",
+    "unknownDevice": "Neznámé zařízení",
+    "deviceCreatedAt": "Vytvořeno: {{date}}",
+    "noDevices": "Pro push oznámení nejsou registrována žádná zařízení",
+    "customSection": "Vlastní oznámení",
+    "customSectionDescription": "Oznámení přes jinou platformu, například Telegram nebo Pushover",
+    "customLabel": "Vlastní oznámení",
+    "customHelper": "Dostávat oznámení na jiné platformě",
+    "targetNone": "Žádné",
+    "targetTelegram": "",
+    "targetPushover": "",
+    "targetWebhooks": "Webhooky",
+    "telegramBotHelpBefore": "Aby oznámení přes Telegram fungovala, musíte botovi nejprve napsat zprávu",
+    "telegramBotHelpAfter": "a zahajte chat",
+    "clickHere": "Klikněte sem",
+    "chatId": "ID chatu",
+    "chatIdPlaceholder": "ID uživatele / ID chatu",
+    "telegramChatIdHelpBefore": "Pokud neznáte své ID chatu, zahajte chat s userinfobot a ten vám ho pošle.",
+    "telegramChatIdHelpAfter": "a zahajte chat s userinfobot",
+    "userKey": "Uživatelský klíč",
+    "userKeyPlaceholder": "ID uživatele",
+    "chatIdRequired": "ID chatu je povinné",
+    "chatIdInvalid": "Neplatné ID chatu",
+    "userKeyRequired": "Uživatelský klíč je povinný",
+    "targetUpdated": "Cíl oznámení aktualizován",
+    "targetUpdateFailed": "Chyba při aktualizaci cíle oznámení: {{error}}",
+    "deviceRegistered": "Zařízení bylo úspěšně registrováno pro push oznámení.",
+    "deviceLimitTitle": "Dosažen limit zařízení",
+    "deviceLimitMessage": "Dosáhli jste maximálního počtu 5 registrovaných zařízení. Před registrací tohoto zařízení nějaké odeberte.",
+    "registrationFailedTitle": "Registrace se nezdařila",
+    "registrationFailedMessage": "Zařízení se nepodařilo automaticky registrovat. Zkuste to prosím znovu.",
+    "permissionRequiredTitle": "Vyžadováno oprávnění",
+    "permissionRequiredMessage": "Pro registraci tohoto zařízení je nutné oprávnění k push oznámením.",
+    "registrationInitiatedTitle": "Registrace zahájena",
+    "registrationInitiatedMessage": "Registrace push oznámení byla zahájena. Zařízení bude registrováno automaticky.",
+    "registerDeviceFailed": "Zařízení se nepodařilo registrovat. Zkuste to prosím znovu.",
+    "permissionDeniedTitle": "Oprávnění k oznámením zamítnuto",
+    "permissionDeniedMessage": "Zamítli jste oprávnění k oznámením. Později je můžete povolit v nastavení zařízení.",
+    "pushPermissionDeniedTitle": "Oprávnění k push oznámením zamítnuto",
+    "pushPermissionDeniedMessage": "Push oznámení byla vypnuta. V případě potřeby je můžete povolit v nastavení zařízení.",
+    "unregisterFailed": "Registraci zařízení se nepodařilo zrušit"
+  },
+  "mfa": {
+    "title": "Vícefázové ověření",
+    "description": "Přidejte ke svému účtu další vrstvu zabezpečení pomocí vícefázového ověření (MFA). Je-li zapnuto, budete při přihlášení kromě hesla zadávat i ověřovací kód z ověřovací aplikace.",
+    "twoFactor": "Dvoufázové ověření",
+    "enabledSubtitle": "Váš účet je chráněn 2FA",
+    "disabledSubtitle": "Zabezpečte svůj účet ověřovací aplikací",
+    "enable": "Zapnout",
+    "disable": "Vypnout",
+    "enabledSuccess": "MFA bylo úspěšně zapnuto!",
+    "disabledSuccess": "MFA bylo úspěšně vypnuto!",
+    "errors": {
+      "qrGenerationFailed": "QR kód se nepodařilo vygenerovat",
+      "invalidResponse": "Neplatná odpověď serveru. Chybí QR kód nebo tajný klíč.",
+      "notFound": "Koncový bod pro nastavení MFA nebyl nalezen. Tato funkce možná ještě není dostupná.",
+      "unauthorized": "Neautorizováno. Přihlaste se prosím znovu.",
+      "serverError": "Chyba serveru. Zkuste to prosím později.",
+      "setupFailed": "Nastavení MFA se nezdařilo ({{status}}). Zkuste to prosím znovu.",
+      "networkError": "Chyba sítě. Zkontrolujte připojení a zkuste to znovu.",
+      "invalidCode": "Neplatný ověřovací kód. Zkuste to prosím znovu.",
+      "confirmFailed": "MFA se nepodařilo potvrdit. Zkuste to prosím znovu.",
+      "disableFailed": "MFA se nepodařilo vypnout. Zkuste to prosím znovu."
+    },
+    "setup": {
+      "title": "Nastavení vícefázového ověření",
+      "addedAccount": "Účet jsem přidal(a)",
+      "back": "Zpět",
+      "verifyAndEnable": "Ověřit a zapnout",
+      "savedBackupCodes": "Záložní kódy jsem si uložil(a)",
+      "step1Label": "Krok 1:",
+      "step1": "Naskenujte níže uvedený QR kód ověřovací aplikací (Google Authenticator, Authy apod.)",
+      "qrAlt": "QR kód MFA",
+      "qrFailed": "QR kód se nepodařilo vygenerovat. Zkuste to znovu nebo použijte klíč pro ruční zadání níže.",
+      "manualKey": "Klíč pro ruční zadání:",
+      "step2Label": "Krok 2:",
+      "step2": "Zadejte 6místný ověřovací kód z ověřovací aplikace",
+      "codePlaceholder": "Zadejte 6místný kód",
+      "successTitle": "MFA bylo úspěšně zapnuto!",
+      "backupCodesTitle": "Uložte si tyto záložní kódy na bezpečné místo",
+      "backupCodesDescription": "Tyto kódy můžete použít pro přístup k účtu, pokud ztratíte zařízení s ověřovací aplikací. Každý kód lze použít pouze jednou."
+    },
+    "disableModal": {
+      "title": "Vypnout vícefázové ověření",
+      "warning": "Vypnutím MFA bude váš účet méně zabezpečený. Opravdu chcete pokračovat?",
+      "prompt": "Pro potvrzení zadejte ověřovací kód z ověřovací aplikace:",
+      "confirm": "Vypnout MFA"
+    },
+    "backupCodesModal": {
+      "title": "Nové záložní kódy",
+      "warning": "Vaše předchozí záložní kódy jsou nyní neplatné. Uložte si tyto nové kódy na bezpečné místo. Každý kód lze použít pouze jednou."
+    },
+    "generateCodes": "Vygenerovat nové kódy"
+  },
+  "apiTokens": {
+    "title": "API tokeny",
+    "accessToken": "Přístupový token",
+    "description": "Vytvořte token pro použití s API k aktualizaci věcí, které spouštějí úkoly",
+    "plusNotice": "API tokeny nejsou v tarifu Basic k dispozici. Přejděte na Plus a generujte API tokeny pro integraci s externími systémy a automatizaci úkolů.",
+    "showToken": "Zobrazit token",
+    "hideToken": "Skrýt token",
+    "removeTitle": "Odebrat token",
+    "removeMessage": "Opravdu chcete odebrat {{name}}?",
+    "removedTitle": "Odebráno",
+    "removedMessage": "API token byl odebrán",
+    "tokenCopied": "Token zkopírován do schránky",
+    "generateNew": "Vygenerovat nový token",
+    "nameModalTitle": "Pojmenujte nový token, abyste si pamatovali, k čemu slouží.",
+    "generateToken": "Vygenerovat token"
+  },
+  "storage": {
+    "title": "Nastavení úložiště",
+    "serverTitle": "Využití úložiště na serveru",
+    "serverDescription": "Toto je úložiště, které váš účet využívá na našich serverech (např. nahrané soubory, obrázky a data).",
+    "usagePlaceholder": "Využito -- MB z -- MB (--)",
+    "usage": "Využito {{used}} MB z {{total}} MB ({{percent}} %)",
+    "basicPlanNotice": "Úložiště na serveru není v tarifu Basic k dispozici. Přejděte na Plus a sledujte využití úložiště na serveru.",
+    "localTitleApp": "Místní úložiště a mezipaměť aplikace",
+    "localTitleBrowser": "Místní úložiště a mezipaměť prohlížeče",
+    "localDescription": "Jde o data uložená místně ve vašem prohlížeči pro rychlejší přístup. Jejich vymazání neovlivní data na serveru, ale může vás odhlásit.",
+    "clearLocal": "Vymazat veškeré místní úložiště a mezipaměť",
+    "clearLocalTitle": "Vymazat veškeré místní úložiště",
+    "clearLocalMessage": "Opravdu chcete vymazat místní úložiště a mezipaměť? Odstraní se všechna vaše data z tohoto prohlížeče a bude nutné se znovu přihlásit.",
+    "clearAll": "Vymazat vše",
+    "appPreferences": "Předvolby aplikace",
+    "deviceOnly": "Pouze zařízení",
+    "appPreferencesDescription": "Jde o předvolby a nastavení, které aplikace ukládá místně ve vašem zařízení. Jejich vymazání obnoví nastavení aplikace a může vás odhlásit, ale neovlivní data na serveru.",
+    "clearPreferences": "Vymazat předvolby aplikace",
+    "clearPreferencesTitle": "Vymazat předvolby aplikace",
+    "clearPreferencesMessage": "Opravdu chcete vymazat všechny předvolby aplikace? Nastavení aplikace se obnoví a může být nutné se znovu přihlásit."
+  },
+  "sidepanel": {
+    "title": "Přizpůsobení postranního panelu",
+    "description": "Určete, které karty se v postranním panelu zobrazí a v jakém pořadí. Pořadí změníte přetažením, viditelnost každé karty přepínačem.",
+    "resetToDefaults": "Obnovit výchozí",
+    "resetHelper": "Obnoví výchozí viditelnost a pořadí všech karet.",
+    "cards": {
+      "welcome": {
+        "name": "Přepínač uživatelů",
+        "description": "Umožňuje správcům/manažerům zobrazit úkoly jako jiní uživatelé"
+      },
+      "smartInsights": {
+        "name": "Chytré přehledy",
+        "description": "Rychlé akce podle vašich úkolů"
+      },
+      "assignees": {
+        "name": "Úkoly podle řešitele",
+        "description": "Seskupí úkoly podle toho, komu jsou přiřazeny"
+      },
+      "calendar": {
+        "name": "Kalendářní zobrazení",
+        "description": "Zobrazí úkoly v kalendáři"
+      },
+      "activities": {
+        "name": "Nedávné aktivity",
+        "description": "Zobrazí nedávno dokončené úkoly a aktivity"
+      },
+      "weeklyGoals": {
+        "name": "Týdenní cíle",
+        "description": "Zobrazí týdenní pokrok a statistiky dokončení v rodině"
+      }
+    },
+    "heading": "Nastavení postranního panelu",
+    "detailedDescription": "Upravte rozložení a viditelnost karet v postranním panelu. Tato sekce je dostupná pouze na zařízeních s velkou obrazovkou, jako jsou tablety a počítače."
+  },
+  "homeSections": {
+    "title": "Přizpůsobení přehledu",
+    "description": "Určete, které sekce se na domovské obrazovce zobrazí a v jakém pořadí. Pořadí změníte přetažením, viditelnost každé sekce přepínačem.",
+    "resetToDefaults": "Obnovit výchozí",
+    "resetHelper": "Obnoví výchozí viditelnost a pořadí všech sekcí.",
+    "sections": {
+      "greeting": {
+        "name": "Pozdrav",
+        "description": "Nadpis nahoře, který shrnuje váš den"
+      },
+      "glance": {
+        "name": "Na první pohled",
+        "description": "Počty po termínu / dnes / ke kontrole / nenaplánovaných"
+      },
+      "circle": {
+        "name": "Váš kruh",
+        "description": "Ukazuje, co má kdo z vašeho kruhu tento týden na starosti"
+      },
+      "review": {
+        "name": "Ke kontrole",
+        "description": "Dokončené úkoly čekající na schválení"
+      },
+      "overdue": {
+        "name": "Po termínu",
+        "description": "Úkoly, kterým uplynul termín"
+      },
+      "nextUp": {
+        "name": "Brzy",
+        "description": "Co má termín dnes a zítra"
+      },
+      "filters": {
+        "name": "Filtry",
+        "description": "Rychlý přístup k připnutým a nejužitečnějším filtrům"
+      },
+      "projects": {
+        "name": "Projekty",
+        "description": "Kde se práce hromadí, podle projektů"
+      }
+    },
+    "detailedDescription": "Upravte rozložení a viditelnost sekcí na domovské obrazovce."
+  },
+  "layout": {
+    "title": "Rozvržení a navigace",
+    "detailedDescription": "Vyberte obrazovku, kterou aplikace otevře, a to, jaké zkratky a panely ji obklopují.",
+    "defaultView": {
+      "title": "Výchozí zobrazení",
+      "description": "Vyberte, kterou obrazovku aplikace otevře.",
+      "options": {
+        "home": {
+          "name": "Přehled",
+          "description": "Souhrn toho, co dnes potřebuje vaši pozornost, včetně rychlého přidání"
+        },
+        "tasks": {
+          "name": "Seznam úkolů",
+          "description": "Úplný seznam úkolů s filtry, hledáním a seskupením"
+        }
+      }
+    },
+    "bottomNav": {
+      "title": "Dolní navigace",
+      "description": "Vyberte až {{max}} zkratky pro dolní navigační lištu na mobilu a přetažením je seřaďte. Položka „Více“ vždy zůstává poslední a otevírá celé menu.",
+      "resetToDefaults": "Obnovit výchozí",
+      "resetHelper": "Obnoví výchozí zkratky a pořadí dolní navigace."
+    },
+    "sidepanel": {
+      "title": "Postranní panel"
+    }
+  },
+  "theme": {
+    "title": "Předvolby motivu",
+    "description": "Zvolte, jak má aplikace vypadat. Vyberte jeden motiv, nebo se řiďte systémem a automaticky přepínejte mezi denním a nočním motivem.",
+    "themeMode": "Režim motivu",
+    "light": "Světlý",
+    "dark": "Tmavý",
+    "system": "Systémový"
+  },
+  "localization": {
+    "title": "Lokalizace",
+    "description": "Nastavte jazyk, formát data a regionální předvolby svého účtu.",
+    "language": "Jazyk",
+    "languageDescription": "Vyberte preferovaný jazyk",
+    "rtlNotice": "Tento jazyk používá směr textu zprava doleva (RTL)",
+    "dateFormat": "Formát data",
+    "dateFormatDescription": "Zvolte, jak se mají v aplikaci zobrazovat data",
+    "timeFormat": "Formát času",
+    "timeFormatDescription": "Vyberte 12hodinový nebo 24hodinový formát času",
+    "preview": "Náhled: {{value}}",
+    "12hour": "12hodinový (AM/PM)",
+    "24hour": "24hodinový",
+    "firstDayOfWeek": "První den v týdnu",
+    "firstDayOfWeekDescription": "Vyberte, kterým dnem začíná váš týden",
+    "sunday": "Neděle",
+    "monday": "Pondělí",
+    "saturday": "Sobota",
+    "helpTranslate": "Pomozte vylepšit tento překlad",
+    "formats": {
+      "mdy": "MM/DD/YYYY (USA)",
+      "dmy": "DD/MM/YYYY (Evropa)",
+      "ymd": "",
+      "long": "Dlouhý formát (např. January 1, 2024)",
+      "short": "Krátký formát (např. Jan 1, 2024)"
+    },
+    "descriptionLong": "Nastavte jazyk, formát data a regionální předvolby svého účtu. Tato nastavení platí v celé aplikaci."
+  },
+  "advanced": {
+    "title": "Pokročilá nastavení",
+    "description": "Nastavte pokročilé funkce, jako jsou webhooky a aktualizace v reálném čase, pro vyšší produktivitu.",
+    "offlineTitle": "Podpora offline",
+    "offlineDescription": "Používejte Donetick i offline v tomto zařízení/prohlížeči. Změny se uloží místně a synchronizují se po návratu online.",
+    "offlineToggle": "Zapnout podporu offline",
+    "offlineHelper": "Vypnutím odstraníte nesynchronizované offline změny a uložená offline data z tohoto zařízení/prohlížeče.",
+    "offlineEnabled": "Offline režim zapnut pro toto zařízení/prohlížeč",
+    "offlineDisabled": "Offline režim vypnut a místní data vymazána",
+    "offlineDisabledPartial": "Offline režim byl vypnut, ale některá místní data mohou být stále uložena",
+    "offlineDisableTitle": "Vypnout offline režim",
+    "offlineDisableMessage": "Vypnutím offline režimu odstraníte nesynchronizované offline změny a uložená offline data v tomto zařízení/prohlížeči. Chcete pokračovat?",
+    "offlineDisableConfirm": "Vypnout a vymazat data",
+    "webhookTitle": "Integrace webhooků",
+    "webhookDescription": "Webhooky umožňují posílat oznámení v reálném čase do jiných služeb, když se ve vašem kruhu něco stane. Nastavte URL webhooku pro příjem aktualizací v reálném čase.",
+    "webhookPlusNotice": "Oznámení přes webhooky nejsou v tarifu Basic k dispozici. Přejděte na Plus a dostávejte aktualizace v reálném čase přes webhooky.",
+    "webhookToggle": "Zapnout webhook",
+    "webhookHelper": "Zapnout oznámení přes webhook pro aktualizace úkolů a věcí.",
+    "webhookURL": "URL webhooku",
+    "webhookUpdated": "URL webhooku byla úspěšně aktualizována",
+    "webhookUpdateFailed": "URL webhooku se nepodařilo aktualizovat",
+    "realtimeTitle": "Aktualizace v reálném čase",
+    "realtimeDescription": "Nastavte, jak dostávat živé aktualizace, když se ve vašem kruhu změní úkoly a aktivity.",
+    "realtime": {
+      "toggleLabel": "Zapnout aktualizace v reálném čase",
+      "title": "Aktualizace v reálném čase",
+      "subtitle": "Dostávejte okamžitá oznámení při aktualizaci úkolů",
+      "statusLabel": "Stav:",
+      "basicPlan": "Aktualizace v reálném čase nejsou v tarifu Basic k dispozici. Přejděte na Plus a dostávejte okamžitá oznámení při aktualizaci úkolů.",
+      "disabled": "Aktualizace v reálném čase jsou vypnuté. Zapněte je a uvidíte živé změny, když vy nebo jiní členové kruhu dokončíte, přeskočíte nebo upravíte úkoly.",
+      "connected": "Aktualizace v reálném čase fungují. Uvidíte živé změny, když vy nebo jiní členové kruhu dokončíte, přeskočíte nebo upravíte úkoly.",
+      "connecting": "Připojování k aktualizacím v reálném čase...",
+      "errored": "Aktualizace v reálném čase jsou zapnuté, ale nefungují: {{error}}",
+      "notConnected": "Aktualizace v reálném čase jsou zapnuté, ale momentálně nejsou připojené.",
+      "basicPlanNotice": "Aktualizace v reálném čase nejsou v tarifu Basic k dispozici. Přejděte na Plus a dostávejte okamžitá oznámení, když vy nebo jiní členové kruhu dokončíte, přeskočíte nebo upravíte úkoly."
+    }
+  },
+  "privacyAnalytics": {
+    "title": "Soukromí a analytika",
+    "description": "Donetick nikdy neodesílá názvy, popisy, poznámky ani jiný obsah úkolů. Nahrávání relací není nikdy zapnuté.",
+    "analyticsToggle": "Anonymní analytika",
+    "analyticsHelper": "Pomozte vylepšit Donetick sdílením anonymních statistik používání.",
+    "crashToggle": "Hlášení o pádech",
+    "crashHelper": "Když Donetick spadne, pošle nám chybu a to, co k ní vedlo, bez obsahu úkolů.",
+    "footnote": "Tyto volby můžete kdykoli změnit."
+  },
+  "subscription": {
+    "sessionFailed": "Relaci předplatného se nepodařilo vytvořit",
+    "errorTitle": "Chyba předplatného",
+    "errorMessage": "Proces předplatného se nepodařilo zahájit. Zkuste to prosím znovu.",
+    "subscribe": "Předplatit",
+    "cancelAnytime": "Zrušení kdykoli. Žádné skryté poplatky. Bezpečná platba přes Stripe.",
+    "description": "Odemkněte připomínky, bohaté podrobnosti úkolů a pokročilou automatizaci.",
+    "whatsIncluded": "Co obsahuje:",
+    "mostPopular": "Nejoblíbenější",
+    "featureNotifications": "Oznámení a připomínky k úkolům",
+    "featureRichText": "Formátované popisy s nahráváním obrázků",
+    "featureThingTriggers": "Spouštění úkolů podle věcí",
+    "featureApiTokens": "API tokeny pro integrace",
+    "featureImageUploads": "Nahrávání obrázků do popisů",
+    "featureAutomation": "Pokročilá automatizace úkolů",
+    "planYearly": "Ročně"
+  },
+  "childUsers": {
+    "errNameRequired": "Název podúčtu je povinný",
+    "errNameMin": "Název podúčtu musí mít alespoň 2 znaky",
+    "errNameMax": "Název podúčtu musí mít méně než 20 znaků",
+    "errNameChars": "Název podúčtu smí obsahovat pouze malá písmena, tečku a pomlčku",
+    "errPasswordRequired": "Heslo je povinné",
+    "errPasswordLength": "Heslo musí mít 8 až 64 znaků",
+    "errPasswordMatch": "Hesla se neshodují",
+    "errDisplayNameMax": "Zobrazované jméno musí mít méně než 50 znaků",
+    "createTitle": "Vytvořit podúčet",
+    "createDescription": "Vytvořte přihlášení, které může plnit úkoly přiřazené tomuto účtu.",
+    "createButton": "Vytvořit účet",
+    "nameLabel": "Název podúčtu *",
+    "namePlaceholder": "Zadejte název podúčtu (např. sara)",
+    "displayNameLabel": "Zobrazované jméno",
+    "displayNamePlaceholder": "Zobrazované jméno (volitelné, výchozí je název podúčtu)",
+    "passwordLabel": "Heslo *",
+    "passwordPlaceholder": "Zadejte heslo (8–64 znaků)",
+    "confirmPasswordLabel": "Potvrzení hesla *",
+    "confirmPasswordPlaceholder": "Potvrďte heslo"
+  },
+  "passwordChange": {
+    "minLength": "Heslo musí mít alespoň 8 znaků",
+    "maxLength": "Heslo musí mít méně než 64 znaků",
+    "description": "Zvolte heslo o délce 8 až 64 znaků.",
+    "mismatch": "Hesla se neshodují",
+    "newPassword": "Nové heslo",
+    "newPasswordPlaceholder": "Zadejte heslo",
+    "confirmPassword": "Potvrzení hesla",
+    "confirmPasswordPlaceholder": "Zopakujte heslo"
+  },
+  "payment": {
+    "cancelledTitle": "Platba byla zrušena",
+    "cancelledRedirect": "Brzy budete přesměrováni na hlavní stránku.",
+    "successTitle": "Platba proběhla úspěšně!",
+    "successRedirect": "Brzy budete přesměrováni na stránku nastavení."
+  },
+  "developer": {
+    "tokenRefreshed": "Token byl úspěšně obnoven",
+    "endpointCalled": "Koncový bod pro obnovu tokenu byl úspěšně zavolán",
+    "clearDbCleared": "Místní offline databáze vymazána. Zahajuje se úplná synchronizace...",
+    "clearDbDone": "Úplná synchronizace od začátku dokončena",
+    "intro": "Zobrazte technické informace o ověřovacích tokenech a relaci",
+    "refreshCookieNote": "Obnovovací tokeny jsou na webové platformě spravovány pomocí HTTP-only cookies",
+    "noReconnectInfo": "Nejsou k dispozici žádné informace o opětovném připojení",
+    "noTimeoutInfo": "Nejsou k dispozici žádné informace o časových limitech",
+    "noDebugInfo": "Nejsou k dispozici žádné ladicí informace"
+  },
+  "backup": {
+    "keyRequired": "Šifrovací klíč je povinný",
+    "created": "Záloha byla úspěšně vytvořena a stažena",
+    "createFailed": "Zálohu se nepodařilo vytvořit",
+    "selectFile": "Vyberte soubor zálohy",
+    "restored": "Záloha byla úspěšně obnovena. Obnovte prosím stránku.",
+    "restoreFailed": "Zálohu se nepodařilo obnovit",
+    "readFailed": "Soubor zálohy se nepodařilo přečíst",
+    "createIntro": "Vytvořte šifrovanou zálohu svých dat. Záloha bude obsahovat všechny úkoly, historii, nastavení a volitelně i nahrané soubory.",
+    "keyPlaceholder": "Zadejte silný šifrovací klíč",
+    "includeAssets": "Zahrnout nahrané soubory a prostředky",
+    "warningLabel": "Upozornění:",
+    "restoreWarning": "Obnovením zálohy nahradíte všechna aktuální data. Tuto akci nelze vrátit.",
+    "restoreKeyPlaceholder": "Zadejte šifrovací klíč použitý pro tuto zálohu",
+    "title": "Záloha a obnovení",
+    "createTab": "Vytvořit zálohu",
+    "restoreTab": "Obnovit zálohu",
+    "creating": "Vytváření zálohy...",
+    "restoring": "Obnovování zálohy..."
+  },
+  "deletion": {
+    "passwordRequired": "Pro pokračování zadejte své heslo",
+    "passwordAndDelete": "Zadejte své heslo a pro potvrzení napište DELETE",
+    "failed": "Účet se nepodařilo smazat",
+    "passwordPlaceholder": "Zadejte své heslo",
+    "transferIntro": "Vlastníte kruhy, u kterých je před smazáním nutné převést vlastnictví. Vyberte nové vlastníky:",
+    "selectOwner": "Vyberte nového vlastníka",
+    "confirmPrompt": "Zadejte své heslo a pro potvrzení napište DELETE",
+    "typeDelete": "",
+    "warningLead": "Tuto akci nelze vrátit.",
+    "warningIntro": "Smazáním účtu trvale odstraníte:",
+    "removesProfile": "Váš uživatelský profil a ověřovací údaje",
+    "removesChores": "Všechny vaše úkoly, jejich historii a relace měření času",
+    "removesTokens": "API tokeny, relace MFA a tokeny pro obnovení hesla",
+    "removesStorage": "Soubory v úložišti a údaje o využití",
+    "removesPoints": "Historii bodů a oznámení",
+    "removesCircles": "Členství v kruzích a vazby",
+    "passwordToContinue": "Pro pokračování zadejte své heslo",
+    "circleLabel": "Kruh: {{name}}",
+    "newOwner": "Nový vlastník",
+    "logoutNotice": "Po úspěšném smazání budete odhlášeni a přesměrováni na přihlašovací stránku.",
+    "passwordLabel": "Heslo",
+    "typeToConfirm": "Pro potvrzení napište „{{word}}“"
+  },
+  "realtime": {
+    "titleSse": "Aktualizace v reálném čase (SSE)",
+    "subtitleSse": "Dostávejte okamžitá oznámení prostřednictvím Server-Sent Events"
+  },
+  "nativeCancel": {
+    "title": "Zrušit předplatné",
+    "dismiss": "Zavřít",
+    "cancelViaStore": "Zruším ho v obchodě s aplikacemi",
+    "cancelDesktop": "Zrušit předplatné pro počítač",
+    "intro": "Pro zrušení předplatného postupujte podle pokynů pro svou platformu (předplatné je třeba zrušit na stejné platformě, na které jste ho sjednali).",
+    "iosHeading": "Pro iOS (iPhone/iPad):",
+    "iosStep1": "1. Otevřete v zařízení aplikaci <b>Nastavení</b>",
+    "iosStep2": "2. Klepněte na své jméno v horní části obrazovky",
+    "iosStep3": "3. Klepněte na <b>Předplatné</b>",
+    "iosStep4": "4. Najděte a klepněte na <b>Donetick</b>",
+    "iosStep5": "5. Klepněte na <b>Zrušit předplatné</b>",
+    "iosNote": "<b>Poznámka:</b> Pokud jste předplatné sjednali přes iOS a používáte webovou/desktopovou verzi, musíte ho zrušit v Nastavení iOS podle výše uvedeného postupu.",
+    "androidHeading": "Pro Android:",
+    "androidStep1": "1. Otevřete aplikaci <b>Obchod Google Play</b>",
+    "androidStep2": "2. Klepněte na ikonu profilu vpravo nahoře",
+    "androidStep3": "3. Klepněte na <b>Platby a předplatná</b>",
+    "androidStep4": "4. Klepněte na <b>Předplatná</b>",
+    "androidStep5": "5. Najděte a klepněte na <b>Donetick</b>",
+    "androidStep6": "6. Klepněte na <b>Zrušit předplatné</b>",
+    "androidNote": "<b>Poznámka:</b> Pokud jste předplatné sjednali přes Google Play a používáte webovou/desktopovou verzi, musíte ho zrušit v Google Play podle výše uvedeného postupu.",
+    "webHeading": "Pro webová/desktopová předplatná:",
+    "webBody": "Pokud jste předplatné původně sjednali přes náš web nebo desktopovou aplikaci, můžete ho zrušit v sekci Nastavení účtu na našem webu ve webovém prohlížeči.",
+    "webNote": "<b>Důležité:</b> Předplatné musíte zrušit na stejné platformě, na které jste ho původně sjednali. Pokud jste ho sjednali přes App Store nebo Obchod Google Play (i když nyní používáte webovou/desktopovou verzi), musíte ho zrušit na původní platformě podle výše uvedených pokynů.",
+    "footer": "Vaše předplatné zůstane aktivní do konce aktuálního zúčtovacího období."
+  }
+}

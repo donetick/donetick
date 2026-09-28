@@ -1,0 +1,72 @@
+{
+  "blurb": "Organiza tus tareas en proyectos. Crea espacios de trabajo personalizados para mantener tus tareas organizadas y accesibles.",
+  "defaultChip": "Predeterminado",
+  "defaultDescription": "Todas las tareas sin un proyecto específico",
+  "delete": {
+    "message": "¿Estás seguro de que quieres eliminar \"{{name}}\"? Esto eliminará el proyecto pero conservará las tareas (se moverán al Proyecto Predeterminado).",
+    "title": "Eliminar Proyecto"
+  },
+  "iconPicker": {
+    "availableIcons": "Iconos Disponibles",
+    "chooseIcon": "Elegir Icono de Proyecto"
+  },
+  "icons": {
+    "AccountBalance": "Finanzas",
+    "Book": "Estudio",
+    "Build": "Construcción",
+    "BusinessCenter": "Negocios",
+    "Code": "Código",
+    "Computer": "Tecnología",
+    "DirectionsCar": "Vehículo",
+    "FitnessCenter": "Fitness",
+    "Flight": "Viajes",
+    "FolderOpen": "Carpeta",
+    "Games": "Juegos",
+    "Garden": "Jardín",
+    "Home": "Hogar",
+    "LocalHospital": "Salud",
+    "MusicNote": "Música",
+    "Palette": "Diseño",
+    "Pets": "Mascotas",
+    "PhotoCamera": "Foto",
+    "Restaurant": "Comida",
+    "School": "Estudios",
+    "Science": "Ciencia",
+    "ShoppingCart": "Compras",
+    "SportsSoccer": "Deportes",
+    "Work": "Trabajo"
+  },
+  "loadError": "Error al cargar los proyectos. Por favor, inténtalo de nuevo.",
+  "modal": {
+    "colorLabel": "Color del Proyecto",
+    "descriptionLabel": "Descripción",
+    "descriptionPlaceholder": "Descripción opcional del proyecto...",
+    "errorCreate": "Error al crear el proyecto",
+    "errorNameRequired": "El nombre del proyecto es obligatorio",
+    "errorUpdate": "Error al actualizar el proyecto",
+    "iconLabel": "Icono del Proyecto",
+    "nameLabel": "Nombre del Proyecto",
+    "namePlaceholder": "Introduce el nombre del proyecto...",
+    "selectIcon": "Seleccionar Icono"
+  },
+  "search": {
+    "clear": "Limpiar búsqueda",
+    "noFilterResultsDescription": "Ningún proyecto coincide con el filtro actual.",
+    "noResultsDescription": "Ningún proyecto coincide con \"{{searchTerm}}\".",
+    "noResultsTitle": "Ningún proyecto coincide",
+    "placeholder": "Buscar proyectos",
+    "showAll": "Mostrar todos los proyectos"
+  },
+  "selector": {
+    "builtInWorkspace": "Espacio de trabajo integrado",
+    "createNew": "Crear Nuevo Proyecto",
+    "createNewDescription": "Añade un espacio de trabajo de proyecto personalizado",
+    "currentProjectTitle": "Proyecto actual: {{project}} (Ctrl+E)",
+    "manage": "Gestionar Proyectos",
+    "manageDescription": "Ver, editar y organizar todos los proyectos",
+    "title": "Proyectos"
+  },
+  "shared": "Compartido",
+  "tasks_one": "{{count}} tarea",
+  "tasks_other": "{{count}} tareas"
+}

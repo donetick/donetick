@@ -1,0 +1,717 @@
+{
+  "title": "Settings",
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "remove": "Remove",
+    "delete": "Delete",
+    "refresh": "Refresh",
+    "loading": "Loading...",
+    "on": "On",
+    "off": "Off",
+    "error": "Error",
+    "success": "Success",
+    "plusFeature": "Plus Feature",
+    "earlyAccess": "Early Access"
+  },
+  "overview": {
+    "title": "Settings",
+    "subtitle": "Customize your experience and manage your account preferences",
+    "upgrade": {
+      "title": "Upgrade to Plus",
+      "description": "Unlock powerful features to enhance your productivity",
+      "button": "Upgrade Now",
+      "features": {
+        "richText": "Rich text descriptions",
+        "notifications": "Task notifications",
+        "apiIntegrations": "API integrations",
+        "advancedAutomation": "Advanced automation"
+      }
+    },
+    "sections": {
+      "profile": {
+        "title": "Profile Settings",
+        "description": "Update your profile information, photo, display name, and timezone preferences."
+      },
+      "circle": {
+        "title": "Circle Settings",
+        "description": "Manage your circle, invite members, and handle join requests."
+      },
+      "account": {
+        "title": "Account Settings",
+        "description": "Manage your subscription, change password, and account deletion options."
+      },
+      "subaccounts": {
+        "title": "Managed Accounts",
+        "description": "Create and manage sub accounts to log in and complete assigned tasks."
+      },
+      "notifications": {
+        "title": "Notifications",
+        "description": "Configure push notifications, email alerts, and notification targets for tasks."
+      },
+      "mfa": {
+        "title": "Multi-Factor Authentication",
+        "description": "Add an extra layer of security with MFA using authenticator apps."
+      },
+      "apitokens": {
+        "title": "API Tokens",
+        "description": "Generate and manage access tokens for third-party integrations and API access."
+      },
+      "storage": {
+        "title": "Storage Settings",
+        "description": "Backup and restore your data, manage local storage and sync preferences."
+      },
+      "layout": {
+        "title": "Layout & Navigation",
+        "description": "Pick the screen the app opens on, and which shortcuts and panels surround it."
+      },
+      "theme": {
+        "title": "Theme Preferences",
+        "description": "Choose your preferred theme and configure dark/light mode settings."
+      },
+      "localization": {
+        "title": "Localization",
+        "description": "Customize language, date format, time format, and regional preferences."
+      },
+      "advanced": {
+        "title": "Advanced Settings",
+        "description": "Configure webhooks, real-time updates, and other advanced features for enhanced productivity."
+      },
+      "privacy": {
+        "title": "Privacy & Analytics",
+        "description": "Control anonymous usage analytics and crash reporting."
+      },
+      "developer": {
+        "title": "Developer Settings",
+        "description": "View technical information about authentication tokens, SSE connections, and debug data."
+      },
+      "feedback": {
+        "title": "Send Feedback",
+        "description": "Tell us how Donetick is working for you or request a feature."
+      },
+      "bugReport": {
+        "title": "Report an Issue",
+        "description": "Tell us what's not working and we'll attach the technical details for you."
+      }
+    }
+  },
+  "profile": {
+    "title": "Profile Settings",
+    "description": "Update your display name and profile photo.",
+    "photoUpdated": "Photo Updated",
+    "photoUpdatedMessage": "Your profile photo has been updated successfully!",
+    "uploadFailed": "Upload Failed",
+    "uploadFailedMessage": "Failed to upload your photo. Please try again.",
+    "profileUpdated": "Profile Updated",
+    "profileUpdatedMessage": "Your profile information has been saved successfully!",
+    "updateFailed": "Update Failed",
+    "updateFailedMessage": "Unable to update your profile. Please check your connection and try again.",
+    "changePhoto": "Change Photo",
+    "editPhoto": "Edit profile photo",
+    "displayName": "Display Name",
+    "displayNamePlaceholder": "Enter your display name",
+    "timezone": "Timezone",
+    "timezonePlaceholder": "Select your timezone",
+    "save": "Save",
+    "cancel": "Cancel"
+  },
+  "circleSettings": {
+    "title": "Circle Settings",
+    "description": "Your account is automatically connected to a Circle when you create or join one. Easily invite friends by sharing the unique Circle code or link below. You'll receive a notification below when someone requests to join your Circle.",
+    "memberOf": "You are part of {{name}}",
+    "yourCircleCode": "Your circle code is:",
+    "copyCode": "Copy Code",
+    "shareInvite": "Share Invite",
+    "codeCopied": "Code copied to clipboard",
+    "linkCopied": "Invite link copied to clipboard",
+    "myCircle": "my Circle",
+    "shareTitle": "Join {{name}} on Donetick",
+    "shareText": "I'd like to invite you to join {{name}} on Donetick.",
+    "shareDialogTitle": "Share Circle invite",
+    "leave": "Leave Circle",
+    "leaveConfirmTitle": "Leave Circle",
+    "leaveConfirmMessage": "Are you sure you want to leave your circle?",
+    "leaveConfirmButton": "Leave",
+    "leftCircle": "Left circle successfully",
+    "leaveFailed": "Failed to leave circle",
+    "circleMembers": "Circle Members",
+    "you": "(You)",
+    "pendingApproval": "Pending Approval",
+    "joinedOn": "Joined on {{date}}",
+    "requestedToJoin": "Request to join {{date}}",
+    "roles": {
+      "member": "Member",
+      "memberDescription": "Just a regular member of the circle",
+      "manager": "Manager",
+      "managerDescription": "Can impersonate users and perform actions on their behalf",
+      "admin": "Admin",
+      "adminDescription": "Full access to the circle"
+    },
+    "roleUpdateFailed": "Failed to update role",
+    "removeMemberTitle": "Remove Member",
+    "removeMemberMessage": "Are you sure you want to remove {{name}} from your circle?",
+    "memberRemoved": "Removed member successfully",
+    "circleMemberRequests": "Circle Member Requests",
+    "lastUpdated": "Last updated: {{time}}",
+    "refreshing": "Refreshing...",
+    "refreshFailed": "Failed to refresh member requests",
+    "wantsToJoin": "{{name}} wants to join your circle.",
+    "accept": "Accept",
+    "acceptRequestTitle": "Accept Member Request",
+    "acceptRequestMessage": "Are you sure you want to accept {{name}} (username: {{username}}) to join your circle?",
+    "requestAccepted": "Accepted request successfully",
+    "or": "or",
+    "joinOtherDescription": "Want to join someone else's Circle? Ask them for their unique Circle code or join link. Enter the code below to join their Circle.",
+    "enterCircleCode": "Enter Circle code:",
+    "enterCodePlaceholder": "Enter code",
+    "joinCircle": "Join Circle",
+    "joinedPending": "Joined circle successfully, wait for the circle owner to accept your request.",
+    "alreadyMember": "You are already a member of this circle",
+    "joinFailed": "Failed to join circle",
+    "copyLink": "Copy Link"
+  },
+  "accountSettings": {
+    "title": "Account Settings",
+    "description": "Change your account settings, type or update your password",
+    "accountType": "Account Type : {{type}}",
+    "free": "Free",
+    "plus": "Plus",
+    "plusUntil": "Plus (until {{date}})",
+    "activeDescription": "You are currently subscribed to the Plus plan. Your subscription will renew on {{date}}.",
+    "cancelledDescription": "You have cancelled your subscription. Your account will be downgraded to the Free plan on {{date}}.",
+    "freeDescription": "You are currently on the Free plan. Upgrade to the Plus plan to unlock more features.",
+    "upgrade": "Upgrade",
+    "cancel": "Cancel",
+    "password": "Password :",
+    "changePassword": "Change Password",
+    "passwordChanged": "Password changed successfully",
+    "passwordChangeFailed": "Password change failed",
+    "dangerZone": "Danger Zone",
+    "dangerZoneDescription": "Once you delete your account, there is no going back. Please be certain.",
+    "deleteAccount": "Delete Account",
+    "accountDeleted": "Account deleted successfully",
+    "subscriptionCancelled": "Subscription cancelled",
+    "subscriptionCancelFailed": "Failed to cancel subscription",
+    "purchase": {
+      "success": "Purchase successful! Please restart the app to access Plus features.",
+      "storeConnection": "Store connection issue. Please check your network and try again.",
+      "notAllowed": "Purchases are not allowed on this device. Please check your device restrictions.",
+      "unavailable": "This subscription is not available. Please try again later.",
+      "alreadyProcessed": "This purchase has already been processed. If you believe this is an error, please contact support.",
+      "receiptMissing": "Purchase receipt missing. Please try purchasing again.",
+      "networkError": "Network error. Please check your connection and try again.",
+      "invalidReceipt": "Invalid purchase receipt. Please contact support if this persists.",
+      "pending": "Payment is pending approval. You will receive access once approved.",
+      "failed": "Purchase failed: {{error}}. Please try again or contact support.",
+      "unknownError": "Unknown error"
+    }
+  },
+  "subaccounts": {
+    "title": "Managed Accounts",
+    "description": "Manage sub accounts. Sub account users can log in and complete assigned tasks.",
+    "notParentTitle": "Sub Account Management",
+    "notParentMessage": "Only primary users can manage sub accounts.",
+    "freePlanNotice": "Sub account limited to 1 on Free plan. Upgrade to Plus to have up to 5 sub accounts.",
+    "count": "Sub Accounts ({{count}})",
+    "add": "Add Sub Account",
+    "loading": "Loading sub accounts...",
+    "emptyTitle": "No Sub Accounts",
+    "emptyDescription": "Create sub accounts so team members can log in and complete their assigned tasks.",
+    "addFirst": "Add Your First Sub Account",
+    "username": "Username: {{username}}",
+    "created": "Created: {{date}}",
+    "changePassword": "Change Password",
+    "deleteAccount": "Delete Account",
+    "createdSuccess": "Child account \"{{name}}\" created successfully!",
+    "createFailed": "Failed to create child account: {{error}}",
+    "createFailedGeneric": "Failed to create child user",
+    "passwordUpdated": "Child password updated successfully",
+    "passwordUpdateFailed": "Failed to update password: {{error}}",
+    "passwordUpdateFailedGeneric": "Failed to update password",
+    "deleteConfirmTitle": "Delete Sub Account",
+    "deleteConfirmMessage": "Are you sure you want to delete the child account \"{{name}}\"? This action cannot be undone.",
+    "deleted": "Sub account \"{{name}}\" deleted successfully",
+    "deleteFailed": "Failed to delete Sub account: {{error}}",
+    "deleteFailedGeneric": "Failed to delete Sub user",
+    "howItWorksTitle": "How Managed Accounts Work",
+    "howItWorks1": "Managed accounts created by the primary user, these specific for user you want to have ability to delete and reset password.",
+    "howItWorks2": "Sub accounts can log in with their own username and password.",
+    "howItWorks3": "Managed accounts can complete tasks but have limited administrative permissions",
+    "howItWorks4": "Managed accounts automatically added to your circle"
+  },
+  "notifications": {
+    "title": "Notification Settings",
+    "deviceSection": "Device Notification",
+    "deviceSectionDescription": "Manage your Device Notification",
+    "deviceLabel": "Device Notification",
+    "deviceHelper": "Receive notification on your device when a task is due",
+    "mobileOnly": "This feature is only available on mobile devices",
+    "testNotification": "Test Notification",
+    "testNotificationBody": "You have a task due soon",
+    "dueTitle": "Due Date Notification",
+    "dueLabel": "Notification when the task is due",
+    "preDueTitle": "Pre-Due Date Notification",
+    "preDueLabel": "Notification a few hours before the task is due",
+    "overdueTitle": "Overdue Notification",
+    "overdueLabel": "Notification when the task is overdue",
+    "pushLabel": "Push Notifications",
+    "pushHelper": "Receive Nudges, Announcements, and Chore Assignments via Push Notifications",
+    "registeredDevices": "Registered Devices ({{count}}/5)",
+    "registeredDevicesDescription": "Devices registered to receive push notifications for your account",
+    "currentDevice": "Current Device: {{platform}} {{model}}",
+    "currentDeviceNotRegistered": "This device is not registered for push notifications",
+    "limitReached": "Limit Reached",
+    "registerDevice": "Register Device",
+    "unknownDevice": "Unknown Device",
+    "deviceCreatedAt": "Created At: {{date}}",
+    "noDevices": "No devices registered for push notifications",
+    "customSection": "Custom Notification",
+    "customSectionDescription": "Notification through other platform like Telegram or Pushover",
+    "customLabel": "Custom Notification",
+    "customHelper": "Receive notification on other platform",
+    "targetNone": "None",
+    "targetTelegram": "Telegram",
+    "targetPushover": "Pushover",
+    "targetWebhooks": "Webhooks",
+    "telegramBotHelpBefore": "You need to initiate a message to the bot in order for the Telegram notification to work",
+    "telegramBotHelpAfter": "to start a chat",
+    "clickHere": "Click here",
+    "chatId": "Chat ID",
+    "chatIdPlaceholder": "User ID / Chat ID",
+    "telegramChatIdHelpBefore": "If you don't know your Chat ID, start chat with userinfobot and it will send you your Chat ID.",
+    "telegramChatIdHelpAfter": "to start chat with userinfobot",
+    "userKey": "User key",
+    "userKeyPlaceholder": "User ID",
+    "chatIdRequired": "Chat ID is required",
+    "chatIdInvalid": "Invalid Chat ID",
+    "userKeyRequired": "User key is required",
+    "targetUpdated": "Notification target updated",
+    "targetUpdateFailed": "Error while updating notification target: {{error}}",
+    "deviceRegistered": "Device registered successfully for push notifications.",
+    "deviceLimitTitle": "Device Limit Reached",
+    "deviceLimitMessage": "You have reached the maximum limit of 5 registered devices. Please remove a device before registering this one.",
+    "registrationFailedTitle": "Registration Failed",
+    "registrationFailedMessage": "Failed to register device automatically. Please try again.",
+    "permissionRequiredTitle": "Permission Required",
+    "permissionRequiredMessage": "Push notification permission is required to register this device.",
+    "registrationInitiatedTitle": "Registration Initiated",
+    "registrationInitiatedMessage": "Push notification registration has been initiated. The device will be registered automatically.",
+    "registerDeviceFailed": "Failed to register device. Please try again.",
+    "permissionDeniedTitle": "Notification Permission Denied",
+    "permissionDeniedMessage": "You have denied notification permissions. You can enable them later in your device settings.",
+    "pushPermissionDeniedTitle": "Push Notification Permission Denied",
+    "pushPermissionDeniedMessage": "Push notifications have been disabled. You can enable them in your device settings if needed.",
+    "unregisterFailed": "Failed to unregister device"
+  },
+  "mfa": {
+    "title": "Multi-Factor Authentication",
+    "description": "Add an extra layer of security to your account with multi-factor authentication (MFA). When enabled, you'll need to provide a verification code from your authenticator app in addition to your password when signing in.",
+    "twoFactor": "Two-Factor Authentication",
+    "enabledSubtitle": "Your account is protected with 2FA",
+    "disabledSubtitle": "Secure your account with an authenticator app",
+    "enable": "Enable",
+    "disable": "Disable",
+    "enabledSuccess": "MFA has been successfully enabled!",
+    "disabledSuccess": "MFA has been disabled successfully!",
+    "errors": {
+      "qrGenerationFailed": "Failed to generate QR code",
+      "invalidResponse": "Invalid response from server. Missing QR code or secret.",
+      "notFound": "MFA setup endpoint not found. This feature may not be available yet.",
+      "unauthorized": "Unauthorized. Please login again.",
+      "serverError": "Server error. Please try again later.",
+      "setupFailed": "Failed to setup MFA ({{status}}). Please try again.",
+      "networkError": "Network error. Please check your connection and try again.",
+      "invalidCode": "Invalid verification code. Please try again.",
+      "confirmFailed": "Failed to confirm MFA. Please try again.",
+      "disableFailed": "Failed to disable MFA. Please try again."
+    },
+    "setup": {
+      "title": "Set up Multi-Factor Authentication",
+      "addedAccount": "I've added the account",
+      "back": "Back",
+      "verifyAndEnable": "Verify & Enable",
+      "savedBackupCodes": "I've saved my backup codes",
+      "step1Label": "Step 1:",
+      "step1": "Scan the QR code below with your authenticator app (Google Authenticator, Authy, etc.)",
+      "qrAlt": "MFA QR Code",
+      "qrFailed": "QR code could not be generated. Please try again or use the manual entry key below.",
+      "manualKey": "Manual entry key:",
+      "step2Label": "Step 2:",
+      "step2": "Enter the 6-digit verification code from your authenticator app",
+      "codePlaceholder": "Enter 6-digit code",
+      "successTitle": "MFA Successfully Enabled!",
+      "backupCodesTitle": "Save these backup codes in a safe place",
+      "backupCodesDescription": "You can use these codes to access your account if you lose your authenticator device. Each code can only be used once."
+    },
+    "disableModal": {
+      "title": "Disable Multi-Factor Authentication",
+      "warning": "Disabling MFA will make your account less secure. Are you sure you want to continue?",
+      "prompt": "Enter a verification code from your authenticator app to confirm:",
+      "confirm": "Disable MFA"
+    },
+    "backupCodesModal": {
+      "title": "New Backup Codes",
+      "warning": "Your previous backup codes are now invalid. Save these new codes in a safe place. Each code can only be used once."
+    },
+    "generateCodes": "Generate New Codes"
+  },
+  "apiTokens": {
+    "title": "API Tokens",
+    "accessToken": "Access Token",
+    "description": "Create token to use with the API to update things that trigger task or chores",
+    "plusNotice": "API tokens are not available in the Basic plan. Upgrade to Plus to generate API tokens for integrating with external systems and automating your tasks.",
+    "showToken": "Show Token",
+    "hideToken": "Hide Token",
+    "removeTitle": "Remove Token",
+    "removeMessage": "Are you sure you want to remove {{name}}?",
+    "removedTitle": "Removed",
+    "removedMessage": "API token has been removed",
+    "tokenCopied": "Token copied to clipboard",
+    "generateNew": "Generate New Token",
+    "nameModalTitle": "Give a name for your new token, something to remember it by.",
+    "generateToken": "Generate Token"
+  },
+  "storage": {
+    "title": "Storage Settings",
+    "serverTitle": "Server Storage Usage",
+    "serverDescription": "This is the storage used by your account on our servers (e.g. files, images, and data you have uploaded).",
+    "usagePlaceholder": "-- MB used / -- MB total (--)",
+    "usage": "{{used}} MB used / {{total}} MB total ({{percent}}%)",
+    "basicPlanNotice": "Server storage is not available in the Basic plan. Upgrade to Plus to track your server storage usage.",
+    "localTitleApp": "App Local Storage & Cache",
+    "localTitleBrowser": "Browser Local Storage & Cache",
+    "localDescription": "This is data stored locally in your browser for faster access. Clearing this will not affect your server data, but may log you out.",
+    "clearLocal": "Clear All Local Storage and Cache",
+    "clearLocalTitle": "Clear All Local Storage",
+    "clearLocalMessage": "Are you sure you want to clear your local storage and cache? This will remove all your data from this browser and require login.",
+    "clearAll": "Clear All",
+    "appPreferences": "App Preferences",
+    "deviceOnly": "Device Only",
+    "appPreferencesDescription": "These are preferences and settings stored locally on your device by the app. Clearing them will reset app-specific settings and may log you out, but will not affect your server data.",
+    "clearPreferences": "Clear App Preferences",
+    "clearPreferencesTitle": "Clear App Preferences",
+    "clearPreferencesMessage": "Are you sure you want to clear all app preferences? This will reset your app settings and may require you to log in again."
+  },
+  "sidepanel": {
+    "title": "Sidepanel Customization",
+    "description": "Customize which cards appear in the sidepanel and their order. Drag and drop to reorder, or toggle visibility for each card.",
+    "resetToDefaults": "Reset to Defaults",
+    "resetHelper": "This will restore all cards to their default visibility and order.",
+    "cards": {
+      "welcome": {
+        "name": "User Switcher",
+        "description": "Allows admins/managers to view tasks as different users"
+      },
+      "smartInsights": {
+        "name": "Smart Insights",
+        "description": "Quick actions based on your tasks"
+      },
+      "assignees": {
+        "name": "Tasks by Assignee",
+        "description": "Groups tasks by who they are assigned to"
+      },
+      "calendar": {
+        "name": "Calendar View",
+        "description": "Shows tasks in a calendar format"
+      },
+      "activities": {
+        "name": "Recent Activities",
+        "description": "Shows recent task completions and activities"
+      },
+      "weeklyGoals": {
+        "name": "Weekly Goals",
+        "description": "Shows weekly progress and family completion stats"
+      }
+    }
+  },
+  "homeSections": {
+    "title": "Overview Customization",
+    "description": "Customize which sections appear on the Home screen and their order. Drag and drop to reorder, or toggle visibility for each section.",
+    "resetToDefaults": "Reset to Defaults",
+    "resetHelper": "This will restore all sections to their default visibility and order.",
+    "sections": {
+      "greeting": {
+        "name": "Greeting",
+        "description": "The headline at the top that sums up your day"
+      },
+      "glance": {
+        "name": "At a Glance",
+        "description": "Overdue / due today / needs review / unplanned counts"
+      },
+      "circle": {
+        "name": "Your Circle",
+        "description": "Shows what everyone in your circle is carrying this week"
+      },
+      "review": {
+        "name": "Needs Review",
+        "description": "Finished tasks waiting to be signed off"
+      },
+      "overdue": {
+        "name": "Overdue",
+        "description": "Tasks that have slipped past their due date"
+      },
+      "nextUp": {
+        "name": "Coming Up",
+        "description": "What's due today and tomorrow"
+      },
+      "filters": {
+        "name": "Filters",
+        "description": "Quick access to your pinned and most useful filters"
+      },
+      "projects": {
+        "name": "Projects",
+        "description": "Where the work is piling up, by project"
+      }
+    },
+    "detailedDescription": "Customize the layout and visibility of sections on the Home screen."
+  },
+  "layout": {
+    "title": "Layout & Navigation",
+    "detailedDescription": "Choose the screen the app opens on and which shortcuts and panels sit around it.",
+    "defaultView": {
+      "title": "Default View",
+      "description": "Choose which screen the app opens on.",
+      "options": {
+        "home": {
+          "name": "Overview",
+          "description": "A summary of what needs you today, with quick capture"
+        },
+        "tasks": {
+          "name": "Task List",
+          "description": "The full task list with filters, search and grouping"
+        }
+      }
+    },
+    "bottomNav": {
+      "title": "Bottom Navigation",
+      "description": "Choose up to {{max}} shortcuts for the mobile bottom navigation bar and drag to reorder them. \"More\" always stays as the last item and opens the full menu.",
+      "resetToDefaults": "Reset to Defaults",
+      "resetHelper": "This will restore the bottom navigation to its default shortcuts and order."
+    },
+    "sidepanel": {
+      "title": "Sidepanel"
+    }
+  },
+  "theme": {
+    "title": "Theme Preferences",
+    "description": "Choose how the site looks to you. Select a single theme, or sync with your system and automatically switch between day and night themes.",
+    "themeMode": "Theme mode",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "localization": {
+    "title": "Localization",
+    "description": "Customize language, date format, and regional preferences for your account.",
+    "language": "Language",
+    "languageDescription": "Select your preferred language",
+    "rtlNotice": "This language uses right-to-left (RTL) text direction",
+    "dateFormat": "Date Format",
+    "dateFormatDescription": "Choose how dates should be displayed throughout the application",
+    "timeFormat": "Time Format",
+    "timeFormatDescription": "Select 12-hour or 24-hour time format",
+    "preview": "Preview: {{value}}",
+    "12hour": "12-hour (AM/PM)",
+    "24hour": "24-hour",
+    "firstDayOfWeek": "First Day of Week",
+    "firstDayOfWeekDescription": "Select which day starts your week",
+    "sunday": "Sunday",
+    "monday": "Monday",
+    "saturday": "Saturday",
+    "helpTranslate": "Help improve this translation",
+    "formats": {
+      "mdy": "MM/DD/YYYY (US)",
+      "dmy": "DD/MM/YYYY (Europe)",
+      "ymd": "YYYY-MM-DD (ISO)",
+      "long": "Long format (e.g., January 1, 2024)",
+      "short": "Short format (e.g., Jan 1, 2024)"
+    },
+    "descriptionLong": "Customize language, date format, and regional preferences for your account. These settings will apply throughout the application."
+  },
+  "advanced": {
+    "title": "Advanced Settings",
+    "description": "Configure advanced features like webhooks and real-time updates for enhanced productivity.",
+    "offlineTitle": "Offline Support",
+    "offlineDescription": "Keep using Donetick when you're offline on this device/browser. Your changes are saved locally and synced when you're back online.",
+    "offlineToggle": "Enable Offline Support",
+    "offlineHelper": "Turning this off removes unsynced offline changes and saved offline data from this device/browser.",
+    "offlineEnabled": "Offline mode turned on for this device/browser",
+    "offlineDisabled": "Offline mode turned off and local data was cleared",
+    "offlineDisabledPartial": "Offline mode was turned off, but some local data may still be stored",
+    "offlineDisableTitle": "Turn Off Offline Mode",
+    "offlineDisableMessage": "Turning off offline mode will remove unsynced offline changes and saved offline data on this device/browser. Do you want to continue?",
+    "offlineDisableConfirm": "Turn Off & Clear Data",
+    "webhookTitle": "Webhook Integration",
+    "webhookDescription": "Webhooks allow you to send real-time notifications to other services when events happen in your Circle. Configure a webhook URL to receive real-time updates.",
+    "webhookPlusNotice": "Webhook notifications are not available in the Basic plan. Upgrade to Plus to receive real-time updates via webhooks.",
+    "webhookToggle": "Enable Webhook",
+    "webhookHelper": "Enable webhook notifications for tasks and things updates.",
+    "webhookURL": "Webhook URL",
+    "webhookUpdated": "Webhook URL updated successfully",
+    "webhookUpdateFailed": "Failed to update webhook URL",
+    "realtimeTitle": "Real-time Updates",
+    "realtimeDescription": "Configure how you receive live updates when tasks and activities change in your circle.",
+    "realtime": {
+      "toggleLabel": "Enable Real-time Updates",
+      "title": "Real-time Updates",
+      "subtitle": "Get instant notifications when tasks are updated",
+      "statusLabel": "Status:",
+      "basicPlan": "Real-time updates are not available in the Basic plan. Upgrade to Plus to receive instant notifications when tasks are updated.",
+      "disabled": "Real-time updates are disabled. Enable them to see live changes when you or other circle members complete, skip, or modify tasks.",
+      "connected": "Real-time updates are working. You'll see live changes when you or other circle members complete, skip, or modify tasks.",
+      "connecting": "Connecting to real-time updates...",
+      "errored": "Real-time updates are enabled but not working: {{error}}",
+      "notConnected": "Real-time updates are enabled but not currently connected.",
+      "basicPlanNotice": "Real-time updates are not available in the Basic plan. Upgrade to Plus to receive instant notifications when you or other circle members complete, skip, or modify tasks."
+    }
+  },
+  "privacyAnalytics": {
+    "title": "Privacy & Analytics",
+    "description": "Donetick never sends task names, descriptions, notes, or other task content. Session recording is never enabled.",
+    "analyticsToggle": "Anonymous analytics",
+    "analyticsHelper": "Help improve Donetick by sharing anonymous usage statistics.",
+    "crashToggle": "Crash reports",
+    "crashHelper": "Send us the error and what led to it when Donetick crashes no task content.",
+    "footnote": "You can change these choices at any time."
+  },
+  "subscription": {
+    "sessionFailed": "Failed to create subscription session",
+    "errorTitle": "Subscription Error",
+    "errorMessage": "Failed to start subscription process. Please try again.",
+    "subscribe": "Subscribe",
+    "cancelAnytime": "Cancel anytime. No hidden fees. Secure payment powered by Stripe.",
+    "description": "Unlock reminders, rich task details, and advanced automation.",
+    "whatsIncluded": "What's included:",
+    "mostPopular": "Most Popular",
+    "featureNotifications": "Task notifications and reminders",
+    "featureRichText": "Rich text descriptions with images uploads",
+    "featureThingTriggers": "Thing-based task triggers",
+    "featureApiTokens": "API tokens for integrations",
+    "featureImageUploads": "Image uploads in descriptions",
+    "featureAutomation": "Advanced task automation",
+    "planYearly": "Yearly"
+  },
+  "childUsers": {
+    "errNameRequired": "Sub account name is required",
+    "errNameMin": "Sub account name must be at least 2 characters",
+    "errNameMax": "Sub account name must be less than 20 characters",
+    "errNameChars": "Sub account name can only contain lowercase letters, dot and dash",
+    "errPasswordRequired": "Password is required",
+    "errPasswordLength": "Password must be between 8 and 64 characters",
+    "errPasswordMatch": "Passwords do not match",
+    "errDisplayNameMax": "Display name must be less than 50 characters",
+    "createTitle": "Create Sub Account",
+    "createDescription": "Create a login that can complete tasks assigned to this account.",
+    "createButton": "Create Account",
+    "nameLabel": "Sub Account Name *",
+    "namePlaceholder": "Enter sub account name (e.g., sarah)",
+    "displayNameLabel": "Display Name",
+    "displayNamePlaceholder": "Display name (optional, defaults to sub account name)",
+    "passwordLabel": "Password *",
+    "passwordPlaceholder": "Enter password (8-64 characters)",
+    "confirmPasswordLabel": "Confirm Password *",
+    "confirmPasswordPlaceholder": "Confirm password"
+  },
+  "passwordChange": {
+    "minLength": "Password must be at least 8 characters",
+    "maxLength": "Password must be less than 64 characters",
+    "description": "Choose a password between 8 and 64 characters.",
+    "mismatch": "Passwords do not match",
+    "newPassword": "New password",
+    "newPasswordPlaceholder": "Enter password",
+    "confirmPassword": "Confirm password",
+    "confirmPasswordPlaceholder": "Repeat password"
+  },
+  "payment": {
+    "cancelledTitle": "Payment has been cancelled",
+    "cancelledRedirect": "You will be redirected to the main page shortly.",
+    "successTitle": "Payment Successful!",
+    "successRedirect": "You will be redirected to the settings page shortly."
+  },
+  "developer": {
+    "tokenRefreshed": "Token refreshed successfully",
+    "endpointCalled": "Refresh token endpoint called successfully",
+    "clearDbCleared": "Local offline database cleared. Starting full sync...",
+    "clearDbDone": "Full sync completed from the beginning",
+    "intro": "View technical information about your authentication tokens and session",
+    "refreshCookieNote": "Refresh tokens are managed via HTTP-only cookies on web platform",
+    "noReconnectInfo": "No reconnection information available",
+    "noTimeoutInfo": "No timeout information available",
+    "noDebugInfo": "No debug information available"
+  },
+  "backup": {
+    "keyRequired": "Encryption key is required",
+    "created": "Backup created and downloaded successfully",
+    "createFailed": "Failed to create backup",
+    "selectFile": "Please select a backup file",
+    "restored": "Backup restored successfully. Please refresh the page.",
+    "restoreFailed": "Failed to restore backup",
+    "readFailed": "Failed to read backup file",
+    "createIntro": "Create an encrypted backup of your data. This backup will include all your chores, history, settings, and optionally your uploaded files.",
+    "keyPlaceholder": "Enter a strong encryption key",
+    "includeAssets": "Include uploaded files and assets",
+    "warningLabel": "Warning:",
+    "restoreWarning": "Restoring a backup will replace all your current data. This action cannot be undone.",
+    "restoreKeyPlaceholder": "Enter the encryption key used for this backup",
+    "title": "Backup & Restore",
+    "createTab": "Create Backup",
+    "restoreTab": "Restore Backup",
+    "creating": "Creating backup...",
+    "restoring": "Restoring backup..."
+  },
+  "deletion": {
+    "passwordRequired": "Please enter your password to continue",
+    "passwordAndDelete": "Please enter your password and type DELETE to confirm",
+    "failed": "Failed to delete account",
+    "passwordPlaceholder": "Enter your password",
+    "transferIntro": "You own circles that require ownership transfer before deletion. Please select new owners:",
+    "selectOwner": "Select new owner",
+    "confirmPrompt": "Please enter your password and type DELETE to confirm",
+    "typeDelete": "DELETE",
+    "warningLead": "This action cannot be undone.",
+    "warningIntro": "Deleting your account will permanently remove:",
+    "removesProfile": "Your user profile and authentication data",
+    "removesChores": "All your chores, chore history, and time tracking sessions",
+    "removesTokens": "API tokens, MFA sessions, and password reset tokens",
+    "removesStorage": "Storage files and usage data",
+    "removesPoints": "Points history and notifications",
+    "removesCircles": "Circle memberships and relationships",
+    "passwordToContinue": "Enter your password to continue",
+    "circleLabel": "Circle: {{name}}",
+    "newOwner": "New Owner",
+    "logoutNotice": "On successful deletion, you will be logged out and redirected to the login page.",
+    "passwordLabel": "Password",
+    "typeToConfirm": "Type \"{{word}}\" to confirm"
+  },
+  "realtime": {
+    "titleSse": "Real-time Updates (SSE)",
+    "subtitleSse": "Get instant notifications via Server-Sent Events"
+  },
+  "nativeCancel": {
+    "title": "Cancel Subscription",
+    "dismiss": "Dismiss",
+    "cancelViaStore": "I'll cancel from my app store",
+    "cancelDesktop": "Cancel desktop subscription",
+    "intro": "To cancel your subscription, please follow the instructions for your platform (you should cancel through the same platform you used to subscribe).",
+    "iosHeading": "For iOS (iPhone/iPad):",
+    "iosStep1": "1. Open the <b>Settings</b> app on your device",
+    "iosStep2": "2. Tap your name at the top of the screen",
+    "iosStep3": "3. Tap <b>Subscriptions</b>",
+    "iosStep4": "4. Find and tap <b>Donetick</b>",
+    "iosStep5": "5. Tap <b>Cancel Subscription</b>",
+    "iosNote": "<b>Note:</b> If you subscribed through iOS and are using the web/desktop version, you must cancel through iOS Settings as described above.",
+    "androidHeading": "For Android:",
+    "androidStep1": "1. Open the <b>Google Play Store</b> app",
+    "androidStep2": "2. Tap the profile icon in the top right",
+    "androidStep3": "3. Tap <b>Payments & subscriptions</b>",
+    "androidStep4": "4. Tap <b>Subscriptions</b>",
+    "androidStep5": "5. Find and tap <b>Donetick</b>",
+    "androidStep6": "6. Tap <b>Cancel subscription</b>",
+    "androidNote": "<b>Note:</b> If you subscribed through Google Play and are using the web/desktop version, you must cancel through Google Play as described above.",
+    "webHeading": "For Web/Desktop Subscriptions:",
+    "webBody": "If you originally subscribed through our website or desktop app, you can cancel your subscription by going to the Account Settings section on our website. using a web browser",
+    "webNote": "<b>Important:</b> You must cancel your subscription through the same platform where you originally subscribed. If you subscribed through the iOS App Store or Google Play Store (even if you're now using the web/desktop version), you must cancel through that original platform using the instructions above.",
+    "footer": "Your subscription will remain active until the end of your current billing period."
+  }
+}

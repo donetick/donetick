@@ -1,0 +1,690 @@
+{
+  "save": "Сохранить",
+  "cancel": "Отмена",
+  "delete": "Удалить",
+  "edit": "Изменить",
+  "close": "Закрыть",
+  "confirm": "Подтвердить",
+  "loading": "Загрузка...",
+  "error": "Ошибка",
+  "success": "Готово",
+  "warning": "Предупреждение",
+  "colors": {
+    "Salmon": "Лососевый",
+    "Teal": "Бирюзово-синий",
+    "Sky Blue": "Небесно-голубой",
+    "Grape": "Виноградный",
+    "Sunshine": "Солнечный",
+    "Coral": "Коралловый",
+    "Lavender": "Лавандовый",
+    "Rose": "Розовый",
+    "Charcoal": "Графитовый",
+    "Sienna": "Терракотовый",
+    "Mint": "Мятный",
+    "Amber": "Янтарный",
+    "Cobalt": "Кобальтовый",
+    "Emerald": "Изумрудный",
+    "Peach": "Персиковый",
+    "Ocean": "Океанский",
+    "Mustard": "Горчичный",
+    "Ruby": "Рубиновый",
+    "Periwinkle": "Барвинковый",
+    "Turquoise": "Бирюзовый",
+    "Lime": "Лаймовый",
+    "Blush": "Пудровый",
+    "Ash": "Пепельный",
+    "Sand": "Песочный"
+  },
+  "refresh": "Обновить",
+  "copy": "Копировать",
+  "copied": "Скопировано!",
+  "settings": "Настройки",
+  "yes": "Да",
+  "no": "Нет",
+  "back": "Назад",
+  "backToCalendar": "Назад к календарю",
+  "logout": "Выйти",
+  "version": "Версия",
+  "navigation": {
+    "search": "Поиск",
+    "allTasks": "Дела",
+    "home": "Обзор",
+    "tasks": "",
+    "more": "",
+    "mobileNavigation": "",
+    "archived": "Архив",
+    "things": "Штуки",
+    "labels": "Метки",
+    "projects": "Проекты",
+    "filters": "Фильтры",
+    "activities": "Активность",
+    "points": "Очки",
+    "settings": "Настройки",
+    "reportBug": "Сообщить о проблеме",
+    "openMenu": "Открыть меню",
+    "collapseMenu": "Свернуть меню",
+    "expandMenu": "Развернуть меню",
+    "primaryNavigation": "Основная навигация",
+    "profile": "Профиль"
+  },
+  "search": {
+    "title": "Поиск",
+    "placeholder": "Поиск по Donetick",
+    "inputAriaLabel": "Поиск по делам, заметкам, проектам, меткам и настройкам",
+    "deviceNote": "Поиск по данным, доступным на этом устройстве",
+    "escape": "",
+    "recent": "Недавнее",
+    "empty": {
+      "title": "Точных совпадений нет",
+      "subtitle": "Список дел всё равно можно отфильтровать по этому запросу.",
+      "actionsSubtitle": "Ни один раздел или действие не подошли. Нажмите Backspace, чтобы искать везде."
+    },
+    "groups": {
+      "tasks": "Дела",
+      "history": "Заметки",
+      "projects": "Проекты",
+      "labels": "Метки",
+      "people": "Люди",
+      "settings": "Настройки",
+      "actions": "Быстрые действия"
+    },
+    "actions": {
+      "quickAction": "Быстрое действие",
+      "navigation": "Навигация",
+      "createTask": "Создать дело",
+      "createLabel": "Создать метку",
+      "createProject": "Создать проект",
+      "createFilter": "Создать фильтр",
+      "viewAllTasks": "Все дела",
+      "viewArchivedTasks": "Архив дел",
+      "viewThings": "Открыть штуки",
+      "viewLabels": "Открыть метки",
+      "viewProjects": "Открыть проекты",
+      "viewFilters": "Открыть фильтры",
+      "viewActivities": "Открыть активность",
+      "viewPoints": "Открыть очки",
+      "openSettings": "Открыть настройки",
+      "filterTasks": "Показать дела по запросу «{{query}}»",
+      "filterTasksSubtitle": "Отфильтровать список дел"
+    },
+    "footer": {
+      "navigate": "Перемещение",
+      "open": "Открыть",
+      "results_one": "{{count}} результат",
+      "results_other": "{{count}} результата",
+      "typeToSearch": "Начните вводить запрос",
+      "slashHint": "/ — перейти к разделу"
+    },
+    "modes": {
+      "actions": {
+        "label": "Перейти",
+        "placeholder": "Перейти к разделу или действию"
+      }
+    }
+  },
+  "policyUpdate": {
+    "title": "Мы обновили политику конфиденциальности и условия",
+    "subtitle": "Пожалуйста, уделите минуту и прочитайте их. Продолжая пользоваться Donetick, вы принимаете обновлённые документы.",
+    "readPrivacy": "Политика конфиденциальности",
+    "readTerms": "Условия",
+    "acknowledge": "Понятно"
+  },
+  "feedback": {
+    "later": "Может быть, позже",
+    "sentiment": {
+      "title": "Как вам Donetick?",
+      "subtitle": "Ваш ответ помогает решить, что делать дальше.",
+      "options": {
+        "love": "Очень нравится",
+        "okay": "Нормально",
+        "issues": "Есть проблемы"
+      }
+    },
+    "categories": {
+      "bugs": "Ошибки",
+      "missingFeature": "Не хватает возможности",
+      "tooComplicated": "Слишком сложно",
+      "slow": "Медленно",
+      "notifications": "Уведомления",
+      "ai": "ИИ",
+      "other": "Другое"
+    },
+    "details": {
+      "title": "Что стоит улучшить?",
+      "messageLabel": "Расскажите подробнее",
+      "messagePlaceholder": "Что произошло или что сделало бы это лучше?",
+      "contextNote": "Мы приложим версию приложения, устройство и платформу, чтобы воспроизвести проблему.",
+      "submit": "Отправить отзыв",
+      "contextNoteSelfHosted": "Вы на собственном сервере, поэтому с него ничего не отправляется — мы откроем заранее заполненную задачу на GitHub, её можно проверить и отредактировать.",
+      "submitSelfHosted": "Перейти на GitHub"
+    },
+    "review": {
+      "title": "Рады, что вам нравится!",
+      "subtitle": "Оценка или звезда помогают другим найти Donetick.",
+      "github": "Поставить звезду на GitHub",
+      "appStore": "Оценить в App Store",
+      "playStore": "Оценить в Google Play"
+    },
+    "thanks": {
+      "title": "Спасибо за отзыв",
+      "subtitle": "Мы читаем каждый ответ — он влияет на то, чем мы займёмся дальше."
+    },
+    "github": {
+      "title": "Сообщить на GitHub",
+      "subtitle": "Мы заполнили задачу вашими заметками и данными о версии. Пока ничего не отправлено — проверьте и опубликуйте, когда будете готовы.",
+      "open": "Открыть задачу"
+    }
+  },
+  "done": "Готово",
+  "clearAll": "Сбросить всё",
+  "upload": {
+    "quotaTitle": "Место закончилось",
+    "quotaMessage": "Вы израсходовали квоту на загрузку файлов.",
+    "tooLargeTitle": "Файл слишком большой",
+    "tooLargeMessage": "Этот файл слишком велик для загрузки.",
+    "deniedTitle": "Нет доступа",
+    "deniedMessage": "У вас нет прав на загрузку файлов.",
+    "plusFeatureTitle": "Возможность Plus",
+    "plusFeatureMessage": "На тарифе Basic загрузка изображений недоступна. Перейдите на Plus, чтобы добавлять картинки.",
+    "upgradeTitle": "Нужен Plus",
+    "upgradeMessage": "Загрузка изображений доступна только на тарифе Plus.",
+    "failedTitle": "Не удалось загрузить",
+    "failedMessage": "Изображение не загрузилось.",
+    "processingMessage": "При обработке изображения произошла ошибка."
+  },
+  "getStarted": "Начать!",
+  "imageLoadFailed": "Не удалось загрузить изображение.",
+  "typeHere": "Введите здесь…",
+  "summaryOfChores": "Краткая сводка по вашим делам",
+  "loadingOffline": "Вы не в сети",
+  "loadingOfflineSub": "Это недоступно без сети. Проверьте подключение и попробуйте ещё раз.",
+  "loadingSlow": "Загрузка идёт дольше обычного. Возможно, что-то не так.",
+  "navigateBack": "Назад",
+  "bottomNav": "Нижняя навигация",
+  "profile": "Профиль",
+  "autocompletePlaceholder": "Введите текст...",
+  "errorScreen": {
+    "title": "Что-то пошло не так",
+    "fallback": "Произошла непредвиденная ошибка. Попробуйте перезагрузить — обычно помогает.",
+    "tryAgain": "Попробовать снова",
+    "home": "На главную",
+    "login": "Войти",
+    "hideDetails": "Скрыть детали ошибки",
+    "showDetails": "Показать детали ошибки",
+    "copyToClipboard": "Скопировать в буфер",
+    "copied": "Детали ошибки скопированы",
+    "reportProblem": "",
+    "reportHint": "",
+    "collectingDetails": ""
+  },
+  "userMenu": {
+    "actAsAnother": "Действовать от имени другого",
+    "stopImpersonating": "Выйти из режима",
+    "returnToAccount": "Вернуться в свой аккаунт",
+    "accountPrefs": "Аккаунт и настройки",
+    "invitePeople": "Пригласить людей",
+    "addMembers": "Добавить участников в группу",
+    "sidePanelSettings": "Настройки боковой панели",
+    "planFree": "Бесплатный",
+    "planPlus": "Плюс",
+    "planPlusExpiring": "Плюс (скоро истекает)",
+    "switchUser": "Сменить пользователя",
+    "impersonateUser": "Войти как пользователь",
+    "switchToLight": "Светлая тема",
+    "switchToDark": "Тёмная тема",
+    "unlockPremium": "Открыть премиум-функции",
+    "impersonating": "Режим другого пользователя",
+    "toggleThemeAppearance": "Переключить оформление",
+    "upgradeToPlus": "Перейти на Plus"
+  },
+  "realtime": {
+    "newTaskTitle": "Новое дело",
+    "connected": "Обновления приходят в реальном времени.",
+    "errorTitle": "Ошибка обновлений",
+    "parseTitle": "Ошибка сообщения",
+    "parseMessage": "Не удалось разобрать ответ сервера",
+    "disabledTitle": "Подключение временно отключено",
+    "failedTitle": "Не удалось подключиться",
+    "stateConnectionError": "Ошибка подключения",
+    "stateAuthExpired": "Сессия истекла — обновляем токен...",
+    "stateTokenRefreshed": "Токен обновлён — переподключаемся...",
+    "stateRefreshInProgress": "Токен обновляется — скоро переподключимся...",
+    "stateSessionExpired": "Сессия истекла — войдите заново",
+    "stateAuthFailed": "Не удалось авторизоваться — войдите заново",
+    "stateAuthError": "Ошибка авторизации — войдите заново",
+    "stateTimeout": "Тайм-аут подключения — переподключаемся...",
+    "connectErrorTitle": "Ошибка подключения",
+    "connectErrorMessage": "Не удалось установить подключение в реальном времени. Попробуйте ещё раз."
+  },
+  "removeAll": "Удалить все",
+  "apply": "Применить",
+  "cancelAll": "Отменить всё",
+  "backFromSearch": "",
+  "newVersionAvailable": "",
+  "notFound": {
+    "title": "",
+    "description": "",
+    "goToMyTasks": "",
+    "logIn": ""
+  },
+  "pendingBadge": {
+    "completePending": "",
+    "skipPending": "",
+    "updatePending": "",
+    "createPending": "",
+    "deletePending": "",
+    "editHistoryPending": "",
+    "deleteHistoryPending": "",
+    "reschedulePending": "",
+    "archivePending": "",
+    "restorePending": "",
+    "startPending": "",
+    "pausePending": ""
+  },
+  "sortAndFilter": {
+    "sortBy": "",
+    "ariaLabel": "",
+    "title": "",
+    "ascending": "",
+    "descending": "",
+    "filter": ""
+  },
+  "versionInfo": "",
+  "apiVersionUnavailable": "",
+  "sync": {
+    "aria": "Открыть состояние синхронизации и сети",
+    "allSynced": "Всё синхронизировано",
+    "willSync": "Синхронизируем, когда появится сеть",
+    "cancelAll": "Отменить всё",
+    "commandLabels": {
+      "createChore": "",
+      "updateChore": "",
+      "updateChoreHistory": "",
+      "completeChore": "",
+      "skipChore": "",
+      "startChore": "",
+      "pauseChore": "",
+      "deleteChore": "",
+      "deleteChoreHistory": "",
+      "rescheduleChore": "",
+      "archiveChore": "",
+      "unarchiveChore": "",
+      "pendingAction": ""
+    },
+    "never": "",
+    "justNow": "",
+    "secondsAgo": "",
+    "minutesAgo": "",
+    "hoursAgo": "",
+    "online": "",
+    "offline": "",
+    "syncing": "",
+    "lastSync": "",
+    "offlineSince": "",
+    "errorPrefix": "",
+    "pending": "",
+    "failed": "",
+    "dismiss": "",
+    "nextAutoSync": "",
+    "checkingServer": "",
+    "retryingIn": "",
+    "syncNow": "",
+    "pendingSyncLabel_one": "",
+    "pendingSyncLabel_other": "",
+    "pendingActionsTitle": "",
+    "actionsWaitingToSync_one": "",
+    "actionsWaitingToSync_other": "",
+    "cancelActionAria": ""
+  },
+  "attachments": "Вложения",
+  "fileNumbered": "Файл {{index}}",
+  "noAttachmentsTitle": "",
+  "noAttachmentsDescription": "",
+  "kbSize": "",
+  "onboarding": {
+    "sources": {
+      "speak": "Голос",
+      "snap": "Фото",
+      "type": "Текст"
+    },
+    "capture": {
+      "voiceCaption": "Даты, метки и очки — из ваших слов",
+      "deviceCaption": "Распознаём прямо на устройстве",
+      "typeCaption": "#метки @люди *очки — прямо при вводе",
+      "trashTitle": "♻️ Вынести мусор",
+      "trashDue": "Срок: завтра",
+      "trashRepeat": "Каждый понедельник",
+      "homeLabel": "Дом",
+      "vehicleTitle": "🚗 Продлить страховку на машину",
+      "vehicleDue": "Срок: 3 августа",
+      "acTitle": "💨 Поменять фильтр кондиционера",
+      "acDue": "Срок: пятница",
+      "acRepeat": "Раз в 3 месяца"
+    },
+    "schedule": {
+      "fromDueDate": "Считать от срока",
+      "fromCompletionDate": "Считать от даты выполнения",
+      "due": "Срок",
+      "done": "Сделано",
+      "next": "Следующее"
+    },
+    "nfc": {
+      "tagOnWasher": "Метка на стиральной машине",
+      "tapToOpen": "Приложите, чтобы открыть",
+      "swapFilter": "Поменять фильтр стиральной машины",
+      "done": "Готово",
+      "skip": "Пропустить",
+      "startTimer": "Запустить таймер",
+      "waitingApproval": "{{name}} отметил(а) выполненным · ждёт вас",
+      "approve": "Принять",
+      "reject": "Отклонить",
+      "completed": "Выполнено",
+      "note": "Стирал на деликатном — в следующий раз почистить фильтр.",
+      "metaJustNow": "Только что · ★ 5 очков",
+      "metaLastWeek": "На прошлой неделе · ★ 5 очков"
+    },
+    "circle": {
+      "kitchenTitle": "Генеральная уборка кухни",
+      "kitchenDue": "Срок: суббота",
+      "kitchenRepeat": "Каждую неделю",
+      "takesTurns": "По очереди"
+    },
+    "turns": {
+      "binsTitle": "🗑️ Вынести баки к дороге",
+      "binsDue": "Срок: завтра",
+      "binsRepeat": "Каждую неделю",
+      "completed": "Выполнено",
+      "metaJustNow": "Только что · ★ 5 очков"
+    },
+    "widget": {
+      "schoolForms": "Бумаги в школу",
+      "takeOutTrash": "Вынести мусор",
+      "waterPlants": "Полить цветы",
+      "today": "Сегодня",
+      "left": "осталось {{count}}"
+    },
+    "reminders": {
+      "trashTitle": "Вынести мусор",
+      "trashBody": "Через 30 минут · Мусорный день",
+      "finishedTitle": "Амалия закончила генеральную уборку кухни",
+      "finishedBody": "Ваша очередь — в следующую субботу"
+    },
+    "things": {
+      "waterBill": "Счёт за воду",
+      "acFilter": "Фильтр кондиционера",
+      "trashDay": "Мусорный день",
+      "dogMedicine": "Лекарство собаке",
+      "whoseTurn": "Чья очередь готовить",
+      "monthly": "Ежемесячно",
+      "everyThreeMonths": "Раз в 3 месяца",
+      "everyMonday": "Каждый понедельник",
+      "daily": "Ежедневно",
+      "weekly": "Еженедельно",
+      "tagBills": "Счета",
+      "tagHome": "Дом",
+      "tagPets": "Питомцы",
+      "tagCooking": "Готовка"
+    },
+    "slides": {
+      "problemTitle": "Перестаньте забывать мелочи",
+      "problemBody": "Donetick помнит, когда это делали в прошлый раз и когда пора снова. Чтобы не помнил никто другой.",
+      "captureTitle": "Запишите, пока не забыли",
+      "captureBody": "Наберите, скажите вслух или сфотографируйте. Donetick сам подставит срок, важность, метки и исполнителя.",
+      "scheduleTitle": "Вернётся ровно тогда, когда нужно",
+      "scheduleBody": "Каждую неделю, раз в три месяца или через месяц после того, как вы это сделали. Опоздание не ломает весь год.",
+      "circleTitle": "Очередь на всех — и больше никаких споров",
+      "circleBody": "Очередь идёт в заданном порядке или случайно. Donetick помнит, кто был последним, — очередь остаётся честной.",
+      "remindersTitle": "Напомнит вовремя — и виджеты!",
+      "remindersBody": "Получайте напоминание до срока или подтолкните того, кто забыл про своё. Список на сегодня — прямо на домашнем экране."
+    },
+    "carousel": {
+      "skip": "Пропустить",
+      "ariaLabel": "Что умеет Donetick",
+      "goToStep": "Перейти к шагу {{number}}",
+      "slidePosition": "{{index}} из {{total}}",
+      "turnOnReminders": "Включить напоминания",
+      "notNow": "Не сейчас",
+      "next": "Дальше"
+    },
+    "getStarted": {
+      "subtitleSignupEnabled": "",
+      "subtitleSignupDisabled": "",
+      "createAccount": "",
+      "alreadyHaveAccount": "",
+      "signIn": "",
+      "connectSelfHosted": ""
+    },
+    "heardAbout": {
+      "title": "Откуда вы узнали о Donetick?",
+      "subtitle": "Поможет нам понять, что работает. Совершенно необязательно.",
+      "detailPlaceholder": "Расскажите, где",
+      "continue": "Дальше",
+      "skip": "Пропустить",
+      "sources": {
+        "appStore": "App Store или Google Play",
+        "reddit": "Reddit или форум",
+        "friend": "От друзей или родных",
+        "video": "YouTube или TikTok",
+        "search": "Поисковик",
+        "other": "Другое"
+      }
+    },
+    "privacy": {
+      "title": "Помогите сделать Donetick лучше",
+      "subtitle": "Ваш сервер, ваши данные. Оба переключателя выключены, пока вы их не включите.",
+      "crashReportsLabel": "Присылать отчёты о сбоях",
+      "crashReportsDescription": "Если Donetick упадёт, прислать нам ошибку и то, что к ней привело: устройство, версию, экран. Без содержимого дел. Так ловятся баги, которых не видно на наших тестах.",
+      "analyticsLabel": "Делиться обезличенной статистикой",
+      "analyticsDescription": "Отправлять обезличенные события: какими возможностями пользуются, а какими нет — чтобы мы делали нужное, а не угадывали. Ни содержимого дел, ни личных данных, ничего, что укажет на вас."
+    }
+  },
+  "errorReport": {
+    "titleBug": "Сообщить о проблеме",
+    "titleCrash": "Сообщить о сбое",
+    "subtitleBug": "Расскажите, что не работает, — технические подробности приложим сами.",
+    "subtitleCrash": "Одна фраза о том, что вы делали, превращает это в починяемую задачу.",
+    "labelBug": "Что пошло не так?",
+    "labelCrash": "Что вы делали?",
+    "placeholderBug": "например: отмечаю дело в списке — срок не обновляется",
+    "placeholderCrash": "например: нажал на дело в «Моих делах», и экран побелел",
+    "email": "Почта",
+    "emailOptional": "(необязательно — только если хотите ответ)",
+    "emailPlaceholder": "",
+    "showWhatGetsSent": "Показать, что уйдёт",
+    "hideWhatGetsSent": "Скрыть, что уйдёт",
+    "copyDiagnostics": "Копировать диагностику",
+    "collecting": "Собираем диагностику…",
+    "privacyNote": "Названия дел, заметки и вложения не отправляются.",
+    "send": "Отправить",
+    "cancel": "Отмена",
+    "notNow": "Не сейчас",
+    "sentTitle": "Отчёт отправлен",
+    "sentBody": "Спасибо! Это ушло прямо к тем, кто может починить.",
+    "reference": "Номер",
+    "copyReference": "Копировать код обращения",
+    "done": "Готово",
+    "githubTitle": "Дописать на GitHub",
+    "githubBody": "Пока ничего не отправлено. Мы подготовили тикет с вашим описанием и диагностикой — посмотрите и опубликуйте, когда будете готовы.",
+    "openIssue": "Открыть заполненный тикет",
+    "copied": "Скопировано",
+    "copyInstead": "Скопировать подробности",
+    "close": "Закрыть"
+  },
+  "circleSetup": {
+    "inviteTitle": "Позовите своих",
+    "inviteSubtitle": "Все, кто войдёт в группу, видят одни и те же дела, берут свою очередь и остаются в курсе автоматически.",
+    "joinTitle": "Вступить в группу",
+    "joinSubtitle": "Введите полученный код — мы отправим заявку, владельцу группы останется её принять.",
+    "loadingCode": "Загрузка…",
+    "copyCodeAria": "Скопировать код группы",
+    "copyLinkInstead": "Скопировать ссылку-приглашение",
+    "continue": "Дальше",
+    "joinInstead": "Вступить в существующую группу",
+    "codePlaceholder": "Введите код",
+    "joinButton": "Вступить",
+    "back": "Назад",
+    "codeCopied": "Код скопирован",
+    "linkCopied": "Ссылка скопирована",
+    "requestSentTitle": "Заявка отправлена",
+    "requestSentBody": "Заявка отправлена! Владелец группы должен её принять — после этого вы увидите общие дела. Придёт уведомление.",
+    "alreadyMember": "Вы уже в этой группе",
+    "joinFailed": "Не удалось вступить в группу"
+  },
+  "joinCircle": {
+    "title": "Вас приглашают в группу",
+    "incompleteTitle": "Ссылка неполная",
+    "incompleteSubtitle": "В ссылке-приглашении нет кода. Попросите пригласившего прислать новую.",
+    "goToDonetick": "Перейти в Donetick",
+    "signedOutSubtitle": "Войдите или создайте аккаунт Donetick, чтобы продолжить. Заявку отправим сразу после входа.",
+    "signIn": "Войти",
+    "createAccount": "Создать аккаунт",
+    "sendingTitle": "Отправляем заявку",
+    "sendingSubtitle": "Отправляем заявку…",
+    "greetingSubtitle": "Здравствуйте, {{name}}! Отправьте заявку, чтобы вести общие дела вместе с участниками группы.",
+    "adminReviewNote": "Администратор группы рассмотрит заявку до того, как вы получите доступ.",
+    "sendRequest": "Отправить заявку",
+    "requestSentTitle": "Заявка отправлена",
+    "requestSentBody": "Заявка отправлена. Администратор группы должен её принять — после этого откроются группа и её дела. Мы уведомим вас.",
+    "gotIt": "Понятно",
+    "alreadyMember": "Вы уже в этой группе",
+    "joinFailed": "Не удалось вступить в группу",
+    "requestError": "Не удалось отправить заявку. Попробуйте ещё раз."
+  },
+  "selectUser": "",
+  "closeDialog": "",
+  "activeFilterChips": {
+    "removeFilterAria": "",
+    "addFilterCondition": "",
+    "moreCount": ""
+  },
+  "filterBar": {
+    "filtersButton": "",
+    "clearAllButton": "",
+    "doneButton": "",
+    "showResults_one": "",
+    "showResults_other": "",
+    "selectedCount": "",
+    "dateRangeFallback": "",
+    "fromDate": "",
+    "untilDate": "",
+    "presetToday": "",
+    "presetYesterday": "",
+    "presetThisWeek": "",
+    "presetLast7Days": "",
+    "presetThisMonth": "",
+    "presetLast30Days": "",
+    "presetLast3Months": ""
+  },
+  "workspaceReady": {
+    "allSetNamed": "",
+    "allSet": "",
+    "subtitle": "",
+    "continue": "",
+    "readyShared": "",
+    "readyRecurring": "",
+    "readyCapture": "",
+    "readyReminders": ""
+  },
+  "home": {
+    "customize": {
+      "action": ""
+    },
+    "verdict": {
+      "late": {
+        "title_one": "",
+        "title_other": ""
+      },
+      "review": {
+        "title": "",
+        "body_one": "",
+        "body_other": ""
+      },
+      "today": {
+        "title_one": "",
+        "title_other": ""
+      },
+      "clear": {
+        "title": "",
+        "body": ""
+      },
+      "firstRun": {
+        "title": "",
+        "body": ""
+      }
+    },
+    "triage": {
+      "overdue": "",
+      "dueToday": "",
+      "needsReview": "",
+      "comingUp": "",
+      "unplanned": "",
+      "allClear": ""
+    },
+    "nextUp": {
+      "title": "",
+      "action": ""
+    },
+    "nextUpFallback": {
+      "title": "",
+      "action": ""
+    },
+    "overdue": {
+      "title": "",
+      "action": ""
+    },
+    "clear": {
+      "title": "",
+      "body": "",
+      "action": ""
+    },
+    "firstTask": {
+      "title": "",
+      "description": "",
+      "action": ""
+    },
+    "review": {
+      "title": "",
+      "pendingTitle": "",
+      "myPendingTitle": "",
+      "action": ""
+    },
+    "circle": {
+      "title": "",
+      "action": "",
+      "open_one": "",
+      "open_other": "",
+      "late_one": "",
+      "late_other": "",
+      "done_one": "",
+      "done_other": "",
+      "caughtUp": "",
+      "emptyTitle": "",
+      "emptyBody": "",
+      "emptyAction": ""
+    },
+    "projects": {
+      "title": "",
+      "action": "",
+      "tasks_one": "",
+      "tasks_other": "",
+      "tasksOverdue_one": "",
+      "tasksOverdue_other": "",
+      "tasksUnplanned_one": "",
+      "tasksUnplanned_other": "",
+      "clear": ""
+    },
+    "filters": {
+      "title": "",
+      "action": "",
+      "tasks_one": "",
+      "tasks_other": "",
+      "clear": ""
+    },
+    "capture": {
+      "placeholder": "",
+      "add": "",
+      "voice": "",
+      "scan": ""
+    }
+  }
+}

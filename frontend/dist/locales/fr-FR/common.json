@@ -1,0 +1,78 @@
+{
+  "save": "Enregistrer",
+  "cancel": "Annuler",
+  "delete": "Supprimer",
+  "edit": "Modifier",
+  "close": "Fermer",
+  "confirm": "Confirmer",
+  "loading": "Chargement...",
+  "error": "Erreur",
+  "success": "Succès",
+  "warning": "Avertissement",
+  "refresh": "Actualiser",
+  "copy": "Copier",
+  "copied": "Copié !",
+  "settings": "Paramètres",
+  "yes": "Oui",
+  "no": "Non",
+  "back": "Retour",
+  "backToCalendar": "Retour au Calendrier",
+  "logout": "Déconnexion",
+  "version": "Version",
+  "navigation": {
+    "search": "Recherche",
+    "allTasks": "Tâches",
+    "home": "Aperçu",
+    "archived": "Archivées",
+    "things": "Objets",
+    "labels": "Étiquettes",
+    "projects": "Projets",
+    "filters": "Filtres",
+    "activities": "Activités",
+    "points": "Points",
+    "settings": "Paramètres",
+    "openMenu": "Ouvrir le menu",
+    "collapseMenu": "Réduire le menu",
+    "expandMenu": "Développer le menu",
+    "primaryNavigation": "Navigation principale",
+    "profile": "Profil"
+  },
+  "search": {
+    "title": "Recherche",
+    "placeholder": "Rechercher dans Donetick",
+    "inputAriaLabel": "Rechercher des tâches, l’historique, des projets, des étiquettes et des paramètres",
+    "deviceNote": "Recherche dans le contenu disponible sur cet appareil",
+    "escape": "Échap",
+    "recent": "Récents",
+    "empty": {
+      "title": "Aucune correspondance directe",
+      "subtitle": "Vous pouvez tout de même filtrer la liste des tâches avec cette recherche."
+    },
+    "groups": {
+      "tasks": "Tâches",
+      "history": "Notes",
+      "projects": "Projets",
+      "labels": "Étiquettes",
+      "people": "Personnes",
+      "settings": "Paramètres",
+      "actions": "Actions rapides"
+    },
+    "actions": {
+      "quickAction": "Action rapide",
+      "navigation": "Navigation",
+      "createTask": "Créer une tâche",
+      "viewAllTasks": "Voir toutes les tâches",
+      "viewArchivedTasks": "Voir les tâches archivées",
+      "openSettings": "Ouvrir les paramètres",
+      "filterTasks": "Afficher les tâches correspondant à « {{query}} »",
+      "filterTasksSubtitle": "Filtrer la liste des tâches"
+    },
+    "footer": {
+      "navigate": "Naviguer",
+      "open": "Ouvrir",
+      "results_one": "{{count}} résultat",
+      "results_other": "{{count}} résultats",
+      "typeToSearch": "Saisissez du texte pour rechercher"
+    }
+  }
+}

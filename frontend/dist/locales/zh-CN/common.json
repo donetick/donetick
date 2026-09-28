@@ -1,0 +1,77 @@
+{
+  "save": "保存",
+  "cancel": "取消",
+  "delete": "删除",
+  "edit": "编辑",
+  "close": "关闭",
+  "confirm": "确认",
+  "loading": "加载中...",
+  "error": "错误",
+  "success": "成功",
+  "warning": "警告",
+  "refresh": "刷新",
+  "copy": "复制",
+  "copied": "已复制！",
+  "settings": "设置",
+  "yes": "是",
+  "no": "否",
+  "back": "返回",
+  "backToCalendar": "返回日历",
+  "logout": "退出登录",
+  "version": "版本",
+  "navigation": {
+    "search": "搜索",
+    "allTasks": "任务",
+    "home": "概览",
+    "archived": "已归档",
+    "things": "事项",
+    "labels": "标签",
+    "projects": "项目",
+    "filters": "筛选",
+    "activities": "活动",
+    "points": "积分",
+    "settings": "设置",
+    "openMenu": "打开菜单",
+    "collapseMenu": "收起菜单",
+    "expandMenu": "展开菜单",
+    "primaryNavigation": "主导航",
+    "profile": "个人资料"
+  },
+  "search": {
+    "title": "搜索",
+    "placeholder": "搜索 Donetick",
+    "inputAriaLabel": "搜索任务、历史、项目、标签和设置",
+    "deviceNote": "正在搜索此设备上可用的内容",
+    "escape": "Esc",
+    "recent": "最近",
+    "empty": {
+      "title": "没有直接匹配的结果",
+      "subtitle": "你仍然可以用此搜索筛选任务列表。"
+    },
+    "groups": {
+      "tasks": "任务",
+      "history": "备注",
+      "projects": "项目",
+      "labels": "标签",
+      "people": "成员",
+      "settings": "设置",
+      "actions": "快捷操作"
+    },
+    "actions": {
+      "quickAction": "快捷操作",
+      "navigation": "导航",
+      "createTask": "创建任务",
+      "viewAllTasks": "查看所有任务",
+      "viewArchivedTasks": "查看已归档任务",
+      "openSettings": "打开设置",
+      "filterTasks": "显示匹配“{{query}}”的任务",
+      "filterTasksSubtitle": "筛选任务列表"
+    },
+    "footer": {
+      "navigate": "导航",
+      "open": "打开",
+      "results_other": "{{count}} 个结果",
+      "typeToSearch": "输入以搜索"
+    }
+  }
+}

@@ -1,0 +1,74 @@
+{
+  "redeem": "استبدال النقاط",
+  "redeemModal": {
+    "redeemButton": "Redeem",
+    "pointsAvailable": "",
+    "pointsToRedeem": "النقاط المراد استبدالها",
+    "placeholder": "أدخل نقاط...",
+    "cannotExceed": "لا يمكن تجاوز النقاط المتاحة",
+    "quickAdd": "إضافة سريعة:",
+    "aboutToRedeem": "أنت على وشك الاسترداد",
+    "amount": "{{count}} نقاط",
+    "remaining": "المتبقية: {{count}} نقاط"
+  },
+  "leaderboard": {
+    "titlePoints": "لائحة المتصدرين",
+    "titleTasks": "لائحة المتصدرين للمهام",
+    "subtitlePoints": "الترتيب بناء على النقاط المكتسبة خلال الفترة الزمنية المحددة",
+    "subtitleTasks": "التصنيف بناء على المهام المنجزة خلال الفترة الزمنية المحددة",
+    "modePoints": "النقاط",
+    "modeTasks": "مهام",
+    "you": "أنت",
+    "tasksAndAvg": "مهام {{tasks}} • متوسط {{avg}} لكل مهمة",
+    "available": "",
+    "points_one": "",
+    "points_other": "{{count}} نقاط"
+  },
+  "tabs": {
+    "short7d": "7D",
+    "short6m": "6 ميغا",
+    "shortAll": "الكل",
+    "days7": "7 أيام",
+    "months6": "6 أشهر",
+    "allTime": "كل الوقت"
+  },
+  "filter": {
+    "analysisTitle": "الفلتر والتحليل",
+    "title": "نقاط الفلتر",
+    "showFor": "إظهار النقاط لـ:",
+    "timePeriod": "الفترة الزمنية:"
+  },
+  "cards": {
+    "available": {
+      "title": "متوفر",
+      "subtext": "جاهز للاسترداد"
+    },
+    "redeemed": {
+      "title": "استبدلت",
+      "subtext": "مستخدم من قبل"
+    },
+    "total": {
+      "title": "المجموع",
+      "subtext": "كل الوقت المكتسبة"
+    },
+    "period": {
+      "title": "نقاط الفترة",
+      "allTime": "كل الوقت",
+      "last6Months": "آخر 6 أشهر",
+      "lastDays_one": "آخر {{count}} يوم",
+      "lastDays_other": "آخر {{count}} أيام"
+    }
+  },
+  "summary": {
+    "showingFor": "عرض النقاط ل",
+    "unknownUser": "مستخدم غير معروف",
+    "overThe": "فوق",
+    "allTime": "كل الوقت",
+    "last6Months": "آخر 6 أشهر",
+    "lastDays_one": "آخر {{count}} يوم",
+    "lastDays_other": "آخر {{count}} أيام"
+  },
+  "trend": {
+    "title": "اتجاه النقاط"
+  }
+}

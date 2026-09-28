@@ -1,0 +1,163 @@
+{
+  "activities": {
+    "emptyDescriptionEveryone": "Nadie ha completado nada en tu círculo {{period}}. Prueba con un rango de tiempo más amplio o un miembro diferente.",
+    "emptyDescriptionMember": "{{name}} no ha completado nada {{period}}. Prueba con un rango de tiempo más amplio o un miembro diferente.",
+    "emptyTitle": "Sin actividad en este rango",
+    "periodLastDays": "en los últimos {{count}} días",
+    "periodSoFar": "hasta ahora",
+    "title": "Actividades",
+    "unknownMember": "este miembro"
+  },
+  "badge": {
+    "onTime": "A Tiempo",
+    "onTimeLabel": "A tiempo"
+  },
+  "card": {
+    "assignedTo": "Asignada a {{name}}",
+    "daysAfterDue_one": "{{count}} d después de la fecha límite",
+    "daysAfterDue_other": "{{count}} d después de la fecha límite",
+    "daysBeforeDue_one": "{{count}} d antes de la fecha límite",
+    "daysBeforeDue_other": "{{count}} d antes de la fecha límite",
+    "hoursAfterDue_one": "{{count}} h después de la fecha límite",
+    "hoursAfterDue_other": "{{count}} h después de la fecha límite",
+    "hoursBeforeDue_one": "{{count}} h antes de la fecha límite",
+    "hoursBeforeDue_other": "{{count}} h antes de la fecha límite",
+    "points_one": "★ {{count}} pt",
+    "points_other": "★ {{count}} pts",
+    "wasDue": "Vencía el {{date}}"
+  },
+  "charts": {
+    "assigneeBreakdown": {
+      "description": "Tareas agrupadas por persona asignada",
+      "title": "por Asignado"
+    },
+    "due": {
+      "description": "Fecha de vencimiento de tareas actuales",
+      "title": "Fecha de Vencimiento"
+    },
+    "labels": {
+      "description": "Tareas por etiquetas",
+      "title": "Etiquetas"
+    },
+    "labelsDuration": {
+      "description": "Tiempo invertido por etiqueta (horas)",
+      "title": "Etiquetas (tiempo)"
+    },
+    "late": "Con retraso",
+    "noData": "No hay datos disponibles",
+    "noLabels": "Sin Etiquetas",
+    "priority": {
+      "description": "Tareas por prioridad",
+      "title": "Prioridad"
+    },
+    "status": {
+      "description": "Estado de tareas completadas",
+      "title": "Estado"
+    },
+    "tasksTime": {
+      "description": "Tiempo invertido por tareas individuales (horas)",
+      "title": "Tareas (tiempo)"
+    },
+    "unassigned": "Sin Asignar",
+    "unknownTask": "Tarea Desconocida"
+  },
+  "delete": {
+    "message": "¿Estás seguro de que quieres eliminar este registro del historial?",
+    "title": "Eliminar Registro del Historial"
+  },
+  "detail": {
+    "assignedTo": "Asignada a",
+    "duration": "Duración",
+    "editEntry": "Editar Entrada",
+    "lastUpdated": "Última actualización",
+    "note": "Nota",
+    "openTask": "Abrir Tarea",
+    "performedBy": "Realizado por",
+    "pointsEarned": "Puntos ganados",
+    "points_one": "{{count}} pt",
+    "points_other": "{{count}} pts",
+    "title": "Detalle de Actividad"
+  },
+  "edit": {
+    "additionalNotes": "Notas Adicionales",
+    "completedDate": "Fecha de Finalización",
+    "deleteMessage": "¿Estás seguro de que quieres eliminar este historial?",
+    "deleteTitle": "Eliminar Historial",
+    "note": "Nota",
+    "title": "Editar Historial"
+  },
+  "empty": {
+    "backToTasks": "Volver a tareas",
+    "description": "Cada vez que esta tarea se completa u omite, aparece aquí con quién lo hizo y cuándo. Aún no ha ocurrido nada.",
+    "noResultsDescription": "Hay historial aquí, pero nada se ajusta a los filtros activados actualmente.",
+    "noResultsTitle": "Ningún historial coincide con estos filtros",
+    "title": "Aún no hay historial"
+  },
+  "filter": {
+    "completedAt": "Completada el",
+    "completedBy": "Completada por",
+    "hasNotes": "Tiene Notas",
+    "hasPoints": "Tiene Puntos",
+    "labels": "Etiquetas",
+    "pending": "Pendiente",
+    "status": "Estado",
+    "timePeriod": "Período de Tiempo",
+    "user": "Usuario"
+  },
+  "info": {
+    "allCompleted": "Todas Completadas",
+    "averageTiming": "Tiempo Promedio",
+    "completedMost": "Más Completadas por",
+    "lastCompleted": "Última Finalización",
+    "longestDelay": "Mayor Retraso",
+    "membersInvolved": "Miembros Involucrados",
+    "membersSuffix": "{{count}} miembros",
+    "neverLate": "Nunca tarde",
+    "onTime": "A tiempo",
+    "timesSuffix": "{{count}} veces",
+    "unknown": "Desconocido"
+  },
+  "noResults": {
+    "clear": "Limpiar filtros"
+  },
+  "noteViewer": {
+    "updatedAt": "Actualizado el {{date}}"
+  },
+  "period": {
+    "allTime": "Todo el Tiempo",
+    "days_one": "{{count}} Día",
+    "days_other": "{{count}} Días"
+  },
+  "status": {
+    "completed": "Completada",
+    "inProgress": "En Progreso",
+    "missed": "No Realizada",
+    "pendingApproval": "Pendiente de Aprobación",
+    "rejected": "Rechazada",
+    "rescheduled": "Reagendada",
+    "scheduled": "Programada",
+    "skipped": "Omitida"
+  },
+  "title": {
+    "activity": "Actividad de Tareas",
+    "summary": "Resumen de Tareas"
+  },
+  "toast": {
+    "deleteQueued": {
+      "message": "Estás sin conexión. La eliminación del historial se sincronizará cuando se restablezca la conexión.",
+      "title": "Eliminación de Historial en Cola"
+    },
+    "deleted": {
+      "message": "El registro del historial se ha eliminado correctamente.",
+      "title": "Historial Eliminado"
+    },
+    "updateQueued": {
+      "message": "Estás sin conexión. La actualización del historial se sincronizará cuando se restablezca la conexión.",
+      "title": "Actualización de Historial en Cola"
+    },
+    "updated": {
+      "message": "El registro del historial se ha actualizado correctamente.",
+      "title": "Historial Actualizado"
+    }
+  }
+}

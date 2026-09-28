@@ -1,0 +1,71 @@
+{
+  "shared": "Sdílený",
+  "delete": {
+    "title": "Smazat štítek",
+    "message": "Opravdu chcete tento štítek smazat? Štítek bude odebrán ze všech úkolů."
+  },
+  "loadError": "Štítky se nepodařilo načíst. Zkuste to prosím znovu.",
+  "search": {
+    "placeholder": "Hledat štítky",
+    "noResultsTitle": "Žádné odpovídající štítky",
+    "noResultsDescription": "Hledání „{{searchTerm}}“ neodpovídá žádný štítek.",
+    "noFilterResultsDescription": "Aktuálnímu filtru neodpovídá žádný štítek.",
+    "clear": "Vymazat hledání",
+    "showAll": "Zobrazit všechny štítky"
+  },
+  "detail": {
+    "taskCount_one": "{{count}} úkol",
+    "taskCount_other": "{{count}} úkolů",
+    "labelActions": "Akce štítku",
+    "filters": {
+      "all": "Vše",
+      "overdue": "Po termínu",
+      "today": "Dnes",
+      "undated": "Bez data"
+    },
+    "noMatchingStatus": "Žádný úkol s tímto štítkem teď není v tomto stavu.",
+    "clearFilters": "Zobrazit všechny úkoly",
+    "searchPlaceholder": "Hledat úkoly s tímto štítkem",
+    "emptyTitle": "Žádné úkoly s tímto štítkem",
+    "emptyDescription": "Zatím nic nemá štítek „{{label}}“. Přidejte štítek k úkolu a zobrazí se zde.",
+    "browseTasks": "Procházet úkoly",
+    "noResultsTitle": "Žádné odpovídající úkoly",
+    "noResultsDescription": "Hledání „{{searchTerm}}“ neodpovídá žádný úkol s tímto štítkem.",
+    "notFoundTitle": "Štítek nenalezen",
+    "notFoundDescription": "Tento štítek byl možná smazán nebo už s vámi není sdílen.",
+    "backToLabels": "Zpět na štítky"
+  },
+  "blurb": "Spravujte své štítky a efektivně organizujte úkoly. Štítky se automaticky sdílí s vaším kruhem, pokud jsou použity na sdíleném úkolu.",
+  "modal": {
+    "errorEmptyName": "Název nesmí být prázdný",
+    "errorDuplicate": "Štítek s tímto názvem již existuje",
+    "errorNoColor": "Vyberte barvu",
+    "saveFailedTitle": "Štítek se nepodařilo uložit",
+    "saveFailedMessage": "Štítek nelze uložit. Zkuste to prosím znovu.",
+    "name": "Název",
+    "editTitle": "Upravit štítek",
+    "addTitle": "Přidat štítek",
+    "color": "Barva",
+    "saveChanges": "Uložit změny",
+    "addLabel": "Přidat štítek",
+    "colorAriaSelect": "Vybrat {{color}}"
+  },
+  "picker": {
+    "label": "Štítky",
+    "createLabel": "Vytvořit štítek",
+    "labelsCount_one": "{{count}} štítek",
+    "labelsCount_other": "{{count}} štítků"
+  },
+  "view": {
+    "emptyTitle": "Zatím žádné štítky",
+    "emptyDescription": "Štítky seskupují úkoly napříč vaším kruhem, třeba „kuchyň“ nebo „účty“, takže je vyfiltrujete jedním klepnutím.",
+    "createLabel": "Vytvořit štítek",
+    "filterTitle": "Zobrazit",
+    "sortName": "Název",
+    "sortColor": "Barva",
+    "sortRecent": "Nedávno vytvořené",
+    "filterAll": "Všechny štítky",
+    "filterMine": "Vytvořené mnou",
+    "filterShared": "Sdílené se mnou"
+  }
+}

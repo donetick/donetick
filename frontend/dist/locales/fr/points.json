@@ -1,0 +1,74 @@
+{
+  "redeem": "Utiliser des points",
+  "redeemModal": {
+    "redeemButton": "Utiliser",
+    "pointsAvailable": "Disponibles : {{count}}",
+    "pointsToRedeem": "Points à utiliser",
+    "placeholder": "Saisissez un nombre de points...",
+    "cannotExceed": "Le solde de points disponibles ne peut pas être dépassé",
+    "quickAdd": "Ajout rapide :",
+    "aboutToRedeem": "Vous allez utiliser",
+    "amount": "Points : {{count}}",
+    "remaining": "Points restants : {{count}}"
+  },
+  "leaderboard": {
+    "titlePoints": "Classement par points",
+    "titleTasks": "Classement par tâches",
+    "subtitlePoints": "Classement selon les points gagnés pendant la période sélectionnée",
+    "subtitleTasks": "Classement selon les tâches terminées pendant la période sélectionnée",
+    "modePoints": "Points",
+    "modeTasks": "Tâches",
+    "you": "Vous",
+    "tasksAndAvg": "{{tasks}} tâches • {{avg}} en moyenne par tâche",
+    "available": "Disponibles : {{count}}",
+    "points_one": "{{count}} point",
+    "points_other": "{{count}} points"
+  },
+  "tabs": {
+    "short7d": "7 j",
+    "short6m": "6 mois",
+    "shortAll": "Tout",
+    "days7": "7 jours",
+    "months6": "6 mois",
+    "allTime": "Toute la période"
+  },
+  "filter": {
+    "analysisTitle": "Filtres et analyse",
+    "title": "Filtrer les points",
+    "showFor": "Afficher les points pour :",
+    "timePeriod": "Période :"
+  },
+  "cards": {
+    "available": {
+      "title": "Disponibles",
+      "subtext": "Prêts à être utilisés"
+    },
+    "redeemed": {
+      "title": "Utilisés",
+      "subtext": "Utilisés précédemment"
+    },
+    "total": {
+      "title": "Total",
+      "subtext": "Gagnés sur toute la période"
+    },
+    "period": {
+      "title": "Points de la période",
+      "allTime": "Toute la période",
+      "last6Months": "6 derniers mois",
+      "lastDays_one": "{{count}} dernier jour",
+      "lastDays_other": "{{count}} derniers jours"
+    }
+  },
+  "summary": {
+    "showingFor": "Points affichés pour",
+    "unknownUser": "Utilisateur inconnu",
+    "overThe": "sur",
+    "allTime": "toute la période",
+    "last6Months": "les 6 derniers mois",
+    "lastDays_one": "{{count}} jour",
+    "lastDays_other": "{{count}} jours"
+  },
+  "trend": {
+    "title": "Évolution des points"
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "builder": {
+    "addConditions": "Añade condiciones para la vista previa",
+    "color": "Color",
+    "editTitle": "Editar Filtro",
+    "errorConditions": "Por favor, configura al menos una condición de filtro",
+    "errorName": "Por favor, introduce un nombre para el filtro",
+    "name": "Nombre del Filtro",
+    "namePlaceholder": "ej. Tareas vencidas de Alicia",
+    "newTitle": "Nuevo Filtro",
+    "save": "Guardar Filtro"
+  },
+  "condition_one": "{{count}} condición",
+  "condition_other": "{{count}} condiciones",
+  "delete": {
+    "message": "¿Estás seguro de que quieres eliminar \"{{name}}\"? Esto no se puede deshacer.",
+    "title": "Eliminar Filtro"
+  },
+  "empty": {
+    "clearSearch": "Limpiar búsqueda",
+    "createFilter": "Crear un filtro",
+    "description": "Guarda un conjunto de condiciones una vez, como \"vencidas y asignadas a mí\", y vuelve directamente a ellas desde cualquier lugar.",
+    "noResultsDefault": "Ningún filtro guardado coincide con el filtro actual.",
+    "noResultsTitle": "Ningún filtro coincide",
+    "noResultsWithSearch": "Ningún filtro guardado coincide con \"{{search}}\".",
+    "showAllFilters": "Mostrar todos los filtros",
+    "title": "Aún no hay filtros guardados"
+  },
+  "header": {
+    "subtitle": "Guarda tus combinaciones de filtros favoritas para un acceso rápido. Crea vistas personalizadas para organizar y encontrar tareas más rápido.",
+    "title": "Filtros"
+  },
+  "nameExists": "Ya existe un filtro con este nombre",
+  "noConditions": "Sin condiciones",
+  "overdue": "{{count}} vencida(s)",
+  "pin": "Fijar",
+  "searchPlaceholder": "Buscar filtros",
+  "show": {
+    "all": "Todos los filtros",
+    "pinned": "Fijados",
+    "title": "Mostrar",
+    "unpinned": "No fijados"
+  },
+  "sort": {
+    "created": "Fecha de creación",
+    "lastUsed": "Último uso",
+    "name": "Nombre",
+    "smart": "Inteligente",
+    "usage": "Frecuencia de uso"
+  },
+  "tasks_one": "{{count}} tarea",
+  "tasks_other": "{{count}} tareas",
+  "unpin": "Desfijar",
+  "usedCount": "Usado {{count}} vez/veces"
+}

@@ -1,0 +1,690 @@
+{
+  "save": "Save",
+  "cancel": "Cancel",
+  "delete": "Delete",
+  "edit": "Edit",
+  "close": "Close",
+  "confirm": "Confirm",
+  "loading": "Loading...",
+  "error": "Error",
+  "success": "Success",
+  "warning": "Warning",
+  "colors": {
+    "Salmon": "Salmon",
+    "Teal": "Teal",
+    "Sky Blue": "Sky Blue",
+    "Grape": "Grape",
+    "Sunshine": "Sunshine",
+    "Coral": "Coral",
+    "Lavender": "Lavender",
+    "Rose": "Rose",
+    "Charcoal": "Charcoal",
+    "Sienna": "Sienna",
+    "Mint": "Mint",
+    "Amber": "Amber",
+    "Cobalt": "Cobalt",
+    "Emerald": "Emerald",
+    "Peach": "Peach",
+    "Ocean": "Ocean",
+    "Mustard": "Mustard",
+    "Ruby": "Ruby",
+    "Periwinkle": "Periwinkle",
+    "Turquoise": "Turquoise",
+    "Lime": "Lime",
+    "Blush": "Blush",
+    "Ash": "Ash",
+    "Sand": "Sand"
+  },
+  "refresh": "Refresh",
+  "copy": "Copy",
+  "copied": "Copied!",
+  "settings": "Settings",
+  "yes": "Yes",
+  "no": "No",
+  "back": "Back",
+  "backToCalendar": "Back to Calendar",
+  "logout": "Logout",
+  "version": "Version",
+  "navigation": {
+    "search": "Search",
+    "allTasks": "Tasks",
+    "home": "Overview",
+    "tasks": "Tasks",
+    "more": "More",
+    "mobileNavigation": "Primary navigation",
+    "archived": "Archived",
+    "things": "Things",
+    "labels": "Labels",
+    "projects": "Projects",
+    "filters": "Filters",
+    "activities": "Activities",
+    "points": "Points",
+    "settings": "Settings",
+    "reportBug": "Report an Issue",
+    "openMenu": "Open menu",
+    "collapseMenu": "Collapse menu",
+    "expandMenu": "Expand menu",
+    "primaryNavigation": "Primary navigation",
+    "profile": "Profile"
+  },
+  "search": {
+    "title": "Search",
+    "placeholder": "Search Donetick",
+    "inputAriaLabel": "Search tasks, history, projects, labels and settings",
+    "deviceNote": "Searching content available on this device",
+    "escape": "Esc",
+    "recent": "Recent",
+    "empty": {
+      "title": "No direct matches",
+      "subtitle": "You can still filter the task list with this search.",
+      "actionsSubtitle": "No view or action matches. Press backspace to search everything."
+    },
+    "groups": {
+      "tasks": "Tasks",
+      "history": "Notes",
+      "projects": "Projects",
+      "labels": "Labels",
+      "people": "People",
+      "settings": "Settings",
+      "actions": "Quick actions"
+    },
+    "actions": {
+      "quickAction": "Quick action",
+      "navigation": "Navigation",
+      "createTask": "Create a task",
+      "createLabel": "Create a label",
+      "createProject": "Create a project",
+      "createFilter": "Create a filter",
+      "viewAllTasks": "View all tasks",
+      "viewArchivedTasks": "View archived tasks",
+      "viewThings": "View things",
+      "viewLabels": "View labels",
+      "viewProjects": "View projects",
+      "viewFilters": "View filters",
+      "viewActivities": "View activities",
+      "viewPoints": "View points",
+      "openSettings": "Open settings",
+      "filterTasks": "Show tasks matching “{{query}}”",
+      "filterTasksSubtitle": "Filter the task list"
+    },
+    "footer": {
+      "navigate": "Navigate",
+      "open": "Open",
+      "results_one": "{{count}} result",
+      "results_other": "{{count}} results",
+      "typeToSearch": "Type to search",
+      "slashHint": "/ to jump to a view"
+    },
+    "modes": {
+      "actions": {
+        "label": "Go to",
+        "placeholder": "Jump to a view or action"
+      }
+    }
+  },
+  "policyUpdate": {
+    "title": "We've updated our Privacy Policy and Terms",
+    "subtitle": "Please take a moment to review them. By continuing to use Donetick, you accept the updated documents.",
+    "readPrivacy": "Privacy Policy",
+    "readTerms": "Terms",
+    "acknowledge": "Got it"
+  },
+  "feedback": {
+    "later": "Maybe later",
+    "sentiment": {
+      "title": "How's Donetick working for you?",
+      "subtitle": "Your answer helps us decide what to build next.",
+      "options": {
+        "love": "Love it",
+        "okay": "It's okay",
+        "issues": "Having issues"
+      }
+    },
+    "categories": {
+      "bugs": "Bugs",
+      "missingFeature": "Missing feature",
+      "tooComplicated": "Too complicated",
+      "slow": "Slow",
+      "notifications": "Notifications",
+      "ai": "AI",
+      "other": "Other"
+    },
+    "details": {
+      "title": "What could we improve?",
+      "messageLabel": "Tell us more",
+      "messagePlaceholder": "What happened, or what would make this better?",
+      "contextNote": "We'll include your app version, device and platform so we can reproduce issues.",
+      "submit": "Send feedback",
+      "contextNoteSelfHosted": "You're on a self-hosted instance, so nothing is sent from your server — we'll open a pre-filled GitHub issue you can review and edit first.",
+      "submitSelfHosted": "Continue to GitHub"
+    },
+    "review": {
+      "title": "Glad you're enjoying it!",
+      "subtitle": "A rating or a star helps other people find Donetick.",
+      "github": "Star on GitHub",
+      "appStore": "Rate on the App Store",
+      "playStore": "Rate on Google Play"
+    },
+    "thanks": {
+      "title": "Thanks for the feedback",
+      "subtitle": "We read every response and it shapes what we work on next."
+    },
+    "github": {
+      "title": "Report it on GitHub",
+      "subtitle": "We've filled in an issue with your notes and version details. Nothing has been sent yet — review it and post when you're ready.",
+      "open": "Open the issue"
+    }
+  },
+  "done": "Done",
+  "clearAll": "Clear all",
+  "upload": {
+    "quotaTitle": "Storage Quota Exceeded",
+    "quotaMessage": "You have exceeded your quota for uploading files.",
+    "tooLargeTitle": "File Too Large",
+    "tooLargeMessage": "The file you are trying to upload is too large.",
+    "deniedTitle": "Permission Denied",
+    "deniedMessage": "You do not have permission to upload files.",
+    "plusFeatureTitle": "Plus Feature",
+    "plusFeatureMessage": "Image uploads are not available in the Basic plan. Upgrade to Plus to add images to your content.",
+    "upgradeTitle": "Upgrade Required",
+    "upgradeMessage": "Image uploads are only available for Plus accounts.",
+    "failedTitle": "Upload Failed",
+    "failedMessage": "Failed to upload image.",
+    "processingMessage": "An error occurred while processing the image."
+  },
+  "getStarted": "Get Started!",
+  "imageLoadFailed": "Failed to load image.",
+  "typeHere": "Type in here…",
+  "summaryOfChores": "This is a summary of your chores",
+  "loadingOffline": "You are offline",
+  "loadingOfflineSub": "This not available while offline. Please check your internet connection and try again.",
+  "loadingSlow": "This is taking longer than usual. There might be an issue.",
+  "navigateBack": "Navigate Back",
+  "bottomNav": "Bottom Navigation",
+  "profile": "Profile",
+  "autocompletePlaceholder": "Type here...",
+  "errorScreen": {
+    "title": "Something went wrong",
+    "fallback": "An unexpected error occurred. Try reloading — it usually fixes it.",
+    "tryAgain": "Try again",
+    "home": "Home",
+    "login": "Login",
+    "hideDetails": "Hide error details",
+    "showDetails": "Show error details",
+    "copyToClipboard": "Copy to clipboard",
+    "copied": "Error details copied to clipboard",
+    "reportProblem": "Report this problem",
+    "reportHint": "If this keeps happening, please consider sending us a report so we can take a look.",
+    "collectingDetails": "Collecting error details…"
+  },
+  "userMenu": {
+    "actAsAnother": "Act as another user",
+    "stopImpersonating": "Stop Impersonating",
+    "returnToAccount": "Return to your account",
+    "accountPrefs": "Account & preferences",
+    "invitePeople": "Invite People",
+    "addMembers": "Add members to your circle",
+    "sidePanelSettings": "Side Panel Settings",
+    "planFree": "Free",
+    "planPlus": "Plus",
+    "planPlusExpiring": "Plus (expires soon)",
+    "switchUser": "Switch User",
+    "impersonateUser": "Impersonate User",
+    "switchToLight": "Switch to Light",
+    "switchToDark": "Switch to Dark",
+    "unlockPremium": "Unlock premium features",
+    "impersonating": "Impersonating",
+    "toggleThemeAppearance": "Toggle theme appearance",
+    "upgradeToPlus": "Upgrade to Plus"
+  },
+  "realtime": {
+    "newTaskTitle": "New Task Created",
+    "connected": "You are now receiving real-time as they happen.",
+    "errorTitle": "Real-time Error",
+    "parseTitle": "Message Error",
+    "parseMessage": "Failed to parse server message",
+    "disabledTitle": "Connection Temporarily Disabled",
+    "failedTitle": "Connection Failed",
+    "stateConnectionError": "Connection error occurred",
+    "stateAuthExpired": "Authentication expired - refreshing token...",
+    "stateTokenRefreshed": "Token refreshed - reconnecting...",
+    "stateRefreshInProgress": "Token refresh in progress - reconnecting soon...",
+    "stateSessionExpired": "Session expired - please log in again",
+    "stateAuthFailed": "Authentication failed - please log in again",
+    "stateAuthError": "Authentication error - please log in again",
+    "stateTimeout": "Connection timeout - reconnecting...",
+    "connectErrorTitle": "Connection Error",
+    "connectErrorMessage": "Failed to establish real-time connection. Please try again."
+  },
+  "removeAll": "Remove all",
+  "apply": "Apply",
+  "cancelAll": "Cancel all",
+  "backFromSearch": "Back from search",
+  "newVersionAvailable": "A new version is now available. Click on reload button to update.",
+  "notFound": {
+    "title": "Page not found",
+    "description": "This link does not lead anywhere. It may have moved, or the address has a typo in it.",
+    "goToMyTasks": "Go to my tasks",
+    "logIn": "Log in"
+  },
+  "pendingBadge": {
+    "completePending": "Complete pending",
+    "skipPending": "Skip pending",
+    "updatePending": "Update pending",
+    "createPending": "Create pending",
+    "deletePending": "Delete pending",
+    "editHistoryPending": "Edit history pending",
+    "deleteHistoryPending": "Delete history pending",
+    "reschedulePending": "Reschedule pending",
+    "archivePending": "Archive pending",
+    "restorePending": "Restore pending",
+    "startPending": "Start pending",
+    "pausePending": "Pause pending"
+  },
+  "sortAndFilter": {
+    "sortBy": "Sort by",
+    "ariaLabel": "Sort and filter options",
+    "title": "Sort & Filter",
+    "ascending": "Ascending",
+    "descending": "Descending",
+    "filter": "Filter"
+  },
+  "versionInfo": "V{{version}} (API: {{apiVersion}})",
+  "apiVersionUnavailable": "unavailable",
+  "sync": {
+    "aria": "Open sync and network status",
+    "allSynced": "All changes synced",
+    "willSync": "Will sync when back online",
+    "cancelAll": "Cancel All",
+    "commandLabels": {
+      "createChore": "Create chore",
+      "updateChore": "Update chore",
+      "updateChoreHistory": "Edit history",
+      "completeChore": "Complete chore",
+      "skipChore": "Skip chore",
+      "startChore": "Start chore",
+      "pauseChore": "Pause chore",
+      "deleteChore": "Delete chore",
+      "deleteChoreHistory": "Delete history",
+      "rescheduleChore": "Reschedule chore",
+      "archiveChore": "Archive chore",
+      "unarchiveChore": "Restore chore",
+      "pendingAction": "Pending action"
+    },
+    "never": "Never",
+    "justNow": "Just now",
+    "secondsAgo": "{{count}}s ago",
+    "minutesAgo": "{{count}}m ago",
+    "hoursAgo": "{{count}}h ago",
+    "online": "Online",
+    "offline": "Offline",
+    "syncing": "Syncing...",
+    "lastSync": "Last sync: {{time}}",
+    "offlineSince": "Offline since {{duration}}",
+    "errorPrefix": "Error: {{message}}",
+    "pending": "Pending ({{count}})",
+    "failed": "Failed ({{count}})",
+    "dismiss": "Dismiss",
+    "nextAutoSync": "Next auto-sync in {{seconds}}s",
+    "checkingServer": "Checking server...",
+    "retryingIn": "Retrying in {{seconds}}s",
+    "syncNow": "Sync Now",
+    "pendingSyncLabel_one": "{{count}} pending action to sync",
+    "pendingSyncLabel_other": "{{count}} pending actions to sync",
+    "pendingActionsTitle": "Pending actions",
+    "actionsWaitingToSync_one": "{{count}} action waiting to be synced.",
+    "actionsWaitingToSync_other": "{{count}} actions waiting to be synced.",
+    "cancelActionAria": "Cancel {{label}}"
+  },
+  "attachments": "Attachments",
+  "fileNumbered": "File {{index}}",
+  "noAttachmentsTitle": "No attachments",
+  "noAttachmentsDescription": "Photos and files added to this task will show up here.",
+  "kbSize": "{{size}} KB",
+  "onboarding": {
+    "sources": {
+      "speak": "Speak",
+      "snap": "Snap",
+      "type": "Type"
+    },
+    "capture": {
+      "voiceCaption": "Dates, labels and points from your words",
+      "deviceCaption": "Read on your device",
+      "typeCaption": "#labels @people *points as you type",
+      "trashTitle": "♻️ Take out the trash",
+      "trashDue": "Due tomorrow",
+      "trashRepeat": "Every Monday",
+      "homeLabel": "Home",
+      "vehicleTitle": "🚗 Vehicle Registration Renewal",
+      "vehicleDue": "Due Aug 3",
+      "acTitle": "💨 Change the AC filter",
+      "acDue": "Due Fri",
+      "acRepeat": "Every 3 months"
+    },
+    "schedule": {
+      "fromDueDate": "Reschedule from due date",
+      "fromCompletionDate": "Reschedule from completion date",
+      "due": "Due",
+      "done": "Done",
+      "next": "Next"
+    },
+    "nfc": {
+      "tagOnWasher": "Tag on the washer",
+      "tapToOpen": "Tap to open",
+      "swapFilter": "Swap the washer filter",
+      "done": "Done",
+      "skip": "Skip",
+      "startTimer": "Start timer",
+      "waitingApproval": "{{name}} marked it done · waiting on you",
+      "approve": "Approve",
+      "reject": "Reject",
+      "completed": "Completed",
+      "note": "Used the delicate cycle — filter needs a clean next time.",
+      "metaJustNow": "Just now · ★ 5 pts",
+      "metaLastWeek": "Last week · ★ 5 pts"
+    },
+    "circle": {
+      "kitchenTitle": "Kitchen deep clean",
+      "kitchenDue": "Due Sat",
+      "kitchenRepeat": "Every week",
+      "takesTurns": "Takes turns"
+    },
+    "turns": {
+      "binsTitle": "🗑️ Take bins to the curb",
+      "binsDue": "Due Tomorrow",
+      "binsRepeat": "Every week",
+      "completed": "Completed",
+      "metaJustNow": "Just now · ★ 5 pts"
+    },
+    "widget": {
+      "schoolForms": "School forms",
+      "takeOutTrash": "Take out the trash",
+      "waterPlants": "Water the plants",
+      "today": "Today",
+      "left": "{{count}} left"
+    },
+    "reminders": {
+      "trashTitle": "Take out the trash",
+      "trashBody": "Due in 30 minutes · Bin night",
+      "finishedTitle": "Amalie finished Kitchen deep clean",
+      "finishedBody": "Your turn is next Saturday"
+    },
+    "things": {
+      "waterBill": "Water bill",
+      "acFilter": "AC filter",
+      "trashDay": "Trash day",
+      "dogMedicine": "Dog's medicine",
+      "whoseTurn": "Whose turn to cook",
+      "monthly": "Monthly",
+      "everyThreeMonths": "Every 3 months",
+      "everyMonday": "Every Monday",
+      "daily": "Daily",
+      "weekly": "Weekly",
+      "tagBills": "Bills",
+      "tagHome": "Home",
+      "tagPets": "Pets",
+      "tagCooking": "Cooking"
+    },
+    "slides": {
+      "problemTitle": "Stop forgetting the little things",
+      "problemBody": "Donetick remembers the last time it happened, and when it's due next. So nobody else has to.",
+      "captureTitle": "Add it before you forget it",
+      "captureBody": "Type it, say it out loud, or snap a photo. Donetick fills in the due date, priority, labels, and who's on it.",
+      "scheduleTitle": "It comes back exactly when it should",
+      "scheduleBody": "Every week, every 3 months, or a month after you actually did it. Finishing late doesn't throw the rest of the year off.",
+      "circleTitle": "Everyone gets a turn, No more arguing",
+      "circleBody": "Rotate in the order you pick, or at random. Donetick remembers who went last, so turns stay fair.",
+      "remindersTitle": "A nudge right when it matters & Widgets!",
+      "remindersBody": "Get a reminder before something's due, or send a heads-up when someone forgets theirs. Today's list sits on your home screen too."
+    },
+    "carousel": {
+      "skip": "Skip",
+      "ariaLabel": "What you can do with Donetick",
+      "goToStep": "Go to step {{number}}",
+      "slidePosition": "{{index}} of {{total}}",
+      "turnOnReminders": "Turn on reminders",
+      "notNow": "Not now",
+      "next": "Next"
+    },
+    "getStarted": {
+      "subtitleSignupEnabled": "Create an account to sync everywhere, or sign in and pick up where you left off.",
+      "subtitleSignupDisabled": "Sign in to your account to pick up where you left off.",
+      "createAccount": "Create an account",
+      "alreadyHaveAccount": "I already have an account",
+      "signIn": "Sign in",
+      "connectSelfHosted": "Connect to a self-hosted server"
+    },
+    "heardAbout": {
+      "title": "Where'd you hear about Donetick?",
+      "subtitle": "Helps us know what's working. Totally optional.",
+      "detailPlaceholder": "Tell us where",
+      "continue": "Continue",
+      "skip": "Skip",
+      "sources": {
+        "appStore": "App Store / Google Play",
+        "reddit": "Reddit or a forum",
+        "friend": "Friend or family",
+        "video": "YouTube or TikTok",
+        "search": "Search engine",
+        "other": "Something else"
+      }
+    },
+    "privacy": {
+      "title": "Help us improve Donetick",
+      "subtitle": "Your server, your data. Both of these are off from this point unless you turn them on.",
+      "crashReportsLabel": "Share crash reports",
+      "crashReportsDescription": "When Donetick crashes, send us the error and what led to it (device, app version, the screen you were on) no task content. It's how we catch bugs that never show up in our own testing and ship fixes faster.",
+      "analyticsLabel": "Share anonymous usage analytics",
+      "analyticsDescription": "Send anonymous usage events which features get used, which get ignored so we know what to build next instead of guessing. No task content, no personal data, nothing tied back to you."
+    }
+  },
+  "errorReport": {
+    "titleBug": "Report an issue",
+    "titleCrash": "Report this problem",
+    "subtitleBug": "Tell us what went wrong and we’ll attach the technical details for you.",
+    "subtitleCrash": "A sentence about what you were doing turns this into something we can actually fix.",
+    "labelBug": "What went wrong?",
+    "labelCrash": "What were you doing?",
+    "placeholderBug": "e.g. Completing a chore from the list doesn’t update the due date",
+    "placeholderCrash": "e.g. I tapped a chore in My Chores and the screen went blank",
+    "email": "Email",
+    "emailOptional": "(optional — only if you want a reply)",
+    "emailPlaceholder": "you@example.com",
+    "showWhatGetsSent": "Show what gets sent",
+    "hideWhatGetsSent": "Hide what gets sent",
+    "copyDiagnostics": "Copy diagnostics",
+    "collecting": "Collecting diagnostics…",
+    "privacyNote": "No chore names, notes or attachments are included.",
+    "send": "Send report",
+    "cancel": "Cancel",
+    "notNow": "Not now",
+    "sentTitle": "Report sent",
+    "sentBody": "Thanks! this goes straight to the people who can fix it.",
+    "reference": "Reference",
+    "copyReference": "Copy reference",
+    "done": "Done",
+    "githubTitle": "Finish on GitHub",
+    "githubBody": "Nothing has been sent. We've filled in an issue with your notes and the diagnostics — review it and post when you're happy with it.",
+    "openIssue": "Open pre-filled issue",
+    "copied": "Copied",
+    "copyInstead": "Copy details instead",
+    "close": "Close"
+  },
+  "circleSetup": {
+    "inviteTitle": "Bring your squad in",
+    "inviteSubtitle": "Everyone who joins your Circle sees the same chores, takes their own turn, and stays in sync automatically.",
+    "joinTitle": "Join a circle",
+    "joinSubtitle": "Enter the code you were given and we'll send a request to join — the circle owner just needs to approve it.",
+    "loadingCode": "Loading…",
+    "copyCodeAria": "Copy circle code",
+    "copyLinkInstead": "Copy invite link instead",
+    "continue": "Continue",
+    "joinInstead": "Join an existing circle instead",
+    "codePlaceholder": "Enter code",
+    "joinButton": "Join Circle",
+    "back": "Back",
+    "codeCopied": "Code copied to clipboard",
+    "linkCopied": "Link copied to clipboard",
+    "requestSentTitle": "Request Sent",
+    "requestSentBody": "Your join request has been sent! The circle owner will need to approve it before you can see their chores. You'll get a notification once you're in.",
+    "alreadyMember": "You are already a member of this circle",
+    "joinFailed": "Failed to join circle"
+  },
+  "joinCircle": {
+    "title": "You're invited to join a circle",
+    "incompleteTitle": "Invite link is incomplete",
+    "incompleteSubtitle": "This invite link is missing a code. Ask the person who invited you to send a new link.",
+    "goToDonetick": "Go to Donetick",
+    "signedOutSubtitle": "Sign in or create a Donetick account to continue. We'll send your join request once you're signed in.",
+    "signIn": "Sign in",
+    "createAccount": "Create an account",
+    "sendingTitle": "Sending your request",
+    "sendingSubtitle": "Sending your request…",
+    "greetingSubtitle": "Hi {{name}}. Send a request to share this circle's chores with its members.",
+    "adminReviewNote": "A circle admin will review your request before you get access.",
+    "sendRequest": "Send join request",
+    "requestSentTitle": "Request sent",
+    "requestSentBody": "Your request has been sent. A circle admin will need to approve it before you can access the circle and its chores. We'll notify you when it's approved.",
+    "gotIt": "Got it",
+    "alreadyMember": "You are already a member of this circle",
+    "joinFailed": "Failed to join circle",
+    "requestError": "Could not send your join request. Please try again."
+  },
+  "selectUser": "Select User",
+  "closeDialog": "Close dialog",
+  "activeFilterChips": {
+    "removeFilterAria": "Remove {{label}} filter",
+    "addFilterCondition": "Add filter condition",
+    "moreCount": "+{{count}} more"
+  },
+  "filterBar": {
+    "filtersButton": "Filters",
+    "clearAllButton": "Clear all",
+    "doneButton": "Done",
+    "showResults_one": "Show {{count}} result",
+    "showResults_other": "Show {{count}} results",
+    "selectedCount": "{{count}} selected",
+    "dateRangeFallback": "Date Range",
+    "fromDate": "From {{date}}",
+    "untilDate": "Until {{date}}",
+    "presetToday": "Today",
+    "presetYesterday": "Yesterday",
+    "presetThisWeek": "This Week",
+    "presetLast7Days": "Last 7 Days",
+    "presetThisMonth": "This Month",
+    "presetLast30Days": "Last 30 Days",
+    "presetLast3Months": "Last 3 Months"
+  },
+  "workspaceReady": {
+    "allSetNamed": "You're all set, {{name}}",
+    "allSet": "You're all set",
+    "subtitle": "Your workspace is ready. Here's what's waiting inside.",
+    "continue": "Continue",
+    "readyShared": "Shared chores for the whole house",
+    "readyRecurring": "Recurring schedules that survive real life",
+    "readyCapture": "Capture by voice, photo or text",
+    "readyReminders": "Reminders and home-screen widgets"
+  },
+  "home": {
+    "customize": {
+      "action": "Customize Home"
+    },
+    "verdict": {
+      "late": {
+        "title_one": "{{count}} task needs attention.",
+        "title_other": "{{count}} tasks need attention."
+      },
+      "review": {
+        "title": "Something needs reviewing.",
+        "body_one": "{{count}} finished task is waiting to be signed off.",
+        "body_other": "{{count}} finished tasks are waiting to be signed off."
+      },
+      "today": {
+        "title_one": "{{count}} task due today.",
+        "title_other": "{{count}} tasks due today."
+      },
+      "clear": {
+        "title": "You’re all caught up.",
+        "body": "Nothing scheduled today, nothing late."
+      },
+      "firstRun": {
+        "title": "Let’s get the first one down.",
+        "body": "Home fills in as you add tasks."
+      }
+    },
+    "triage": {
+      "overdue": "Overdue",
+      "dueToday": "Due today",
+      "needsReview": "Needs review",
+      "comingUp": "Coming up",
+      "unplanned": "Unplanned",
+      "allClear": "Nothing overdue, nothing waiting"
+    },
+    "nextUp": {
+      "title": "Coming up",
+      "action": "View all"
+    },
+    "nextUpFallback": {
+      "title": "Next up",
+      "action": "View all"
+    },
+    "overdue": {
+      "title": "Overdue",
+      "action": "View all"
+    },
+    "clear": {
+      "title": "Plan ahead",
+      "body": "Browse upcoming chores, reschedule plans, or add the next thing.",
+      "action": "Browse all tasks"
+    },
+    "firstTask": {
+      "title": "Add your first task",
+      "description": "Type it, say it, or scan it. Anything you add shows up here when it needs you.",
+      "action": "Add a task"
+    },
+    "review": {
+      "title": "Needs your review",
+      "pendingTitle": "Pending review",
+      "myPendingTitle": "My tasks pending review",
+      "action": "Review all"
+    },
+    "circle": {
+      "title": "Your circle",
+      "action": "Manage Circle",
+      "open_one": "{{count}} open",
+      "open_other": "{{count}} open",
+      "late_one": "{{count}} overdue",
+      "late_other": "{{count}} overdue",
+      "done_one": "{{count}} done",
+      "done_other": "{{count}} done",
+      "caughtUp": "All clear",
+      "emptyTitle": "Nobody else is here yet",
+      "emptyBody": "Invite the people you share chores with, and this screen will show who’s carrying what.",
+      "emptyAction": "Invite to your circle"
+    },
+    "projects": {
+      "title": "Projects",
+      "action": "All projects",
+      "tasks_one": "{{count}} task",
+      "tasks_other": "{{count}} tasks",
+      "tasksOverdue_one": "{{count}} task, {{overdue}} overdue",
+      "tasksOverdue_other": "{{count}} tasks, {{overdue}} overdue",
+      "tasksUnplanned_one": "{{count}} task, {{unplanned}} unplanned",
+      "tasksUnplanned_other": "{{count}} tasks, {{unplanned}} unplanned",
+      "clear": "All clear"
+    },
+    "filters": {
+      "title": "Filters",
+      "action": "All filters",
+      "tasks_one": "{{count}} match",
+      "tasks_other": "{{count}} matches",
+      "clear": "No matches"
+    },
+    "capture": {
+      "placeholder": "Add a task…",
+      "add": "Add a task",
+      "voice": "Capture by voice",
+      "scan": "Scan to task"
+    }
+  }
+}

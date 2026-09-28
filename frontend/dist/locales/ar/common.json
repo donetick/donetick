@@ -1,0 +1,690 @@
+{
+  "save": "حفظ",
+  "cancel": "إلغاء",
+  "delete": "حذف",
+  "edit": "تعديل",
+  "close": "إغلاق",
+  "confirm": "تأكيد",
+  "loading": "جارٍ التحميل...",
+  "error": "خطأ",
+  "success": "نجح",
+  "warning": "تحذير",
+  "colors": {
+    "Salmon": "سالمون",
+    "Teal": "الفم",
+    "Sky Blue": "أزرق سماء",
+    "Grape": "غضب",
+    "Sunshine": "الشمس",
+    "Coral": "المرجان",
+    "Lavender": "Lavender",
+    "Rose": "وردة",
+    "Charcoal": "الفحم",
+    "Sienna": "Sienna",
+    "Mint": "النعناع",
+    "Amber": "آمبر",
+    "Cobalt": "كوبالت",
+    "Emerald": "الزمردي",
+    "Peach": "خوخ",
+    "Ocean": "المحيط",
+    "Mustard": "مسرد",
+    "Ruby": "روبي",
+    "Periwinkle": "Periwinkle",
+    "Turquoise": "Turquoise",
+    "Lime": "ليمي",
+    "Blush": "ضرب",
+    "Ash": "رماد",
+    "Sand": "الرمال"
+  },
+  "refresh": "تحديث",
+  "copy": "نسخ",
+  "copied": "تم النسخ!",
+  "settings": "الإعدادات",
+  "yes": "نعم",
+  "no": "لا",
+  "back": "رجوع",
+  "backToCalendar": "العودة إلى التقويم",
+  "logout": "تسجيل الخروج",
+  "version": "النسخة",
+  "navigation": {
+    "search": "بحث",
+    "allTasks": "المهام",
+    "home": "نظرة عامة",
+    "tasks": "مهام",
+    "more": "المزيد",
+    "mobileNavigation": "التنقل الأساسي",
+    "archived": "المؤرشفة",
+    "things": "الأشياء",
+    "labels": "التسميات",
+    "projects": "المشاريع",
+    "filters": "الفلاتر",
+    "activities": "الأنشطة",
+    "points": "النقاط",
+    "settings": "الإعدادات",
+    "reportBug": "Report a Bug",
+    "openMenu": "فتح القائمة",
+    "collapseMenu": "طي القائمة",
+    "expandMenu": "توسيع القائمة",
+    "primaryNavigation": "التنقل الرئيسي",
+    "profile": "الملف الشخصي"
+  },
+  "search": {
+    "title": "بحث",
+    "placeholder": "ابحث في Donetick",
+    "inputAriaLabel": "ابحث في المهام والسجل والمشاريع والتسميات والإعدادات",
+    "deviceNote": "يتم البحث في المحتوى المتوفر على هذا الجهاز",
+    "escape": "Esc",
+    "recent": "الأخيرة",
+    "empty": {
+      "title": "لا توجد نتائج مطابقة",
+      "subtitle": "لا يزال بإمكانك تصفية قائمة المهام باستخدام هذا البحث.",
+      "actionsSubtitle": "لا يوجد عرض أو إجراء مطابق. اضغط على المساحة الخلفية للبحث عن كل شيء."
+    },
+    "groups": {
+      "tasks": "المهام",
+      "history": "الملاحظات",
+      "projects": "المشاريع",
+      "labels": "التسميات",
+      "people": "الأشخاص",
+      "settings": "الإعدادات",
+      "actions": "إجراءات سريعة"
+    },
+    "actions": {
+      "quickAction": "إجراء سريع",
+      "navigation": "التنقل",
+      "createTask": "إنشاء مهمة",
+      "createLabel": "إنشاء تسمية",
+      "createProject": "إنشاء مشروع",
+      "createFilter": "إنشاء فلتر",
+      "viewAllTasks": "عرض جميع المهام",
+      "viewArchivedTasks": "عرض المهام المؤرشفة",
+      "viewThings": "عرض الأشياء",
+      "viewLabels": "عرض التسميات",
+      "viewProjects": "عرض المشاريع",
+      "viewFilters": "عرض الفلاتر",
+      "viewActivities": "عرض الأنشطة",
+      "viewPoints": "عرض النقاط",
+      "openSettings": "فتح الإعدادات",
+      "filterTasks": "عرض المهام المطابقة لـ «{{query}}»",
+      "filterTasksSubtitle": "تصفية قائمة المهام"
+    },
+    "footer": {
+      "navigate": "تنقل",
+      "open": "فتح",
+      "results_one": "نتيجة واحدة",
+      "results_other": "{{count}} نتيجة",
+      "typeToSearch": "اكتب للبحث",
+      "slashHint": "/ للقفز إلى طريقة العرض"
+    },
+    "modes": {
+      "actions": {
+        "label": "الذهاب إلى",
+        "placeholder": "الانتقال إلى عرض أو إجراء"
+      }
+    }
+  },
+  "policyUpdate": {
+    "title": "لقد قمنا بتحديث سياسة الخصوصية و الشروط الخاصة بنا",
+    "subtitle": "يرجى أخذ لحظة لمراجعة هذه الوثائق. من خلال الاستمرار في استخدام Donetick، فإنك تقبل الوثائق المحدثة.",
+    "readPrivacy": "سياسة الخصوصية",
+    "readTerms": "الشروط",
+    "acknowledge": "فهمت ذلك"
+  },
+  "feedback": {
+    "later": "ربما لاحقاً",
+    "sentiment": {
+      "title": "كيف تعمل من أجلك؟",
+      "subtitle": "إن إجابتك تساعدنا على تقرير ما سنبنيه بعد ذلك.",
+      "options": {
+        "love": "أحبها",
+        "okay": "لا بأس",
+        "issues": "لديك مشكلات"
+      }
+    },
+    "categories": {
+      "bugs": "الأخطاء",
+      "missingFeature": "ميزة مفقودة",
+      "tooComplicated": "معقدة جداً",
+      "slow": "بطيء",
+      "notifications": "الإشعارات",
+      "ai": "AI",
+      "other": "اخرى"
+    },
+    "details": {
+      "title": "ما الذي يمكننا تحسينه؟",
+      "messageLabel": "أخبرنا بالمزيد",
+      "messagePlaceholder": "ماذا حدث، أو ما الذي سيجعل هذا أفضل؟",
+      "contextNote": "سنقوم بتضمين إصدار التطبيق الخاص بك والجهاز والمنصة حتى نتمكن من تكرار المشاكل.",
+      "submit": "إرسال الملاحظات",
+      "contextNoteSelfHosted": "أنت على مثال ذاتي الاستضافة، لذلك لا يتم إرسال أي شيء من الخادم الخاص بك - سنقوم بفتح مشكلة GitHub المملوءة مسبقاً يمكنك مراجعتها وتحريرها أولاً.",
+      "submitSelfHosted": "المتابعة إلى GitHub"
+    },
+    "review": {
+      "title": "يسعدك أن تستمتع به!",
+      "subtitle": "التقييم أو النجم يساعد الآخرين على العثور على \"دونتيك\".",
+      "github": "Star on GitHub",
+      "appStore": "قيم على متجر التطبيقات",
+      "playStore": "قيم على جوجل بلاي"
+    },
+    "thanks": {
+      "title": "شكراً على الملاحظات",
+      "subtitle": "ونحن نقرأ كل استجابة ونشكل ما نعمل عليه بعد ذلك."
+    },
+    "github": {
+      "title": "أبلغ عن ذلك على GitHub",
+      "subtitle": "لقد ملأنا مشكلة بملاحظاتك وتفاصيل الإصدار. لم يتم إرسال أي شيء حتى الآن - راجعه و نشره عندما تكون مستعدا.",
+      "open": "فتح المشكلة"
+    }
+  },
+  "done": "تم",
+  "clearAll": "مسح الكل",
+  "upload": {
+    "quotaTitle": "تجاوز حصص التخزين",
+    "quotaMessage": "لقد تجاوزت حصتك لتحميل الملفات.",
+    "tooLargeTitle": "ملف كبير جداً",
+    "tooLargeMessage": "الملف الذي تحاول تحميله كبير جدا.",
+    "deniedTitle": "تم رفض الإذن",
+    "deniedMessage": "ليس لديك الصلاحية لتحميل الملفات.",
+    "plusFeatureTitle": "ميزة زائدة",
+    "plusFeatureMessage": "تحميل الصور غير متوفر في الخطة الأساسية. قم بالترقية إلى Plus لإضافة صور إلى المحتوى الخاص بك.",
+    "upgradeTitle": "الترقية مطلوبة",
+    "upgradeMessage": "تحميل الصور متاح فقط لحسابات Plus.",
+    "failedTitle": "فشل التحميل",
+    "failedMessage": "فشل في تحميل الصورة.",
+    "processingMessage": "حدث خطأ أثناء معالجة الصورة."
+  },
+  "getStarted": "ابدأ!",
+  "imageLoadFailed": "فشل تحميل الصورة.",
+  "typeHere": "اكتب هنا…",
+  "summaryOfChores": "هذا هو ملخص عن مهامك",
+  "loadingOffline": "أنت غير متصل",
+  "loadingOfflineSub": "هذا غير متوفر أثناء عدم الاتصال. الرجاء التحقق من اتصالك بالإنترنت وحاول مرة أخرى.",
+  "loadingSlow": "وهذا يستغرق وقتا أطول من المعتاد، وقد تكون هناك مشكلة.",
+  "navigateBack": "الانتقال إلى الوراء",
+  "bottomNav": "التنقل السفلي",
+  "profile": "الملف الشخصي",
+  "autocompletePlaceholder": "اكتب هنا...",
+  "errorScreen": {
+    "title": "حدث خطأ ما",
+    "fallback": "حدث خطأ غير متوقع. حاول إعادة التحميل - عادة ما يقوم بإصلاحه.",
+    "tryAgain": "حاول مرة أخرى",
+    "home": "المنزل",
+    "login": "تسجيل الدخول",
+    "hideDetails": "إخفاء تفاصيل الخطأ",
+    "showDetails": "عرض تفاصيل الخطأ",
+    "copyToClipboard": "نسخ إلى الحافظة",
+    "copied": "تم نسخ تفاصيل الخطأ إلى الحافظة",
+    "reportProblem": "الإبلاغ عن هذه المشكلة",
+    "reportHint": "وإذا استمر هذا في الحدوث، يرجى النظر في إرسال تقرير لنا حتى نتمكن من إلقاء نظر.",
+    "collectingDetails": "تفاصيل خطأ في الجمع…"
+  },
+  "userMenu": {
+    "actAsAnother": "العمل كمستخدم آخر",
+    "stopImpersonating": "إيقاف انتحال الشخصية",
+    "returnToAccount": "العودة إلى حسابك",
+    "accountPrefs": "الحساب والتفضيلات",
+    "invitePeople": "دعوة أشخاص",
+    "addMembers": "إضافة أعضاء إلى دائرتك",
+    "sidePanelSettings": "إعدادات لوحة الجوانب",
+    "planFree": "مجاني",
+    "planPlus": "زائد",
+    "planPlusExpiring": "+ (تنتهي قريبا)",
+    "switchUser": "تبديل المستخدم",
+    "impersonateUser": "انتحال شخصية المستخدم",
+    "switchToLight": "التبديل إلى الضوء",
+    "switchToDark": "التبديل إلى الظلام",
+    "unlockPremium": "فتح الميزات المتميزة",
+    "impersonating": "انتحال الشخصية",
+    "toggleThemeAppearance": "تبديل مظهر السمة",
+    "upgradeToPlus": "الترقية إلى Plus"
+  },
+  "realtime": {
+    "newTaskTitle": "تم إنشاء مهمة جديدة",
+    "connected": "إنكم تستقبلون الآن في الوقت الحقيقي أثناء حدوثهم.",
+    "errorTitle": "خطأ في الوقت الحقيقي",
+    "parseTitle": "خطأ في الرسالة",
+    "parseMessage": "فشل تحليل رسالة الخادم",
+    "disabledTitle": "الاتصال معطل مؤقتاً",
+    "failedTitle": "فشل الاتصال",
+    "stateConnectionError": "حدث خطأ في الاتصال",
+    "stateAuthExpired": "انتهت صلاحية المصادقة - رمز التحديث...",
+    "stateTokenRefreshed": "تحديث الرمز المميز - إعادة الاتصال...",
+    "stateRefreshInProgress": "تحديث الرمز في التقدم - إعادة الاتصال قريبًا...",
+    "stateSessionExpired": "انتهت صلاحية الجلسة - الرجاء تسجيل الدخول مرة أخرى",
+    "stateAuthFailed": "فشل المصادقة - الرجاء تسجيل الدخول مرة أخرى",
+    "stateAuthError": "خطأ في المصادقة - الرجاء تسجيل الدخول مرة أخرى",
+    "stateTimeout": "مهلة الاتصال - إعادة الاتصال...",
+    "connectErrorTitle": "خطأ في الاتصال",
+    "connectErrorMessage": "فشل إنشاء اتصال في الوقت الحقيقي. الرجاء المحاولة مرة أخرى."
+  },
+  "removeAll": "إزالة الكل",
+  "apply": "تطبيق",
+  "cancelAll": "إلغاء الكل",
+  "backFromSearch": "العودة من البحث",
+  "newVersionAvailable": "يتوفر الآن إصدار جديد. انقر فوق زر إعادة التحميل للتحديث.",
+  "notFound": {
+    "title": "لم يتم العثور على الصفحة",
+    "description": "هذا الرابط لا يؤدي إلى أي مكان. ربما يكون قد انتقل، أو العنوان يحتوي على نموذج فيه.",
+    "goToMyTasks": "انتقل إلى مهامي",
+    "logIn": "تسجيل الدخول"
+  },
+  "pendingBadge": {
+    "completePending": "أكمل معلق",
+    "skipPending": "تخطي معلق",
+    "updatePending": "التحديث معلق",
+    "createPending": "إنشاء معلق",
+    "deletePending": "حذف معلق",
+    "editHistoryPending": "تحرير المحفوظات معلق",
+    "deleteHistoryPending": "حذف المحفوظات المعلقة",
+    "reschedulePending": "إعادة جدولة معلقة",
+    "archivePending": "الأرشيف معلق",
+    "restorePending": "Restore pending",
+    "startPending": "بدء الانتظار",
+    "pausePending": "إيقاف مؤقت"
+  },
+  "sortAndFilter": {
+    "sortBy": "الترتيب حسب",
+    "ariaLabel": "خيارات الفرز والتصفية",
+    "title": "فرز وفلتر",
+    "ascending": "تصاعدي",
+    "descending": "تنازلي",
+    "filter": "تصفية"
+  },
+  "versionInfo": "V{{version}} (API: {{apiVersion}})",
+  "apiVersionUnavailable": "unavailable",
+  "sync": {
+    "aria": "فتح حالة المزامنة والشبكة",
+    "allSynced": "تمت مزامنة جميع التغييرات",
+    "willSync": "سيتم المزامنة عند العودة عبر الإنترنت",
+    "cancelAll": "إلغاء الكل",
+    "commandLabels": {
+      "createChore": "إنشاء مربع",
+      "updateChore": "تحديث المربع",
+      "updateChoreHistory": "تحرير المحفوظات",
+      "completeChore": "أكمل الكر",
+      "skipChore": "تخطي المقطع",
+      "startChore": "ابدأ المحار",
+      "pauseChore": "إيقاف مؤقت",
+      "deleteChore": "حذف المحطة",
+      "deleteChoreHistory": "حذف المحفوظات",
+      "rescheduleChore": "إعادة جدولة التمرير",
+      "archiveChore": "أرشيف القوس",
+      "unarchiveChore": "استعادة الوسط",
+      "pendingAction": "الإجراء المعلق"
+    },
+    "never": "لا",
+    "justNow": "للتو الآن",
+    "secondsAgo": "",
+    "minutesAgo": "",
+    "hoursAgo": "",
+    "online": "متصل",
+    "offline": "غير متصل",
+    "syncing": "مزامنة...",
+    "lastSync": "آخر مزامنة: {{time}}",
+    "offlineSince": "دون اتصال منذ {{duration}}",
+    "errorPrefix": "خطأ: {{message}}",
+    "pending": "معلق ({{count}})",
+    "failed": "فشل ({{count}})",
+    "dismiss": "تجاهل",
+    "nextAutoSync": "المزامنة التلقائية التالية في {{seconds}}ث",
+    "checkingServer": "التحقق من الخادم...",
+    "retryingIn": "إعادة المحاولة في {{seconds}}ثانية",
+    "syncNow": "المزامنة الآن",
+    "pendingSyncLabel_one": "{{count}} في انتظار إجراء المزامنة",
+    "pendingSyncLabel_other": "{{count}} إجراءات معلقة للمزامنة",
+    "pendingActionsTitle": "الإجراءات المعلقة",
+    "actionsWaitingToSync_one": "إجراء {{count}} في انتظار المزامنة.",
+    "actionsWaitingToSync_other": "",
+    "cancelActionAria": "إلغاء {{label}}"
+  },
+  "attachments": "المرفقات",
+  "fileNumbered": "الملف {{index}}",
+  "noAttachmentsTitle": "لا توجد مرفقات",
+  "noAttachmentsDescription": "الصور والملفات المضافة إلى هذه المهمة ستظهر هنا.",
+  "kbSize": "{{size}} كيلوبايت",
+  "onboarding": {
+    "sources": {
+      "speak": "التحدث",
+      "snap": "التقط",
+      "type": "نوع"
+    },
+    "capture": {
+      "voiceCaption": "التواريخ والمسميات والنقاط من كلماتك",
+      "deviceCaption": "القراءة على جهازك",
+      "typeCaption": "#تسميات @people *نقاط كما تكتب",
+      "trashTitle": "♻️ إخراج القمامة",
+      "trashDue": "موعد الغد",
+      "trashRepeat": "كل اثنين",
+      "homeLabel": "المنزل",
+      "vehicleTitle": "تجديد تسجيل المدرعات 🚗",
+      "vehicleDue": "المصادقة الواجبة 3",
+      "acTitle": "💨 تغيير عامل تصفية AC",
+      "acDue": "المستحق للجمعة",
+      "acRepeat": "كل 3 أشهر"
+    },
+    "schedule": {
+      "fromDueDate": "إعادة الجدولة من تاريخ الاستحقاق",
+      "fromCompletionDate": "إعادة الجدولة من تاريخ الإكمال",
+      "due": "واجب",
+      "done": "تم",
+      "next": "التالي"
+    },
+    "nfc": {
+      "tagOnWasher": "علامة على الغسيل",
+      "tapToOpen": "انقر للفتح",
+      "swapFilter": "تبديل فلتر الغسيل",
+      "done": "تم",
+      "skip": "تخطي",
+      "startTimer": "بدء المؤقت",
+      "waitingApproval": "",
+      "approve": "الموافقة",
+      "reject": "رفض",
+      "completed": "مكتمل",
+      "note": "استخدم الدورة الحساسة - يحتاج عامل التصفية إلى نظافة في المرة القادمة.",
+      "metaJustNow": "الآن فقط · ★ 5 نقاط",
+      "metaLastWeek": "الأسبوع الماضي · ★ 5 صفحات"
+    },
+    "circle": {
+      "kitchenTitle": "تنظيف مطبخ عميق",
+      "kitchenDue": "جلس مستحق",
+      "kitchenRepeat": "كل أسبوع",
+      "takesTurns": "يأخذ الدوران"
+    },
+    "turns": {
+      "binsTitle": "🗑️ خذ الحافلات إلى كبح",
+      "binsDue": "واجب الغد",
+      "binsRepeat": "كل أسبوع",
+      "completed": "مكتمل",
+      "metaJustNow": "الآن فقط · ★ 5 نقاط"
+    },
+    "widget": {
+      "schoolForms": "استمارات المدارس",
+      "takeOutTrash": "إخراج القمامة",
+      "waterPlants": "مياه النباتات",
+      "today": "اليوم",
+      "left": ""
+    },
+    "reminders": {
+      "trashTitle": "إخراج القمامة",
+      "trashBody": "ينتهي في 30 دقيقة · معامل الليلة",
+      "finishedTitle": "مطبخ أمالي المنتهي تنظيف عميق",
+      "finishedBody": "دورتك هي يوم السبت القادم"
+    },
+    "things": {
+      "waterBill": "فاتورة المياه",
+      "acFilter": "عامل تصفية AC",
+      "trashDay": "يوم المهملات",
+      "dogMedicine": "دواء الكلب",
+      "whoseTurn": "من يتحول إلى الطبخ",
+      "monthly": "شهريا",
+      "everyThreeMonths": "كل 3 أشهر",
+      "everyMonday": "كل اثنين",
+      "daily": "يومياً",
+      "weekly": "أسبوعيا",
+      "tagBills": "الفواتير",
+      "tagHome": "المنزل",
+      "tagPets": "الحيوانات الأليفة",
+      "tagCooking": "الطبخ"
+    },
+    "slides": {
+      "problemTitle": "التوقف عن نسيان الأشياء الصغيرة",
+      "problemBody": "يفعل ما يذكره آخر مرة حدث فيها ، وعندما يحين موعده بعد ذلك. لذا لا أحد آخر يجب أن يفعل ذلك.",
+      "captureTitle": "أضفه قبل أن تنسى",
+      "captureBody": "اكتبها، قلها بصوت عالٍ، أو التقط صورة. يمليك في التاريخ المحدد، الأولوية، التسميات ومن هو على ذلك.",
+      "scheduleTitle": "إنها تعود بالضبط متى يجب أن تكون",
+      "scheduleBody": "كل أسبوع، كل 3 أشهر، أو شهر بعد قيامك بذلك فعلا. الإنهاء في وقت متأخر لا يرفع بقية العام في العطلة.",
+      "circleTitle": "الجميع يحصل على دور, لا مزيد من الجدل",
+      "circleBody": "تدوير بالترتيب الذي تختاره، أو عشوائيا. تذكر التذكر الذي ذهب إلى آخر مرة، لذلك قم بالبقاء عادلا.",
+      "remindersTitle": "دفعة على اليمين عندما تكون مهمًا و أشواط!",
+      "remindersBody": "احصل على تذكير قبل استحقاق شيء ما، أو ارسل رأس عندما ينسى شخص ما. قائمة اليوم موجودة على الشاشة الرئيسية أيضًا."
+    },
+    "carousel": {
+      "skip": "تخطي",
+      "ariaLabel": "ماذا يمكنك أن تفعله مع دونتيك",
+      "goToStep": "انتقل إلى الخطوة {{number}}",
+      "slidePosition": "{{index}} من {{total}}",
+      "turnOnReminders": "تشغيل تذكيرات",
+      "notNow": "ليس الآن",
+      "next": "التالي"
+    },
+    "getStarted": {
+      "subtitleSignupEnabled": "قم بإنشاء حساب للمزامنة في كل مكان، أو قم بتسجيل الدخول والتقاط من حيث توقفت.",
+      "subtitleSignupDisabled": "قم بتسجيل الدخول إلى حسابك للإلتقاط من أين توقفت.",
+      "createAccount": "إنشاء حساب",
+      "alreadyHaveAccount": "لدي حساب بالفعل",
+      "signIn": "تسجيل الدخول",
+      "connectSelfHosted": "الاتصال بالخادم المستضاف ذاتياً"
+    },
+    "heardAbout": {
+      "title": "أين كنت تسمع عن \"دونتيك\"؟",
+      "subtitle": "يساعدنا على معرفة ما هو ناجح. اختياري تماما.",
+      "detailPlaceholder": "أخبرنا أين",
+      "continue": "متابعة",
+      "skip": "تخطي",
+      "sources": {
+        "appStore": "متجر التطبيقات / متجر Google Play",
+        "reddit": "Reddit أو منتدى",
+        "friend": "صديق أو عائلة",
+        "video": "يوتيوب أو تيك",
+        "search": "محرك البحث",
+        "other": "شيء آخر"
+      }
+    },
+    "privacy": {
+      "title": "ساعدنا على تحسين الإعجاب",
+      "subtitle": "السيرفر الخاص بك، بياناتك. كلاهما معطل من هذه النقطة ما لم تقم بتشغيله.",
+      "crashReportsLabel": "مشاركة تقارير الأعطال",
+      "crashReportsDescription": "عندما يتعطل دونيك، أرسل لنا الخطأ وما أدى إليه (الجهاز، إصدار التطبيق، الشاشة التي كنت تشغلها) لا يوجد محتوى للمهمة. إنها الطريقة التي نلمس بها الأخطاء التي لا تظهر أبداً في اختبارنا الخاص وتصلح السفن بشكل أسرع.",
+      "analyticsLabel": "مشاركة تحليلات الاستخدام المجهولة",
+      "analyticsDescription": "إرسال أحداث الاستخدام المجهول التي يتم استخدام الميزات، والتي يتم تجاهلها حتى نعرف ماذا نبنيه بعد ذلك بدلاً من تخمينه. لا يوجد محتوى مهمة، لا توجد بيانات شخصية، ولا أي قيد عليك."
+    }
+  },
+  "errorReport": {
+    "titleBug": "الإبلاغ عن مشكلة",
+    "titleCrash": "الإبلاغ عن هذه المشكلة",
+    "subtitleBug": "أخبرنا عن الأخطاء التي حدثت وسنقوم بإرفاق التفاصيل التقنية لك.",
+    "subtitleCrash": "جملة حول ما كنت تفعله تحوِّل هذا إلى شيء يمكننا إصلاحه في الواقع.",
+    "labelBug": "ماذا حدث خطأ؟",
+    "labelCrash": "ماذا كنت تفعل؟",
+    "placeholderBug": "على سبيل المثال, لا يتم تحديث تاريخ الاستحقاق من القائمة",
+    "placeholderCrash": "على سبيل المثال, لقد قمت بالنقر على منصة في إختياراتي وأصبحت الشاشة فارغة",
+    "email": "البريد الإلكتروني",
+    "emailOptional": "(اختياري - فقط إذا كنت تريد الرد)",
+    "emailPlaceholder": "You@example.com",
+    "showWhatGetsSent": "إظهار ما يتم إرساله",
+    "hideWhatGetsSent": "إخفاء ما يتم إرساله",
+    "copyDiagnostics": "نسخ التشخيصات",
+    "collecting": "جمع التشخيصات…",
+    "privacyNote": "لا تتضمن أي أسماء أو ملاحظات أو مرفقات.",
+    "send": "إرسال التقرير",
+    "cancel": "إلغاء",
+    "notNow": "ليس الآن",
+    "sentTitle": "تم إرسال التقرير",
+    "sentBody": "شكرًا! هذا يذهب مباشرة إلى الناس الذين يستطيعون إصلاحه.",
+    "reference": "مرجع",
+    "copyReference": "نسخ المرجع",
+    "done": "تم",
+    "githubTitle": "إنهاء على GitHub",
+    "githubBody": "لم يتم إرسال أي شيء. لقد ملأنا مشكلة بملاحظاتك وتشخيصك - راجعها و نشرها عندما تكون سعيدا بها.",
+    "openIssue": "فتح مشكلة مملوءة مسبقاً",
+    "copied": "منسوخ",
+    "copyInstead": "نسخ التفاصيل بدلاً من ذلك",
+    "close": "أغلق"
+  },
+  "circleSetup": {
+    "inviteTitle": "أحضر فريقك إلى",
+    "inviteSubtitle": "كل من ينضم إلى دائرتك يرى نفس الواجبات، ويأخذ دوره، ويبقى في المزامنة تلقائياً.",
+    "joinTitle": "الانضمام إلى دائرة",
+    "joinSubtitle": "أدخل الرمز الذي أعطيت لك وسوف نرسل طلب للانضمام - مالك الدائرة يحتاج فقط إلى الموافقة عليه.",
+    "loadingCode": "جاري التحميل…",
+    "copyCodeAria": "نسخ رمز الدائرة",
+    "copyLinkInstead": "نسخ رابط الدعوة بدلاً من ذلك",
+    "continue": "متابعة",
+    "joinInstead": "الانضمام إلى دائرة موجودة بدلاً من ذلك",
+    "codePlaceholder": "أدخل الرمز",
+    "joinButton": "الانضمام إلى دائرة",
+    "back": "الرجوع",
+    "codeCopied": "تم نسخ الرمز إلى الحافظة",
+    "linkCopied": "تم نسخ الرابط إلى الحافظة",
+    "requestSentTitle": "تم إرسال الطلب",
+    "requestSentBody": "تم إرسال طلب الانضمام الخاص بك! سيحتاج مالك الدائرة إلى الموافقة عليه قبل أن تتمكن من رؤية مهامهم. ستحصل على إشعار بمجرد دخولك.",
+    "alreadyMember": "أنت بالفعل عضو في هذه الدائرة",
+    "joinFailed": "فشل في الانضمام إلى الدائرة"
+  },
+  "joinCircle": {
+    "title": "أنت مدعو للانضمام إلى دائرة",
+    "incompleteTitle": "رابط الدعوة غير مكتمل",
+    "incompleteSubtitle": "رابط الدعوة هذا مفقود. اسأل الشخص الذي دعاك لإرسال رابط جديد.",
+    "goToDonetick": "الذهاب إلى \"دونتيك\"",
+    "signedOutSubtitle": "قم بتسجيل الدخول أو إنشاء حساب يدوي للمتابعة. سنقوم بإرسال طلب الانضمام الخاص بك بمجرد تسجيل الدخول.",
+    "signIn": "تسجيل الدخول",
+    "createAccount": "إنشاء حساب",
+    "sendingTitle": "إرسال طلبك",
+    "sendingSubtitle": "جارٍ إرسال طلبك…",
+    "greetingSubtitle": "مرحبا {{name}}. أرسل طلب لمشاركة مهام هذه الدائرة مع أعضائها.",
+    "adminReviewNote": "سيقوم المشرف الدائري بمراجعة طلبك قبل أن تحصل على الوصول.",
+    "sendRequest": "إرسال طلب الانضمام",
+    "requestSentTitle": "تم إرسال الطلب",
+    "requestSentBody": "تم إرسال طلبك. سيحتاج مسؤول الدائرة إلى الموافقة عليه قبل أن تتمكن من الوصول إلى الدائرة وواجباتها. سنقوم بإعلامك عند الموافقة عليه.",
+    "gotIt": "فهمت ذلك",
+    "alreadyMember": "أنت بالفعل عضو في هذه الدائرة",
+    "joinFailed": "فشل في الانضمام إلى الدائرة",
+    "requestError": "تعذر إرسال طلب الانضمام الخاص بك. الرجاء المحاولة مرة أخرى."
+  },
+  "selectUser": "حدد المستخدم",
+  "closeDialog": "إغلاق مربع الحوار",
+  "activeFilterChips": {
+    "removeFilterAria": "إزالة عامل تصفية {{label}}",
+    "addFilterCondition": "إضافة حالة فلتر",
+    "moreCount": "+{{count}} المزيد"
+  },
+  "filterBar": {
+    "filtersButton": "فلاتر",
+    "clearAllButton": "مسح الكل",
+    "doneButton": "تم",
+    "showResults_one": "إظهار النتيجة {{count}}",
+    "showResults_other": "إظهار النتائج {{count}}",
+    "selectedCount": "",
+    "dateRangeFallback": "Date Range",
+    "fromDate": "من {{date}}",
+    "untilDate": "حتى {{date}}",
+    "presetToday": "اليوم",
+    "presetYesterday": "أمس",
+    "presetThisWeek": "هذا الأسبوع",
+    "presetLast7Days": "آخر 7 أيام",
+    "presetThisMonth": "هذا الشهر",
+    "presetLast30Days": "آخر 30 يوم",
+    "presetLast3Months": "آخر 3 أشهر"
+  },
+  "workspaceReady": {
+    "allSetNamed": "لقد تم تعيينك، {{name}}",
+    "allSet": "لقد تم تعيينك جميعا",
+    "subtitle": "مساحة العمل الخاصة بك جاهزة. إليك ما ينتظر بالداخل.",
+    "continue": "متابعة",
+    "readyShared": "المهام المشتركة لكل البيت",
+    "readyRecurring": "الجداول الزمنية المتكررة التي تبقى على قيد الحياة",
+    "readyCapture": "التقاط الصوت أو الصورة أو النص",
+    "readyReminders": "تذكير و واجهة الشاشة الرئيسية"
+  },
+  "home": {
+    "customize": {
+      "action": "تخصيص الصفحة الرئيسية"
+    },
+    "verdict": {
+      "late": {
+        "title_one": "",
+        "title_other": ""
+      },
+      "review": {
+        "title": "شيء ما لاستعراض الاحتياجات.",
+        "body_one": "المهام المنجزة {{count}} في انتظار أن يتم تسجيل الدخول.",
+        "body_other": "المهام المنجزة {{count}} في انتظار أن يتم تسجيل الدخول."
+      },
+      "today": {
+        "title_one": "",
+        "title_other": ""
+      },
+      "clear": {
+        "title": "جميعكم يقبضون عليكم.",
+        "body": "لا شيء مقرر اليوم، لا يتأخر."
+      },
+      "firstRun": {
+        "title": "دعونا نخفض أول واحدة منها.",
+        "body": "تملأ المنزل عند إضافة مهام."
+      }
+    },
+    "triage": {
+      "overdue": "متأخرة",
+      "dueToday": "الواجب اليوم",
+      "needsReview": "استعراض الاحتياجات",
+      "comingUp": "",
+      "unplanned": "غير مخطط",
+      "allClear": "لا شيء متأخر، لا ينتظر"
+    },
+    "nextUp": {
+      "title": "قادمة",
+      "action": "عرض الكل"
+    },
+    "nextUpFallback": {
+      "title": "التالي",
+      "action": "عرض الكل"
+    },
+    "overdue": {
+      "title": "متأخرة",
+      "action": "عرض الكل"
+    },
+    "clear": {
+      "title": "الخطة المقبلة",
+      "body": "تصفح المهام القادمة، إعادة جدولة الخطط، أو إضافة الشيء التالي.",
+      "action": "تصفح جميع المهام"
+    },
+    "firstTask": {
+      "title": "أضف مهمتك الأولى",
+      "description": "اكتبها أو قلها، أو قم بفحصها. يظهر أي شيء تضيفه هنا عندما تحتاج إليك.",
+      "action": "إضافة مهمة"
+    },
+    "review": {
+      "title": "يحتاج مراجعتك",
+      "pendingTitle": "مراجعة معلقة",
+      "myPendingTitle": "مهامي في انتظار المراجعة",
+      "action": "مراجعة الكل"
+    },
+    "circle": {
+      "title": "دائرتك",
+      "action": "إدارة الدائرة",
+      "open_one": "",
+      "open_other": "",
+      "late_one": "",
+      "late_other": "",
+      "done_one": "",
+      "done_other": "",
+      "caughtUp": "الكل واضح",
+      "emptyTitle": "لا أحد آخر هنا بعد",
+      "emptyBody": "قم بدعوة الأشخاص الذين تشارك في الأعباء معهم، وستظهر هذه الشاشة من يحملون ما يحملونه.",
+      "emptyAction": "دعوة إلى دائرتك"
+    },
+    "projects": {
+      "title": "المشاريع",
+      "action": "جميع المشاريع",
+      "tasks_one": "مهمة {{count}}",
+      "tasks_other": "مهام {{count}}",
+      "tasksOverdue_one": "",
+      "tasksOverdue_other": "",
+      "tasksUnplanned_one": "",
+      "tasksUnplanned_other": "",
+      "clear": "الكل واضح"
+    },
+    "filters": {
+      "title": "فلاتر",
+      "action": "جميع الفلاتر",
+      "tasks_one": "",
+      "tasks_other": "",
+      "clear": "لا يوجد تطابق"
+    },
+    "capture": {
+      "placeholder": "إضافة مهمة…",
+      "add": "إضافة مهمة",
+      "voice": "التقط بصوت",
+      "scan": "مسح للمهمة"
+    }
+  }
+}

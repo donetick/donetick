@@ -1,0 +1,72 @@
+{
+  "iconPicker": {
+    "chooseIcon": "Projektsymbol auswählen",
+    "availableIcons": "Verfügbare Symbole"
+  },
+  "icons": {
+    "FolderOpen": "Ordner",
+    "Work": "Arbeit",
+    "Home": "Zuhause",
+    "School": "Schule",
+    "BusinessCenter": "Geschäftlich",
+    "Code": "",
+    "Build": "Werkzeug",
+    "Palette": "",
+    "SportsSoccer": "Sport",
+    "FitnessCenter": "",
+    "ShoppingCart": "Einkaufen",
+    "Restaurant": "Essen",
+    "Flight": "Reisen",
+    "Book": "Lernen",
+    "MusicNote": "Musik",
+    "PhotoCamera": "Foto",
+    "Games": "Spiele",
+    "Science": "Wissenschaft",
+    "AccountBalance": "Finanzen",
+    "LocalHospital": "Gesundheit",
+    "DirectionsCar": "",
+    "Pets": "Haustiere",
+    "Garden": "Garten",
+    "Computer": "Technik"
+  },
+  "defaultChip": "Standard",
+  "tasks_one": "{{count}} Aufgabe",
+  "tasks_other": "{{count}} Aufgaben",
+  "shared": "Geteilt",
+  "delete": {
+    "title": "Projekt löschen",
+    "message": "Möchtest du „{{name}}“ wirklich löschen? Das Projekt wird entfernt, die Aufgaben bleiben erhalten und werden in das Standardprojekt verschoben."
+  },
+  "loadError": "Projekte konnten nicht geladen werden. Bitte versuche es erneut.",
+  "search": {
+    "placeholder": "Projekte durchsuchen",
+    "noResultsTitle": "Keine passenden Projekte",
+    "noResultsDescription": "Kein Projekt passt zu „{{searchTerm}}“.",
+    "noFilterResultsDescription": "Kein Projekt entspricht dem aktuellen Filter.",
+    "clear": "Suche löschen",
+    "showAll": "Alle Projekte anzeigen"
+  },
+  "blurb": "Organisiere deine Aufgaben in Projekten. Erstelle eigene Arbeitsbereiche, damit deine Aufgaben übersichtlich und leicht zugänglich bleiben.",
+  "defaultDescription": "Alle Aufgaben ohne bestimmtes Projekt",
+  "selector": {
+    "title": "Projekte",
+    "createNew": "Neues Projekt erstellen",
+    "createNewDescription": "Eigenen Projekt-Arbeitsbereich hinzufügen",
+    "manage": "Projekte verwalten",
+    "manageDescription": "Alle Projekte anzeigen, bearbeiten und organisieren",
+    "currentProjectTitle": "Aktuelles Projekt: {{project}} (Strg+E)",
+    "builtInWorkspace": "Integrierter Projektarbeitsbereich"
+  },
+  "modal": {
+    "errorNameRequired": "Projektname ist erforderlich",
+    "errorUpdate": "Projekt konnte nicht aktualisiert werden",
+    "errorCreate": "Projekt konnte nicht erstellt werden",
+    "namePlaceholder": "Projektname eingeben...",
+    "descriptionPlaceholder": "Optionale Projektbeschreibung...",
+    "nameLabel": "Projektname",
+    "descriptionLabel": "Beschreibung",
+    "iconLabel": "Projektsymbol",
+    "selectIcon": "Symbol auswählen",
+    "colorLabel": "Projektfarbe"
+  }
+}

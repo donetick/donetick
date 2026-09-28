@@ -1,0 +1,71 @@
+{
+  "shared": "مشترك",
+  "delete": {
+    "title": "حذف التسمية",
+    "message": "هل أنت متأكد من أنك تريد حذف هذه التسمية؟ سيؤدي هذا إلى إزالة التسمية من جميع المهام."
+  },
+  "loadError": "فشل تحميل الملصقات. الرجاء المحاولة مرة أخرى.",
+  "search": {
+    "placeholder": "البحث عن التسميات",
+    "noResultsTitle": "لا توجد تسميات متطابقة",
+    "noResultsDescription": "لا يوجد تسمية مطابقة \"{{searchTerm}}\".",
+    "noFilterResultsDescription": "لا توجد تسمية تطابق الفلتر الحالي.",
+    "clear": "مسح البحث",
+    "showAll": "إظهار جميع التسميات"
+  },
+  "detail": {
+    "taskCount_one": "مهمة {{count}}",
+    "taskCount_other": "مهام {{count}}",
+    "labelActions": "إجراءات التسمية",
+    "filters": {
+      "all": "الكل",
+      "overdue": "متأخرة",
+      "today": "اليوم",
+      "undated": "لا يوجد تاريخ"
+    },
+    "noMatchingStatus": "لا توجد مهمة في هذه التسمية في تلك الدولة الآن.",
+    "clearFilters": "إظهار جميع المهام",
+    "searchPlaceholder": "البحث عن المهام في هذه التسمية",
+    "emptyTitle": "لا توجد مهام بهذا التسمية",
+    "emptyDescription": "لا شيء معلوم \"{{label}}\" حتى الآن. أضف التسمية إلى مهمة وسوف تظهر هنا.",
+    "browseTasks": "استعراض المهام",
+    "noResultsTitle": "لا توجد مهام متطابقة",
+    "noResultsDescription": "لا توجد مهمة في هذه التسمية تتطابق مع \"{{searchTerm}}\".",
+    "notFoundTitle": "لم يتم العثور على التسمية",
+    "notFoundDescription": "ربما تم حذف هذه التسمية أو لم تعد مشاركة معك.",
+    "backToLabels": "العودة إلى التسميات"
+  },
+  "blurb": "إدارة التسميات الخاصة بك وتنظيم المهام الخاصة بك بشكل فعال. سيتم مشاركة التسميات تلقائياً مع الدائرة الخاصة بك إذا تم استخدامها في مهمة مشتركة.",
+  "modal": {
+    "errorEmptyName": "لا يمكن أن يكون الاسم فارغاً",
+    "errorDuplicate": "التسمية بهذا الاسم موجودة مسبقاً",
+    "errorNoColor": "الرجاء تحديد لون",
+    "saveFailedTitle": "فشل في حفظ التسمية",
+    "saveFailedMessage": "غير قادر على حفظ التسمية. الرجاء المحاولة مرة أخرى.",
+    "name": "الاسم",
+    "editTitle": "تعديل التسمية",
+    "addTitle": "إضافة تسمية",
+    "color": "اللون",
+    "saveChanges": "حفظ التغييرات",
+    "addLabel": "إضافة تسمية",
+    "colorAriaSelect": "حدد {{color}}"
+  },
+  "picker": {
+    "label": "التسميات",
+    "createLabel": "إنشاء تسمية",
+    "labelsCount_one": "تسمية {{count}}",
+    "labelsCount_other": "تسميات {{count}}"
+  },
+  "view": {
+    "emptyTitle": "لا توجد تسميات بعد",
+    "emptyDescription": "التسميات مجموعة المهام عبر دائرتك، مثل \"المطبخ\" أو \"الفواتير\"، حتى تتمكن من التصفية لأسفل إليها بنقرة واحدة.",
+    "createLabel": "إنشاء تسمية",
+    "filterTitle": "إظهار",
+    "sortName": "الاسم",
+    "sortColor": "اللون",
+    "sortRecent": "تم إنشاؤها مؤخرا",
+    "filterAll": "جميع التسميات",
+    "filterMine": "أنشئ من قبلي",
+    "filterShared": "شارك معي"
+  }
+}

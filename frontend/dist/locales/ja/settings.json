@@ -1,0 +1,723 @@
+{
+  "title": "設定",
+  "common": {
+    "save": "保存",
+    "cancel": "キャンセル",
+    "confirm": "確認",
+    "remove": "削除",
+    "delete": "削除",
+    "refresh": "更新",
+    "loading": "読み込み中…",
+    "on": "オン",
+    "off": "オフ",
+    "error": "エラー",
+    "success": "成功",
+    "plusFeature": "Plus機能",
+    "earlyAccess": "早期アクセス"
+  },
+  "overview": {
+    "title": "設定",
+    "subtitle": "アプリの使い方をカスタマイズし、アカウント設定を管理します",
+    "upgrade": {
+      "title": "Plusにアップグレード",
+      "description": "強力な機能を解放して生産性を高めましょう",
+      "button": "今すぐアップグレード",
+      "features": {
+        "richText": "リッチテキストの説明",
+        "notifications": "タスク通知",
+        "apiIntegrations": "API連携",
+        "advancedAutomation": "高度な自動化"
+      }
+    },
+    "sections": {
+      "profile": {
+        "title": "プロフィール設定",
+        "description": "プロフィール情報、写真、表示名、タイムゾーンを更新します。"
+      },
+      "circle": {
+        "title": "サークル設定",
+        "description": "サークルの管理、メンバーの招待、参加リクエストの処理を行います。"
+      },
+      "account": {
+        "title": "アカウント設定",
+        "description": "サブスクリプションの管理、パスワードの変更、アカウントの削除を行います。"
+      },
+      "subaccounts": {
+        "title": "管理アカウント",
+        "description": "ログインして割り当てられたタスクを完了できるサブアカウントを作成・管理します。"
+      },
+      "notifications": {
+        "title": "通知",
+        "description": "プッシュ通知、メール通知、タスクの通知先を設定します。"
+      },
+      "mfa": {
+        "title": "多要素認証",
+        "description": "認証アプリを使ったMFAでセキュリティを強化します。"
+      },
+      "apitokens": {
+        "title": "APIトークン",
+        "description": "外部サービス連携やAPIアクセス用のアクセストークンを発行・管理します。"
+      },
+      "storage": {
+        "title": "ストレージ設定",
+        "description": "データのバックアップと復元、ローカルストレージと同期設定を管理します。"
+      },
+      "layout": {
+        "title": "レイアウトとナビゲーション",
+        "description": "アプリを開いたときに表示する画面と、その周囲に並ぶショートカットやパネルを選べます。"
+      },
+      "theme": {
+        "title": "テーマ設定",
+        "description": "好みのテーマを選び、ライト／ダークモードを設定します。"
+      },
+      "localization": {
+        "title": "地域と言語",
+        "description": "言語、日付形式、時刻形式、地域設定をカスタマイズします。"
+      },
+      "advanced": {
+        "title": "詳細設定",
+        "description": "Webhook、リアルタイム更新など、生産性を高める高度な機能を設定します。"
+      },
+      "privacy": {
+        "title": "",
+        "description": ""
+      },
+      "developer": {
+        "title": "開発者設定",
+        "description": "認証トークン、SSE接続、デバッグデータなどの技術情報を表示します。"
+      },
+      "feedback": {
+        "title": "フィードバックを送る",
+        "description": "Donetickの使い心地を教えてください。機能のご要望もどうぞ。"
+      },
+      "bugReport": {
+        "title": "不具合を報告",
+        "description": "うまく動かないところがありますか？技術情報とあわせて詳細をお送りください。"
+      },
+      "sidepanel": {
+        "title": "サイドパネルのカスタマイズ",
+        "description": "サイドパネルのカードの並びと表示・非表示をカスタマイズします。"
+      }
+    }
+  },
+  "profile": {
+    "title": "プロフィール設定",
+    "description": "表示名とプロフィール写真を更新します。",
+    "photoUpdated": "写真を更新しました",
+    "photoUpdatedMessage": "プロフィール写真を更新しました。",
+    "uploadFailed": "アップロードに失敗しました",
+    "uploadFailedMessage": "写真をアップロードできませんでした。もう一度お試しください。",
+    "profileUpdated": "プロフィールを更新しました",
+    "profileUpdatedMessage": "プロフィール情報を保存しました。",
+    "updateFailed": "更新に失敗しました",
+    "updateFailedMessage": "プロフィールを更新できませんでした。接続を確認してもう一度お試しください。",
+    "changePhoto": "写真を変更",
+    "editPhoto": "プロフィール写真を編集",
+    "displayName": "表示名",
+    "displayNamePlaceholder": "表示名を入力",
+    "timezone": "タイムゾーン",
+    "timezonePlaceholder": "タイムゾーンを選択",
+    "save": "保存",
+    "cancel": "キャンセル"
+  },
+  "circleSettings": {
+    "title": "サークル設定",
+    "description": "サークルを作成または参加すると、アカウントは自動的にそのサークルに接続されます。下のサークルコードやリンクを共有して、友だちを簡単に招待できます。誰かが参加をリクエストすると、下に通知が表示されます。",
+    "memberOf": "あなたは{{name}}のメンバーです",
+    "yourCircleCode": "あなたのサークルコード:",
+    "copyCode": "コードをコピー",
+    "shareInvite": "招待を共有",
+    "codeCopied": "コードをクリップボードにコピーしました",
+    "linkCopied": "招待リンクをクリップボードにコピーしました",
+    "myCircle": "私のサークル",
+    "shareTitle": "Donetickで{{name}}に参加しませんか",
+    "shareText": "Donetickの{{name}}にご招待します。",
+    "shareDialogTitle": "サークルの招待を共有",
+    "leave": "サークルを退出",
+    "leaveConfirmTitle": "サークルを退出",
+    "leaveConfirmMessage": "サークルを退出してもよろしいですか？",
+    "leaveConfirmButton": "退出",
+    "leftCircle": "サークルを退出しました",
+    "leaveFailed": "サークルを退出できませんでした",
+    "circleMembers": "サークルのメンバー",
+    "you": "（あなた）",
+    "pendingApproval": "承認待ち",
+    "joinedOn": "{{date}}に参加",
+    "requestedToJoin": "参加リクエスト {{date}}",
+    "roles": {
+      "member": "メンバー",
+      "memberDescription": "サークルの一般メンバーです",
+      "manager": "マネージャー",
+      "managerDescription": "他のユーザーになりかわって操作できます",
+      "admin": "管理者",
+      "adminDescription": "サークルへのフルアクセス"
+    },
+    "roleUpdateFailed": "役割を更新できませんでした",
+    "removeMemberTitle": "メンバーを削除",
+    "removeMemberMessage": "{{name}}をサークルから削除してもよろしいですか？",
+    "memberRemoved": "メンバーを削除しました",
+    "circleMemberRequests": "サークルへの参加リクエスト",
+    "lastUpdated": "最終更新: {{time}}",
+    "refreshing": "更新中…",
+    "refreshFailed": "参加リクエストを更新できませんでした",
+    "wantsToJoin": "{{name}}さんがサークルへの参加を希望しています。",
+    "accept": "承認",
+    "acceptRequestTitle": "参加リクエストを承認",
+    "acceptRequestMessage": "{{name}}（ユーザー名: {{username}}）のサークル参加を承認してもよろしいですか？",
+    "requestAccepted": "リクエストを承認しました",
+    "or": "または",
+    "joinOtherDescription": "他の人のサークルに参加しますか？サークルコードまたは参加リンクを教えてもらい、下にコードを入力して参加してください。",
+    "enterCircleCode": "サークルコードを入力:",
+    "enterCodePlaceholder": "コードを入力",
+    "joinCircle": "サークルに参加",
+    "joinedPending": "サークルに参加しました。サークルの所有者がリクエストを承認するまでお待ちください。",
+    "alreadyMember": "すでにこのサークルのメンバーです",
+    "joinFailed": "サークルに参加できませんでした",
+    "copyLink": ""
+  },
+  "accountSettings": {
+    "title": "アカウント設定",
+    "description": "アカウント設定、プラン、パスワードを変更します",
+    "accountType": "アカウントの種類: {{type}}",
+    "free": "無料",
+    "plus": "",
+    "plusUntil": "Plus（{{date}}まで）",
+    "activeDescription": "現在Plusプランをご利用中です。サブスクリプションは{{date}}に更新されます。",
+    "cancelledDescription": "サブスクリプションを解約しました。アカウントは{{date}}に無料プランへ変更されます。",
+    "freeDescription": "現在は無料プランをご利用中です。Plusにアップグレードすると、さらに多くの機能をご利用いただけます。",
+    "upgrade": "アップグレード",
+    "cancel": "解約",
+    "password": "パスワード:",
+    "changePassword": "パスワードを変更",
+    "passwordChanged": "パスワードを変更しました",
+    "passwordChangeFailed": "パスワードを変更できませんでした",
+    "dangerZone": "危険な操作",
+    "dangerZoneDescription": "アカウントを削除すると元に戻すことはできません。慎重にご判断ください。",
+    "deleteAccount": "アカウントを削除",
+    "accountDeleted": "アカウントを削除しました",
+    "subscriptionCancelled": "サブスクリプションを解約しました",
+    "subscriptionCancelFailed": "サブスクリプションを解約できませんでした",
+    "purchase": {
+      "success": "購入が完了しました。Plus機能を利用するにはアプリを再起動してください。",
+      "storeConnection": "ストアへの接続に問題があります。ネットワークを確認してもう一度お試しください。",
+      "notAllowed": "このデバイスでは購入が許可されていません。デバイスの制限設定をご確認ください。",
+      "unavailable": "このサブスクリプションはご利用いただけません。しばらくしてからお試しください。",
+      "alreadyProcessed": "この購入はすでに処理されています。問題があると思われる場合はサポートにお問い合わせください。",
+      "receiptMissing": "購入レシートが見つかりません。もう一度購入をお試しください。",
+      "networkError": "ネットワークエラーです。接続を確認してもう一度お試しください。",
+      "invalidReceipt": "購入レシートが無効です。解決しない場合はサポートにお問い合わせください。",
+      "pending": "支払いは承認待ちです。承認され次第ご利用いただけます。",
+      "failed": "購入に失敗しました: {{error}}。もう一度お試しいただくか、サポートにお問い合わせください。",
+      "unknownError": "不明なエラー"
+    }
+  },
+  "subaccounts": {
+    "title": "管理アカウント",
+    "description": "サブアカウントを管理します。サブアカウントのユーザーはログインして、割り当てられたタスクを完了できます。",
+    "notParentTitle": "サブアカウントの管理",
+    "notParentMessage": "サブアカウントを管理できるのは主アカウントのみです。",
+    "freePlanNotice": "無料プランではサブアカウントは1つまでです。Plusにアップグレードすると最大5つまで作成できます。",
+    "count": "サブアカウント（{{count}}）",
+    "add": "サブアカウントを追加",
+    "loading": "サブアカウントを読み込み中…",
+    "emptyTitle": "サブアカウントがありません",
+    "emptyDescription": "サブアカウントを作成すると、メンバーがログインして担当タスクを完了できるようになります。",
+    "addFirst": "最初のサブアカウントを追加",
+    "username": "ユーザー名: {{username}}",
+    "created": "作成日: {{date}}",
+    "changePassword": "パスワードを変更",
+    "deleteAccount": "アカウントを削除",
+    "createdSuccess": "サブアカウント「{{name}}」を作成しました。",
+    "createFailed": "サブアカウントを作成できませんでした: {{error}}",
+    "createFailedGeneric": "サブアカウントを作成できませんでした",
+    "passwordUpdated": "サブアカウントのパスワードを更新しました",
+    "passwordUpdateFailed": "パスワードを更新できませんでした: {{error}}",
+    "passwordUpdateFailedGeneric": "パスワードを更新できませんでした",
+    "deleteConfirmTitle": "サブアカウントを削除",
+    "deleteConfirmMessage": "サブアカウント「{{name}}」を削除してもよろしいですか？この操作は取り消せません。",
+    "deleted": "サブアカウント「{{name}}」を削除しました",
+    "deleteFailed": "サブアカウントを削除できませんでした: {{error}}",
+    "deleteFailedGeneric": "サブアカウントを削除できませんでした",
+    "howItWorksTitle": "管理アカウントのしくみ",
+    "howItWorks1": "管理アカウントは主アカウントが作成します。削除やパスワードのリセットを自分で行いたいユーザー向けです。",
+    "howItWorks2": "サブアカウントは独自のユーザー名とパスワードでログインできます。",
+    "howItWorks3": "管理アカウントはタスクを完了できますが、管理者権限は制限されています",
+    "howItWorks4": "管理アカウントは自動的にあなたのサークルに追加されます"
+  },
+  "notifications": {
+    "title": "通知設定",
+    "deviceSection": "デバイス通知",
+    "deviceSectionDescription": "デバイス通知を管理します",
+    "deviceLabel": "デバイス通知",
+    "deviceHelper": "タスクの期限になるとデバイスに通知を受け取ります",
+    "mobileOnly": "この機能はモバイル端末でのみ利用できます",
+    "testNotification": "テスト通知",
+    "testNotificationBody": "まもなく期限のタスクがあります",
+    "dueTitle": "期限の通知",
+    "dueLabel": "タスクの期限になったときの通知",
+    "preDueTitle": "期限前の通知",
+    "preDueLabel": "タスクの期限の数時間前に届く通知",
+    "overdueTitle": "期限切れの通知",
+    "overdueLabel": "タスクが期限切れになったときの通知",
+    "pushLabel": "プッシュ通知",
+    "pushHelper": "リマインド、お知らせ、タスクの割り当てをプッシュ通知で受け取ります",
+    "registeredDevices": "登録済みデバイス（{{count}}/5）",
+    "registeredDevicesDescription": "アカウントのプッシュ通知を受け取るために登録されたデバイス",
+    "currentDevice": "現在のデバイス: {{platform}} {{model}}",
+    "currentDeviceNotRegistered": "このデバイスはプッシュ通知に登録されていません",
+    "limitReached": "上限に達しました",
+    "registerDevice": "デバイスを登録",
+    "unknownDevice": "不明なデバイス",
+    "deviceCreatedAt": "登録日: {{date}}",
+    "noDevices": "プッシュ通知に登録されたデバイスはありません",
+    "customSection": "カスタム通知",
+    "customSectionDescription": "TelegramやPushoverなど、他のプラットフォーム経由の通知",
+    "customLabel": "カスタム通知",
+    "customHelper": "他のプラットフォームで通知を受け取ります",
+    "targetNone": "なし",
+    "targetTelegram": "",
+    "targetPushover": "",
+    "targetWebhooks": "Webhook",
+    "telegramBotHelpBefore": "Telegram通知を利用するには、まずボットにメッセージを送る必要があります",
+    "telegramBotHelpAfter": "でチャットを開始してください",
+    "clickHere": "こちら",
+    "chatId": "チャットID",
+    "chatIdPlaceholder": "ユーザーID / チャットID",
+    "telegramChatIdHelpBefore": "チャットIDが分からない場合は、userinfobotとチャットを開始すると教えてくれます。",
+    "telegramChatIdHelpAfter": "でuserinfobotとのチャットを開始してください",
+    "userKey": "ユーザーキー",
+    "userKeyPlaceholder": "ユーザーID",
+    "chatIdRequired": "チャットIDは必須です",
+    "chatIdInvalid": "チャットIDが正しくありません",
+    "userKeyRequired": "ユーザーキーは必須です",
+    "targetUpdated": "通知先を更新しました",
+    "targetUpdateFailed": "通知先の更新中にエラーが発生しました: {{error}}",
+    "deviceRegistered": "デバイスをプッシュ通知に登録しました。",
+    "deviceLimitTitle": "デバイス数の上限に達しました",
+    "deviceLimitMessage": "登録できるデバイスは最大5台です。このデバイスを登録する前に、いずれかのデバイスを削除してください。",
+    "registrationFailedTitle": "登録に失敗しました",
+    "registrationFailedMessage": "デバイスを自動的に登録できませんでした。もう一度お試しください。",
+    "permissionRequiredTitle": "権限が必要です",
+    "permissionRequiredMessage": "このデバイスを登録するにはプッシュ通知の権限が必要です。",
+    "registrationInitiatedTitle": "登録を開始しました",
+    "registrationInitiatedMessage": "プッシュ通知の登録を開始しました。デバイスは自動的に登録されます。",
+    "registerDeviceFailed": "デバイスを登録できませんでした。もう一度お試しください。",
+    "permissionDeniedTitle": "通知の権限が拒否されました",
+    "permissionDeniedMessage": "通知の権限が拒否されました。後からデバイスの設定で有効にできます。",
+    "pushPermissionDeniedTitle": "プッシュ通知の権限が拒否されました",
+    "pushPermissionDeniedMessage": "プッシュ通知が無効になりました。必要に応じてデバイスの設定から有効にできます。",
+    "unregisterFailed": "デバイスの登録を解除できませんでした"
+  },
+  "mfa": {
+    "title": "多要素認証",
+    "description": "多要素認証（MFA）でアカウントのセキュリティを強化します。有効にすると、サインイン時にパスワードに加えて認証アプリの確認コードの入力が必要になります。",
+    "twoFactor": "2要素認証",
+    "enabledSubtitle": "アカウントは2FAで保護されています",
+    "disabledSubtitle": "認証アプリでアカウントを保護しましょう",
+    "enable": "有効にする",
+    "disable": "無効にする",
+    "enabledSuccess": "MFAを有効にしました。",
+    "disabledSuccess": "MFAを無効にしました。",
+    "errors": {
+      "qrGenerationFailed": "QRコードを生成できませんでした",
+      "invalidResponse": "サーバーからの応答が正しくありません。QRコードまたはシークレットがありません。",
+      "notFound": "MFA設定のエンドポイントが見つかりません。この機能はまだ利用できない可能性があります。",
+      "unauthorized": "権限がありません。もう一度ログインしてください。",
+      "serverError": "サーバーエラーです。しばらくしてからお試しください。",
+      "setupFailed": "MFAの設定に失敗しました（{{status}}）。もう一度お試しください。",
+      "networkError": "ネットワークエラーです。接続を確認してもう一度お試しください。",
+      "invalidCode": "確認コードが正しくありません。もう一度お試しください。",
+      "confirmFailed": "MFAを確認できませんでした。もう一度お試しください。",
+      "disableFailed": "MFAを無効にできませんでした。もう一度お試しください。"
+    },
+    "setup": {
+      "title": "多要素認証を設定",
+      "addedAccount": "アカウントを追加しました",
+      "back": "戻る",
+      "verifyAndEnable": "確認して有効にする",
+      "savedBackupCodes": "バックアップコードを保存しました",
+      "step1Label": "ステップ1:",
+      "step1": "下のQRコードを認証アプリ（Google Authenticator、Authyなど）で読み取ってください",
+      "qrAlt": "MFAのQRコード",
+      "qrFailed": "QRコードを生成できませんでした。もう一度お試しいただくか、下の手動入力キーをご利用ください。",
+      "manualKey": "手動入力キー:",
+      "step2Label": "ステップ2:",
+      "step2": "認証アプリに表示される6桁の確認コードを入力してください",
+      "codePlaceholder": "6桁のコードを入力",
+      "successTitle": "MFAを有効にしました",
+      "backupCodesTitle": "このバックアップコードを安全な場所に保管してください",
+      "backupCodesDescription": "認証用デバイスを紛失した場合、これらのコードでアカウントにアクセスできます。各コードは1回のみ使用できます。"
+    },
+    "disableModal": {
+      "title": "多要素認証を無効にする",
+      "warning": "MFAを無効にするとアカウントの安全性が下がります。続行してもよろしいですか？",
+      "prompt": "確認のため、認証アプリの確認コードを入力してください:",
+      "confirm": "MFAを無効にする"
+    },
+    "backupCodesModal": {
+      "title": "新しいバックアップコード",
+      "warning": "以前のバックアップコードは無効になりました。新しいコードを安全な場所に保管してください。各コードは1回のみ使用できます。"
+    },
+    "generateCodes": ""
+  },
+  "apiTokens": {
+    "title": "APIトークン",
+    "accessToken": "アクセストークン",
+    "description": "タスクをトリガーするモノをAPIで更新するためのトークンを作成します",
+    "plusNotice": "APIトークンはベーシックプランではご利用いただけません。Plusにアップグレードすると、外部システムとの連携やタスクの自動化に使えるAPIトークンを発行できます。",
+    "showToken": "トークンを表示",
+    "hideToken": "トークンを隠す",
+    "removeTitle": "トークンを削除",
+    "removeMessage": "{{name}}を削除してもよろしいですか？",
+    "removedTitle": "削除しました",
+    "removedMessage": "APIトークンを削除しました",
+    "tokenCopied": "トークンをクリップボードにコピーしました",
+    "generateNew": "新しいトークンを生成",
+    "nameModalTitle": "新しいトークンに、あとで見分けられる名前を付けてください。",
+    "generateToken": "トークンを生成"
+  },
+  "storage": {
+    "title": "ストレージ設定",
+    "serverTitle": "サーバーストレージの使用量",
+    "serverDescription": "アカウントがサーバー上で使用しているストレージです（アップロードしたファイル、画像、データなど）。",
+    "usagePlaceholder": "-- MB使用 / 合計 -- MB（--）",
+    "usage": "{{used}} MB使用 / 合計 {{total}} MB（{{percent}}%）",
+    "basicPlanNotice": "サーバーストレージはベーシックプランではご利用いただけません。Plusにアップグレードすると使用量を確認できます。",
+    "localTitleApp": "アプリのローカルストレージとキャッシュ",
+    "localTitleBrowser": "ブラウザのローカルストレージとキャッシュ",
+    "localDescription": "高速に読み込むためにブラウザ内へローカル保存されたデータです。消去してもサーバー上のデータには影響しませんが、ログアウトされる場合があります。",
+    "clearLocal": "ローカルストレージとキャッシュをすべて消去",
+    "clearLocalTitle": "ローカルストレージをすべて消去",
+    "clearLocalMessage": "ローカルストレージとキャッシュを消去してもよろしいですか？このブラウザからすべてのデータが削除され、再度ログインが必要になります。",
+    "clearAll": "すべて消去",
+    "appPreferences": "アプリの設定",
+    "deviceOnly": "この端末のみ",
+    "appPreferencesDescription": "アプリが端末にローカル保存している設定です。消去するとアプリ固有の設定がリセットされ、ログアウトされる場合がありますが、サーバー上のデータには影響しません。",
+    "clearPreferences": "アプリの設定を消去",
+    "clearPreferencesTitle": "アプリの設定を消去",
+    "clearPreferencesMessage": "アプリの設定をすべて消去してもよろしいですか？設定がリセットされ、再度ログインが必要になる場合があります。"
+  },
+  "sidepanel": {
+    "title": "サイドパネルのカスタマイズ",
+    "description": "サイドパネルに表示するカードと並び順を設定します。ドラッグ＆ドロップで並べ替えたり、カードごとに表示・非表示を切り替えたりできます。",
+    "resetToDefaults": "初期設定に戻す",
+    "resetHelper": "すべてのカードの表示状態と並び順が初期設定に戻ります。",
+    "cards": {
+      "welcome": {
+        "name": "ユーザー切り替え",
+        "description": "管理者やマネージャーが他のユーザーとしてタスクを表示できます"
+      },
+      "smartInsights": {
+        "name": "スマートインサイト",
+        "description": "タスクに応じたクイックアクション"
+      },
+      "assignees": {
+        "name": "担当者別のタスク",
+        "description": "担当者ごとにタスクをまとめて表示します"
+      },
+      "calendar": {
+        "name": "カレンダー表示",
+        "description": "タスクをカレンダー形式で表示します"
+      },
+      "activities": {
+        "name": "最近のアクティビティ",
+        "description": "最近完了したタスクやアクティビティを表示します"
+      },
+      "weeklyGoals": {
+        "name": "週間目標",
+        "description": "週の進捗と家族全体の達成状況を表示します"
+      }
+    },
+    "heading": "サイドパネル設定",
+    "detailedDescription": ""
+  },
+  "homeSections": {
+    "title": "",
+    "description": "",
+    "resetToDefaults": "",
+    "resetHelper": "",
+    "sections": {
+      "greeting": {
+        "name": "",
+        "description": ""
+      },
+      "glance": {
+        "name": "",
+        "description": ""
+      },
+      "circle": {
+        "name": "",
+        "description": ""
+      },
+      "review": {
+        "name": "",
+        "description": ""
+      },
+      "overdue": {
+        "name": "",
+        "description": ""
+      },
+      "nextUp": {
+        "name": "",
+        "description": ""
+      },
+      "filters": {
+        "name": "",
+        "description": ""
+      },
+      "projects": {
+        "name": "",
+        "description": ""
+      }
+    },
+    "detailedDescription": ""
+  },
+  "layout": {
+    "title": "レイアウトとナビゲーション",
+    "detailedDescription": "アプリを開いたときに表示する画面と、その周囲に配置するショートカットやパネルを選びます。",
+    "defaultView": {
+      "title": "デフォルトの画面",
+      "description": "アプリを開いたときに表示する画面を選びます。",
+      "options": {
+        "home": {
+          "name": "概要",
+          "description": "今日やるべきことのまとめと、クイック追加"
+        },
+        "tasks": {
+          "name": "タスク一覧",
+          "description": "絞り込み・検索・グループ分けができる完全なタスク一覧"
+        }
+      }
+    },
+    "bottomNav": {
+      "title": "下部ナビゲーション",
+      "description": "モバイルの下部ナビゲーションバーに表示するショートカットを最大{{max}}個まで選び、ドラッグして並べ替えます。「その他」は常に最後に残り、フルメニューを開きます。",
+      "resetToDefaults": "初期設定に戻す",
+      "resetHelper": "下部ナビゲーションのショートカットと並び順が初期設定に戻ります。"
+    },
+    "sidepanel": {
+      "title": "サイドパネル"
+    }
+  },
+  "theme": {
+    "title": "テーマ設定",
+    "description": "サイトの見た目を選べます。テーマを固定するか、システムと同期して昼夜で自動的に切り替えられます。",
+    "themeMode": "テーマモード",
+    "light": "ライト",
+    "dark": "ダーク",
+    "system": "システム"
+  },
+  "localization": {
+    "title": "地域と言語",
+    "description": "アカウントの言語、日付形式、地域設定をカスタマイズします。",
+    "language": "言語",
+    "languageDescription": "使用する言語を選択してください",
+    "rtlNotice": "この言語は右から左（RTL）に表記されます",
+    "dateFormat": "日付形式",
+    "dateFormatDescription": "アプリ全体での日付の表示方法を選択します",
+    "timeFormat": "時刻形式",
+    "timeFormatDescription": "12時間表示か24時間表示かを選択します",
+    "preview": "プレビュー: {{value}}",
+    "12hour": "12時間表示（AM/PM）",
+    "24hour": "24時間表示",
+    "firstDayOfWeek": "週の始まり",
+    "firstDayOfWeekDescription": "週の始まりの曜日を選択します",
+    "sunday": "日曜日",
+    "monday": "月曜日",
+    "saturday": "土曜日",
+    "helpTranslate": "",
+    "formats": {
+      "mdy": "MM/DD/YYYY（米国）",
+      "dmy": "DD/MM/YYYY（欧州）",
+      "ymd": "YYYY-MM-DD（ISO）",
+      "long": "長い形式（例: 2024年1月1日）",
+      "short": "短い形式（例: 2024/1/1）"
+    },
+    "descriptionLong": ""
+  },
+  "advanced": {
+    "title": "詳細設定",
+    "description": "Webhookやリアルタイム更新など、生産性を高める高度な機能を設定します。",
+    "offlineTitle": "オフライン対応",
+    "offlineDescription": "この端末・ブラウザでオフラインでもDonetickを使えます。変更はローカルに保存され、オンラインに戻ると同期されます。",
+    "offlineToggle": "オフライン対応を有効にする",
+    "offlineHelper": "無効にすると、未同期のオフライン変更とこの端末・ブラウザに保存されたオフラインデータが削除されます。",
+    "offlineEnabled": "この端末・ブラウザでオフラインモードを有効にしました",
+    "offlineDisabled": "オフラインモードを無効にし、ローカルデータを消去しました",
+    "offlineDisabledPartial": "オフラインモードを無効にしましたが、一部のローカルデータが残っている可能性があります",
+    "offlineDisableTitle": "オフラインモードを無効にする",
+    "offlineDisableMessage": "オフラインモードを無効にすると、未同期のオフライン変更とこの端末・ブラウザに保存されたオフラインデータが削除されます。続行しますか？",
+    "offlineDisableConfirm": "無効にしてデータを消去",
+    "webhookTitle": "Webhook連携",
+    "webhookDescription": "Webhookを使うと、サークル内でイベントが発生したときに他のサービスへリアルタイムで通知を送れます。WebhookのURLを設定してリアルタイム更新を受け取りましょう。",
+    "webhookPlusNotice": "Webhook通知はベーシックプランではご利用いただけません。Plusにアップグレードすると、Webhook経由でリアルタイム更新を受け取れます。",
+    "webhookToggle": "Webhookを有効にする",
+    "webhookHelper": "タスクとモノの更新についてWebhook通知を有効にします。",
+    "webhookURL": "WebhookのURL",
+    "webhookUpdated": "WebhookのURLを更新しました",
+    "webhookUpdateFailed": "WebhookのURLを更新できませんでした",
+    "realtimeTitle": "リアルタイム更新",
+    "realtimeDescription": "サークル内でタスクやアクティビティが変化したときに、更新をどう受け取るかを設定します。",
+    "realtime": {
+      "toggleLabel": "リアルタイム更新を有効にする",
+      "title": "リアルタイム更新",
+      "subtitle": "タスクが更新されるとすぐに通知を受け取れます",
+      "statusLabel": "ステータス:",
+      "basicPlan": "リアルタイム更新はベーシックプランではご利用いただけません。Plusにアップグレードすると、タスクの更新時にすぐ通知を受け取れます。",
+      "disabled": "リアルタイム更新は無効です。有効にすると、あなたや他のサークルメンバーがタスクを完了・スキップ・変更したときに、その変化をすぐに確認できます。",
+      "connected": "リアルタイム更新は正常に動作しています。あなたや他のサークルメンバーがタスクを完了・スキップ・変更すると、その変化がすぐに反映されます。",
+      "connecting": "リアルタイム更新に接続中…",
+      "errored": "リアルタイム更新は有効ですが動作していません: {{error}}",
+      "notConnected": "リアルタイム更新は有効ですが、現在接続されていません。",
+      "basicPlanNotice": "リアルタイム更新はベーシックプランではご利用いただけません。Plusにアップグレードすると、あなたや他のサークルメンバーがタスクを完了・スキップ・変更したときにすぐ通知を受け取れます。"
+    }
+  },
+  "privacyAnalytics": {
+    "title": "",
+    "description": "",
+    "analyticsToggle": "",
+    "analyticsHelper": "",
+    "crashToggle": "",
+    "crashHelper": "",
+    "footnote": ""
+  },
+  "subscription": {
+    "sessionFailed": "",
+    "errorTitle": "",
+    "errorMessage": "",
+    "subscribe": "",
+    "cancelAnytime": "",
+    "description": "",
+    "whatsIncluded": "",
+    "mostPopular": "",
+    "featureNotifications": "",
+    "featureRichText": "",
+    "featureThingTriggers": "",
+    "featureApiTokens": "",
+    "featureImageUploads": "",
+    "featureAutomation": "",
+    "planYearly": ""
+  },
+  "childUsers": {
+    "errNameRequired": "",
+    "errNameMin": "",
+    "errNameMax": "",
+    "errNameChars": "",
+    "errPasswordRequired": "",
+    "errPasswordLength": "",
+    "errPasswordMatch": "",
+    "errDisplayNameMax": "",
+    "createTitle": "",
+    "createDescription": "",
+    "createButton": "",
+    "nameLabel": "",
+    "namePlaceholder": "",
+    "displayNameLabel": "",
+    "displayNamePlaceholder": "",
+    "passwordLabel": "",
+    "passwordPlaceholder": "",
+    "confirmPasswordLabel": "",
+    "confirmPasswordPlaceholder": ""
+  },
+  "passwordChange": {
+    "minLength": "",
+    "maxLength": "",
+    "description": "",
+    "mismatch": "",
+    "newPassword": "",
+    "newPasswordPlaceholder": "",
+    "confirmPassword": "",
+    "confirmPasswordPlaceholder": ""
+  },
+  "payment": {
+    "cancelledTitle": "",
+    "cancelledRedirect": "",
+    "successTitle": "",
+    "successRedirect": ""
+  },
+  "developer": {
+    "tokenRefreshed": "",
+    "endpointCalled": "",
+    "clearDbCleared": "",
+    "clearDbDone": "",
+    "intro": "",
+    "refreshCookieNote": "",
+    "noReconnectInfo": "",
+    "noTimeoutInfo": "",
+    "noDebugInfo": ""
+  },
+  "backup": {
+    "keyRequired": "",
+    "created": "",
+    "createFailed": "",
+    "selectFile": "",
+    "restored": "",
+    "restoreFailed": "",
+    "readFailed": "",
+    "createIntro": "",
+    "keyPlaceholder": "",
+    "includeAssets": "",
+    "warningLabel": "",
+    "restoreWarning": "",
+    "restoreKeyPlaceholder": "",
+    "title": "",
+    "createTab": "",
+    "restoreTab": "",
+    "creating": "",
+    "restoring": ""
+  },
+  "deletion": {
+    "passwordRequired": "",
+    "passwordAndDelete": "",
+    "failed": "",
+    "passwordPlaceholder": "",
+    "transferIntro": "",
+    "selectOwner": "",
+    "confirmPrompt": "",
+    "typeDelete": "",
+    "warningLead": "",
+    "warningIntro": "",
+    "removesProfile": "",
+    "removesChores": "",
+    "removesTokens": "",
+    "removesStorage": "",
+    "removesPoints": "",
+    "removesCircles": "",
+    "passwordToContinue": "",
+    "circleLabel": "",
+    "newOwner": "",
+    "logoutNotice": "",
+    "passwordLabel": "",
+    "typeToConfirm": ""
+  },
+  "realtime": {
+    "titleSse": "",
+    "subtitleSse": ""
+  },
+  "nativeCancel": {
+    "title": "",
+    "dismiss": "",
+    "cancelViaStore": "",
+    "cancelDesktop": "",
+    "intro": "",
+    "iosHeading": "",
+    "iosStep1": "",
+    "iosStep2": "",
+    "iosStep3": "",
+    "iosStep4": "",
+    "iosStep5": "",
+    "iosNote": "",
+    "androidHeading": "",
+    "androidStep1": "",
+    "androidStep2": "",
+    "androidStep3": "",
+    "androidStep4": "",
+    "androidStep5": "",
+    "androidStep6": "",
+    "androidNote": "",
+    "webHeading": "",
+    "webBody": "",
+    "webNote": "",
+    "footer": ""
+  }
+}

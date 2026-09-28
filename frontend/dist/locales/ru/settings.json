@@ -1,0 +1,723 @@
+{
+  "title": "",
+  "common": {
+    "save": "",
+    "cancel": "",
+    "confirm": "",
+    "remove": "",
+    "delete": "",
+    "refresh": "",
+    "loading": "",
+    "on": "",
+    "off": "",
+    "error": "",
+    "success": "",
+    "plusFeature": "",
+    "earlyAccess": ""
+  },
+  "overview": {
+    "title": "",
+    "subtitle": "",
+    "upgrade": {
+      "title": "",
+      "description": "",
+      "button": "",
+      "features": {
+        "richText": "",
+        "notifications": "",
+        "apiIntegrations": "",
+        "advancedAutomation": ""
+      }
+    },
+    "sections": {
+      "profile": {
+        "title": "",
+        "description": ""
+      },
+      "circle": {
+        "title": "",
+        "description": ""
+      },
+      "account": {
+        "title": "",
+        "description": ""
+      },
+      "subaccounts": {
+        "title": "",
+        "description": ""
+      },
+      "notifications": {
+        "title": "",
+        "description": ""
+      },
+      "mfa": {
+        "title": "",
+        "description": ""
+      },
+      "apitokens": {
+        "title": "",
+        "description": ""
+      },
+      "storage": {
+        "title": "",
+        "description": ""
+      },
+      "layout": {
+        "title": "Оформление и навигация",
+        "description": "Выберите экран, с которого открывается приложение, и какие ярлыки и панели его окружают."
+      },
+      "theme": {
+        "title": "",
+        "description": ""
+      },
+      "localization": {
+        "title": "",
+        "description": ""
+      },
+      "advanced": {
+        "title": "",
+        "description": ""
+      },
+      "privacy": {
+        "title": "",
+        "description": ""
+      },
+      "developer": {
+        "title": "",
+        "description": ""
+      },
+      "feedback": {
+        "title": "",
+        "description": ""
+      },
+      "bugReport": {
+        "title": "",
+        "description": ""
+      },
+      "sidepanel": {
+        "title": "",
+        "description": ""
+      }
+    }
+  },
+  "profile": {
+    "title": "",
+    "description": "",
+    "photoUpdated": "",
+    "photoUpdatedMessage": "",
+    "uploadFailed": "",
+    "uploadFailedMessage": "",
+    "profileUpdated": "",
+    "profileUpdatedMessage": "",
+    "updateFailed": "",
+    "updateFailedMessage": "",
+    "changePhoto": "",
+    "editPhoto": "",
+    "displayName": "",
+    "displayNamePlaceholder": "",
+    "timezone": "",
+    "timezonePlaceholder": "",
+    "save": "",
+    "cancel": ""
+  },
+  "circleSettings": {
+    "title": "",
+    "description": "",
+    "memberOf": "",
+    "yourCircleCode": "",
+    "copyCode": "",
+    "shareInvite": "",
+    "codeCopied": "",
+    "linkCopied": "",
+    "myCircle": "",
+    "shareTitle": "",
+    "shareText": "",
+    "shareDialogTitle": "",
+    "leave": "",
+    "leaveConfirmTitle": "",
+    "leaveConfirmMessage": "",
+    "leaveConfirmButton": "",
+    "leftCircle": "",
+    "leaveFailed": "",
+    "circleMembers": "",
+    "you": "",
+    "pendingApproval": "",
+    "joinedOn": "",
+    "requestedToJoin": "",
+    "roles": {
+      "member": "",
+      "memberDescription": "",
+      "manager": "",
+      "managerDescription": "",
+      "admin": "",
+      "adminDescription": ""
+    },
+    "roleUpdateFailed": "",
+    "removeMemberTitle": "",
+    "removeMemberMessage": "",
+    "memberRemoved": "",
+    "circleMemberRequests": "",
+    "lastUpdated": "",
+    "refreshing": "",
+    "refreshFailed": "",
+    "wantsToJoin": "",
+    "accept": "",
+    "acceptRequestTitle": "",
+    "acceptRequestMessage": "",
+    "requestAccepted": "",
+    "or": "",
+    "joinOtherDescription": "",
+    "enterCircleCode": "",
+    "enterCodePlaceholder": "",
+    "joinCircle": "",
+    "joinedPending": "",
+    "alreadyMember": "",
+    "joinFailed": "",
+    "copyLink": ""
+  },
+  "accountSettings": {
+    "title": "",
+    "description": "",
+    "accountType": "",
+    "free": "",
+    "plus": "",
+    "plusUntil": "",
+    "activeDescription": "",
+    "cancelledDescription": "",
+    "freeDescription": "",
+    "upgrade": "",
+    "cancel": "",
+    "password": "",
+    "changePassword": "",
+    "passwordChanged": "",
+    "passwordChangeFailed": "",
+    "dangerZone": "",
+    "dangerZoneDescription": "",
+    "deleteAccount": "",
+    "accountDeleted": "",
+    "subscriptionCancelled": "",
+    "subscriptionCancelFailed": "",
+    "purchase": {
+      "success": "",
+      "storeConnection": "",
+      "notAllowed": "",
+      "unavailable": "",
+      "alreadyProcessed": "",
+      "receiptMissing": "",
+      "networkError": "",
+      "invalidReceipt": "",
+      "pending": "",
+      "failed": "",
+      "unknownError": ""
+    }
+  },
+  "subaccounts": {
+    "title": "",
+    "description": "",
+    "notParentTitle": "",
+    "notParentMessage": "",
+    "freePlanNotice": "",
+    "count": "",
+    "add": "",
+    "loading": "",
+    "emptyTitle": "",
+    "emptyDescription": "",
+    "addFirst": "",
+    "username": "",
+    "created": "",
+    "changePassword": "",
+    "deleteAccount": "",
+    "createdSuccess": "",
+    "createFailed": "",
+    "createFailedGeneric": "",
+    "passwordUpdated": "",
+    "passwordUpdateFailed": "",
+    "passwordUpdateFailedGeneric": "",
+    "deleteConfirmTitle": "",
+    "deleteConfirmMessage": "",
+    "deleted": "",
+    "deleteFailed": "",
+    "deleteFailedGeneric": "",
+    "howItWorksTitle": "",
+    "howItWorks1": "",
+    "howItWorks2": "",
+    "howItWorks3": "",
+    "howItWorks4": ""
+  },
+  "notifications": {
+    "title": "",
+    "deviceSection": "",
+    "deviceSectionDescription": "",
+    "deviceLabel": "",
+    "deviceHelper": "",
+    "mobileOnly": "",
+    "testNotification": "",
+    "testNotificationBody": "",
+    "dueTitle": "",
+    "dueLabel": "",
+    "preDueTitle": "",
+    "preDueLabel": "",
+    "overdueTitle": "",
+    "overdueLabel": "",
+    "pushLabel": "",
+    "pushHelper": "",
+    "registeredDevices": "",
+    "registeredDevicesDescription": "",
+    "currentDevice": "",
+    "currentDeviceNotRegistered": "",
+    "limitReached": "",
+    "registerDevice": "",
+    "unknownDevice": "",
+    "deviceCreatedAt": "",
+    "noDevices": "",
+    "customSection": "",
+    "customSectionDescription": "",
+    "customLabel": "",
+    "customHelper": "",
+    "targetNone": "",
+    "targetTelegram": "",
+    "targetPushover": "",
+    "targetWebhooks": "",
+    "telegramBotHelpBefore": "",
+    "telegramBotHelpAfter": "",
+    "clickHere": "",
+    "chatId": "",
+    "chatIdPlaceholder": "",
+    "telegramChatIdHelpBefore": "",
+    "telegramChatIdHelpAfter": "",
+    "userKey": "",
+    "userKeyPlaceholder": "",
+    "chatIdRequired": "",
+    "chatIdInvalid": "",
+    "userKeyRequired": "",
+    "targetUpdated": "",
+    "targetUpdateFailed": "",
+    "deviceRegistered": "",
+    "deviceLimitTitle": "",
+    "deviceLimitMessage": "",
+    "registrationFailedTitle": "",
+    "registrationFailedMessage": "",
+    "permissionRequiredTitle": "",
+    "permissionRequiredMessage": "",
+    "registrationInitiatedTitle": "",
+    "registrationInitiatedMessage": "",
+    "registerDeviceFailed": "",
+    "permissionDeniedTitle": "",
+    "permissionDeniedMessage": "",
+    "pushPermissionDeniedTitle": "",
+    "pushPermissionDeniedMessage": "",
+    "unregisterFailed": ""
+  },
+  "mfa": {
+    "title": "",
+    "description": "",
+    "twoFactor": "",
+    "enabledSubtitle": "",
+    "disabledSubtitle": "",
+    "enable": "",
+    "disable": "",
+    "enabledSuccess": "",
+    "disabledSuccess": "",
+    "errors": {
+      "qrGenerationFailed": "",
+      "invalidResponse": "",
+      "notFound": "",
+      "unauthorized": "",
+      "serverError": "",
+      "setupFailed": "",
+      "networkError": "",
+      "invalidCode": "",
+      "confirmFailed": "",
+      "disableFailed": ""
+    },
+    "setup": {
+      "title": "",
+      "addedAccount": "",
+      "back": "",
+      "verifyAndEnable": "",
+      "savedBackupCodes": "",
+      "step1Label": "",
+      "step1": "",
+      "qrAlt": "",
+      "qrFailed": "",
+      "manualKey": "",
+      "step2Label": "",
+      "step2": "",
+      "codePlaceholder": "",
+      "successTitle": "",
+      "backupCodesTitle": "",
+      "backupCodesDescription": ""
+    },
+    "disableModal": {
+      "title": "",
+      "warning": "",
+      "prompt": "",
+      "confirm": ""
+    },
+    "backupCodesModal": {
+      "title": "",
+      "warning": ""
+    },
+    "generateCodes": ""
+  },
+  "apiTokens": {
+    "title": "",
+    "accessToken": "",
+    "description": "",
+    "plusNotice": "",
+    "showToken": "",
+    "hideToken": "",
+    "removeTitle": "",
+    "removeMessage": "",
+    "removedTitle": "",
+    "removedMessage": "",
+    "tokenCopied": "",
+    "generateNew": "",
+    "nameModalTitle": "",
+    "generateToken": ""
+  },
+  "storage": {
+    "title": "",
+    "serverTitle": "",
+    "serverDescription": "",
+    "usagePlaceholder": "",
+    "usage": "",
+    "basicPlanNotice": "",
+    "localTitleApp": "",
+    "localTitleBrowser": "",
+    "localDescription": "",
+    "clearLocal": "",
+    "clearLocalTitle": "",
+    "clearLocalMessage": "",
+    "clearAll": "",
+    "appPreferences": "",
+    "deviceOnly": "",
+    "appPreferencesDescription": "",
+    "clearPreferences": "",
+    "clearPreferencesTitle": "",
+    "clearPreferencesMessage": ""
+  },
+  "sidepanel": {
+    "title": "",
+    "description": "",
+    "resetToDefaults": "",
+    "resetHelper": "",
+    "cards": {
+      "welcome": {
+        "name": "",
+        "description": ""
+      },
+      "smartInsights": {
+        "name": "",
+        "description": ""
+      },
+      "assignees": {
+        "name": "",
+        "description": ""
+      },
+      "calendar": {
+        "name": "",
+        "description": ""
+      },
+      "activities": {
+        "name": "",
+        "description": ""
+      },
+      "weeklyGoals": {
+        "name": "",
+        "description": ""
+      }
+    },
+    "heading": "",
+    "detailedDescription": ""
+  },
+  "homeSections": {
+    "title": "",
+    "description": "",
+    "resetToDefaults": "",
+    "resetHelper": "",
+    "sections": {
+      "greeting": {
+        "name": "",
+        "description": ""
+      },
+      "glance": {
+        "name": "",
+        "description": ""
+      },
+      "circle": {
+        "name": "",
+        "description": ""
+      },
+      "review": {
+        "name": "",
+        "description": ""
+      },
+      "overdue": {
+        "name": "",
+        "description": ""
+      },
+      "nextUp": {
+        "name": "",
+        "description": ""
+      },
+      "filters": {
+        "name": "",
+        "description": ""
+      },
+      "projects": {
+        "name": "",
+        "description": ""
+      }
+    },
+    "detailedDescription": ""
+  },
+  "layout": {
+    "title": "Оформление и навигация",
+    "detailedDescription": "Выберите экран, с которого открывается приложение, и какие ярлыки и панели его окружают.",
+    "defaultView": {
+      "title": "Экран по умолчанию",
+      "description": "Выберите, с какого экрана открывается приложение.",
+      "options": {
+        "home": {
+          "name": "Обзор",
+          "description": "Сводка того, что требует вашего внимания сегодня, и быстрое добавление"
+        },
+        "tasks": {
+          "name": "Список задач",
+          "description": "Полный список задач с фильтрами, поиском и группировкой"
+        }
+      }
+    },
+    "bottomNav": {
+      "title": "Нижняя навигация",
+      "description": "Выберите до {{max}} ярлыков для нижней панели навигации на телефоне и перетащите их, чтобы изменить порядок. Пункт «Ещё» всегда остаётся последним и открывает полное меню.",
+      "resetToDefaults": "Сбросить по умолчанию",
+      "resetHelper": "Ярлыки и порядок нижней навигации будут сброшены к значениям по умолчанию."
+    },
+    "sidepanel": {
+      "title": "Боковая панель"
+    }
+  },
+  "theme": {
+    "title": "",
+    "description": "",
+    "themeMode": "",
+    "light": "",
+    "dark": "",
+    "system": ""
+  },
+  "localization": {
+    "title": "",
+    "description": "",
+    "language": "",
+    "languageDescription": "",
+    "rtlNotice": "",
+    "dateFormat": "",
+    "dateFormatDescription": "",
+    "timeFormat": "",
+    "timeFormatDescription": "",
+    "preview": "",
+    "12hour": "",
+    "24hour": "",
+    "firstDayOfWeek": "",
+    "firstDayOfWeekDescription": "",
+    "sunday": "",
+    "monday": "",
+    "saturday": "",
+    "helpTranslate": "",
+    "formats": {
+      "mdy": "",
+      "dmy": "",
+      "ymd": "",
+      "long": "",
+      "short": ""
+    },
+    "descriptionLong": ""
+  },
+  "advanced": {
+    "title": "",
+    "description": "",
+    "offlineTitle": "",
+    "offlineDescription": "",
+    "offlineToggle": "",
+    "offlineHelper": "",
+    "offlineEnabled": "",
+    "offlineDisabled": "",
+    "offlineDisabledPartial": "",
+    "offlineDisableTitle": "",
+    "offlineDisableMessage": "",
+    "offlineDisableConfirm": "",
+    "webhookTitle": "",
+    "webhookDescription": "",
+    "webhookPlusNotice": "",
+    "webhookToggle": "",
+    "webhookHelper": "",
+    "webhookURL": "",
+    "webhookUpdated": "",
+    "webhookUpdateFailed": "",
+    "realtimeTitle": "",
+    "realtimeDescription": "",
+    "realtime": {
+      "toggleLabel": "",
+      "title": "",
+      "subtitle": "",
+      "statusLabel": "",
+      "basicPlan": "",
+      "disabled": "",
+      "connected": "",
+      "connecting": "",
+      "errored": "",
+      "notConnected": "",
+      "basicPlanNotice": ""
+    }
+  },
+  "privacyAnalytics": {
+    "title": "",
+    "description": "",
+    "analyticsToggle": "",
+    "analyticsHelper": "",
+    "crashToggle": "",
+    "crashHelper": "",
+    "footnote": ""
+  },
+  "subscription": {
+    "sessionFailed": "",
+    "errorTitle": "",
+    "errorMessage": "",
+    "subscribe": "",
+    "cancelAnytime": "",
+    "description": "",
+    "whatsIncluded": "",
+    "mostPopular": "",
+    "featureNotifications": "",
+    "featureRichText": "",
+    "featureThingTriggers": "",
+    "featureApiTokens": "",
+    "featureImageUploads": "",
+    "featureAutomation": "",
+    "planYearly": ""
+  },
+  "childUsers": {
+    "errNameRequired": "",
+    "errNameMin": "",
+    "errNameMax": "",
+    "errNameChars": "",
+    "errPasswordRequired": "",
+    "errPasswordLength": "",
+    "errPasswordMatch": "",
+    "errDisplayNameMax": "",
+    "createTitle": "",
+    "createDescription": "",
+    "createButton": "",
+    "nameLabel": "",
+    "namePlaceholder": "",
+    "displayNameLabel": "",
+    "displayNamePlaceholder": "",
+    "passwordLabel": "",
+    "passwordPlaceholder": "",
+    "confirmPasswordLabel": "",
+    "confirmPasswordPlaceholder": ""
+  },
+  "passwordChange": {
+    "minLength": "",
+    "maxLength": "",
+    "description": "",
+    "mismatch": "",
+    "newPassword": "",
+    "newPasswordPlaceholder": "",
+    "confirmPassword": "",
+    "confirmPasswordPlaceholder": ""
+  },
+  "payment": {
+    "cancelledTitle": "",
+    "cancelledRedirect": "",
+    "successTitle": "",
+    "successRedirect": ""
+  },
+  "developer": {
+    "tokenRefreshed": "",
+    "endpointCalled": "",
+    "clearDbCleared": "",
+    "clearDbDone": "",
+    "intro": "",
+    "refreshCookieNote": "",
+    "noReconnectInfo": "",
+    "noTimeoutInfo": "",
+    "noDebugInfo": ""
+  },
+  "backup": {
+    "keyRequired": "",
+    "created": "",
+    "createFailed": "",
+    "selectFile": "",
+    "restored": "",
+    "restoreFailed": "",
+    "readFailed": "",
+    "createIntro": "",
+    "keyPlaceholder": "",
+    "includeAssets": "",
+    "warningLabel": "",
+    "restoreWarning": "",
+    "restoreKeyPlaceholder": "",
+    "title": "",
+    "createTab": "",
+    "restoreTab": "",
+    "creating": "",
+    "restoring": ""
+  },
+  "deletion": {
+    "passwordRequired": "",
+    "passwordAndDelete": "",
+    "failed": "",
+    "passwordPlaceholder": "",
+    "transferIntro": "",
+    "selectOwner": "",
+    "confirmPrompt": "",
+    "typeDelete": "",
+    "warningLead": "",
+    "warningIntro": "",
+    "removesProfile": "",
+    "removesChores": "",
+    "removesTokens": "",
+    "removesStorage": "",
+    "removesPoints": "",
+    "removesCircles": "",
+    "passwordToContinue": "",
+    "circleLabel": "",
+    "newOwner": "",
+    "logoutNotice": "",
+    "passwordLabel": "",
+    "typeToConfirm": ""
+  },
+  "realtime": {
+    "titleSse": "",
+    "subtitleSse": ""
+  },
+  "nativeCancel": {
+    "title": "",
+    "dismiss": "",
+    "cancelViaStore": "",
+    "cancelDesktop": "",
+    "intro": "",
+    "iosHeading": "",
+    "iosStep1": "",
+    "iosStep2": "",
+    "iosStep3": "",
+    "iosStep4": "",
+    "iosStep5": "",
+    "iosNote": "",
+    "androidHeading": "",
+    "androidStep1": "",
+    "androidStep2": "",
+    "androidStep3": "",
+    "androidStep4": "",
+    "androidStep5": "",
+    "androidStep6": "",
+    "androidNote": "",
+    "webHeading": "",
+    "webBody": "",
+    "webNote": "",
+    "footer": ""
+  }
+}

@@ -1,0 +1,74 @@
+{
+  "cards": {
+    "available": {
+      "subtext": "Listos para canjear",
+      "title": "Disponibles"
+    },
+    "period": {
+      "allTime": "Todo el tiempo",
+      "last6Months": "Últimos 6 meses",
+      "lastDays_one": "Último {{count}} día",
+      "lastDays_other": "Últimos {{count}} días",
+      "title": "Puntos del Período"
+    },
+    "redeemed": {
+      "subtext": "Usados anteriormente",
+      "title": "Canjeados"
+    },
+    "total": {
+      "subtext": "Ganados en total",
+      "title": "Total"
+    }
+  },
+  "filter": {
+    "analysisTitle": "Filtro y Análisis",
+    "showFor": "Mostrar puntos de:",
+    "timePeriod": "Período de tiempo:",
+    "title": "Filtrar Puntos"
+  },
+  "leaderboard": {
+    "available": "{{count}} disponibles",
+    "modePoints": "Puntos",
+    "modeTasks": "Tareas",
+    "points_one": "{{count}} punto",
+    "points_other": "{{count}} puntos",
+    "subtitlePoints": "Clasificación basada en puntos ganados durante el período seleccionado",
+    "subtitleTasks": "Clasificación basada en tareas completadas durante el período seleccionado",
+    "tasksAndAvg": "{{tasks}} tareas • {{avg}} prom. por tarea",
+    "titlePoints": "Clasificación de Puntos",
+    "titleTasks": "Clasificación de Tareas",
+    "you": "Tú"
+  },
+  "redeem": "Canjear Puntos",
+  "redeemModal": {
+    "aboutToRedeem": "Estás a punto de canjear",
+    "amount": "{{count}} puntos",
+    "cannotExceed": "No puede exceder los puntos disponibles",
+    "placeholder": "Introduce puntos...",
+    "pointsAvailable": "{{count}} puntos disponibles",
+    "pointsToRedeem": "Puntos a Canjear",
+    "quickAdd": "Añadir rápido:",
+    "redeemButton": "Canjear",
+    "remaining": "Restantes: {{count}} puntos"
+  },
+  "summary": {
+    "allTime": "Todo el Tiempo",
+    "last6Months": "Últimos 6 Meses",
+    "lastDays_one": "Último {{count}} Día",
+    "lastDays_other": "Últimos {{count}} Días",
+    "overThe": "durante",
+    "showingFor": "Mostrando puntos de",
+    "unknownUser": "Usuario Desconocido"
+  },
+  "tabs": {
+    "allTime": "Todo el tiempo",
+    "days7": "7 Días",
+    "months6": "6 Meses",
+    "short6m": "6M",
+    "short7d": "7D",
+    "shortAll": "Todo"
+  },
+  "trend": {
+    "title": "Tendencia de Puntos"
+  }
+}

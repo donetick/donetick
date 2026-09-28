@@ -1,0 +1,182 @@
+{
+  "edit": {
+    "title": "",
+    "completedDate": "",
+    "note": "",
+    "additionalNotes": "",
+    "deleteTitle": "",
+    "deleteMessage": ""
+  },
+  "status": {
+    "inProgress": "",
+    "completed": "",
+    "skipped": "",
+    "pendingApproval": "",
+    "rejected": "",
+    "missed": "",
+    "rescheduled": "",
+    "scheduled": ""
+  },
+  "badge": {
+    "onTime": "",
+    "onTimeLabel": ""
+  },
+  "card": {
+    "wasDue": "",
+    "daysBeforeDue_one": "",
+    "daysBeforeDue_other": "",
+    "daysAfterDue_one": "",
+    "daysAfterDue_other": "",
+    "hoursBeforeDue_one": "",
+    "hoursBeforeDue_other": "",
+    "hoursAfterDue_one": "",
+    "hoursAfterDue_other": "",
+    "assignedTo": "",
+    "points_one": "",
+    "points_other": ""
+  },
+  "detail": {
+    "title": "",
+    "openTask": "",
+    "editEntry": "",
+    "performedBy": "",
+    "assignedTo": "",
+    "lastUpdated": "",
+    "duration": "",
+    "pointsEarned": "",
+    "points_one": "",
+    "points_other": "",
+    "note": ""
+  },
+  "charts": {
+    "noData": "",
+    "noLabels": "",
+    "unassigned": "",
+    "unknownTask": "",
+    "late": "",
+    "status": {
+      "title": "",
+      "description": ""
+    },
+    "due": {
+      "title": "",
+      "description": ""
+    },
+    "priority": {
+      "title": "",
+      "description": ""
+    },
+    "labels": {
+      "title": "",
+      "description": ""
+    },
+    "labelsDuration": {
+      "title": "",
+      "description": ""
+    },
+    "tasksTime": {
+      "title": "",
+      "description": ""
+    },
+    "assigneeBreakdown": {
+      "title": "",
+      "description": ""
+    }
+  },
+  "filter": {
+    "status": "",
+    "pending": "",
+    "labels": "",
+    "hasNotes": "",
+    "hasPoints": "",
+    "timePeriod": "",
+    "user": "",
+    "completedBy": "",
+    "completedAt": ""
+  },
+  "period": {
+    "days_one": "",
+    "days_other": "",
+    "allTime": ""
+  },
+  "search": {
+    "placeholder": "",
+    "clear": ""
+  },
+  "sort": {
+    "date": "",
+    "updatedDate": "",
+    "performer": "",
+    "status": "",
+    "points": ""
+  },
+  "activities": {
+    "title": "",
+    "subtitle": "",
+    "emptyTitle": "",
+    "emptyDescriptionEveryone": "",
+    "emptyDescriptionMember": "",
+    "periodSoFar": "",
+    "periodLastDays": "",
+    "unknownMember": "",
+    "searchPlaceholder": "",
+    "sort": {
+      "date": "",
+      "name": "",
+      "status": "",
+      "points": ""
+    }
+  },
+  "title": {
+    "summary": "",
+    "activity": ""
+  },
+  "noResults": {
+    "clear": ""
+  },
+  "toast": {
+    "updateQueued": {
+      "title": "",
+      "message": ""
+    },
+    "updated": {
+      "title": "",
+      "message": ""
+    },
+    "deleteQueued": {
+      "title": "",
+      "message": ""
+    },
+    "deleted": {
+      "title": "",
+      "message": ""
+    }
+  },
+  "delete": {
+    "title": "",
+    "message": ""
+  },
+  "empty": {
+    "title": "",
+    "description": "",
+    "backToTasks": "",
+    "noResultsTitle": "",
+    "noResultsDescription": ""
+  },
+  "info": {
+    "allCompleted": "",
+    "timesSuffix": "",
+    "averageTiming": "",
+    "onTime": "",
+    "longestDelay": "",
+    "neverLate": "",
+    "completedMost": "",
+    "unknown": "",
+    "membersInvolved": "",
+    "membersSuffix": "",
+    "lastCompleted": ""
+  },
+  "noteViewer": {
+    "updatedAt": ""
+  }
+}

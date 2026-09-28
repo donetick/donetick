@@ -1,0 +1,55 @@
+{
+  "builder": {
+    "errorName": "Veuillez saisir un nom de filtre",
+    "errorConditions": "Configurez au moins une condition de filtre",
+    "editTitle": "Modifier le filtre",
+    "newTitle": "Nouveau filtre",
+    "addConditions": "Ajoutez des conditions pour afficher un aperçu",
+    "save": "Enregistrer le filtre",
+    "name": "Nom du filtre",
+    "namePlaceholder": "p. ex. Tâches en retard assignées à Alice",
+    "color": "Couleur"
+  },
+  "nameExists": "Un filtre portant ce nom existe déjà",
+  "tasks_one": "{{count}} tâche",
+  "tasks_other": "{{count}} tâches",
+  "overdue": "{{count}} en retard",
+  "noConditions": "Aucune condition",
+  "condition_one": "{{count}} condition",
+  "condition_other": "{{count}} conditions",
+  "usedCount": "Utilisé {{count}} fois",
+  "delete": {
+    "title": "Supprimer le filtre",
+    "message": "Voulez-vous vraiment supprimer « {{name}} » ? Cette action est irréversible."
+  },
+  "empty": {
+    "title": "Aucun filtre enregistré pour le moment",
+    "description": "Enregistrez un ensemble de conditions, comme « en retard et assignées à moi », pour y accéder directement depuis n'importe où.",
+    "createFilter": "Créer un filtre",
+    "noResultsTitle": "Aucun filtre correspondant",
+    "noResultsWithSearch": "Aucun filtre enregistré ne correspond à « {{search}} ».",
+    "noResultsDefault": "Aucun filtre enregistré ne correspond au filtre actuel.",
+    "clearSearch": "Effacer la recherche",
+    "showAllFilters": "Afficher tous les filtres"
+  },
+  "header": {
+    "title": "Filtres",
+    "subtitle": "Enregistrez vos combinaisons de filtres favorites pour y accéder rapidement. Créez des vues personnalisées afin d'organiser et de trouver vos tâches plus vite."
+  },
+  "searchPlaceholder": "Rechercher des filtres",
+  "sort": {
+    "smart": "Intelligent",
+    "name": "Nom",
+    "usage": "Nombre d'utilisations",
+    "lastUsed": "Dernière utilisation",
+    "created": "Date de création"
+  },
+  "show": {
+    "title": "Afficher",
+    "all": "Tous les filtres",
+    "pinned": "Épinglés",
+    "unpinned": "Non épinglés"
+  },
+  "pin": "Épingler",
+  "unpin": "Désépingler"
+}

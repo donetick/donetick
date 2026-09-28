@@ -1,0 +1,74 @@
+{
+  "redeem": "Canjear Puntos",
+  "redeemModal": {
+    "redeemButton": "Canjear",
+    "pointsAvailable": "{{count}} puntos disponibles",
+    "pointsToRedeem": "Puntos a Canjear",
+    "placeholder": "Introduce puntos...",
+    "cannotExceed": "No puede exceder los puntos disponibles",
+    "quickAdd": "Añadir rápido:",
+    "aboutToRedeem": "Estás a punto de canjear",
+    "amount": "{{count}} puntos",
+    "remaining": "Restantes: {{count}} puntos"
+  },
+  "leaderboard": {
+    "titlePoints": "Clasificación de Puntos",
+    "titleTasks": "Clasificación de Tareas",
+    "subtitlePoints": "Clasificación basada en puntos ganados durante el período seleccionado",
+    "subtitleTasks": "Clasificación basada en tareas completadas durante el período seleccionado",
+    "modePoints": "Puntos",
+    "modeTasks": "Tareas",
+    "you": "Tú",
+    "tasksAndAvg": "{{tasks}} tareas • {{avg}} prom. por tarea",
+    "available": "{{count}} disponibles",
+    "points_one": "{{count}} punto",
+    "points_other": "{{count}} puntos"
+  },
+  "tabs": {
+    "short7d": "",
+    "short6m": "",
+    "shortAll": "Todo",
+    "days7": "7 Días",
+    "months6": "6 Meses",
+    "allTime": "Todo el tiempo"
+  },
+  "filter": {
+    "analysisTitle": "Filtro y Análisis",
+    "title": "Filtrar Puntos",
+    "showFor": "Mostrar puntos de:",
+    "timePeriod": "Período de tiempo:"
+  },
+  "cards": {
+    "available": {
+      "title": "Disponibles",
+      "subtext": "Listos para canjear"
+    },
+    "redeemed": {
+      "title": "Canjeados",
+      "subtext": "Usados anteriormente"
+    },
+    "total": {
+      "title": "",
+      "subtext": "Ganados en total"
+    },
+    "period": {
+      "title": "Puntos del Período",
+      "allTime": "Todo el tiempo",
+      "last6Months": "Últimos 6 meses",
+      "lastDays_one": "Último {{count}} día",
+      "lastDays_other": "Últimos {{count}} días"
+    }
+  },
+  "summary": {
+    "showingFor": "Mostrando puntos de",
+    "unknownUser": "Usuario Desconocido",
+    "overThe": "durante",
+    "allTime": "Todo el Tiempo",
+    "last6Months": "Últimos 6 Meses",
+    "lastDays_one": "Último {{count}} Día",
+    "lastDays_other": "Últimos {{count}} Días"
+  },
+  "trend": {
+    "title": "Tendencia de Puntos"
+  }
+}

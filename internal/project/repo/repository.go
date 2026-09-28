@@ -183,22 +183,6 @@ func (r *ProjectRepository) DeleteProject(ctx context.Context, projectID int, us
 			return errors.New("user does not have permission to delete this project")
 		}
 
-		// Removing the project would make a private chore fall back to chore-level
-		// visibility, which always includes its original creator. Refuse the
-		// operation when that would reveal a chore to somebody other than the
-		// project owner; callers can move or delete those chores explicitly first.
-		if project.IsPrivate {
-			var foreignCreatorCount int64
-			if err := tx.WithContext(ctx).Model(&chModel.Chore{}).
-				Where("project_id = ? AND circle_id = ? AND created_by != ?", projectID, circleID, project.CreatedBy).
-				Count(&foreignCreatorCount).Error; err != nil {
-				return err
-			}
-			if foreignCreatorCount > 0 {
-				return errors.New("cannot delete private project containing chores created by other users")
-			}
-		}
-
 		choreIDs, err := r.choreIDsInProject(ctx, tx, projectID, circleID)
 		if err != nil {
 			log.Error("Error getting chores for project", "error", err)

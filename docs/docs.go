@@ -10,10 +10,6 @@ const docTemplate = `{
         "description": "{{escape .Description}}",
         "title": "{{.Title}}",
         "contact": {},
-        "license": {
-            "name": "GNU Affero General Public License v3.0",
-            "url": "https://github.com/donetick/donetick/blob/main/LICENSE.md"
-        },
         "version": "{{.Version}}"
     },
     "host": "{{.Host}}",
@@ -45,6 +41,12 @@ const docTemplate = `{
                         "type": "boolean",
                         "description": "Include archived chores",
                         "name": "includeArchived",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Include subtasks for chore",
+                        "name": "includeSubtasks",
                         "in": "query"
                     }
                 ],
@@ -3841,6 +3843,75 @@ const docTemplate = `{
                 }
             }
         },
+        "/sync/changes": {
+            "get": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
+                    }
+                ],
+                "description": "Returns chores and chore histories that have changed since the given sync version cursor, along with deleted entity IDs. Paginated — call repeatedly while hasMore is true using the returned cursor.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "sync"
+                ],
+                "summary": "Get sync changes",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "default": 0,
+                        "description": "Sync version cursor (0 for initial full sync)",
+                        "name": "since",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "changes, deletions, cursor, hasMore",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "error: Invalid 'since' parameter",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "error: Authentication failed",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Failed to fetch changes",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/things": {
             "get": {
                 "security": [
@@ -4297,6 +4368,20 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "chore.ActionOptions": {
+            "type": "object",
+            "properties": {
+                "createdAt": {
+                    "type": "string"
+                },
+                "nextDueDate": {
+                    "type": "string"
+                },
+                "syncVersion": {
+                    "type": "integer"
+                }
+            }
+        },
         "chore.AssigneeReq": {
             "type": "object",
             "required": [
@@ -4317,7 +4402,6 @@ const docTemplate = `{
             "required": [
                 "assignStrategy",
                 "frequencyType",
-                "isPrivate",
                 "name"
             ],
             "properties": {
@@ -4347,10 +4431,12 @@ const docTemplate = `{
                     }
                 },
                 "completionWindow": {
-                    "type": "integer",
-                    "minimum": 0
+                    "type": "integer"
                 },
                 "description": {
+                    "type": "string"
+                },
+                "draftId": {
                     "type": "string"
                 },
                 "frequency": {
@@ -4371,7 +4457,8 @@ const docTemplate = `{
                         "days_of_the_week",
                         "day_of_the_month",
                         "trigger",
-                        "no_repeat"
+                        "no_repeat",
+                        "anytime"
                     ],
                     "allOf": [
                         {
@@ -4393,6 +4480,7 @@ const docTemplate = `{
                 },
                 "labelsV2": {
                     "type": "array",
+                    "uniqueItems": true,
                     "items": {
                         "$ref": "#/definitions/model.LabelReq"
                     }
@@ -4411,13 +4499,10 @@ const docTemplate = `{
                     "$ref": "#/definitions/model.NotificationMetadata"
                 },
                 "points": {
-                    "type": "integer",
-                    "minimum": 0
+                    "type": "integer"
                 },
                 "priority": {
-                    "type": "integer",
-                    "maximum": 5,
-                    "minimum": 0
+                    "type": "integer"
                 },
                 "projectId": {
                     "type": "integer"
@@ -4442,6 +4527,9 @@ const docTemplate = `{
         "chore.CompleteChoreReq": {
             "type": "object",
             "properties": {
+                "actionOptions": {
+                    "$ref": "#/definitions/chore.ActionOptions"
+                },
                 "completedBy": {
                     "description": "The completed by only can be populated by the admin or super user.",
                     "type": "integer"
@@ -4516,6 +4604,9 @@ const docTemplate = `{
         "chore.RejectChoreReq": {
             "type": "object",
             "properties": {
+                "actionOptions": {
+                    "$ref": "#/definitions/chore.ActionOptions"
+                },
                 "note": {
                     "description": "This is going to be deprecated in future release, use \"Notes\" instead.",
                     "type": "string",
@@ -4713,6 +4804,27 @@ const docTemplate = `{
                 "UserRoleManager"
             ]
         },
+        "donetick_com_core_internal_storage_model.EntityType": {
+            "type": "integer",
+            "enum": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6
+            ],
+            "x-enum-varnames": [
+                "EntityTypeUnknown",
+                "EntityTypeChoreDescription",
+                "EntityTypeChoreHistory",
+                "EntityTypeThing",
+                "EntityTypeChoreAttachment",
+                "EntityTypeChoreAttachmentDraft",
+                "EntityTypeChoreDescriptionDraft"
+            ]
+        },
         "model.AssignmentStrategy": {
             "type": "string",
             "enum": [
@@ -4754,6 +4866,12 @@ const docTemplate = `{
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/model.ChoreAssignees"
+                    }
+                },
+                "attachments": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.StorageFile"
                     }
                 },
                 "circleId": {
@@ -4871,6 +4989,9 @@ const docTemplate = `{
                         "$ref": "#/definitions/model.SubTask"
                     }
                 },
+                "syncVersion": {
+                    "type": "integer"
+                },
                 "thingChore": {
                     "description": "ThingChore relationship",
                     "allOf": [
@@ -4914,7 +5035,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "createdAt": {
-                    "description": "When the record was created",
+                    "description": "When the record was created (immutable after insert)",
                     "type": "string"
                 },
                 "dueDate": {
@@ -4948,6 +5069,9 @@ const docTemplate = `{
                             "$ref": "#/definitions/model.ChoreHistoryStatus"
                         }
                     ]
+                },
+                "syncVersion": {
+                    "type": "integer"
                 },
                 "updatedAt": {
                     "description": "When the record was last updated",
@@ -5166,7 +5290,8 @@ const docTemplate = `{
                 "days_of_the_week",
                 "day_of_the_month",
                 "trigger",
-                "no_repeat"
+                "no_repeat",
+                "anytime"
             ],
             "x-enum-varnames": [
                 "FrequencyTypeOnce",
@@ -5179,7 +5304,8 @@ const docTemplate = `{
                 "FrequencyTypeDayOfTheWeek",
                 "FrequencyTypeDayOfTheMonth",
                 "FrequencyTypeTrigger",
-                "FrequencyTypeNoRepeat"
+                "FrequencyTypeNoRepeat",
+                "FrequencyTypeAnytime"
             ]
         },
         "model.Label": {
@@ -5320,6 +5446,10 @@ const docTemplate = `{
                 "isDefault": {
                     "type": "boolean"
                 },
+                "isPrivate": {
+                    "description": "Whether the project is only visible to its creator",
+                    "type": "boolean"
+                },
                 "name": {
                     "type": "string"
                 },
@@ -5343,6 +5473,10 @@ const docTemplate = `{
                 "icon": {
                     "type": "string"
                 },
+                "isPrivate": {
+                    "description": "IsPrivate is optional: when omitted on update the current value is kept, so\nolder clients that don't know about the field can't accidentally unset it.",
+                    "type": "boolean"
+                },
                 "name": {
                     "type": "string"
                 }
@@ -5363,6 +5497,39 @@ const docTemplate = `{
                 "ChoreStatusPaused",
                 "ChoreStatusPendingApproval"
             ]
+        },
+        "model.StorageFile": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "integer"
+                },
+                "draft_id": {
+                    "type": "string"
+                },
+                "entity_id": {
+                    "type": "integer"
+                },
+                "entity_type": {
+                    "$ref": "#/definitions/donetick_com_core_internal_storage_model.EntityType"
+                },
+                "file_name": {
+                    "type": "string"
+                },
+                "file_path": {
+                    "type": "string"
+                },
+                "sign": {
+                    "description": "Sign is a fetchable (signed) URL populated at serialization time; never stored.",
+                    "type": "string"
+                },
+                "size_bytes": {
+                    "type": "integer"
+                },
+                "user_id": {
+                    "type": "integer"
+                }
+            }
         },
         "model.SubTask": {
             "type": "object",
@@ -5556,31 +5723,17 @@ const docTemplate = `{
                 }
             }
         }
-    },
-    "securityDefinitions": {
-        "APIKeyAuth": {
-            "description": "donetick issued apikey",
-            "type": "apiKey",
-            "name": "secretkey",
-            "in": "header"
-        },
-        "JWTKeyAuth": {
-            "description": "Type \"Bearer\" followed by a space and JWT token.",
-            "type": "apiKey",
-            "name": "Authorization",
-            "in": "header"
-        }
     }
 }`
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
-	Version:          "1.0",
+	Version:          "",
 	Host:             "",
-	BasePath:         "/api/v1",
+	BasePath:         "",
 	Schemes:          []string{},
-	Title:            "Donetick Swagger API",
-	Description:      "Donetick swagger documentation.",
+	Title:            "",
+	Description:      "",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

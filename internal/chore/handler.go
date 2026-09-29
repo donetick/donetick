@@ -306,7 +306,7 @@ func (h *Handler) signAttachments(c *gin.Context, attachments []storageModel.Sto
 type ChoreReq struct {
 	ID                   int                           `json:"id"`
 	Name                 string                        `json:"name" binding:"required"`
-	FrequencyType        chModel.FrequencyType         `json:"frequencyType" binding:"required,oneof=once daily weekly monthly yearly adaptive interval days_of_the_week day_of_the_month trigger no_repeat"`
+	FrequencyType        chModel.FrequencyType         `json:"frequencyType" binding:"required,oneof=once daily weekly monthly yearly adaptive interval days_of_the_week day_of_the_month trigger no_repeat always"`
 	Frequency            *int                          `json:"frequency" binding:"omitempty"`
 	FrequencyMetadata    *chModel.FrequencyMetadata    `json:"frequencyMetadata,omitempty"`
 	NextDueDate          *time.Time                    `json:"nextDueDate" binding:"omitempty,required_with=IsRolling"` // Next due date in RFC3339 format

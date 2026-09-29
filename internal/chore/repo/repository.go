@@ -583,6 +583,9 @@ func (r *ChoreRepository) CompleteChore(c context.Context, chore *chModel.Chore,
 			// In case of trigger frequency type we need to still set the next assigned but need the task archived.
 			choreUpdates["assigned_to"] = nextAssignedTo
 			choreUpdates["is_active"] = false
+		case chore.FrequencyType == "always":
+			// Always chores have no due date but stay active and available immediately after completion.
+			choreUpdates["assigned_to"] = nextAssignedTo
 		default:
 			// one time task
 			choreUpdates["is_active"] = false

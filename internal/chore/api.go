@@ -413,8 +413,17 @@ func (h *API) DeleteChore(c *gin.Context) {
 		return
 	}
 	if chore.CreatedBy != currentUser.ID {
-		c.JSON(403, gin.H{"error": "You can only delete your own chores"})
-		return
+		// Circle admins and managers may delete chores created by other members,
+		// consistent with UpdateChore above (CanEdit) and DeleteChoreHistory.
+		circleUsers, err := h.circleRepo.GetCircleUsers(c, currentUser.CircleID)
+		if err != nil {
+			c.JSON(500, gin.H{"error": "Failed to get circle members"})
+			return
+		}
+		if !currentUser.IsAdminOrManager(circleUsers) {
+			c.JSON(403, gin.H{"error": "You can only delete your own chores"})
+			return
+		}
 	}
 	if _, err := h.choreRepo.DeleteChore(c, choreID); err != nil {
 		c.JSON(500, gin.H{"error": "Failed to delete chore"})

@@ -201,7 +201,7 @@ type ChoreLabels struct {
 	Label   lModel.Label
 }
 type ChoreLiteReq struct { // TODO: Remove this when api is removed.
-	Name        string  `json:"name" binding:"required"`
+	Name        string  `json:"name" binding:"omitempty"`
 	Description *string `json:"description,omitempty"`
 	ID          int     `json:"id"`
 	DueDate     string  `json:"dueDate"`

@@ -2,6 +2,7 @@ package chore
 
 import (
 	"strconv"
+	"strings"
 	"time"
 
 	"donetick.com/core/config"
@@ -75,7 +76,7 @@ func (h *API) CreateChore(c *gin.Context) {
 	}
 
 	// Validate required fields
-	if choreRequest.Name == "" {
+	if strings.TrimSpace(choreRequest.Name) == "" {
 		c.JSON(400, gin.H{"error": "Chore name is required"})
 		return
 	}
@@ -202,10 +203,12 @@ func (h *API) UpdateChore(c *gin.Context) {
 		return
 	}
 
-	// Validate required fields
-	if choreRequest.Name == "" {
-		c.JSON(400, gin.H{"error": "Chore name is required"})
-		return
+	if strings.TrimSpace(choreRequest.Name) == "" {
+		choreRequest.Name = existingChore.Name
+	}
+
+	if choreRequest.Description == nil {
+		choreRequest.Description = existingChore.Description
 	}
 
 	// Parse due date if provided
@@ -229,6 +232,8 @@ func (h *API) UpdateChore(c *gin.Context) {
 			return
 		}
 		nextDueDate = &parsedDate
+	} else {
+		nextDueDate = existingChore.NextDueDate
 	}
 
 	// Update only name and due date

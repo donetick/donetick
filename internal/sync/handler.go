@@ -65,7 +65,7 @@ func (h *SyncHandler) GetChanges(c *gin.Context) {
 		chores = chores[:defaultSyncLimit]
 	}
 
-	choreTombstones, err := h.choreRepo.GetTombstonesSince(c, circleID, syncModel.EntityTypeChore, since, defaultSyncLimit+1)
+	choreTombstones, err := h.choreRepo.GetTombstonesSince(c, circleID, syncModel.EntityTypeChore, userID, since, defaultSyncLimit+1)
 	if err != nil {
 		c.JSON(500, gin.H{"error": "Failed to fetch deletions"})
 		return
@@ -86,7 +86,7 @@ func (h *SyncHandler) GetChanges(c *gin.Context) {
 		histories = histories[:defaultSyncLimit]
 	}
 
-	historyTombstones, err := h.choreRepo.GetTombstonesSince(c, circleID, syncModel.EntityTypeChoreHistory, since, defaultSyncLimit+1)
+	historyTombstones, err := h.choreRepo.GetTombstonesSince(c, circleID, syncModel.EntityTypeChoreHistory, userID, since, defaultSyncLimit+1)
 	if err != nil {
 		c.JSON(500, gin.H{"error": "Failed to fetch history deletions"})
 		return

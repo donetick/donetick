@@ -210,6 +210,8 @@ func main() {
 			docs.Routes,
 			resource.Routes,
 			// backup.Routes,
+			payment.Routes,
+			payment.Webhooks,
 
 			dsync.Routes,
 			realtime.Routes, // (router, rtAuthMiddleware, pollingHandler, jwtAuth)

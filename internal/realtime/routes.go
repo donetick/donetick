@@ -32,4 +32,3 @@ func Routes(
 		// adminGroup.GET("/connections/:circleId", wsHandler.HandleConnectionStats)
 	}
 }
-

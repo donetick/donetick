@@ -19,9 +19,10 @@ type Resource struct {
 	DisablePasswordAuth bool `json:"disable_password_auth"`
 }
 type identityProvider struct {
-	Auth_url  string `json:"auth_url" binding:"omitempty"`
-	Client_ID string `json:"client_id" binding:"omitempty"`
-	Name      string `json:"name" binding:"omitempty"`
+	Auth_url  string   `json:"auth_url" binding:"omitempty"`
+	Client_ID string   `json:"client_id" binding:"omitempty"`
+	Name      string   `json:"name" binding:"omitempty"`
+	Scopes    []string `json:"scopes" binding:"omitempty"`
 }
 
 type Handler struct {
@@ -40,6 +41,7 @@ func (h *Handler) getResource(c *gin.Context) {
 			Auth_url:  h.config.OAuth2Config.AuthURL,
 			Client_ID: h.config.OAuth2Config.ClientID,
 			Name:      h.config.OAuth2Config.Name,
+			Scopes:    h.config.OAuth2Config.Scopes,
 		},
 		MinVersion:             h.config.MinVersion,
 		APIVersion:             h.config.Info.Version,

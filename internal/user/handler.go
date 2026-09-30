@@ -89,8 +89,8 @@ func (h *Handler) GetAllUsers() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		currentUser, ok := auth.CurrentUser(c)
 		if !ok {
-			c.JSON(500, gin.H{
-				"error": "Error getting current user",
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error": "User not authenticated",
 			})
 			return
 		}
@@ -235,8 +235,8 @@ func (h *Handler) signUp(c *gin.Context) {
 func (h *Handler) GetUserProfile(c *gin.Context) {
 	user, ok := auth.CurrentUser(c)
 	if !ok {
-		c.JSON(500, gin.H{
-			"error": "Error getting user",
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "User not authenticated",
 		})
 		return
 	}
@@ -954,8 +954,8 @@ func (h *Handler) UpdateUserDetails(c *gin.Context) {
 	}
 	user, ok := auth.CurrentUser(c)
 	if !ok {
-		c.JSON(500, gin.H{
-			"error": "Error getting user",
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "User not authenticated",
 		})
 		return
 	}
@@ -998,7 +998,7 @@ func (h *Handler) UpdateUserDetails(c *gin.Context) {
 func (h *Handler) CreateLongLivedToken(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get current user"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
 
@@ -1071,7 +1071,7 @@ func (h *Handler) CreateLongLivedToken(c *gin.Context) {
 func (h *Handler) GetAllUserToken(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get current user"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
 
@@ -1088,7 +1088,7 @@ func (h *Handler) GetAllUserToken(c *gin.Context) {
 func (h *Handler) DeleteUserToken(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get current user"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
 
@@ -1106,7 +1106,7 @@ func (h *Handler) DeleteUserToken(c *gin.Context) {
 func (h *Handler) UpdateNotificationTarget(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get current user"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
 
@@ -1166,7 +1166,7 @@ func (h *Handler) updateUserPasswordLoggedInOnly(c *gin.Context) {
 
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get current user"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
 
@@ -1192,7 +1192,7 @@ func (h *Handler) updateUserPasswordLoggedInOnly(c *gin.Context) {
 func (h *Handler) setWebhook(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get current user"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
 
@@ -1242,7 +1242,7 @@ func (h *Handler) setWebhook(c *gin.Context) {
 func (h *Handler) updateProfilePhoto(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get current user"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
 
@@ -1319,7 +1319,7 @@ func (h *Handler) updateProfilePhoto(c *gin.Context) {
 func (h *Handler) getStorageUsage(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get current user"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
 
@@ -1761,10 +1761,10 @@ func passwordAuthDisabled() gin.HandlerFunc {
 	}
 }
 
-func Routes(router *gin.Engine, h *Handler, jwtAuth *jwt.GinJWTMiddleware, limiter *limiter.Limiter, cfg *config.Config) {
+func Routes(router *gin.Engine, h *Handler, jwtAuth *jwt.GinJWTMiddleware, multiAuthMiddleware *auth.MultiAuthMiddleware, limiter *limiter.Limiter, cfg *config.Config) {
 
 	userRoutes := router.Group("api/v1/users")
-	userRoutes.Use(jwtAuth.MiddlewareFunc(), utils.RateLimitMiddleware(limiter))
+	userRoutes.Use(multiAuthMiddleware.MiddlewareFunc(), utils.RateLimitMiddleware(limiter))
 	{
 		userRoutes.GET("/", h.GetAllUsers())
 		userRoutes.GET("/profile", h.GetUserProfile)

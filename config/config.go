@@ -209,6 +209,7 @@ type OAuth2Config struct {
 	ClientID      string   `mapstructure:"client_id" yaml:"client_id"`
 	ClientSecret  string   `mapstructure:"client_secret" yaml:"client_secret"`
 	RedirectURL   string   `mapstructure:"redirect_url" yaml:"redirect_url"`
+	PKCE          bool     `mapstructure:"pkce" yaml:"pkce"`
 	Scopes        []string `mapstructure:"scopes" yaml:"scopes"`
 	AuthURL       string   `mapstructure:"auth_url" yaml:"auth_url"`
 	TokenURL      string   `mapstructure:"token_url" yaml:"token_url"`

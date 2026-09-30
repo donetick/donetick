@@ -33,7 +33,7 @@ func NewIdentityProvider(cfg *config.Config) *IdentityProvider {
 	return &IdentityProvider{config: &cfg.OAuth2Config, isEnabled: true}
 }
 
-func (i *IdentityProvider) ExchangeToken(ctx context.Context, code string, redirectURL string) (string, error) {
+func (i *IdentityProvider) ExchangeToken(ctx context.Context, code string, redirectURL string, verifier string) (string, error) {
 	if !i.isEnabled {
 		return "", errors.New("identity provider is not enabled")
 	}
@@ -59,7 +59,15 @@ func (i *IdentityProvider) ExchangeToken(ctx context.Context, code string, redir
 		},
 	}
 
-	token, err := conf.Exchange(ctx, code)
+	options := make([]oauth2.AuthCodeOption, 0)
+	if i.config.PKCE {
+		if verifier == "" {
+			return "", errors.New("verifier is empty")
+		}
+		options = append(options, oauth2.VerifierOption(verifier))
+	}
+
+	token, err := conf.Exchange(ctx, code, options...)
 	if err != nil {
 		// Enhanced error handling for OAuth2 errors
 		switch {

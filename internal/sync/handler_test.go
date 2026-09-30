@@ -12,6 +12,7 @@ import (
 	chRepo "donetick.com/core/internal/chore/repo"
 	cModel "donetick.com/core/internal/circle/model"
 	lModel "donetick.com/core/internal/label/model"
+	nModel "donetick.com/core/internal/notifier/model"
 	syncModel "donetick.com/core/internal/sync/model"
 	uModel "donetick.com/core/internal/user/model"
 	"github.com/gin-gonic/gin"
@@ -46,6 +47,7 @@ func newSyncHandlerTest(t *testing.T) (*chRepo.ChoreRepository, *gorm.DB, *gin.E
 		&chModel.TimeSession{},
 		&cModel.UserCircle{},
 		&lModel.Label{},
+		&nModel.Notification{},
 		&syncModel.SyncCursor{},
 		&syncModel.Tombstone{},
 	))

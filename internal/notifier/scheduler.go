@@ -6,7 +6,9 @@ import (
 	"time"
 
 	"donetick.com/core/config"
+	"donetick.com/core/internal/bridge"
 	chRepo "donetick.com/core/internal/chore/repo"
+	dRepo "donetick.com/core/internal/device/repo"
 	"donetick.com/core/internal/events"
 	nRepo "donetick.com/core/internal/notifier/repo"
 	uRepo "donetick.com/core/internal/user/repo"
@@ -22,6 +24,8 @@ const (
 type Scheduler struct {
 	choreRepo        *chRepo.ChoreRepository
 	userRepo         *uRepo.UserRepository
+	deviceRepo       *dRepo.DeviceRepository
+	bridgeSvc        *bridge.Service
 	stopChan         chan bool
 	notifier         *Notifier
 	eventsProducer   *events.EventsProducer
@@ -29,10 +33,12 @@ type Scheduler struct {
 	SchedulerJobs    config.SchedulerConfig
 }
 
-func NewScheduler(cfg *config.Config, ur *uRepo.UserRepository, cr *chRepo.ChoreRepository, n *Notifier, nr *nRepo.NotificationRepository, ep *events.EventsProducer) *Scheduler {
+func NewScheduler(cfg *config.Config, ur *uRepo.UserRepository, cr *chRepo.ChoreRepository, n *Notifier, nr *nRepo.NotificationRepository, ep *events.EventsProducer, dr *dRepo.DeviceRepository, bs *bridge.Service) *Scheduler {
 	return &Scheduler{
 		choreRepo:        cr,
 		userRepo:         ur,
+		deviceRepo:       dr,
+		bridgeSvc:        bs,
 		stopChan:         make(chan bool),
 		notifier:         n,
 		notificationRepo: nr,
@@ -46,6 +52,53 @@ func (s *Scheduler) Start(c context.Context) {
 	log.Debug("Scheduler started")
 	go s.runScheduler(c, " NOTIFICATION_SCHEDULER ", s.loadAndSendNotificationJob, 3*time.Minute)
 	go s.runScheduler(c, " NOTIFICATION_CLEANUP ", s.cleanupSentNotifications, 24*time.Hour*30)
+	go s.runScheduler(c, " BRIDGE_DEVICE_SYNC_RETRY ", s.retryPendingBridgeDeviceSyncJob, 10*time.Minute)
+}
+
+// retryPendingBridgeDeviceSyncJob opportunistically retries Bridge device
+// registration for local devices that were saved locally but never
+// successfully synced to Bridge (e.g. Bridge was temporarily unreachable
+// at registration time, plan §15 "retry registration later without
+// blocking normal login"). Content-free: only re-sends the device's own
+// FCM token/platform/app version, never notification content, and never
+// logs the token. A no-op (nothing queried) when Bridge is disabled.
+func (s *Scheduler) retryPendingBridgeDeviceSyncJob(c context.Context) (time.Duration, error) {
+	log := logging.FromContext(c)
+	startTime := time.Now().UTC()
+
+	client := s.bridgeSvc.Client()
+	if !client.Enabled() {
+		return time.Since(startTime), nil
+	}
+
+	pending, err := s.deviceRepo.GetDevicesPendingBridgeSync(c, 50)
+	if err != nil {
+		log.Error("Error getting devices pending bridge sync", "error", err)
+		return time.Since(startTime), err
+	}
+
+	for _, d := range pending {
+		res, err := client.RegisterDevice(c, bridge.RegisterDeviceInput{
+			LocalDeviceID: d.DeviceID,
+			Token:         d.Token,
+			Platform:      d.Platform,
+			AppVersion:    d.AppVersion,
+			DeviceModel:   d.DeviceModel,
+		})
+		if err != nil {
+			category := bridge.Classify(err)
+			log.Debug("Bridge device sync retry still failing", "category", string(category), "device_id", d.DeviceID)
+			if updErr := s.deviceRepo.UpdateBridgeSyncStatus(c, d.ID, nil, string(category)); updErr != nil {
+				log.Error("Failed to record bridge sync retry status", "error", updErr)
+			}
+			continue
+		}
+		if updErr := s.deviceRepo.UpdateBridgeSyncStatus(c, d.ID, &res.BridgeDeviceID, "synced"); updErr != nil {
+			log.Error("Failed to persist bridge device id from retry", "error", updErr)
+		}
+	}
+
+	return time.Since(startTime), nil
 }
 func (s *Scheduler) cleanupSentNotifications(c context.Context) (time.Duration, error) {
 	log := logging.FromContext(c)

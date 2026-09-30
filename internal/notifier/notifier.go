@@ -5,6 +5,7 @@ import (
 
 	"donetick.com/core/internal/events"
 	nModel "donetick.com/core/internal/notifier/model"
+	"donetick.com/core/internal/notifier/service/bridgenotifier"
 	"donetick.com/core/internal/notifier/service/discord"
 	"donetick.com/core/internal/notifier/service/fcm"
 	pushover "donetick.com/core/internal/notifier/service/pushover"
@@ -18,19 +19,29 @@ type Notifier struct {
 	Pushover       *pushover.Pushover
 	discord        *discord.DiscordNotifier
 	FCM            *fcm.FCMNotifier
+	Bridge         *bridgenotifier.BridgeNotifier
 	eventsProducer *events.EventsProducer
 }
 
-func NewNotifier(t *telegram.TelegramNotifier, p *pushover.Pushover, ep *events.EventsProducer, d *discord.DiscordNotifier, f *fcm.FCMNotifier) *Notifier {
+func NewNotifier(t *telegram.TelegramNotifier, p *pushover.Pushover, ep *events.EventsProducer, d *discord.DiscordNotifier, f *fcm.FCMNotifier, b *bridgenotifier.BridgeNotifier) *Notifier {
 	return &Notifier{
 		Telegram:       t,
 		Pushover:       p,
 		eventsProducer: ep,
 		discord:        d,
 		FCM:            f,
+		Bridge:         b,
 	}
 }
 
+// SendNotification dispatches notification to the right provider and
+// returns its real error. Previously this always returned nil even after a
+// provider failure (only logging it), which caused the scheduler
+// (internal/notifier.Scheduler.loadAndSendNotificationJob) to mark every
+// attempted notification as sent regardless of outcome. That silently
+// dropped failed sends -- including, critically, Bridge quota/availability
+// errors -- instead of leaving them pending for retry. Fixed here for every
+// provider, not just Bridge, since the bug was general.
 func (n *Notifier) SendNotification(c context.Context, notification *nModel.NotificationDetails) error {
 	log := logging.FromContext(c)
 	var err error
@@ -54,11 +65,19 @@ func (n *Notifier) SendNotification(c context.Context, notification *nModel.Noti
 		}
 		err = n.discord.SendNotification(c, notification)
 	case nModel.NotificationPlatformFCM:
-		if n.FCM == nil {
-			log.Error("FCM is not initialized, Skipping sending message")
+		// Prefer Bridge when it is connected and enabled (self-hosted
+		// instance relaying through Donetick Bridge, plan §15); otherwise
+		// fall back to Core's own direct Firebase config, preserving
+		// existing behavior for Donetick Cloud / self-managed-FCM
+		// installs.
+		if n.Bridge != nil && n.Bridge.Enabled() {
+			err = n.Bridge.SendNotification(c, notification)
+		} else if n.FCM != nil {
+			err = n.FCM.SendNotification(c, notification)
+		} else {
+			log.Error("Neither Bridge nor FCM is initialized, Skipping sending message")
 			return nil
 		}
-		err = n.FCM.SendNotification(c, notification)
 
 	case nModel.NotificationPlatformWebhook:
 		// TODO: Implement webhook notification
@@ -74,5 +93,5 @@ func (n *Notifier) SendNotification(c context.Context, notification *nModel.Noti
 		log.Error("Failed to send notification", "err", err)
 	}
 
-	return nil
+	return err
 }

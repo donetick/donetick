@@ -87,3 +87,13 @@ realtime:
   enable_stats: true
   allowed_origins:
     - "*"
+# Donetick Bridge: optional hosted push-notification relay for self-hosted
+# instances. Disabled by default -- Core falls back to its own direct FCM
+# config (fcm.* above via env vars) when disabled. Never put instance_token
+# in this file; set it via the BRIDGE_INSTANCE_TOKEN environment variable.
+bridge:
+  enabled: false
+  base_url: "https://bridge.donetick.com"
+  instance_id: ""
+  instance_token: ""
+  timeout_seconds: 15

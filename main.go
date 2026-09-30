@@ -14,6 +14,7 @@ import (
 	"donetick.com/core/frontend"
 	auth "donetick.com/core/internal/auth"
 	"donetick.com/core/internal/auth/apple"
+	"donetick.com/core/internal/bridge"
 	"donetick.com/core/internal/chore"
 	chRepo "donetick.com/core/internal/chore/repo"
 	"donetick.com/core/internal/circle"
@@ -99,6 +100,20 @@ func main() {
 		// Device management:
 		fx.Provide(dRepo.NewDeviceRepository),
 		fx.Provide(device.NewHandler),
+
+		// Donetick Bridge (hosted push-notification relay, plan §15):
+		fx.Provide(func(cfg *config.Config) bridge.CoreConfig {
+			return bridge.CoreConfig{
+				Enabled:        cfg.Bridge.Enabled,
+				BaseURL:        cfg.Bridge.BaseURL,
+				InstanceID:     cfg.Bridge.InstanceID,
+				InstanceToken:  cfg.Bridge.InstanceToken,
+				TimeoutSeconds: cfg.Bridge.TimeoutSeconds,
+			}
+		}),
+		fx.Provide(bridge.NewSettingsRepository),
+		fx.Provide(bridge.NewService),
+		fx.Provide(bridge.NewHandler),
 
 		fx.Provide(nRepo.NewNotificationRepository),
 		fx.Provide(nps.NewNotificationPlanner),
@@ -199,6 +214,7 @@ func main() {
 			user.Routes,
 			circle.Routes,
 			device.Routes,
+			bridge.Routes,
 			thing.Routes,
 			thing.APIs,
 			label.Routes,

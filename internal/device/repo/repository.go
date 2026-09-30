@@ -22,6 +22,10 @@ type IDeviceRepository interface {
 	GetActiveDeviceCount(c context.Context, userID int) (int64, error)
 	UpdateDeviceTokenActivity(c context.Context, userID int, deviceID string) error
 	CleanupInactiveTokens(c context.Context, inactiveDays int) error
+	GetActiveDeviceByDeviceID(c context.Context, userID int, deviceID string) (*uModel.UserDeviceToken, error)
+	GetActiveDeviceByToken(c context.Context, userID int, token string) (*uModel.UserDeviceToken, error)
+	UpdateBridgeSyncStatus(c context.Context, id int, bridgeDeviceID *string, status string) error
+	GetDevicesPendingBridgeSync(c context.Context, limit int) ([]*uModel.UserDeviceToken, error)
 }
 
 type DeviceRepository struct {
@@ -179,6 +183,73 @@ func (r *DeviceRepository) GetActiveDeviceCount(c context.Context, userID int) (
 		Where("user_id = ? AND is_active = ?", userID, true).
 		Count(&count).Error
 	return count, err
+}
+
+// GetActiveDeviceByDeviceID returns the active device token row for a
+// user/deviceId pair, or nil if none exists. Used before unregistering
+// locally so the caller can still deactivate the corresponding Bridge
+// device afterward (plan §15).
+func (r *DeviceRepository) GetActiveDeviceByDeviceID(c context.Context, userID int, deviceID string) (*uModel.UserDeviceToken, error) {
+	var token uModel.UserDeviceToken
+	err := r.db.WithContext(c).
+		Where("user_id = ? AND device_id = ? AND is_active = ?", userID, deviceID, true).
+		First(&token).Error
+	if err == gorm.ErrRecordNotFound {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &token, nil
+}
+
+// GetActiveDeviceByToken returns the active device token row for a
+// user/FCM-token pair, or nil if none exists. See GetActiveDeviceByDeviceID.
+func (r *DeviceRepository) GetActiveDeviceByToken(c context.Context, userID int, token string) (*uModel.UserDeviceToken, error) {
+	var t uModel.UserDeviceToken
+	err := r.db.WithContext(c).
+		Where("user_id = ? AND token = ? AND is_active = ?", userID, token, true).
+		First(&t).Error
+	if err == gorm.ErrRecordNotFound {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &t, nil
+}
+
+// UpdateBridgeSyncStatus records the outcome of a Bridge device
+// registration attempt. bridgeDeviceID is nil when registration failed
+// (status carries the sanitized failure category instead); it is non-nil
+// only on success. Never receives or stores a raw FCM token.
+func (r *DeviceRepository) UpdateBridgeSyncStatus(c context.Context, id int, bridgeDeviceID *string, status string) error {
+	updates := map[string]interface{}{"bridge_sync_status": status}
+	if bridgeDeviceID != nil {
+		now := time.Now().UTC()
+		updates["bridge_device_id"] = *bridgeDeviceID
+		updates["bridge_registered_at"] = now
+	}
+	return r.db.WithContext(c).Model(&uModel.UserDeviceToken{}).
+		Where("id = ?", id).
+		Updates(updates).Error
+}
+
+// GetDevicesPendingBridgeSync returns up to limit active devices that have
+// never been successfully registered with Bridge (bridge_device_id is
+// still empty). Used by the opportunistic retry job (plan §15 "a
+// content-free local retry job is acceptable").
+func (r *DeviceRepository) GetDevicesPendingBridgeSync(c context.Context, limit int) ([]*uModel.UserDeviceToken, error) {
+	var tokens []*uModel.UserDeviceToken
+	err := r.db.WithContext(c).
+		Where("is_active = ? AND (bridge_device_id IS NULL OR bridge_device_id = ?)", true, "").
+		Order("created_at ASC").
+		Limit(limit).
+		Find(&tokens).Error
+	if err != nil {
+		return nil, err
+	}
+	return tokens, nil
 }
 
 // CleanupInactiveTokens removes tokens that haven't been active for the specified number of days

@@ -10,6 +10,7 @@ import (
 
 	"donetick.com/core/config"
 	sModel "donetick.com/core/external/payment/model"
+	bridgeModel "donetick.com/core/internal/bridge"
 	chModel "donetick.com/core/internal/chore/model"
 	cModel "donetick.com/core/internal/circle/model"
 	filterModel "donetick.com/core/internal/filter/model"
@@ -63,6 +64,7 @@ func Migration(db *gorm.DB) error {
 		uModel.UserDeviceToken{},
 		syncModel.SyncCursor{},
 		syncModel.Tombstone{},
+		bridgeModel.Settings{},
 	); err != nil {
 		return err
 	}

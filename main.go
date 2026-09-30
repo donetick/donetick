@@ -203,6 +203,7 @@ func main() {
 			thing.APIs,
 			label.Routes,
 			project.Routes,
+			project.ExternalAPI,
 			filter.Routes,
 
 			storage.Routes,

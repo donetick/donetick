@@ -11,6 +11,7 @@ import (
 	"donetick.com/core/internal/events"
 	nRepo "donetick.com/core/internal/notifier/repo"
 	nps "donetick.com/core/internal/notifier/service"
+	pRepo "donetick.com/core/internal/project/repo"
 	"donetick.com/core/internal/utils"
 	"donetick.com/core/logging"
 	jwt "github.com/appleboy/gin-jwt/v2"
@@ -32,9 +33,10 @@ type API struct {
 	nRepo         *nRepo.NotificationRepository
 	eventProducer *events.EventsProducer
 	stRepo        *stRepo.SubTasksRepository
+	projectRepo   *pRepo.ProjectRepository
 }
 
-func NewAPI(cr *chRepo.ChoreRepository, userRepo *uRepo.UserRepository, circleRepo *cRepo.CircleRepository, nPlanner *nps.NotificationPlanner, nr *nRepo.NotificationRepository, eventProducer *events.EventsProducer, stRepo *stRepo.SubTasksRepository) *API {
+func NewAPI(cr *chRepo.ChoreRepository, userRepo *uRepo.UserRepository, circleRepo *cRepo.CircleRepository, nPlanner *nps.NotificationPlanner, nr *nRepo.NotificationRepository, eventProducer *events.EventsProducer, stRepo *stRepo.SubTasksRepository, projectRepo *pRepo.ProjectRepository) *API {
 	return &API{
 		choreRepo:     cr,
 		userRepo:      userRepo,
@@ -43,6 +45,7 @@ func NewAPI(cr *chRepo.ChoreRepository, userRepo *uRepo.UserRepository, circleRe
 		nRepo:         nr,
 		eventProducer: eventProducer,
 		stRepo:        stRepo,
+		projectRepo:   projectRepo,
 	}
 }
 
@@ -125,6 +128,12 @@ func (h *API) CreateChore(c *gin.Context) {
 			return
 		}
 	}
+	if choreRequest.ProjectID != nil {
+		if _, err := h.projectRepo.GetProjectByID(c, *choreRequest.ProjectID, user.CircleID); err != nil {
+			c.JSON(400, gin.H{"error": "Specified project not found in circle"})
+			return
+		}
+	}
 
 	chore := &chModel.Chore{
 		CreatedBy:     createdBy,
@@ -137,6 +146,7 @@ func (h *API) CreateChore(c *gin.Context) {
 		AssignedTo:     &createdBy,
 		Assignees:      []chModel.ChoreAssignees{{UserID: createdBy}},
 		Description:    choreRequest.Description,
+		ProjectID:      choreRequest.ProjectID,
 		NextDueDate:    nextDueDate,
 		CreatedAt:      time.Now().UTC(),
 	}

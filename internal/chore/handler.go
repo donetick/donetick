@@ -315,6 +315,7 @@ type ChoreReq struct {
 	FrequencyMetadata    *chModel.FrequencyMetadata    `json:"frequencyMetadata,omitempty"`
 	NextDueDate          *time.Time                    `json:"nextDueDate" binding:"omitempty,required_with=IsRolling"` // Next due date in RFC3339 format
 	IsRolling            bool                          `json:"isRolling"`
+	AutoSkipWhenLate     bool                          `json:"autoSkipWhenLate"`
 	AssignedTo           *int                          `json:"assignedTo" binding:"omitempty"`
 	Assignees            []chModel.ChoreAssignees      `json:"assignees" binding:"dive"`
 	AssignStrategy       chModel.AssignmentStrategy    `json:"assignStrategy" binding:"required,oneof=no_assignee least_assigned least_completed random keep_last_assigned random_except_last_assigned round_robin"`
@@ -544,6 +545,7 @@ func (h *Handler) CreateChore(c *gin.Context) {
 		AssignStrategy:         choreReq.AssignStrategy,
 		AssignedTo:             choreReq.AssignedTo,
 		IsRolling:              choreReq.IsRolling,
+		AutoSkipWhenLate:       choreReq.AutoSkipWhenLate,
 		UpdatedBy:              currentUser.ID,
 		IsActive:               *choreReq.IsActive,
 		Notification:           choreReq.Notification,
@@ -855,6 +857,7 @@ func (h *Handler) EditChore(c *gin.Context) {
 		AssignStrategy:         choreReq.AssignStrategy,
 		AssignedTo:             choreReq.AssignedTo,
 		IsRolling:              choreReq.IsRolling,
+		AutoSkipWhenLate:       choreReq.AutoSkipWhenLate,
 		IsActive:               *choreReq.IsActive,
 		Notification:           choreReq.Notification,
 		NotificationMetadataV2: choreReq.NotificationMetadata,

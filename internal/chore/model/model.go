@@ -31,6 +31,7 @@ const (
 	FrequencyTypeDayOfTheMonth FrequencyType = "day_of_the_month"
 	FrequencyTypeTrigger       FrequencyType = "trigger"
 	FrequencyTypeNoRepeat      FrequencyType = "no_repeat"
+	FrequencyTypeAlways        FrequencyType = "always"
 )
 
 type AssignmentStrategy string

@@ -48,7 +48,7 @@ email:
   key:
   email:
   user: # optional, will be filled with email.email if not set.
-  appHost:
+  app_host:
   log_raw_url: true # log password reset URL to console (useful when email is not configured)
 oauth2:
   client_id:

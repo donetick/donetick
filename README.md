@@ -1,5 +1,5 @@
 
-# <img src="assets/icon.png" alt="drawing" width="45"/>Donetick 
+# <img src="assets/icon.png" alt="drawing" width="45"/>Donetick
 
 
 
@@ -27,7 +27,7 @@ Donetick is an open-source, user-friendly app designed to help you organize task
 
 **Natural Language Task Creation**: Describe what you need to do in plain English. Donetick automatically extracts dates, times, and recurrence patterns from phrases like “Change water filter every 6 months” or “Take the trash out every Monday and Tuesday at 6:15 pm.”
 
-**Task Advanced Scheduling**: 
+**Task Advanced Scheduling**:
 - Supports flexible scheduling: daily, weekly, monthly, yearly, specific months, specific days of the week, or even adaptive scheduling — where Donetick learns from historical completions to suggest due dates automatically.
 - Due Date vs Completion Date Based Recurrence: Choose whether recurring tasks should be scheduled from the previous due date (ideal for a consistent cadence) or from the actual completion date (useful when tasks are often delayed).
 - Assignee Rotation: Automatically rotate task assignments based on who has completed the fewest tasks, randomly, or in turns(round-robin) order.
@@ -61,7 +61,7 @@ Donetick is an open-source, user-friendly app designed to help you organize task
 
 **Realtime Sync**: Enable realtime sync to instantly reflect task changes across all connected devices and users.  whether you are adding, editing, or completing a task. It reflects immediately on enabled devices!
 
-**Offline Support**: You can access donetick if you lose connection and navigate some areas, but this is very limited functionality at the moment. 
+**Offline Support**: You can access donetick if you lose connection and navigate some areas, but this is very limited functionality at the moment.
 
 **Multi-Platform Notifications**: Get reminders through the mobile app (we have an alpha iOS app on TestFlight, and the Android APK is available in releases), as well as via Telegram, Discord, or Pushover.
 
@@ -76,9 +76,9 @@ Donetick is an open-source, user-friendly app designed to help you organize task
 
 ## Quick Start
 > [!NOTE]
-> Before running the application, ensure you have a valid `selfhosted.yaml` configuration file. 
+> Before running the application, ensure you have a valid `selfhosted.yaml` configuration file.
 > If you don't have one, create a `selfhosted.yaml` file based on the example provided [here](https://github.com/donetick/donetick/blob/main/config/selfhosted.yaml).
-> Place the `selfhosted.yaml` file in the `/config` directory within your application's root directory 
+> Place the `selfhosted.yaml` file in the `/config` directory within your application's root directory
 
 
 
@@ -127,7 +127,7 @@ services:
       timeout: 5s
       interval: 1m
       retries: 3
-      
+  
 ```
 
 
@@ -139,7 +139,7 @@ services:
    ```
 3. **Run Donetick:**
    ```bash
-   DT_ENV=selfhosted ./donetick 
+   DT_ENV=selfhosted ./donetick
    ```
 
 ---

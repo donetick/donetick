@@ -35,16 +35,23 @@ RUN BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ) && \
 # Stage 2: Create a smaller runtime image
 FROM alpine:latest
 
-# Install necessary CA certificates and timezone data
-RUN apk --no-cache add ca-certificates libc6-compat tzdata
+# Install necessary CA certificates, timezone data and su-exec for stepping
+# down from root
+RUN apk --no-cache add ca-certificates libc6-compat tzdata su-exec
 
 # Copy the binary and config folder from the builder stage
 COPY --from=builder /donetick /donetick
 COPY --from=builder /usr/src/app/config /config
+COPY entrypoint.sh /entrypoint.sh
 
 # Set environment variables; override at `docker run`/compose time to pick
 # the config file under /config (e.g. DT_ENV=selfhosted or DT_ENV=prod)
 ENV DT_ENV="selfhosted"
+
+# Default PUID and PGID values (can be overridden at runtime). Use these to
+# ensure the files on the volumes have the permissions you need.
+ENV PUID=1000
+ENV PGID=1000
 
 # Expose the application port
 EXPOSE 2021
@@ -52,5 +59,5 @@ EXPOSE 2021
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
   CMD wget --quiet --tries=1 --spider http://localhost:2021/health || exit 1
 
-# Command to run the application
+ENTRYPOINT ["/entrypoint.sh"]
 CMD ["/donetick"]

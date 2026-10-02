@@ -31,7 +31,7 @@ func (m MigrateFixNotificationMetadataExperimentModal20241212) Up(ctx context.Co
 			return nil
 		}
 
-		// Update all chore where notification metadata is a null stirng 'null' to empty json {}:
+		// Update all chore where notification metadata is a null string 'null' to empty json {}:
 		if err := tx.Table("chores").Where("notification_meta = ?", "null").Update("notification_meta", "{}").Error; err != nil {
 			log.Errorf("Failed to update chores with null notification metadata: %v", err)
 			return err

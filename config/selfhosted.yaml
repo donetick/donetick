@@ -19,6 +19,7 @@ jwt:
   session_time: 168h # 7 days
   max_refresh: 1440h # 60 days 
 server:
+  host: "" # listening IP address (e.g. "127.0.0.1" or "0.0.0.0"). If empty, defaults to all interfaces.
   port: 2021
   read_timeout: 10s
   write_timeout: 10s

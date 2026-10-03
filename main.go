@@ -28,6 +28,8 @@ import (
 	"donetick.com/core/internal/mfa"
 	"donetick.com/core/internal/project"
 	pjRepo "donetick.com/core/internal/project/repo"
+	reward "donetick.com/core/internal/reward"
+	rwRepo "donetick.com/core/internal/reward/repo"
 
 	sRepo "donetick.com/core/external/payment/repo"
 	sService "donetick.com/core/external/payment/service"
@@ -142,6 +144,10 @@ func main() {
 		fx.Provide(lRepo.NewLabelRepository),
 		fx.Provide(label.NewHandler),
 
+		// Rewards:
+		fx.Provide(rwRepo.NewRewardRepository),
+		fx.Provide(reward.NewHandler),
+
 		// Projects:
 		fx.Provide(pjRepo.NewProjectRepository),
 		fx.Provide(project.NewHandler),
@@ -202,6 +208,7 @@ func main() {
 			thing.Routes,
 			thing.APIs,
 			label.Routes,
+			reward.Routes,
 			project.Routes,
 			filter.Routes,
 

@@ -55,7 +55,15 @@ type APIToken struct {
 	Name      string    `json:"name" gorm:"column:name"`            // Name (display only, not unique)
 	UserID    int       `json:"userId" gorm:"column:user_id;index"` // Index on userID
 	Token     string    `json:"token" gorm:"column:token;index"`    // Index on token
+	Prefix    *string   `json:"prefix" gorm:"column:prefix"`        // Token format/type marker, e.g. "dt_"
+	Suffix    *string   `json:"suffix" gorm:"column:suffix"`        // Last few chars of the token, for masked display
 	CreatedAt time.Time `json:"createdAt" gorm:"column:created_at"`
+}
+
+const APITokenPrefix = "dt_"
+
+func BuildFullToken(prefix, body string) string {
+	return prefix + body
 }
 
 type UserNotificationTarget struct {

@@ -21,9 +21,9 @@ import (
 
 	chModel "donetick.com/core/internal/chore/model"
 	cRepo "donetick.com/core/internal/circle/repo"
+	pjRepo "donetick.com/core/internal/project/repo"
 	stRepo "donetick.com/core/internal/subtask/repo"
 	uRepo "donetick.com/core/internal/user/repo"
-	pjRepo "donetick.com/core/internal/project/repo"
 )
 
 type API struct {
@@ -255,6 +255,9 @@ func (h *API) UpdateChore(c *gin.Context) {
 		"next_due_date": nextDueDate,
 		"updated_by":    user.ID,
 		"updated_at":    time.Now().UTC(),
+	}
+	if choreRequest.ForceUnarchive {
+		updates["is_active"] = true
 	}
 
 	err = h.choreRepo.UpdateChoreFields(c, choreID, updates)

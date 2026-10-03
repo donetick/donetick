@@ -2,6 +2,7 @@ package repo
 
 import (
 	"context"
+	"errors"
 	"path/filepath"
 	"testing"
 
@@ -153,24 +154,33 @@ func TestUpdateProjectKeepsPrivacyWhenFlagOmitted(t *testing.T) {
 	}
 }
 
-func TestDeletePrivateProjectRejectsAccessRestorationToForeignCreator(t *testing.T) {
+func TestDeletePrivateProjectDetachesChoreToFollowChoreLevelPrivacy(t *testing.T) {
 	r, db := newTestRepo(t)
 	project := createTestProject(t, db, "mine", testOwnerID, true)
 	chore := createTestChore(t, db, project.ID, true)
-	require := func(condition bool, message string, args ...interface{}) {
-		t.Helper()
-		if !condition {
-			t.Fatalf(message, args...)
-		}
+	if err := db.Model(&chModel.Chore{}).Where("id = ?", chore.ID).Update("created_by", testOtherID).Error; err != nil {
+		t.Fatalf("failed to set foreign creator: %v", err)
 	}
-	require(db.Model(&chModel.Chore{}).Where("id = ?", chore.ID).Update("created_by", testOtherID).Error == nil, "failed to set foreign creator")
 
-	err := r.DeleteProject(context.Background(), project.ID, testOwnerID, testCircleID)
-	require(err != nil, "deleting project should fail")
-	require(err.Error() == "cannot delete private project containing chores created by other users", "unexpected error: %v", err)
+	if err := r.DeleteProject(context.Background(), project.ID, testOwnerID, testCircleID); err != nil {
+		t.Fatalf("DeleteProject failed: %v", err)
+	}
 
 	var stored pModel.Project
-	require(db.First(&stored, project.ID).Error == nil, "project should still exist")
+	if err := db.First(&stored, project.ID).Error; !errors.Is(err, gorm.ErrRecordNotFound) {
+		t.Errorf("project should have been deleted, got err = %v", err)
+	}
+
+	updated := reloadChore(t, db, chore.ID)
+	if updated.ProjectID != nil {
+		t.Error("chore should have been detached from the deleted project")
+	}
+	if !updated.IsPrivate {
+		t.Error("chore should remain private after losing its project")
+	}
+	if !updated.CanView(testOtherID, nil) {
+		t.Error("chore's own creator should be able to view it once chore-level privacy applies")
+	}
 }
 
 func TestUpdateAndDeleteProjectHidePrivateProjectExistenceFromOthers(t *testing.T) {

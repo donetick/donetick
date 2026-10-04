@@ -278,6 +278,14 @@ golangci-lint run --fix
 
 ---
 
+## Related Projects
+
+Community-built tools that work with Donetick:
+
+- **[betidy-export](https://github.com/mschabhuettl/betidy-export)** — export your tasks from the [BeTidy](https://betidy.io) chores app and import them into Donetick, preserving recurrence, due dates, assignees, labels, priority and points.
+
+---
+
 ## License
 
 This project is licensed under the **AGPLv3**. See the [LICENSE](LICENSE.md) file for more details.

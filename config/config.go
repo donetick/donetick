@@ -2,10 +2,12 @@ package config
 
 import (
 	"crypto/rand"
+	_ "embed"
 	"encoding/base64"
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -361,7 +363,20 @@ func LoadConfig() *Config {
 	if err != nil {
 		var configNotFoundError viper.ConfigFileNotFoundError
 		if errors.As(err, &configNotFoundError) {
-			fmt.Printf("Config file not found, using defaults and environment variables")
+			if os.Getenv("DT_ENV") == "selfhosted" {
+				fmt.Println("Config file not found, generating default config...")
+				if writeErr := generateDefaultConfigFile("./config"); writeErr != nil {
+					fmt.Printf("Warning: could not write default config: %v\n", writeErr)
+					fmt.Println("Continuing with defaults and environment variables")
+				} else {
+					// Re-read the newly written config
+					if readErr := viper.ReadInConfig(); readErr != nil {
+						fmt.Printf("Warning: could not read generated config: %v\n", readErr)
+					}
+				}
+			} else {
+				fmt.Println("Config file not found, using defaults and environment variables")
+			}
 		} else {
 			fmt.Printf("Error reading config file: %v", err)
 			panic(err)
@@ -455,6 +470,40 @@ func validateJWTSecret(secret string) error {
 		fmt.Printf("\n❌ Application will not start with weak JWT secrets for security reasons.\n\n")
 		panic("Weak JWT secret detected - application startup aborted for security")
 	}
+	return nil
+}
+
+// selfhostedConfigTemplate is written as selfhosted.yaml on first startup,
+// with the placeholder JWT secret replaced by a generated one.
+//
+//go:embed selfhosted.yaml.example
+var selfhostedConfigTemplate string
+
+const placeholderJWTSecret = "change_this_to_a_secure_random_string_32_characters_long"
+
+// generateDefaultConfigFile writes a default selfhosted.yaml to the given directory.
+// This persists the generated JWT secret so it survives restarts.
+func generateDefaultConfigFile(configDir string) error {
+	secret, err := generateSecureSecret()
+	if err != nil {
+		return fmt.Errorf("generate JWT secret: %w", err)
+	}
+
+	if !strings.Contains(selfhostedConfigTemplate, placeholderJWTSecret) {
+		return errors.New("config template is missing the placeholder JWT secret")
+	}
+	configContent := strings.Replace(selfhostedConfigTemplate, placeholderJWTSecret, secret, 1)
+
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		return fmt.Errorf("create config dir: %w", err)
+	}
+
+	configPath := filepath.Join(configDir, "selfhosted.yaml")
+	if err := os.WriteFile(configPath, []byte(configContent), 0600); err != nil {
+		return fmt.Errorf("write config file: %w", err)
+	}
+
+	fmt.Printf("Generated default config at %s\n", configPath)
 	return nil
 }
 

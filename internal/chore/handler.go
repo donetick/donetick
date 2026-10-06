@@ -516,6 +516,10 @@ func (h *Handler) CreateChore(c *gin.Context) {
 	var dueDate *time.Time
 	if choreReq.NextDueDate != nil {
 		utcDate := choreReq.NextDueDate.UTC()
+		if fm := choreReq.FrequencyMetadata; choreReq.FrequencyType == chModel.FrequencyTypeDayOfTheWeek && fm != nil && len(fm.Days) > 0 &&
+			(fm.WeekPattern == nil || *fm.WeekPattern == "" || *fm.WeekPattern == chModel.WeekpatternEveryWeek) {
+			utcDate = firstDueDateOnSelectedWeekday(utcDate, fm.Days, fm.Timezone)
+		}
 		dueDate = &utcDate
 	}
 

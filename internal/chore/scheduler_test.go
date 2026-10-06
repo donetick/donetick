@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 	_ "time/tzdata"
+
 	chModel "donetick.com/core/internal/chore/model"
 )
 
@@ -750,6 +751,41 @@ func TestScheduleNextDueDateDSTSpringInterval(t *testing.T) {
 	}
 	// 27.03. + 3 days = 30.03., after the CET -> CEST transition
 	assertLocalTime(t, got, berlin, 2026, 3, 30, 6, 45)
+}
+
+// TestScheduleNextDueDateRollingDayOfMonthKeepsLocalTime covers the rolling
+// branch of day_of_the_month, which replaces baseDate with the stored due
+// date. Reading that back in UTC and re-labelling its hour in the chore's
+// location shifts the chore by the UTC offset, independent of any DST
+// transition.
+func TestScheduleNextDueDateRollingDayOfMonthKeepsLocalTime(t *testing.T) {
+	berlin := mustLoadBerlin(t)
+
+	createdAt := time.Date(2026, 1, 15, 6, 45, 0, 0, berlin)
+	lastDue := time.Date(2026, 1, 15, 6, 45, 0, 0, berlin)
+	// completed before the due date, so the rolling branch takes effect
+	completed := time.Date(2026, 1, 13, 18, 0, 0, 0, berlin)
+
+	jan := "January"
+	feb := "February"
+
+	chore := chModel.Chore{
+		FrequencyType: chModel.FrequencyTypeDayOfTheMonth,
+		Frequency:     15,
+		IsRolling:     true,
+		NextDueDate:   timePtr(lastDue),
+		FrequencyMetadataV2: &chModel.FrequencyMetadata{
+			Months:   []*string{&jan, &feb},
+			Time:     createdAt.Format(time.RFC3339),
+			Timezone: "Europe/Berlin",
+		},
+	}
+
+	got, err := scheduleNextDueDate(context.Background(), &chore, completed)
+	if err != nil {
+		t.Fatalf("scheduleNextDueDate() error = %v", err)
+	}
+	assertLocalTime(t, got, berlin, 2026, 2, 15, 6, 45)
 }
 
 // TestScheduleNextDueDateWithoutTimezoneUnchanged guards the backwards

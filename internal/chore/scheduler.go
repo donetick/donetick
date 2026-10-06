@@ -140,7 +140,7 @@ func scheduleNextDueDate(ctx context.Context, chore *chModel.Chore, completedDat
 		// if task due every 15 of jan, and you completed it on the 13 of jan( before the due date ) if we schedule from due date
 		// we will go back to 15 of jan. so we need to pick the highest between the two dates specifically for day of the month
 		if chore.IsRolling && chore.NextDueDate != nil {
-			secondAfterDueDate := chore.NextDueDate.UTC().Add(time.Second)
+			secondAfterDueDate := chore.NextDueDate.In(loc).Add(time.Second)
 			if completedDate.Before(secondAfterDueDate) {
 				baseDate = secondAfterDueDate
 			}

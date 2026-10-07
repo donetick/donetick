@@ -15,6 +15,7 @@ import (
 	auth "donetick.com/core/internal/auth"
 	"donetick.com/core/internal/auth/apple"
 	"donetick.com/core/internal/calendar"
+	calRepo "donetick.com/core/internal/calendar/repo"
 	"donetick.com/core/internal/chore"
 	chRepo "donetick.com/core/internal/chore/repo"
 	"donetick.com/core/internal/circle"
@@ -92,6 +93,7 @@ func main() {
 		fx.Provide(chRepo.NewChoreRepository),
 		fx.Provide(chore.NewHandler),
 		fx.Provide(calendar.NewHandler),
+		fx.Provide(calRepo.NewCalendarRepository),
 		fx.Provide(uRepo.NewUserRepository),
 		fx.Provide(user.NewDeletionService),
 		fx.Provide(user.NewHandler),

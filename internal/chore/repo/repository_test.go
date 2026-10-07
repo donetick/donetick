@@ -236,3 +236,22 @@ func assertAssignees(t *testing.T, db *gorm.DB, choreID int, want []int) {
 		}
 	}
 }
+
+// The chore view decides whether the delegate target still has to be added to the
+// assignee pool from the details response, so it must carry the assignees (#848).
+func TestGetChoreDetailByIDIncludesAssignees(t *testing.T) {
+	r, db := newTestChoreRepo(t)
+	chore := createChore(t, db, "shared", testOwnerID, false, nil, testOwnerID, testOtherID)
+
+	detail, err := r.GetChoreDetailByID(context.Background(), chore.ID, testCircleID, testOwnerID)
+	if err != nil {
+		t.Fatalf("GetChoreDetailByID failed: %v", err)
+	}
+	got := map[int]bool{}
+	for _, a := range detail.Assignees {
+		got[a.UserID] = true
+	}
+	if len(detail.Assignees) != 2 || !got[testOwnerID] || !got[testOtherID] {
+		t.Errorf("assignees = %+v, want users %d and %d", detail.Assignees, testOwnerID, testOtherID)
+	}
+}

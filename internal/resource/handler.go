@@ -17,6 +17,7 @@ type Resource struct {
 	// DisablePasswordAuth tells the client to hide username/password login and
 	// signup, leaving only SSO (#438).
 	DisablePasswordAuth bool `json:"disable_password_auth"`
+	BridgeEnabled       bool `json:"bridge_enabled"`
 }
 type identityProvider struct {
 	Auth_url  string `json:"auth_url" binding:"omitempty"`
@@ -47,6 +48,7 @@ func (h *Handler) getResource(c *gin.Context) {
 		IsUserCreationDisabled: h.config.IsUserCreationDisabled,
 		SingleCircleInstance:   h.config.SingleCircleInstance,
 		DisablePasswordAuth:    h.config.DisablePasswordAuth,
+		BridgeEnabled:          h.config.Bridge.Enabled,
 	})
 }
 

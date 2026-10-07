@@ -35,6 +35,7 @@ import (
 	notifier "donetick.com/core/internal/notifier"
 	nRepo "donetick.com/core/internal/notifier/repo"
 	nps "donetick.com/core/internal/notifier/service"
+	"donetick.com/core/internal/notifier/service/bridgenotifier"
 	discord "donetick.com/core/internal/notifier/service/discord"
 	"donetick.com/core/internal/notifier/service/fcm"
 	"donetick.com/core/internal/notifier/service/pushover"
@@ -122,6 +123,7 @@ func main() {
 		fx.Provide(pushover.NewPushover),
 		fx.Provide(telegram.NewTelegramNotifier),
 		fx.Provide(discord.NewDiscordNotifier),
+		fx.Provide(bridgenotifier.NewBridgeNotifier),
 		fx.Provide(notifier.NewNotifier),
 		fx.Provide(events.NewEventsProducer),
 		fx.Provide(fcm.NewFCMNotifier),

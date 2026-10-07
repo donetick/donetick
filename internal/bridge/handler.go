@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 
+	"donetick.com/core/config"
 	auth "donetick.com/core/internal/auth"
 	cModel "donetick.com/core/internal/circle/model"
 	cRepo "donetick.com/core/internal/circle/repo"
@@ -167,7 +168,12 @@ func (h *Handler) Disconnect(c *gin.Context) {
 // admins happens per-handler above (not in middleware) so GetStatus can
 // later be relaxed to "any circle member can view" without duplicating the
 // connect/disconnect checks, if desired.
-func Routes(router *gin.Engine, h *Handler, authMw *jwt.GinJWTMiddleware) {
+func Routes(router *gin.Engine, h *Handler, authMw *jwt.GinJWTMiddleware, cfg *config.Config) {
+	// if bridge not enabled then route should not be registered:
+	if !cfg.Bridge.Enabled {
+		return
+	}
+
 	g := router.Group("api/v1/bridge")
 	g.Use(authMw.MiddlewareFunc())
 	{

@@ -7,14 +7,7 @@ import "time"
 // Bridge from Core's own settings UI without editing config files or
 // restarting the process. Falls back to config.BridgeConfig (env/YAML) on
 // first boot -- see Service.bootstrap.
-//
-// InstanceToken is a secret. It is stored here (not logged, never returned
-// by any Service/handler method after it is first set) because Core must
-// keep re-sending it as the Authorization header on every Bridge request;
-// this mirrors plan §15's "If configuration is written through settings,
-// encrypt it at rest where practical" -- encryption-at-rest for this
-// column is a known gap, flagged in the work log, not implemented this
-// session (see donetick-bridge/work-log.md Phase 5 notes).
+
 type Settings struct {
 	ID             int        `json:"-" gorm:"primaryKey;column:id"`
 	Enabled        bool       `json:"enabled" gorm:"column:enabled"`

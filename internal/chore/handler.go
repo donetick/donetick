@@ -1316,7 +1316,7 @@ func (h *Handler) UpdateAssignee(c *gin.Context) {
 		})
 		return
 	}
-	if err := chore.CanEdit(currentUser.ID, circleUsers, &assigneeReq.UpdatedAt); err != nil {
+	if err := chore.CanDelegate(currentUser.ID, circleUsers, &assigneeReq.UpdatedAt); err != nil {
 		c.JSON(403, gin.H{
 			"error": fmt.Sprintf("You cannot edit this chore: %s", err.Error()),
 		})
@@ -1336,22 +1336,30 @@ func (h *Handler) UpdateAssignee(c *gin.Context) {
 		return
 	}
 
+	// Respond with the chore as it is now, not as it was before the update,
+	// otherwise the client keeps showing the previous assignee (#848).
+	updatedChore, err := h.choreRepo.GetChore(c, id, currentUser.ID, currentUser.CircleID)
+	if err != nil {
+		logger.Error("Failed to retrieve updated chore", "error", err, "choreID", id)
+		c.JSON(500, gin.H{
+			"error": "Failed to retrieve chore",
+		})
+		return
+	}
+
 	// Broadcast real-time assignee update event
 	if h.realTimeService != nil {
-		updatedChore, err := h.choreRepo.GetChore(c, id, currentUser.ID, currentUser.CircleID)
-		if err == nil {
-			broadcaster := h.realTimeService.GetEventBroadcaster()
-			changes := map[string]interface{}{
-				"assignedTo": assigneeReq.Assignee,
-				"updatedBy":  currentUser.ID,
-				"updatedAt":  assigneeReq.UpdatedAt,
-			}
-			broadcaster.BroadcastChoreUpdated(updatedChore, &currentUser.User, changes, nil)
+		broadcaster := h.realTimeService.GetEventBroadcaster()
+		changes := map[string]interface{}{
+			"assignedTo": assigneeReq.Assignee,
+			"updatedBy":  currentUser.ID,
+			"updatedAt":  assigneeReq.UpdatedAt,
 		}
+		broadcaster.BroadcastChoreUpdated(updatedChore, &currentUser.User, changes, nil)
 	}
 
 	c.JSON(200, gin.H{
-		"res": chore,
+		"res": updatedChore,
 	})
 }
 

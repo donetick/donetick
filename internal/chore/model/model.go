@@ -185,6 +185,7 @@ type ChoreDetail struct {
 	CreatedBy           int                        `json:"createdBy" gorm:"column:created_by"`
 	CompletionWindow    *int                       `json:"completionWindow,omitempty" gorm:"column:completion_window"`
 	Subtasks            *[]stModel.SubTask         `json:"subTasks,omitempty" gorm:"foreignkey:ChoreID;references:ID"`
+	Assignees           []ChoreAssignees           `json:"assignees" gorm:"foreignkey:ChoreID;references:ID"`
 	Status              Status                     `json:"status" gorm:"column:status"`
 	Duration            int                        `json:"duration" gorm:"column:duration"` // Total duration in seconds for the chore
 	StartTime           *time.Time                 `json:"startTime" gorm:"column:start_time"`
@@ -271,6 +272,32 @@ func (c *Chore) CanEdit(userID int, circleUsers []*cModel.UserCircleDetail, upda
 	return nil
 
 }
+
+// CanDelegate reports whether userID may hand the chore to another assignee.
+// Unlike CanEdit, any active circle member may delegate, not only the creator
+// or an admin; the stale updatedAt check is the same.
+func (c *Chore) CanDelegate(userID int, circleUsers []*cModel.UserCircleDetail, updatedAt *time.Time) error {
+	isMember := false
+	for _, cu := range circleUsers {
+		if cu.UserID == userID && cu.IsActive {
+			isMember = true
+			break
+		}
+	}
+	if !isMember {
+		return errors.New("user is not a member of this circle")
+	}
+	if updatedAt != nil {
+		if c.UpdatedAt.After(*updatedAt) {
+			return errors.New("chore has been modified by another user, please refresh and try again")
+		}
+		if updatedAt.After(time.Now().UTC().Add(30 * time.Second)) {
+			return errors.New("updatedAt is in the future and cannot be used to edit the chore")
+		}
+	}
+	return nil
+}
+
 func (c *Chore) CanView(userID int, circleUsers []*cModel.UserCircleDetail) bool {
 	// if private then only creator and assignees can view:
 	if c.IsPrivate {

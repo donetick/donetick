@@ -1330,6 +1330,7 @@ func (r *ChoreRepository) GetChoreDetailByID(c context.Context, choreID int, cir
 	var choreDetail chModel.ChoreDetail
 	if err := privacyJoins(r.db.WithContext(c).Table("chores"), userID).
 		Preload("Subtasks").
+		Preload("Assignees").
 		Select(`
         chores.id, 
         chores.name,

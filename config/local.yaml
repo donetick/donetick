@@ -54,7 +54,7 @@ email:
   key:
   email:
   user:
-  appHost:
+  app_host:
   log_raw_url: true # log password reset URL to console (useful when email is not configured)
 mfa:
   session_timeout: 10m

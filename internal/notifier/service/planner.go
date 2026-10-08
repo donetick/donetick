@@ -52,19 +52,19 @@ func (n *NotificationPlanner) GenerateNotifications(c context.Context, chore *ch
 	}
 
 	if len(chore.NotificationMetadataV2.Templates) > 0 {
-		if assignedUser != nil {
+		if assignedUser != nil && canReceiveChore(chore, assignedUser.UserID, circleMembers) {
 			notifications = append(notifications, generateNotificationsFromTemplate(chore, assignedUser, assignedUser, nil)...)
-		} else {
+		} else if assignedUser == nil {
 			// A chore assigned to "Anyone" has no assigned user to resolve, which previously
 			// meant no notifications were generated at all. Remind every circle member who
 			// can actually receive one instead.
-			for _, member := range notifiableMembers(circleMembers) {
+			for _, member := range anyoneChoreRecipients(chore, circleMembers) {
 				notifications = append(notifications, generateNotificationsFromTemplate(chore, member, nil, nil)...)
 			}
 		}
 	}
 
-	if chore.NotificationMetadataV2.CircleGroup && assignedUser != nil {
+	if chore.NotificationMetadataV2.CircleGroup && assignedUser != nil && canReceiveChore(chore, assignedUser.UserID, circleMembers) {
 		notifications = append(notifications, generateNotificationsFromTemplate(chore, assignedUser, assignedUser, chore.NotificationMetadataV2.CircleGroupID)...)
 	}
 
@@ -89,6 +89,33 @@ func notifiableMembers(circleMembers []*cModel.UserCircleDetail) []*cModel.UserC
 		members = append(members, member)
 	}
 	return members
+}
+
+// anyoneChoreRecipients returns the circle members to remind about a chore assigned to
+// "Anyone": those that can actually receive a notification and are allowed to see the
+// chore. Without the visibility check a private chore with no assignee would leak its
+// name to the whole circle, which project-level privacy makes easy to hit (every chore
+// in a private project is private).
+func canReceiveChore(chore *chModel.Chore, userID int, circleMembers []*cModel.UserCircleDetail) bool {
+	if chore.ProjectID != nil && chore.Project == nil {
+		return false
+	}
+	if chore.Project != nil && chore.Project.IsPrivate {
+		return chore.Project.CreatedBy == userID
+	}
+	return chore.CanView(userID, circleMembers)
+}
+
+func anyoneChoreRecipients(chore *chModel.Chore, circleMembers []*cModel.UserCircleDetail) []*cModel.UserCircleDetail {
+	members := notifiableMembers(circleMembers)
+	recipients := make([]*cModel.UserCircleDetail, 0, len(members))
+	for _, member := range members {
+		if !canReceiveChore(chore, member.UserID, circleMembers) {
+			continue
+		}
+		recipients = append(recipients, member)
+	}
+	return recipients
 }
 
 func getEventTypeFromTemplate(template *chModel.NotificationTemplate) EventType {

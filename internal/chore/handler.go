@@ -27,6 +27,7 @@ import (
 	nRepo "donetick.com/core/internal/notifier/repo"
 	nps "donetick.com/core/internal/notifier/service"
 	fcmService "donetick.com/core/internal/notifier/service/fcm"
+	pjRepo "donetick.com/core/internal/project/repo"
 	"donetick.com/core/internal/realtime"
 	storage "donetick.com/core/internal/storage"
 	storageModel "donetick.com/core/internal/storage/model"
@@ -60,6 +61,7 @@ type Handler struct {
 	storage         storage.Storage
 	realTimeService *realtime.RealTimeService
 	signer          storage.URLSigner
+	pjRepo          *pjRepo.ProjectRepository
 }
 
 func NewHandler(cr *chRepo.ChoreRepository, circleRepo *cRepo.CircleRepository, nt *notifier.Notifier,
@@ -71,9 +73,11 @@ func NewHandler(cr *chRepo.ChoreRepository, circleRepo *cRepo.CircleRepository, 
 	bs *bridge.Service,
 	stoRepo *storageRepo.StorageRepository,
 	signer storage.URLSigner,
-	rts *realtime.RealTimeService) *Handler {
+	rts *realtime.RealTimeService,
+	projectRepo *pjRepo.ProjectRepository) *Handler {
 	return &Handler{
 		choreRepo:       cr,
+		pjRepo:          projectRepo,
 		uRepo:           ur,
 		deviceRepo:      dr,
 		bridgeSvc:       bs,
@@ -310,7 +314,7 @@ func (h *Handler) signAttachments(c *gin.Context, attachments []storageModel.Sto
 type ChoreReq struct {
 	ID                   int                           `json:"id"`
 	Name                 string                        `json:"name" binding:"required"`
-	FrequencyType        chModel.FrequencyType         `json:"frequencyType" binding:"required,oneof=once daily weekly monthly yearly adaptive interval days_of_the_week day_of_the_month trigger no_repeat"`
+	FrequencyType        chModel.FrequencyType         `json:"frequencyType" binding:"required,oneof=once daily weekly monthly yearly adaptive interval days_of_the_week day_of_the_month trigger no_repeat always"`
 	Frequency            *int                          `json:"frequency" binding:"omitempty"`
 	FrequencyMetadata    *chModel.FrequencyMetadata    `json:"frequencyMetadata,omitempty"`
 	NextDueDate          *time.Time                    `json:"nextDueDate" binding:"omitempty,required_with=IsRolling"` // Next due date in RFC3339 format
@@ -519,6 +523,15 @@ func (h *Handler) CreateChore(c *gin.Context) {
 		dueDate = &utcDate
 	}
 
+	// Before the defaults, so a chore inheriting privacy from its project isn't warned
+	// about defaulting to public.
+	if err := h.inheritProjectPrivacy(c, &choreReq, currentUser.ID, currentUser.CircleID); err != nil {
+		c.JSON(400, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
+
 	warnings := setCreateChoreDefaults(&choreReq)
 	if !choreReq.Notification && choreReq.NotificationMetadata != nil {
 		warnings = append(warnings, "notificationMetadata provided while notification is false; ignoring metadata")
@@ -553,7 +566,11 @@ func (h *Handler) CreateChore(c *gin.Context) {
 		// it's need custom logic to handle subtask creation as we send negative ids sometimes when we creating parent child releationship
 		// when the subtask is not yet created
 	}
-	id, err := h.choreRepo.CreateChore(c, createdChore)
+	assigneeIDs := make([]int, 0, len(choreReq.Assignees))
+	for _, assignee := range choreReq.Assignees {
+		assigneeIDs = append(assigneeIDs, assignee.UserID)
+	}
+	id, err := h.choreRepo.CreateChoreWithAssignees(c, createdChore, assigneeIDs, currentUser.ID)
 	createdChore.ID = id
 
 	if err != nil {
@@ -573,13 +590,6 @@ func (h *Handler) CreateChore(c *gin.Context) {
 		}
 	}
 
-	var choreAssignees []*chModel.ChoreAssignees
-	for _, assignee := range choreReq.Assignees {
-		choreAssignees = append(choreAssignees, &chModel.ChoreAssignees{
-			ChoreID: id,
-			UserID:  assignee.UserID,
-		})
-	}
 	if choreReq.LabelsV2 != nil {
 		labelsV2 := make([]int, len(*choreReq.LabelsV2))
 		for i, label := range *choreReq.LabelsV2 {
@@ -611,24 +621,24 @@ func (h *Handler) CreateChore(c *gin.Context) {
 		}
 	}
 
-	if len(choreAssignees) > 0 {
-		if err := h.choreRepo.UpdateChoreAssignees(c, choreAssignees); err != nil {
-			c.JSON(500, gin.H{
-				"error": "Error adding chore assignees",
-			})
-			return
-		}
+	// Reload relations used by notification and realtime authorization. In
+	// particular, Project must be populated before deciding event recipients.
+	eventChore, err := h.choreRepo.GetChore(c, createdChore.ID, currentUser.ID, currentUser.CircleID)
+	if err != nil {
+		logger.Error("Failed to reload created chore", "error", err)
+		c.JSON(500, gin.H{"error": "Failed to reload created chore"})
+		return
 	}
 	go func() {
-		h.nPlanner.GenerateNotifications(c, createdChore)
+		h.nPlanner.GenerateNotifications(c, eventChore)
 	}()
 
-	h.eventProducer.ChoreCreated(c, currentUser.WebhookURL, createdChore, &currentUser.User)
+	h.eventProducer.ChoreCreated(c, currentUser.WebhookURL, eventChore, &currentUser.User)
 
 	// Broadcast real-time chore creation event
 	if h.realTimeService != nil {
 		broadcaster := h.realTimeService.GetEventBroadcaster()
-		broadcaster.BroadcastChoreCreated(createdChore, &currentUser.User)
+		broadcaster.BroadcastChoreCreated(eventChore, &currentUser.User)
 	}
 
 	shouldReturn := handleThingAssociation(choreReq, createdChore, h, c, &currentUser.User)
@@ -720,6 +730,14 @@ func (h *Handler) EditChore(c *gin.Context) {
 		return
 	}
 
+	// Before the assignee diff below, so a private project can narrow the list down.
+	if err := h.inheritProjectPrivacy(c, &choreReq, currentUser.ID, currentUser.CircleID); err != nil {
+		c.JSON(400, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
+
 	//  filter assignees that not in the circle
 	for _, assignee := range choreReq.Assignees {
 		userFound := false
@@ -767,7 +785,6 @@ func (h *Handler) EditChore(c *gin.Context) {
 
 	// Remove the auto-assignment logic - if no assignee then keep no assignee
 	oldChore, err := h.choreRepo.GetChore(c, choreReq.ID, currentUser.ID, currentUser.CircleID)
-
 	if err != nil {
 		logger.Error("Failed to retrieve chore", "error", err)
 		c.JSON(500, gin.H{
@@ -863,7 +880,7 @@ func (h *Handler) EditChore(c *gin.Context) {
 	for _, assignee := range choreReq.Assignees {
 		assigneeIDs = append(assigneeIDs, assignee.UserID)
 	}
-	if err := h.choreRepo.UpdateChoreVisibility(c, updatedChore, assigneeIDs); err != nil {
+	if err := h.choreRepo.UpdateChoreVisibilityForUser(c, updatedChore, assigneeIDs, currentUser.ID); err != nil {
 		c.JSON(500, gin.H{
 			"error": "Error adding chore",
 		})
@@ -931,8 +948,14 @@ func (h *Handler) EditChore(c *gin.Context) {
 		}
 	}
 
+	eventChore, err := h.choreRepo.GetChore(c, updatedChore.ID, currentUser.ID, currentUser.CircleID)
+	if err != nil {
+		logger.Error("Failed to reload updated chore", "error", err)
+		c.JSON(500, gin.H{"error": "Failed to reload updated chore"})
+		return
+	}
 	go func() {
-		h.nPlanner.GenerateNotifications(c, updatedChore)
+		h.nPlanner.GenerateNotifications(c, eventChore)
 	}()
 
 	// Broadcast real-time chore update event
@@ -943,7 +966,7 @@ func (h *Handler) EditChore(c *gin.Context) {
 			"updatedBy": currentUser.ID,
 			"updatedAt": time.Now().UTC(),
 		}
-		broadcaster.BroadcastChoreUpdated(updatedChore, &currentUser.User, changes, nil)
+		broadcaster.BroadcastChoreUpdated(eventChore, &currentUser.User, changes, nil)
 	}
 
 	if oldChore.ThingChore != nil {
@@ -976,6 +999,55 @@ func setEditChoreDefaults(choreReq *ChoreReq, oldChore *chModel.Chore) {
 	if choreReq.IsPrivate == nil {
 		choreReq.IsPrivate = &oldChore.IsPrivate
 	}
+}
+
+// inheritProjectPrivacy makes sure the project a chore is being placed in is visible
+// to the user, and makes the chore follow that project's privacy: a chore always
+// takes on the privacy of the project it's placed in, in both directions — moving a
+// private chore into a public project makes it public, and moving a public chore
+// into a private project makes it private. A chore in no project at all keeps its
+// own flag, since there's no project to inherit from.
+//
+// It also keeps the assignees of a chore in a private project down to the project
+// owner, the only user who can see it: assigning it to anyone else is rejected, and
+// "Anyone" (an empty assignee list) resolves to the owner instead of the whole
+// circle, so the chore never rotates or notifies its way to someone who can't see it.
+func (h *Handler) inheritProjectPrivacy(c *gin.Context, choreReq *ChoreReq, userID int, circleID int) error {
+	if choreReq.ProjectID == nil {
+		return nil
+	}
+
+	project, err := h.pjRepo.GetProjectByID(c, *choreReq.ProjectID, circleID)
+	// Don't tell apart "missing" from "not visible", it would leak private projects.
+	if err != nil || !project.CanView(userID) {
+		return errors.New("project not found")
+	}
+
+	isPrivate := project.IsPrivate
+	choreReq.IsPrivate = &isPrivate
+
+	if !project.IsPrivate {
+		return nil
+	}
+
+	for _, assignee := range choreReq.Assignees {
+		if assignee.UserID != project.CreatedBy {
+			return errors.New("chores in a private project can only be assigned to its owner")
+		}
+	}
+	if choreReq.AssignedTo != nil && *choreReq.AssignedTo != project.CreatedBy {
+		return errors.New("chores in a private project can only be assigned to its owner")
+	}
+
+	// "Anyone" would otherwise spread over the whole circle when rotating or notifying.
+	if len(choreReq.Assignees) == 0 && choreReq.AssignStrategy != chModel.AssignmentStrategyNoAssignee {
+		choreReq.Assignees = []chModel.ChoreAssignees{{ChoreID: choreReq.ID, UserID: project.CreatedBy}}
+		if choreReq.AssignedTo == nil {
+			owner := project.CreatedBy
+			choreReq.AssignedTo = &owner
+		}
+	}
+	return nil
 }
 
 func dueDatesDiffer(oldDueDate, newDueDate *time.Time) bool {
@@ -1105,10 +1177,20 @@ func (h *Handler) DeleteChore(c *gin.Context) {
 		return
 	}
 	if chore.CreatedBy != currentUser.ID {
-		c.JSON(403, gin.H{
-			"error": "You are not allowed to delete this chore",
-		})
-		return
+		circleUsers, err := h.circleRepo.GetCircleUsers(c, currentUser.CircleID)
+		if err != nil {
+			logger.Error("Failed to retrieve circle users", "error", err)
+			c.JSON(500, gin.H{
+				"error": "Failed to retrieve circle users",
+			})
+			return
+		}
+		if !currentUser.IsAdminOrManager(circleUsers) {
+			c.JSON(403, gin.H{
+				"error": "You are not allowed to delete this chore",
+			})
+			return
+		}
 	}
 
 	// Collect file paths before deletion; the DeleteChore transaction removes the
@@ -1145,7 +1227,7 @@ func (h *Handler) DeleteChore(c *gin.Context) {
 	// Broadcast real-time chore deletion event
 	if h.realTimeService != nil {
 		broadcaster := h.realTimeService.GetEventBroadcaster()
-		broadcaster.BroadcastChoreDeleted(chore.ID, chore.Name, chore.CircleID, &currentUser.User, deletedSyncVersion)
+		broadcaster.BroadcastChoreDeleted(chore, &currentUser.User, deletedSyncVersion)
 	}
 
 	c.JSON(200, gin.H{
@@ -1238,7 +1320,7 @@ func (h *Handler) UpdateAssignee(c *gin.Context) {
 		})
 		return
 	}
-	if err := chore.CanEdit(currentUser.ID, circleUsers, &assigneeReq.UpdatedAt); err != nil {
+	if err := chore.CanDelegate(currentUser.ID, circleUsers, &assigneeReq.UpdatedAt); err != nil {
 		c.JSON(403, gin.H{
 			"error": fmt.Sprintf("You cannot edit this chore: %s", err.Error()),
 		})
@@ -1258,22 +1340,30 @@ func (h *Handler) UpdateAssignee(c *gin.Context) {
 		return
 	}
 
+	// Respond with the chore as it is now, not as it was before the update,
+	// otherwise the client keeps showing the previous assignee (#848).
+	updatedChore, err := h.choreRepo.GetChore(c, id, currentUser.ID, currentUser.CircleID)
+	if err != nil {
+		logger.Error("Failed to retrieve updated chore", "error", err, "choreID", id)
+		c.JSON(500, gin.H{
+			"error": "Failed to retrieve chore",
+		})
+		return
+	}
+
 	// Broadcast real-time assignee update event
 	if h.realTimeService != nil {
-		updatedChore, err := h.choreRepo.GetChore(c, id, currentUser.ID, currentUser.CircleID)
-		if err == nil {
-			broadcaster := h.realTimeService.GetEventBroadcaster()
-			changes := map[string]interface{}{
-				"assignedTo": assigneeReq.Assignee,
-				"updatedBy":  currentUser.ID,
-				"updatedAt":  assigneeReq.UpdatedAt,
-			}
-			broadcaster.BroadcastChoreUpdated(updatedChore, &currentUser.User, changes, nil)
+		broadcaster := h.realTimeService.GetEventBroadcaster()
+		changes := map[string]interface{}{
+			"assignedTo": assigneeReq.Assignee,
+			"updatedBy":  currentUser.ID,
+			"updatedAt":  assigneeReq.UpdatedAt,
 		}
+		broadcaster.BroadcastChoreUpdated(updatedChore, &currentUser.User, changes, nil)
 	}
 
 	c.JSON(200, gin.H{
-		"res": chore,
+		"res": updatedChore,
 	})
 }
 
@@ -2999,11 +3089,10 @@ func (h *Handler) UpdateSubtaskCompletedAt(c *gin.Context) {
 		broadcaster := h.realTimeService.GetEventBroadcaster()
 
 		broadcaster.BroadcastSubtaskUpdated(
-			choreID,
+			chore,
 			req.ID,
 			req.CompletedAt,
 			&effectiveUser.User,
-			chore.CircleID,
 			chore.SyncVersion,
 		)
 

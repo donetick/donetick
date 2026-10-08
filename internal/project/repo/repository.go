@@ -6,18 +6,21 @@ import (
 
 	config "donetick.com/core/config"
 	chModel "donetick.com/core/internal/chore/model"
+	chRepo "donetick.com/core/internal/chore/repo"
 	pModel "donetick.com/core/internal/project/model"
 	syncModel "donetick.com/core/internal/sync/model"
 	"donetick.com/core/logging"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type ProjectRepository struct {
-	db *gorm.DB
+	db        *gorm.DB
+	choreRepo *chRepo.ChoreRepository
 }
 
-func NewProjectRepository(db *gorm.DB, cfg *config.Config) *ProjectRepository {
-	return &ProjectRepository{db: db}
+func NewProjectRepository(db *gorm.DB, cfg *config.Config, choreRepo *chRepo.ChoreRepository) *ProjectRepository {
+	return &ProjectRepository{db: db, choreRepo: choreRepo}
 }
 
 // bumpChoreSyncVersions assigns a fresh sync version to every chore in choreIDs so
@@ -61,9 +64,13 @@ func (r *ProjectRepository) choreIDsInProject(ctx context.Context, tx *gorm.DB, 
 	return choreIDs, nil
 }
 
-func (r *ProjectRepository) GetCircleProjects(ctx context.Context, circleID int) ([]*pModel.Project, error) {
+// GetCircleProjects returns the projects of a circle the user is allowed to see:
+// every public one plus the private ones they created.
+func (r *ProjectRepository) GetCircleProjects(ctx context.Context, circleID int, userID int) ([]*pModel.Project, error) {
 	var projects []*pModel.Project
-	if err := r.db.WithContext(ctx).Where("circle_id = ?", circleID).Order("name ASC").Find(&projects).Error; err != nil {
+	if err := r.db.WithContext(ctx).
+		Where("circle_id = ? AND (is_private = ? OR created_by = ?)", circleID, false, userID).
+		Order("name ASC").Find(&projects).Error; err != nil {
 		return nil, err
 	}
 	return projects, nil
@@ -84,34 +91,59 @@ func (r *ProjectRepository) CreateProject(ctx context.Context, project *pModel.P
 	return nil
 }
 
-func (r *ProjectRepository) UpdateProject(ctx context.Context, project *pModel.Project, userID int, circleID int) error {
+// UpdateProject updates a project owned by the user. isPrivate is optional: when
+// nil the current visibility is kept. Flipping it propagates to every chore in the
+// project, since a chore inherits the privacy of the project it belongs to.
+func (r *ProjectRepository) UpdateProject(ctx context.Context, project *pModel.Project, isPrivate *bool, userID int, circleID int) error {
 	log := logging.FromContext(ctx)
 
-	// Check if user has permission to update this project
-	var existingProject pModel.Project
-	if err := r.db.WithContext(ctx).Where("id = ? AND circle_id = ?", project.ID, circleID).First(&existingProject).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return errors.New("project not found")
-		}
-		log.Error("Error finding project", "error", err)
-		return err
-	}
-
-	// Only creator or admin can update project (implement admin check based on your auth system)
-	if existingProject.CreatedBy != userID {
-		return errors.New("user does not have permission to update this project")
-	}
-
-	updates := map[string]interface{}{
-		"name":        project.Name,
-		"description": project.Description,
-		"color":       project.Color,
-		"icon":        project.Icon,
-	}
-
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if err := tx.WithContext(ctx).Model(&pModel.Project{}).Where("id = ? AND circle_id = ?", project.ID, circleID).Updates(updates).Error; err != nil {
+		// Serialize privacy changes with chore moves that lock their destination
+		// project. Reading this inside the transaction also prevents two concurrent
+		// project updates from making propagation decisions from stale state.
+		var existingProject pModel.Project
+		query := tx.WithContext(ctx)
+		if tx.Dialector.Name() == "postgres" {
+			query = query.Clauses(clause.Locking{Strength: "UPDATE"})
+		}
+		if err := query.Where("id = ? AND circle_id = ?", project.ID, circleID).First(&existingProject).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return errors.New("project not found")
+			}
+			log.Error("Error finding project", "error", err)
 			return err
+		}
+
+		if existingProject.CreatedBy != userID {
+			if !existingProject.CanView(userID) {
+				return errors.New("project not found")
+			}
+			return errors.New("user does not have permission to update this project")
+		}
+
+		destinationPrivacy := existingProject.IsPrivate
+		if isPrivate != nil {
+			destinationPrivacy = *isPrivate
+		}
+		updates := map[string]interface{}{
+			"name":        project.Name,
+			"description": project.Description,
+			"color":       project.Color,
+			"icon":        project.Icon,
+			"is_private":  destinationPrivacy,
+		}
+
+		if err := tx.WithContext(ctx).Model(&pModel.Project{}).Where("id = ? AND circle_id = ?", project.ID, circleID).Updates(updates).Error; err != nil {
+			log.Error("Error updating project", "error", err)
+			return err
+		}
+
+		if existingProject.IsPrivate != destinationPrivacy {
+			if err := r.choreRepo.SetProjectChoresPrivacy(ctx, tx, circleID, project.ID, existingProject.CreatedBy, destinationPrivacy); err != nil {
+				log.Error("Error propagating project privacy to chores", "error", err, "projectID", project.ID)
+				return err
+			}
+			return nil
 		}
 
 		// Clients render the project (name/color/icon) alongside its chores, so the
@@ -128,51 +160,48 @@ func (r *ProjectRepository) UpdateProject(ctx context.Context, project *pModel.P
 func (r *ProjectRepository) DeleteProject(ctx context.Context, projectID int, userID int, circleID int) error {
 	log := logging.FromContext(ctx)
 
-	// Check if it's the default project
-	var project pModel.Project
-	if err := r.db.WithContext(ctx).Where("id = ? AND circle_id = ?", projectID, circleID).First(&project).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return errors.New("project not found")
-		}
-		return err
-	}
-
-	if project.IsDefault {
-		return errors.New("cannot delete default project")
-	}
-
-	// Check if user has permission to delete this project
-	if project.CreatedBy != userID {
-		return errors.New("user does not have permission to delete this project")
-	}
-
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		// Capture the affected chores before project_id is cleared.
+		// Serialize deletion with project privacy changes and chore creation/moves.
+		var project pModel.Project
+		query := tx.WithContext(ctx)
+		if tx.Dialector.Name() == "postgres" {
+			query = query.Clauses(clause.Locking{Strength: "UPDATE"})
+		}
+		if err := query.Where("id = ? AND circle_id = ?", projectID, circleID).First(&project).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return errors.New("project not found")
+			}
+			return err
+		}
+		if project.IsDefault {
+			return errors.New("cannot delete default project")
+		}
+		if project.CreatedBy != userID {
+			if !project.CanView(userID) {
+				return errors.New("project not found")
+			}
+			return errors.New("user does not have permission to delete this project")
+		}
+
 		choreIDs, err := r.choreIDsInProject(ctx, tx, projectID, circleID)
 		if err != nil {
 			log.Error("Error getting chores for project", "error", err)
 			return err
 		}
-
-		// First, update all chores in this project to have no project (project_id = NULL)
-		if err := tx.Exec("UPDATE chores SET project_id = NULL WHERE project_id = ?", projectID).Error; err != nil {
+		if err := tx.WithContext(ctx).Model(&chModel.Chore{}).
+			Where("project_id = ? AND circle_id = ?", projectID, circleID).
+			Update("project_id", nil).Error; err != nil {
 			log.Error("Error updating chores when deleting project", "error", err)
 			return err
 		}
-
-		// Without a version bump the chores look unchanged to delta sync, so clients keep
-		// pointing them at a project that no longer exists and the chores disappear.
 		if err := r.bumpChoreSyncVersions(ctx, tx, circleID, choreIDs); err != nil {
 			log.Error("Error bumping chore sync versions when deleting project", "error", err)
 			return err
 		}
-
-		// Then delete the project
 		if err := tx.Where("id = ? AND circle_id = ?", projectID, circleID).Delete(&pModel.Project{}).Error; err != nil {
 			log.Error("Error deleting project", "error", err)
 			return err
 		}
-
 		return nil
 	})
 }

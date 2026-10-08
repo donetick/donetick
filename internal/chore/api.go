@@ -21,6 +21,7 @@ import (
 
 	chModel "donetick.com/core/internal/chore/model"
 	cRepo "donetick.com/core/internal/circle/repo"
+	pjRepo "donetick.com/core/internal/project/repo"
 	stRepo "donetick.com/core/internal/subtask/repo"
 	uRepo "donetick.com/core/internal/user/repo"
 )
@@ -33,9 +34,10 @@ type API struct {
 	nRepo         *nRepo.NotificationRepository
 	eventProducer *events.EventsProducer
 	stRepo        *stRepo.SubTasksRepository
+	pjRepo        *pjRepo.ProjectRepository
 }
 
-func NewAPI(cr *chRepo.ChoreRepository, userRepo *uRepo.UserRepository, circleRepo *cRepo.CircleRepository, nPlanner *nps.NotificationPlanner, nr *nRepo.NotificationRepository, eventProducer *events.EventsProducer, stRepo *stRepo.SubTasksRepository) *API {
+func NewAPI(cr *chRepo.ChoreRepository, userRepo *uRepo.UserRepository, circleRepo *cRepo.CircleRepository, nPlanner *nps.NotificationPlanner, nr *nRepo.NotificationRepository, eventProducer *events.EventsProducer, stRepo *stRepo.SubTasksRepository, pjRepo *pjRepo.ProjectRepository) *API {
 	return &API{
 		choreRepo:     cr,
 		userRepo:      userRepo,
@@ -44,6 +46,7 @@ func NewAPI(cr *chRepo.ChoreRepository, userRepo *uRepo.UserRepository, circleRe
 		nRepo:         nr,
 		eventProducer: eventProducer,
 		stRepo:        stRepo,
+		pjRepo:        pjRepo,
 	}
 }
 
@@ -127,6 +130,14 @@ func (h *API) CreateChore(c *gin.Context) {
 		}
 	}
 
+	if choreRequest.ProjectID != nil {
+		// check if the specified project exists
+		if proj, _ := h.pjRepo.GetProjectByID(c, *choreRequest.ProjectID, user.CircleID); proj == nil {
+			c.JSON(400, gin.H{"error": "Specified project not found"})
+			return
+		}
+	}
+
 	chore := &chModel.Chore{
 		CreatedBy:     createdBy,
 		CircleID:      user.CircleID,
@@ -140,6 +151,7 @@ func (h *API) CreateChore(c *gin.Context) {
 		Description:    choreRequest.Description,
 		NextDueDate:    nextDueDate,
 		CreatedAt:      time.Now().UTC(),
+		ProjectID:      choreRequest.ProjectID,
 	}
 
 	id, err := h.choreRepo.CreateChore(c, chore)
@@ -195,11 +207,11 @@ func (h *API) UpdateChore(c *gin.Context) {
 		c.JSON(500, gin.H{"error": "Failed to get circle members"})
 		return
 	}
-	// Check if user owns this chore
-	now := time.Now().UTC()
-	if err := existingChore.CanEdit(user.ID, circleUsers, &now); err != nil {
-		log.Debugw("chore.api.UpdateChore user does not own chore", "userID", user.ID, "choreCreatedBy", existingChore.CreatedBy)
-		c.JSON(403, gin.H{"error": "You can only update your own chores"})
+	// Match external API delete permissions. Partial updates do not supply a
+	// client updatedAt value, so the web editor's stale-data check does not apply.
+	if existingChore.CreatedBy != user.ID && !user.IsAdminOrManager(circleUsers) {
+		log.Debugw("chore.api.UpdateChore edit denied", "userID", user.ID, "circleID", user.CircleID, "choreCreatedBy", existingChore.CreatedBy)
+		c.JSON(403, gin.H{"error": "Only the chore creator or a circle admin/manager can update this chore"})
 		return
 	}
 
@@ -243,6 +255,9 @@ func (h *API) UpdateChore(c *gin.Context) {
 		"next_due_date": nextDueDate,
 		"updated_by":    user.ID,
 		"updated_at":    time.Now().UTC(),
+	}
+	if choreRequest.ForceUnarchive {
+		updates["is_active"] = true
 	}
 
 	err = h.choreRepo.UpdateChoreFields(c, choreID, updates)
@@ -418,8 +433,15 @@ func (h *API) DeleteChore(c *gin.Context) {
 		return
 	}
 	if chore.CreatedBy != currentUser.ID {
-		c.JSON(403, gin.H{"error": "You can only delete your own chores"})
-		return
+		circleUsers, err := h.circleRepo.GetCircleUsers(c, currentUser.CircleID)
+		if err != nil {
+			c.JSON(500, gin.H{"error": "Failed to get circle members"})
+			return
+		}
+		if !currentUser.IsAdminOrManager(circleUsers) {
+			c.JSON(403, gin.H{"error": "Only the chore creator or a circle admin/manager can delete this chore"})
+			return
+		}
 	}
 	if _, err := h.choreRepo.DeleteChore(c, choreID); err != nil {
 		c.JSON(500, gin.H{"error": "Failed to delete chore"})

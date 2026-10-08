@@ -48,7 +48,7 @@ func scheduleNextDueDate(ctx context.Context, chore *chModel.Chore, completedDat
 			if chore.NextDueDate != nil {
 				t = *chore.NextDueDate
 			} else {
-				t = time.Now()
+				t = time.Now().UTC()
 			}
 
 		}

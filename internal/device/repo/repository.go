@@ -188,7 +188,7 @@ func (r *DeviceRepository) GetActiveDeviceCount(c context.Context, userID int) (
 // GetActiveDeviceByDeviceID returns the active device token row for a
 // user/deviceId pair, or nil if none exists. Used before unregistering
 // locally so the caller can still deactivate the corresponding Bridge
-// device afterward (plan §15).
+// device afterward.
 func (r *DeviceRepository) GetActiveDeviceByDeviceID(c context.Context, userID int, deviceID string) (*uModel.UserDeviceToken, error) {
 	var token uModel.UserDeviceToken
 	err := r.db.WithContext(c).
@@ -237,8 +237,7 @@ func (r *DeviceRepository) UpdateBridgeSyncStatus(c context.Context, id int, bri
 
 // GetDevicesPendingBridgeSync returns up to limit active devices that have
 // never been successfully registered with Bridge (bridge_device_id is
-// still empty). Used by the opportunistic retry job (plan §15 "a
-// content-free local retry job is acceptable").
+// still empty). Used by the opportunistic, content-free retry job.
 func (r *DeviceRepository) GetDevicesPendingBridgeSync(c context.Context, limit int) ([]*uModel.UserDeviceToken, error) {
 	var tokens []*uModel.UserDeviceToken
 	err := r.db.WithContext(c).

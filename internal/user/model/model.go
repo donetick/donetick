@@ -78,8 +78,7 @@ type UserDeviceToken struct {
 	LastActiveAt time.Time `json:"lastActiveAt,omitempty" gorm:"column:last_active_at"`                            // Last active timestamp
 	CreatedAt    time.Time `json:"createdAt" gorm:"column:created_at"`                                             // Created timestamp
 
-	// Donetick Bridge sync state (see ../../bridge and
-	// ../../../../donetick-bridge/IMPLEMENTATION_PLAN.md §15). Nil/empty
+	// Donetick Bridge sync state (see ../../bridge). Nil/empty
 	// when Bridge is disabled or this device has never been registered
 	// with it. BridgeDeviceID is Bridge's opaque per-device UUID -- never
 	// a raw FCM token or fingerprint.

@@ -1,7 +1,6 @@
 // Package bridgenotifier sends Core's FCM notifications through Donetick
 // Bridge instead of Core's own direct Firebase Admin SDK config, for
-// self-hosted instances connected to Bridge (plan §15 "Notifier
-// interface"). It implements the same shape as
+// self-hosted instances connected to Bridge. It implements the same shape as
 // internal/notifier/service/fcm.FCMNotifier.SendNotification so
 // internal/notifier.Notifier can select between the two by config.
 package bridgenotifier
@@ -93,7 +92,7 @@ func (b *BridgeNotifier) SendNotification(ctx context.Context, notification *nMo
 	// idempotencyKey is derived deterministically from the notification's
 	// stable identity (DB ID + scheduled time), not a fresh random value,
 	// so a scheduler retry of the same logical send reuses it and does not
-	// consume additional Bridge quota (plan §15).
+	// consume additional Bridge quota.
 	idempotencyKey := bridge.IdempotencyKey("core_notification", strconv.Itoa(notification.ID), notification.ScheduledFor.UTC().Format(time.RFC3339))
 
 	res, err := client.SendNotification(ctx, idempotencyKey,
@@ -109,9 +108,7 @@ func (b *BridgeNotifier) SendNotification(ctx context.Context, notification *nMo
 	for _, r := range res.Results {
 		if r.Status == bridge.StatusInvalidToken {
 			// Bridge confirmed the token is permanently unregistered:
-			// deactivate the local copy too (plan §15 "Deactivate local
-			// invalid tokens when Bridge reports a permanent
-			// invalid-token result").
+			// deactivate the local copy too.
 			if err := b.deviceRepo.UnregisterDeviceTokenByToken(ctx, notification.UserID, notification.TargetID); err != nil {
 				log.Error("Failed to deactivate locally invalid device token", "error", err)
 			}

@@ -78,8 +78,7 @@ func errorCodeToErr(code string, status int) error {
 
 // ErrorCategory classifies an error returned by a Client method into a
 // small, loggable/displayable category -- safe to persist as
-// devices.bridge_sync_status or surface in Core's own settings API,
-// matching plan §15 "Optional bridge_sync_status/last error category".
+// devices.bridge_sync_status or surface in Core's own settings API.
 type ErrorCategory string
 
 const (

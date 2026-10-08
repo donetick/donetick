@@ -917,7 +917,6 @@ func (h *Handler) EditChore(c *gin.Context) {
 		}
 	}
 
-
 	if dueDatesDiffer(oldChore.NextDueDate, updatedChore.NextDueDate) {
 		historyEntry := &chModel.ChoreHistory{
 			ChoreID:     oldChore.ID,
@@ -4249,8 +4248,8 @@ func (h *Handler) sendNudgeToUser(c context.Context, userID int, chore *chModel.
 	title := "Gentle Nudge"
 
 	// Send notification to all devices, via Bridge when connected/enabled
-	// (plan §15 -- multicast nudge notifications must go through the same
-	// selection as internal/notifier.Notifier's FCM case), otherwise via
+	// -- multicast nudge notifications go through the same selection as
+	// internal/notifier.Notifier's FCM case -- otherwise via
 	// Core's own direct Firebase config.
 	var sent int
 	if h.notifier.Bridge != nil && h.notifier.Bridge.Enabled() {
@@ -4311,8 +4310,8 @@ func (h *Handler) sendNudgeToDevicesViaFCM(c context.Context, deviceTokens []*uM
 }
 
 // sendNudgeToDevicesViaBridge sends the same nudge content through Bridge's
-// multi-target send API in one call (plan §8 "targets" array, 1-20 per
-// request). Devices that were never successfully registered with Bridge
+// multi-target send API in one call (1-20 targets per request).
+// Devices that were never successfully registered with Bridge
 // (BridgeDeviceID nil -- e.g. still pending retry) are skipped rather than
 // failing the whole nudge.
 func (h *Handler) sendNudgeToDevicesViaBridge(c context.Context, deviceTokens []*uModel.UserDeviceToken, title, message string, chore *chModel.Chore, fromUser *uModel.UserDetails) (int, error) {

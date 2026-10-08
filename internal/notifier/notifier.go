@@ -66,7 +66,7 @@ func (n *Notifier) SendNotification(c context.Context, notification *nModel.Noti
 		err = n.discord.SendNotification(c, notification)
 	case nModel.NotificationPlatformFCM:
 		// Prefer Bridge when it is connected and enabled (self-hosted
-		// instance relaying through Donetick Bridge, plan §15); otherwise
+		// instance relaying through Donetick Bridge); otherwise
 		// fall back to Core's own direct Firebase config, preserving
 		// existing behavior for Donetick Cloud / self-managed-FCM
 		// installs.

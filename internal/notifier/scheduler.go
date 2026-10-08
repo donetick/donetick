@@ -58,8 +58,8 @@ func (s *Scheduler) Start(c context.Context) {
 // retryPendingBridgeDeviceSyncJob opportunistically retries Bridge device
 // registration for local devices that were saved locally but never
 // successfully synced to Bridge (e.g. Bridge was temporarily unreachable
-// at registration time, plan §15 "retry registration later without
-// blocking normal login"). Content-free: only re-sends the device's own
+// at registration time), so registration is retried later without
+// blocking normal login. Content-free: only re-sends the device's own
 // FCM token/platform/app version, never notification content, and never
 // logs the token. A no-op (nothing queried) when Bridge is disabled.
 func (s *Scheduler) retryPendingBridgeDeviceSyncJob(c context.Context) (time.Duration, error) {

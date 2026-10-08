@@ -191,8 +191,7 @@ type FCMConfig struct {
 }
 
 // BridgeConfig configures Donetick Bridge, the hosted push-notification
-// relay for self-hosted installations (see ../donetick-bridge/
-// IMPLEMENTATION_PLAN.md §15). When Enabled is true, device registration
+// relay for self-hosted installations. When Enabled is true, device registration
 // and notification delivery go through Bridge instead of Core's own direct
 // FCM config above. InstanceToken is a secret -- supply it via the
 // BRIDGE_INSTANCE_TOKEN environment variable (viper.AutomaticEnv plus the

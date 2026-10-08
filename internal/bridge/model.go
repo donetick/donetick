@@ -1,8 +1,7 @@
-// Package bridge is a client for the Donetick Bridge push-notification relay
-// (see ../../../donetick-bridge/IMPLEMENTATION_PLAN.md). It never logs the
-// instance token, raw FCM tokens, or notification content -- only status
-// codes, sanitized error categories, and non-sensitive identifiers (see
-// plan §5/§17, mirrored here for Core's own logging conventions).
+// Package bridge is a client for the Donetick Bridge push-notification
+// relay. It never logs the instance token, raw FCM tokens, or notification
+// content -- only status codes, sanitized error categories, and
+// non-sensitive identifiers.
 package bridge
 
 import "time"

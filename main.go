@@ -102,7 +102,7 @@ func main() {
 		fx.Provide(dRepo.NewDeviceRepository),
 		fx.Provide(device.NewHandler),
 
-		// Donetick Bridge (hosted push-notification relay, plan §15):
+		// Donetick Bridge (hosted push-notification relay):
 		fx.Provide(func(cfg *config.Config) bridge.CoreConfig {
 			return bridge.CoreConfig{
 				Enabled:        cfg.Bridge.Enabled,

@@ -7,12 +7,10 @@ import (
 )
 
 // Service owns the live Bridge Client and lets an administrator
-// connect/rotate/disconnect Bridge at runtime (plan §15 "Connect,
-// disconnect, and rotate flow"), persisting the result via
+// connect/rotate/disconnect Bridge at runtime, persisting the result via
 // SettingsRepository so it survives restarts. Falls back to the
 // config-file/env bridge.* section (fallback Config) when no settings row
-// exists yet, matching plan §15's config shape being the documented
-// initial-setup path.
+// exists yet, which is the documented initial-setup path.
 type Service struct {
 	mu       sync.RWMutex
 	client   *Client
@@ -23,7 +21,7 @@ type Service struct {
 // NewService builds a Service, preferring a persisted Settings row over
 // the static fallback config if one exists. DB errors reading settings at
 // startup are treated as "use fallback config" rather than failing boot --
-// Bridge connectivity is never allowed to block Core startup (plan §15).
+// Bridge connectivity is never allowed to block Core startup.
 func NewService(fallback CoreConfig, repo *SettingsRepository) *Service {
 	s := &Service{fallback: fallback, repo: repo}
 	s.client = NewClientFromCoreConfig(fallback)
@@ -50,12 +48,11 @@ func (s *Service) Client() *Client {
 	return s.client
 }
 
-// ConnectInput is the admin-supplied connection request (plan §16 "Account
-// signup/login/connect form"). baseURL/instanceID/instanceToken are
-// obtained by the administrator from Bridge's own owner UI/API (create or
-// select an instance, copy its one-time-shown instanceToken) -- Core does
-// not itself proxy Bridge account signup/login in this phase; see work-log
-// gap notes.
+// ConnectInput is the admin-supplied connection request.
+// baseURL/instanceID/instanceToken are obtained by the administrator from
+// Bridge's own owner UI/API (create or select an instance, copy its
+// one-time-shown instanceToken) -- Core does not itself proxy Bridge
+// account signup/login.
 type ConnectInput struct {
 	BaseURL       string
 	InstanceID    string

@@ -13,9 +13,9 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// Handler exposes Core's own Bridge settings/status API (plan §15
-// "Settings/status endpoints"), the surface Core's frontend calls instead
-// of talking to Bridge directly. Every response here is built from
+// Handler exposes Core's own Bridge settings/status API, the surface
+// Core's frontend calls instead of talking to Bridge directly.
+// Every response here is built from
 // InstanceStatus/sanitized errors only -- the stored instance token is
 // never serialized by any handler in this file.
 type Handler struct {
@@ -28,8 +28,8 @@ func NewHandler(svc *Service, cr *cRepo.CircleRepository) *Handler {
 }
 
 // requireCircleAdmin gates Bridge configuration behind the requesting
-// user's circle-admin role (plan §16 "Only a Donetick administrator may
-// configure Bridge") -- Core has no separate instance-operator role today,
+// user's circle-admin role -- only an administrator may configure Bridge,
+// and Core has no separate instance-operator role today,
 // so the circle admin/owner role is the closest existing concept, matching
 // the gating pattern already used by internal/chore/handler.go for other
 // circle-admin-only actions.

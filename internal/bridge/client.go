@@ -65,7 +65,7 @@ type apiErrorEnvelope struct {
 // a successful response into out (if non-nil). It classifies failures into
 // the sentinel errors in errors.go. It never logs the request/response
 // body -- the body may contain notification content or a fresh instance
-// token, both of which are privacy-sensitive per Bridge's own plan §5.
+// token, both of which are privacy-sensitive.
 func (c *Client) doJSON(ctx context.Context, method, path string, body any, idempotencyKey string, out any) error {
 	if !c.Enabled() {
 		return ErrDisabled
@@ -151,8 +151,7 @@ type registerDeviceResponse struct {
 	Active         bool   `json:"active"`
 }
 
-// RegisterDevice implements POST /v1/devices (see plan §8, verified
-// against donetick-bridge/internal/httpapi/handlers_device.go).
+// RegisterDevice implements POST /v1/devices.
 func (c *Client) RegisterDevice(ctx context.Context, in RegisterDeviceInput) (*RegisterDeviceResult, error) {
 	var resp registerDeviceResponse
 	err := c.doJSON(ctx, http.MethodPost, "/v1/devices", registerDeviceRequest{
@@ -230,7 +229,7 @@ type sendNotificationResponse struct {
 }
 
 // SendNotification implements POST /v1/notifications/send. idempotencyKey
-// must be stable across retries of the *same* logical send (see plan §9 /
+// must be stable across retries of the *same* logical send (see
 // notifier.go's scheduler-retry requirement) -- callers must not generate a
 // fresh random key per retry attempt, or each retry consumes additional
 // Bridge quota.
@@ -320,8 +319,7 @@ func (c *Client) InstanceStatus(ctx context.Context) (*InstanceStatus, error) {
 
 // IdempotencyKey deterministically derives a Bridge idempotency key for one
 // logical notification send, so scheduler retries of the same logical send
-// reuse the same key (plan §15: "Any scheduler retry must reuse the same
-// idempotency key to avoid another quota charge"). Inputs should uniquely
+// reuse the same key and avoid another quota charge. Inputs should uniquely
 // identify the logical send: e.g. a chore ID/notification-target ID plus
 // the scheduled time. A monotonically-increasing attemptEpoch may be
 // included by callers that intentionally want a *new* logical send (e.g. a

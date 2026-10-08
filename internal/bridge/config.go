@@ -16,7 +16,7 @@ type CoreConfig struct {
 }
 
 // NewClientFromCoreConfig builds a Client from Core's bridge.* config
-// section (plan §15). Whether the resulting client is actually usable is
+// section. Whether the resulting client is actually usable is
 // governed by Client.Enabled(), not by whether this constructor was called
 // -- an fx-style always-provide-the-type pattern keeps wiring simple even
 // when Bridge is off.

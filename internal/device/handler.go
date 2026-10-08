@@ -41,8 +41,8 @@ func NewHandler(dr *dRepo.DeviceRepository, bs *bridge.Service) *Handler {
 	}
 }
 
-// syncDeviceWithBridge registers or updates deviceToken with Bridge (plan
-// §15 "Registration flow") after it has already been saved locally. It
+// syncDeviceWithBridge registers or updates deviceToken with Bridge after
+// it has already been saved locally. It
 // never blocks the caller's HTTP response on Bridge -- failures only
 // update deviceToken.BridgeSyncStatus (a sanitized category, see
 // user/model.UserDeviceToken) and are retried later by
@@ -122,9 +122,9 @@ func (h *Handler) RegisterDeviceToken(c *gin.Context) {
 
 	// Register with Bridge synchronously but non-blockingly: any failure
 	// here (including Bridge being temporarily unreachable) only affects
-	// deviceToken.BridgeSyncStatus, never this response, per plan §15
-	// "If Bridge is temporarily unavailable ... retry registration later
-	// without blocking normal login." The bounded client timeout
+	// deviceToken.BridgeSyncStatus, never this response. If Bridge is
+	// temporarily unavailable, registration is retried later without
+	// blocking normal login. The bounded client timeout
 	// (config bridge.timeout_seconds) keeps this call from hanging the
 	// request indefinitely.
 	h.syncDeviceWithBridge(c, deviceToken)
@@ -159,9 +159,9 @@ func (h *Handler) UnregisterDeviceToken(c *gin.Context) {
 	}
 
 	// Look up the row before deleting/deactivating it locally so we still
-	// have bridgeDeviceId to deactivate on Bridge afterward (plan §15 "On
-	// logout/unregister, deactivate both local and Bridge device
-	// records").
+	// have bridgeDeviceId to deactivate on Bridge afterward: on
+	// logout/unregister both the local and the Bridge device record are
+	// deactivated.
 	var existing *uModel.UserDeviceToken
 	if req.DeviceID != "" {
 		existing, _ = h.deviceRepo.GetActiveDeviceByDeviceID(c, currentUser.ID, req.DeviceID)

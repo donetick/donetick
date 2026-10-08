@@ -45,6 +45,7 @@ type Config struct {
 	MinVersion             string              `mapstructure:"min_version" yaml:"min_version"`
 	DonetickCloudConfig    DonetickCloudConfig `mapstructure:"donetick_cloud" yaml:"donetick_cloud"`
 	FCM                    FCMConfig           `mapstructure:"fcm" yaml:"fcm"`
+	Bridge                 BridgeConfig        `mapstructure:"bridge" yaml:"bridge"`
 	FeatureLimits          FeatureLimitsConfig `mapstructure:"feature_limits" yaml:"feature_limits"`
 	Storage                StorageConfig       `mapstructure:"storage" yaml:"storage"`
 	SingleCircleInstance   bool                `mapstructure:"single_circle_instance" yaml:"single_circle_instance"`
@@ -190,6 +191,24 @@ type FCMConfig struct {
 	CredentialsPath string `json:"credentials_path" mapstructure:"credentials_path"`
 	ProjectID       string `json:"project_id" mapstructure:"project_id"`
 }
+
+// BridgeConfig configures Donetick Bridge, the hosted push-notification
+// relay for self-hosted installations. When Enabled is true, device registration
+// and notification delivery go through Bridge instead of Core's own direct
+// FCM config above. InstanceToken is a secret -- supply it via the
+// BRIDGE_INSTANCE_TOKEN environment variable (viper.AutomaticEnv plus the
+// "." -> "_" key replacer already configured in LoadConfig map this
+// automatically from "bridge.instance_token") rather than committing it to
+// a YAML file. It must never be logged or returned by any Core API after
+// initial setup.
+type BridgeConfig struct {
+	Enabled        bool   `json:"enabled" mapstructure:"enabled" yaml:"enabled"`
+	BaseURL        string `json:"base_url" mapstructure:"base_url" yaml:"base_url"`
+	InstanceID     string `json:"instance_id" mapstructure:"instance_id" yaml:"instance_id"`
+	InstanceToken  string `json:"-" mapstructure:"instance_token" yaml:"instance_token"`
+	TimeoutSeconds int    `json:"timeout_seconds" mapstructure:"timeout_seconds" yaml:"timeout_seconds" default:"15"`
+}
+
 type EmailConfig struct {
 	Email string `mapstructure:"email"`
 	User  string `mapstructure:"user"`

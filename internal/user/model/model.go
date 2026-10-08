@@ -77,6 +77,19 @@ type UserDeviceToken struct {
 	IsActive     bool      `json:"isActive" gorm:"column:is_active;default:true;not null;index:idx_user_active"`   // Active status
 	LastActiveAt time.Time `json:"lastActiveAt,omitempty" gorm:"column:last_active_at"`                            // Last active timestamp
 	CreatedAt    time.Time `json:"createdAt" gorm:"column:created_at"`                                             // Created timestamp
+
+	// Donetick Bridge sync state (see ../../bridge). Nil/empty
+	// when Bridge is disabled or this device has never been registered
+	// with it. BridgeDeviceID is Bridge's opaque per-device UUID -- never
+	// a raw FCM token or fingerprint.
+	BridgeDeviceID     *string    `json:"-" gorm:"column:bridge_device_id;type:varchar(64)"`
+	BridgeRegisteredAt *time.Time `json:"-" gorm:"column:bridge_registered_at"`
+	// BridgeSyncStatus is a small sanitized category, not a message: one
+	// of "" (never attempted), "synced", "disabled", "unavailable",
+	// "unauthorized", "device_limit_reached", "validation_error",
+	// "rate_limited", "conflict", "not_found", "unknown". See
+	// internal/bridge.ErrorCategory -- keep these two enums in sync.
+	BridgeSyncStatus string `json:"-" gorm:"column:bridge_sync_status;type:varchar(32)"`
 }
 type AuthProviderType int
 

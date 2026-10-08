@@ -14,6 +14,7 @@ import (
 	"time"
 
 	auth "donetick.com/core/internal/auth"
+	"donetick.com/core/internal/bridge"
 	chModel "donetick.com/core/internal/chore/model"
 	chRepo "donetick.com/core/internal/chore/repo"
 	circle "donetick.com/core/internal/circle/model"
@@ -53,6 +54,7 @@ type Handler struct {
 	lRepo           *lRepo.LabelRepository
 	uRepo           *uRepo.UserRepository
 	deviceRepo      *dRepo.DeviceRepository
+	bridgeSvc       *bridge.Service
 	eventProducer   *events.EventsProducer
 	stRepo          *stRepo.SubTasksRepository
 	storageRepo     *storageRepo.StorageRepository
@@ -68,6 +70,7 @@ func NewHandler(cr *chRepo.ChoreRepository, circleRepo *cRepo.CircleRepository, 
 	stor storage.Storage,
 	ur *uRepo.UserRepository,
 	dr *dRepo.DeviceRepository,
+	bs *bridge.Service,
 	stoRepo *storageRepo.StorageRepository,
 	signer storage.URLSigner,
 	rts *realtime.RealTimeService,
@@ -77,6 +80,7 @@ func NewHandler(cr *chRepo.ChoreRepository, circleRepo *cRepo.CircleRepository, 
 		pjRepo:          projectRepo,
 		uRepo:           ur,
 		deviceRepo:      dr,
+		bridgeSvc:       bs,
 		circleRepo:      circleRepo,
 		notifier:        nt,
 		nPlanner:        np,
@@ -4299,6 +4303,16 @@ func (h *Handler) SendNudgeNotification(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
+// bridgeClient returns the currently active Bridge client, or nil if the
+// Bridge service was never wired (should not happen in normal fx startup,
+// but guards against nil in tests that construct Handler directly).
+func (h *Handler) bridgeClient() *bridge.Client {
+	if h.bridgeSvc == nil {
+		return nil
+	}
+	return h.bridgeSvc.Client()
+}
+
 func (h *Handler) sendNudgeToUser(c context.Context, userID int, chore *chModel.Chore, fromUser *uModel.UserDetails, customMessage string) (int, error) {
 	// Get all active device tokens for the target user
 	deviceTokens, err := h.deviceRepo.GetActiveDeviceTokens(c, userID)
@@ -4310,16 +4324,8 @@ func (h *Handler) sendNudgeToUser(c context.Context, userID int, chore *chModel.
 		return 0, nil // No devices, but not an error
 	}
 
-	// Extract FCM tokens
-	fcmTokens := make([]string, 0, len(deviceTokens))
-	for _, deviceToken := range deviceTokens {
-		if deviceToken.Token != "" {
-			fcmTokens = append(fcmTokens, deviceToken.Token)
-		}
-	}
-
-	if len(fcmTokens) == 0 {
-		return 0, nil // No valid FCM tokens, but not an error
+	if len(deviceTokens) == 0 {
+		return 0, nil // No devices with tokens, but not an error
 	}
 
 	// Prepare notification content
@@ -4330,17 +4336,34 @@ func (h *Handler) sendNudgeToUser(c context.Context, userID int, chore *chModel.
 
 	title := "Gentle Nudge"
 
-	// Send FCM notification to all devices
-	err = h.sendNudgeToDevices(c, fcmTokens, title, message, chore, fromUser)
+	// Send notification to all devices, via Bridge when connected/enabled
+	// -- multicast nudge notifications go through the same selection as
+	// internal/notifier.Notifier's FCM case -- otherwise via
+	// Core's own direct Firebase config.
+	var sent int
+	if h.notifier.Bridge != nil && h.notifier.Bridge.Enabled() {
+		sent, err = h.sendNudgeToDevicesViaBridge(c, deviceTokens, title, message, chore, fromUser)
+	} else {
+		sent, err = h.sendNudgeToDevicesViaFCM(c, deviceTokens, title, message, chore, fromUser)
+	}
 	if err != nil {
-		return 0, fmt.Errorf("failed to send FCM notifications: %w", err)
+		return 0, fmt.Errorf("failed to send nudge notifications: %w", err)
 	}
 
-	return len(fcmTokens), nil
+	return sent, nil
 }
 
-func (h *Handler) sendNudgeToDevices(c context.Context, fcmTokens []string, title, message string, chore *chModel.Chore, fromUser *uModel.UserDetails) error {
-	// Create FCM payload
+func (h *Handler) sendNudgeToDevicesViaFCM(c context.Context, deviceTokens []*uModel.UserDeviceToken, title, message string, chore *chModel.Chore, fromUser *uModel.UserDetails) (int, error) {
+	fcmTokens := make([]string, 0, len(deviceTokens))
+	for _, deviceToken := range deviceTokens {
+		if deviceToken.Token != "" {
+			fcmTokens = append(fcmTokens, deviceToken.Token)
+		}
+	}
+	if len(fcmTokens) == 0 {
+		return 0, nil
+	}
+
 	payload := fcmService.FCMNotificationPayload{
 		Title: title,
 		Body:  message,
@@ -4353,18 +4376,15 @@ func (h *Handler) sendNudgeToDevices(c context.Context, fcmTokens []string, titl
 		},
 	}
 
-	// Get FCM notifier from the main notifier
 	if h.notifier.FCM == nil {
-		return fmt.Errorf("FCM notifier not available")
+		return 0, fmt.Errorf("FCM notifier not available")
 	}
 
-	// Send multicast notification
 	response, err := h.notifier.FCM.SendMulticast(c, fcmTokens, payload)
 	if err != nil {
-		return fmt.Errorf("failed to send multicast notification: %w", err)
+		return 0, fmt.Errorf("failed to send multicast notification: %w", err)
 	}
 
-	// Log any failures
 	if response.FailureCount > 0 {
 		for i, result := range response.Responses {
 			if !result.Success {
@@ -4375,7 +4395,69 @@ func (h *Handler) sendNudgeToDevices(c context.Context, fcmTokens []string, titl
 		}
 	}
 
-	return nil
+	return response.SuccessCount, nil
+}
+
+// sendNudgeToDevicesViaBridge sends the same nudge content through Bridge's
+// multi-target send API in one call (1-20 targets per request).
+// Devices that were never successfully registered with Bridge
+// (BridgeDeviceID nil -- e.g. still pending retry) are skipped rather than
+// failing the whole nudge.
+func (h *Handler) sendNudgeToDevicesViaBridge(c context.Context, deviceTokens []*uModel.UserDeviceToken, title, message string, chore *chModel.Chore, fromUser *uModel.UserDetails) (int, error) {
+	targets := make([]bridge.DeviceTarget, 0, len(deviceTokens))
+	byToken := make(map[string]*uModel.UserDeviceToken, len(deviceTokens))
+	for _, dt := range deviceTokens {
+		if dt.Token == "" || dt.BridgeDeviceID == nil || *dt.BridgeDeviceID == "" {
+			continue
+		}
+		targets = append(targets, bridge.DeviceTarget{BridgeDeviceID: *dt.BridgeDeviceID, Token: dt.Token})
+		byToken[dt.Token] = dt
+	}
+	if len(targets) == 0 {
+		return 0, nil
+	}
+	// Bridge enforces 1-20 targets per request; nudges are a small,
+	// interactively-triggered fan-out so this cap is generous in practice.
+	if len(targets) > 20 {
+		targets = targets[:20]
+	}
+
+	badge := 1
+	data := map[string]string{
+		"type":         "nudge",
+		"chore_id":     fmt.Sprintf("%d", chore.ID),
+		"chore_name":   chore.Name,
+		"from_user_id": fmt.Sprintf("%d", fromUser.ID),
+		"from_user":    fromUser.DisplayName,
+	}
+	// Nudges are interactive, one-shot sends with no scheduler retry, so a
+	// per-call unique idempotency key (rather than a content-derived one)
+	// is appropriate here -- unlike internal/notifier/service/bridgenotifier,
+	// which must reuse the same key across scheduler retries of the same
+	// scheduled notification.
+	idempotencyKey := bridge.IdempotencyKey("nudge", fmt.Sprintf("%d", chore.ID), fmt.Sprintf("%d", fromUser.ID), fmt.Sprintf("%d", time.Now().UTC().UnixNano()))
+
+	bc := h.bridgeClient()
+	if bc == nil {
+		return 0, fmt.Errorf("bridge client not available")
+	}
+	res, err := bc.SendNotification(c, idempotencyKey, targets,
+		bridge.NotificationPayload{Title: title, Body: message, Data: data},
+		bridge.NotificationOptions{AndroidChannelID: "donetick_notifications", Sound: "default", Badge: &badge},
+	)
+	if err != nil {
+		return 0, fmt.Errorf("bridge send: %w", err)
+	}
+
+	sent := 0
+	for _, r := range res.Results {
+		if r.Status == "sent" {
+			sent++
+			continue
+		}
+		logging.FromContext(c).Warn("Failed to send nudge via bridge", "bridge_device_id", r.BridgeDeviceID, "status", r.Status)
+	}
+	return sent, nil
 }
 
 // UndoChore godoc

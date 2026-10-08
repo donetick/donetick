@@ -1,10 +1,12 @@
 package device
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 
 	auth "donetick.com/core/internal/auth"
+	"donetick.com/core/internal/bridge"
 	dRepo "donetick.com/core/internal/device/repo"
 	errorx "donetick.com/core/internal/error"
 	uModel "donetick.com/core/internal/user/model"
@@ -16,6 +18,7 @@ import (
 
 type Handler struct {
 	deviceRepo *dRepo.DeviceRepository
+	bridgeSvc  *bridge.Service
 }
 
 type RegisterDeviceTokenRequest struct {
@@ -31,9 +34,46 @@ type UnregisterDeviceTokenRequest struct {
 	Token    string `json:"token,omitempty"`
 }
 
-func NewHandler(dr *dRepo.DeviceRepository) *Handler {
+func NewHandler(dr *dRepo.DeviceRepository, bs *bridge.Service) *Handler {
 	return &Handler{
 		deviceRepo: dr,
+		bridgeSvc:  bs,
+	}
+}
+
+// syncDeviceWithBridge registers or updates deviceToken with Bridge after
+// it has already been saved locally. It
+// never blocks the caller's HTTP response on Bridge -- failures only
+// update deviceToken.BridgeSyncStatus (a sanitized category, see
+// user/model.UserDeviceToken) and are retried later by
+// RetryPendingBridgeSync. The raw FCM token only ever leaves this stack
+// frame as an argument to bridge.Client.RegisterDevice; it is not logged
+// here or by that client.
+func (h *Handler) syncDeviceWithBridge(c context.Context, deviceToken *uModel.UserDeviceToken) {
+	log := logging.FromContext(c)
+	client := h.bridgeSvc.Client()
+	if !client.Enabled() {
+		return
+	}
+
+	res, err := client.RegisterDevice(c, bridge.RegisterDeviceInput{
+		LocalDeviceID: deviceToken.DeviceID,
+		Token:         deviceToken.Token,
+		Platform:      deviceToken.Platform,
+		AppVersion:    deviceToken.AppVersion,
+		DeviceModel:   deviceToken.DeviceModel,
+	})
+	if err != nil {
+		category := bridge.Classify(err)
+		log.Warn("bridge_device_register_failed", "category", string(category), "device_id", deviceToken.DeviceID)
+		if updErr := h.deviceRepo.UpdateBridgeSyncStatus(c, deviceToken.ID, nil, string(category)); updErr != nil {
+			log.Error("Failed to record bridge sync status", "error", updErr)
+		}
+		return
+	}
+
+	if err := h.deviceRepo.UpdateBridgeSyncStatus(c, deviceToken.ID, &res.BridgeDeviceID, "synced"); err != nil {
+		log.Error("Failed to persist bridge device id", "error", err)
 	}
 }
 
@@ -79,6 +119,16 @@ func (h *Handler) RegisterDeviceToken(c *gin.Context) {
 	}
 
 	log.Debugw("Device token registered successfully", "user_id", currentUser.ID, "device_id", req.DeviceID)
+
+	// Register with Bridge synchronously but non-blockingly: any failure
+	// here (including Bridge being temporarily unreachable) only affects
+	// deviceToken.BridgeSyncStatus, never this response. If Bridge is
+	// temporarily unavailable, registration is retried later without
+	// blocking normal login. The bounded client timeout
+	// (config bridge.timeout_seconds) keeps this call from hanging the
+	// request indefinitely.
+	h.syncDeviceWithBridge(c, deviceToken)
+
 	c.JSON(http.StatusCreated, gin.H{
 		"message":   "Device token registered successfully",
 		"device_id": deviceToken.DeviceID,
@@ -108,6 +158,17 @@ func (h *Handler) UnregisterDeviceToken(c *gin.Context) {
 		return
 	}
 
+	// Look up the row before deleting/deactivating it locally so we still
+	// have bridgeDeviceId to deactivate on Bridge afterward: on
+	// logout/unregister both the local and the Bridge device record are
+	// deactivated.
+	var existing *uModel.UserDeviceToken
+	if req.DeviceID != "" {
+		existing, _ = h.deviceRepo.GetActiveDeviceByDeviceID(c, currentUser.ID, req.DeviceID)
+	} else {
+		existing, _ = h.deviceRepo.GetActiveDeviceByToken(c, currentUser.ID, req.Token)
+	}
+
 	var err error
 	if req.DeviceID != "" {
 		err = h.deviceRepo.UnregisterDeviceToken(c, currentUser.ID, req.DeviceID)
@@ -119,6 +180,20 @@ func (h *Handler) UnregisterDeviceToken(c *gin.Context) {
 		log.Error("Failed to unregister device token", "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to unregister device token"})
 		return
+	}
+
+	if existing != nil && existing.BridgeDeviceID != nil {
+		client := h.bridgeSvc.Client()
+		if client.Enabled() {
+			if err := client.DeactivateDevice(c, *existing.BridgeDeviceID); err != nil {
+				// Best-effort: local unregistration already succeeded and
+				// is authoritative; Bridge will still enforce its own
+				// active-device accounting independently, and this
+				// deactivation can be retried by an operator/cleanup job
+				// later. Never block the response on this.
+				log.Warn("bridge_device_deactivate_failed", "category", string(bridge.Classify(err)))
+			}
+		}
 	}
 
 	log.Info("Device token unregistered successfully", "user_id", currentUser.ID)

@@ -889,7 +889,7 @@ func (r *ChoreRepository) ApproveChore(c context.Context, chore *chModel.Chore, 
 			return err
 		}
 
-		return nil
+		return r.applyCompletionActions(c, tx, chore)
 	})
 	return err
 }
@@ -1014,7 +1014,7 @@ func (r *ChoreRepository) CompleteChore(c context.Context, chore *chModel.Chore,
 			}
 		}
 
-		return nil
+		return r.applyCompletionActions(c, tx, chore)
 	})
 	return err
 }

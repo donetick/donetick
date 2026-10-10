@@ -299,7 +299,22 @@ func (c *Chore) CanDelegate(userID int, circleUsers []*cModel.UserCircleDetail, 
 	return nil
 }
 
+// restrictingProject returns the chore's project when that project limits who can
+// see its chores (private or shared with selected members) and is loaded.
+func (c *Chore) restrictingProject() *pModel.Project {
+	if c.Project != nil && c.Project.IsPrivate && (c.ProjectID == nil || *c.ProjectID == c.Project.ID) {
+		return c.Project
+	}
+	return nil
+}
+
 func (c *Chore) CanView(userID int, circleUsers []*cModel.UserCircleDetail) bool {
+	// A restricted project is the outer boundary: its audience sees every chore in
+	// it and nobody else does, whatever the chore's own flag or assignees say.
+	// This matches privacyPredicate in the repository.
+	if project := c.restrictingProject(); project != nil {
+		return project.CanView(userID)
+	}
 	// if private then only creator and assignees can view:
 	if c.IsPrivate {
 		if c.CreatedBy == userID {
@@ -322,6 +337,16 @@ func (c *Chore) CanView(userID int, circleUsers []*cModel.UserCircleDetail) bool
 	return false
 }
 func (c *Chore) CanComplete(userID int, circleUsers []*cModel.UserCircleDetail) bool {
+	if project := c.restrictingProject(); project != nil {
+		if !project.CanView(userID) {
+			return false
+		}
+		// Unassigned chores in a shared project can be picked up by anyone who
+		// can see the project, like unassigned public chores within the circle.
+		if c.AssignStrategy == AssignmentStrategyNoAssignee && (c.AssignedTo == nil || *c.AssignedTo == 0) {
+			return true
+		}
+	}
 	// If using no assignee strategy, allow any circle member to complete
 	if c.AssignStrategy == AssignmentStrategyNoAssignee && (c.AssignedTo == nil || *c.AssignedTo == 0) {
 		if !c.IsPrivate {

@@ -1,6 +1,7 @@
 package chore
 
 import (
+	"errors"
 	"strconv"
 	"strings"
 	"time"
@@ -131,9 +132,15 @@ func (h *API) CreateChore(c *gin.Context) {
 	}
 
 	if choreRequest.ProjectID != nil {
-		// check if the specified project exists
-		if proj, _ := h.pjRepo.GetProjectByID(c, *choreRequest.ProjectID, user.CircleID); proj == nil {
+		// The project must exist and be visible to the API user; a project the user
+		// can't see is reported as missing so its existence does not leak.
+		proj, _ := h.pjRepo.GetProjectByID(c, *choreRequest.ProjectID, user.CircleID)
+		if proj == nil || !proj.CanView(user.ID) {
 			c.JSON(400, gin.H{"error": "Specified project not found"})
+			return
+		}
+		if proj.IsPrivate && !proj.CanView(createdBy) {
+			c.JSON(400, gin.H{"error": chRepo.ErrAssigneeOutsideProject.Error()})
 			return
 		}
 	}
@@ -147,16 +154,21 @@ func (h *API) CreateChore(c *gin.Context) {
 		// Frequency:                choreRequest.Frequency,
 		AssignStrategy: chModel.AssignmentStrategyRandom,
 		AssignedTo:     &createdBy,
-		Assignees:      []chModel.ChoreAssignees{{UserID: createdBy}},
 		Description:    choreRequest.Description,
 		NextDueDate:    nextDueDate,
 		CreatedAt:      time.Now().UTC(),
 		ProjectID:      choreRequest.ProjectID,
 	}
 
-	id, err := h.choreRepo.CreateChore(c, chore)
+	// Same path as the app: takes the project's lock, inherits its privacy and keeps
+	// the assignee inside a restricted project's audience.
+	id, err := h.choreRepo.CreateChoreWithAssignees(c, chore, []int{createdBy}, user.ID)
 	if err != nil {
 		log.Errorw("chore.api.CreateChore failed to create chore", "error", err)
+		if errors.Is(err, chRepo.ErrAssigneeOutsideProject) {
+			c.JSON(400, gin.H{"error": err.Error()})
+			return
+		}
 		c.JSON(500, gin.H{"error": "Error creating chore"})
 		return
 	}

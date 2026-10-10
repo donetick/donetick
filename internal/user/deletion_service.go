@@ -110,6 +110,7 @@ func (s *DeletionService) deleteUserAccount(ctx context.Context, userID int, tra
 			{"time_sessions", s.countTimeSessions},
 			{"chore_history", s.countChoreHistory},
 			{"chore_assignees", s.countChoreAssignees},
+			{"project_members", s.countProjectMemberships},
 			{"chore_labels", s.countChoreLabels},
 			{"subtasks", s.countUserSubtasks},
 			{"chores", s.countUserChores},
@@ -186,6 +187,7 @@ func (s *DeletionService) deleteUserAccount(ctx context.Context, userID int, tra
 		{"time_sessions", s.deleteTimeSessions},
 		{"chore_history", s.deleteChoreHistory},
 		{"chore_assignees", s.deleteChoreAssignees},
+		{"project_members", s.deleteProjectMemberships},
 		{"chore_labels", s.deleteChoreLabels},
 		{"subtasks", s.deleteUserSubtasks},
 		{"chores", s.deleteUserChores},
@@ -349,6 +351,14 @@ func (s *DeletionService) deleteChoreHistory(tx *gorm.DB, userID int) (int, erro
 
 func (s *DeletionService) deleteChoreAssignees(tx *gorm.DB, userID int) (int, error) {
 	return s.safeDelete(tx, "DELETE FROM chore_assignees WHERE user_id = ?", userID)
+}
+
+func (s *DeletionService) deleteProjectMemberships(tx *gorm.DB, userID int) (int, error) {
+	return s.safeDelete(tx, "DELETE FROM project_members WHERE user_id = ?", userID)
+}
+
+func (s *DeletionService) countProjectMemberships(tx *gorm.DB, userID int) (int, error) {
+	return s.safeCount(tx, "SELECT COUNT(*) FROM project_members WHERE user_id = ?", userID)
 }
 
 func (s *DeletionService) deleteChoreLabels(tx *gorm.DB, userID int) (int, error) {

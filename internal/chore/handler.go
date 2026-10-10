@@ -28,6 +28,7 @@ import (
 	nRepo "donetick.com/core/internal/notifier/repo"
 	nps "donetick.com/core/internal/notifier/service"
 	fcmService "donetick.com/core/internal/notifier/service/fcm"
+	pModel "donetick.com/core/internal/project/model"
 	pjRepo "donetick.com/core/internal/project/repo"
 	"donetick.com/core/internal/realtime"
 	storage "donetick.com/core/internal/storage"
@@ -589,6 +590,10 @@ func (h *Handler) CreateChore(c *gin.Context) {
 	id, err := h.choreRepo.CreateChoreWithAssignees(c, createdChore, assigneeIDs, currentUser.ID)
 	createdChore.ID = id
 
+	if errors.Is(err, chRepo.ErrAssigneeOutsideProject) {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
 	if err != nil {
 		logger.Error("Failed to create chore", "error", err, "userID", currentUser.ID, "circleID", currentUser.CircleID)
 		c.JSON(500, gin.H{
@@ -905,6 +910,10 @@ func (h *Handler) EditChore(c *gin.Context) {
 		assigneeIDs = append(assigneeIDs, assignee.UserID)
 	}
 	if err := h.choreRepo.UpdateChoreVisibilityForUser(c, updatedChore, assigneeIDs, currentUser.ID); err != nil {
+		if errors.Is(err, chRepo.ErrAssigneeOutsideProject) {
+			c.JSON(400, gin.H{"error": err.Error()})
+			return
+		}
 		c.JSON(500, gin.H{
 			"error": "Error adding chore",
 		})
@@ -1051,6 +1060,21 @@ func (h *Handler) inheritProjectPrivacy(c *gin.Context, choreReq *ChoreReq, user
 	choreReq.IsPrivate = &isPrivate
 
 	if !project.IsPrivate {
+		return nil
+	}
+
+	if project.Visibility() == pModel.ProjectVisibilityMembers {
+		// A shared project's audience is its owner plus the selected members: any
+		// of them can be assigned, nobody else. "Anyone" (no assignees) stays as it
+		// is and rotates and notifies within that audience only.
+		for _, assignee := range choreReq.Assignees {
+			if !project.CanView(assignee.UserID) {
+				return chRepo.ErrAssigneeOutsideProject
+			}
+		}
+		if choreReq.AssignedTo != nil && *choreReq.AssignedTo != 0 && !project.CanView(*choreReq.AssignedTo) {
+			return chRepo.ErrAssigneeOutsideProject
+		}
 		return nil
 	}
 
@@ -2132,6 +2156,14 @@ func (h *Handler) ArchiveChore(c *gin.Context) {
 		return
 	}
 
+	// The repository only checks authorship; a creator who lost sight of the chore
+	// (e.g. removed from a shared project) must not be able to change it anymore.
+	if _, err := h.choreRepo.GetChore(c, id, currentUser.ID, currentUser.CircleID); err != nil {
+		c.JSON(404, gin.H{
+			"error": "Chore not found",
+		})
+		return
+	}
 	err = h.choreRepo.ArchiveChore(c, id, currentUser.ID, currentUser.CircleID)
 
 	if err != nil {
@@ -2193,6 +2225,14 @@ func (h *Handler) UnarchiveChore(c *gin.Context) {
 		logger.Error("Failed to get current user from authentication context")
 		c.JSON(401, gin.H{
 			"error": "Authentication failed",
+		})
+		return
+	}
+	// The repository only checks authorship; a creator who lost sight of the chore
+	// (e.g. removed from a shared project) must not be able to change it anymore.
+	if _, err := h.choreRepo.GetChore(c, id, currentUser.ID, currentUser.CircleID); err != nil {
+		c.JSON(404, gin.H{
+			"error": "Chore not found",
 		})
 		return
 	}
@@ -3124,7 +3164,12 @@ func (h *Handler) UpdateSubtaskCompletedAt(c *gin.Context) {
 
 	}
 
-	h.eventProducer.SubtaskUpdated(c, effectiveUser.WebhookURL,
+	webhookURL := effectiveUser.WebhookURL
+	if chore.Project != nil && chore.Project.IsPrivate {
+		// Restricted projects never reach the circle-wide webhook.
+		webhookURL = nil
+	}
+	h.eventProducer.SubtaskUpdated(c, webhookURL,
 		&stModel.SubTask{
 			ID:          req.ID,
 			ChoreID:     req.ChoreID,
@@ -4056,6 +4101,17 @@ func checkNextAssignee(chore *chModel.Chore, choresHistory []*chModel.ChoreHisto
 				UserID:  circleUser.UserID,
 			})
 		}
+	}
+	// In a restricted project only its audience may be picked, so "Anyone" means
+	// anyone who can see the project, and a stale assignee never gets a turn.
+	if chore.Project != nil && chore.Project.IsPrivate {
+		visible := make([]chModel.ChoreAssignees, 0, len(assignees))
+		for _, assignee := range assignees {
+			if chore.Project.CanView(assignee.UserID) {
+				visible = append(visible, assignee)
+			}
+		}
+		assignees = visible
 	}
 
 	assigneesMap := map[int]bool{}

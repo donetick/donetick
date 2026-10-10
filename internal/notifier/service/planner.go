@@ -64,7 +64,9 @@ func (n *NotificationPlanner) GenerateNotifications(c context.Context, chore *ch
 		}
 	}
 
-	if chore.NotificationMetadataV2.CircleGroup && assignedUser != nil && canReceiveChore(chore, assignedUser.UserID, circleMembers) {
+	// A circle group chat reaches everybody in it, so chores of a restricted project
+	// (only me / selected members) are never posted there.
+	if chore.NotificationMetadataV2.CircleGroup && !inRestrictedProject(chore) && assignedUser != nil && canReceiveChore(chore, assignedUser.UserID, circleMembers) {
 		notifications = append(notifications, generateNotificationsFromTemplate(chore, assignedUser, assignedUser, chore.NotificationMetadataV2.CircleGroupID)...)
 	}
 
@@ -101,9 +103,19 @@ func canReceiveChore(chore *chModel.Chore, userID int, circleMembers []*cModel.U
 		return false
 	}
 	if chore.Project != nil && chore.Project.IsPrivate {
-		return chore.Project.CreatedBy == userID
+		// Owner, plus members of a shared project once its members are loaded.
+		return chore.Project.CanView(userID)
 	}
 	return chore.CanView(userID, circleMembers)
+}
+
+// inRestrictedProject reports whether the chore lives in a project hidden from the
+// circle. An unloaded project counts as restricted, failing closed.
+func inRestrictedProject(chore *chModel.Chore) bool {
+	if chore.ProjectID != nil && chore.Project == nil {
+		return true
+	}
+	return chore.Project != nil && chore.Project.IsPrivate
 }
 
 func anyoneChoreRecipients(chore *chModel.Chore, circleMembers []*cModel.UserCircleDetail) []*cModel.UserCircleDetail {

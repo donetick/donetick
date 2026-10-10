@@ -131,7 +131,20 @@ func (r *CircleRepository) GetCircleByID(c context.Context, circleID int) (*cMod
 }
 
 func (r *CircleRepository) LeaveCircleByUserID(c context.Context, circleID, userID int) error {
-	return r.db.WithContext(c).Where("circle_id = ? AND user_id = ? AND role != 'admin'", circleID, userID).Delete(&cModel.UserCircle{}).Error
+	return r.db.WithContext(c).Transaction(func(tx *gorm.DB) error {
+		result := tx.Where("circle_id = ? AND user_id = ? AND role != 'admin'", circleID, userID).Delete(&cModel.UserCircle{})
+		if result.Error != nil || result.RowsAffected == 0 {
+			return result.Error
+		}
+		return removeProjectMemberships(tx, circleID, userID)
+	})
+}
+
+// removeProjectMemberships drops the user's project shares in a circle they are no
+// longer part of, so rejoining the circle later does not silently restore access
+// to projects that were shared with them before.
+func removeProjectMemberships(tx *gorm.DB, circleID, userID int) error {
+	return tx.Exec("DELETE FROM project_members WHERE circle_id = ? AND user_id = ?", circleID, userID).Error
 }
 
 func (r *CircleRepository) GetUserOriginalCircle(c context.Context, userID int) (int, error) {
@@ -143,7 +156,12 @@ func (r *CircleRepository) GetUserOriginalCircle(c context.Context, userID int) 
 }
 
 func (r *CircleRepository) DeleteMemberByID(c context.Context, circleID, userID int) error {
-	return r.db.WithContext(c).Where("circle_id = ? AND user_id = ?", circleID, userID).Delete(&cModel.UserCircle{}).Error
+	return r.db.WithContext(c).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("circle_id = ? AND user_id = ?", circleID, userID).Delete(&cModel.UserCircle{}).Error; err != nil {
+			return err
+		}
+		return removeProjectMemberships(tx, circleID, userID)
+	})
 }
 
 func (r *CircleRepository) GetCircleAdmins(c context.Context, circleID int) ([]*cModel.UserCircleDetail, error) {

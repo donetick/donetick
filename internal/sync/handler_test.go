@@ -13,6 +13,7 @@ import (
 	cModel "donetick.com/core/internal/circle/model"
 	lModel "donetick.com/core/internal/label/model"
 	nModel "donetick.com/core/internal/notifier/model"
+	pModel "donetick.com/core/internal/project/model"
 	syncModel "donetick.com/core/internal/sync/model"
 	uModel "donetick.com/core/internal/user/model"
 	"github.com/gin-gonic/gin"
@@ -50,6 +51,8 @@ func newSyncHandlerTest(t *testing.T) (*chRepo.ChoreRepository, *gorm.DB, *gin.E
 		&nModel.Notification{},
 		&syncModel.SyncCursor{},
 		&syncModel.Tombstone{},
+		&pModel.Project{},
+		&pModel.ProjectMember{},
 	))
 
 	cfg := &config.Config{}
@@ -105,7 +108,11 @@ func TestGetChangesPaginatesScopedTombstonesWithoutSkippingBoundary(t *testing.T
 	require.Equal(t, []int{defaultSyncLimit + 1}, secondPage.Deletions.Chores)
 }
 
-func TestGetChangesReturnsRevocationBeforeNewerRegrant(t *testing.T) {
+// A revocation followed by a re-grant used to reach a client as both a deletion and
+// a change in the same response. Clients apply deletions after upserts, so the chore
+// vanished until its next edit. The re-grant now removes the user's stale tombstone,
+// so a client that syncs both steps at once simply keeps the chore.
+func TestGetChangesDropsRevocationSupersededByRegrant(t *testing.T) {
 	repository, db, router := newSyncHandlerTest(t)
 	for _, userID := range []int{1, 2} {
 		require.NoError(t, db.Create(&cModel.UserCircle{UserID: userID, CircleID: 1, IsActive: true}).Error)
@@ -121,8 +128,12 @@ func TestGetChangesReturnsRevocationBeforeNewerRegrant(t *testing.T) {
 	require.NoError(t, repository.UpdateChoreVisibility(t.Context(), chore, []int{2}))
 	require.Greater(t, chore.SyncVersion, revocation.SyncVersion)
 
+	var remaining int64
+	require.NoError(t, db.Model(&syncModel.Tombstone{}).Where("entity_id = ? AND user_id = ?", chore.ID, 2).Count(&remaining).Error)
+	require.Zero(t, remaining, "re-grant should drop the user's stale tombstone")
+
 	response := getSyncChanges(t, router, 0)
-	require.Equal(t, []int{chore.ID}, response.Deletions.Chores)
+	require.Empty(t, response.Deletions.Chores)
 	require.Len(t, response.Changes.Chores, 1)
 	require.Equal(t, chore.ID, response.Changes.Chores[0].ID)
 	require.Equal(t, chore.SyncVersion, response.Changes.Chores[0].SyncVersion)

@@ -818,35 +818,43 @@ func (h *Handler) EditChore(c *gin.Context) {
 		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
-	// Create a map to store the existing labels for quick lookup
-	oldLabelsMap := make(map[int]struct{})
-	for _, oldLabel := range *oldChore.LabelsV2 {
-		oldLabelsMap[oldLabel.ID] = struct{}{}
-	}
-	newLabelMap := make(map[int]struct{})
-	for _, newLabel := range *choreReq.LabelsV2 {
-		newLabelMap[newLabel.LabelID] = struct{}{}
-	}
-	// check what labels need to be added and what labels need to be deleted:
-	labelsV2ToAdd := make([]int, 0)
-	labelsV2ToBeRemoved := make([]int, 0)
-
-	for _, label := range *choreReq.LabelsV2 {
-		if _, ok := oldLabelsMap[label.LabelID]; !ok {
-			labelsV2ToAdd = append(labelsV2ToAdd, label.LabelID)
+	// Labels are only touched when the request carries them: an update without
+	// labelsV2 keeps the chore's current labels.
+	if choreReq.LabelsV2 != nil {
+		// Create a map to store the existing labels for quick lookup
+		oldLabelsMap := make(map[int]struct{})
+		if oldChore.LabelsV2 != nil {
+			for _, oldLabel := range *oldChore.LabelsV2 {
+				oldLabelsMap[oldLabel.ID] = struct{}{}
+			}
 		}
-	}
-	for _, oldLabel := range *oldChore.LabelsV2 {
-		if _, ok := newLabelMap[oldLabel.ID]; !ok {
-			labelsV2ToBeRemoved = append(labelsV2ToBeRemoved, oldLabel.ID)
+		newLabelMap := make(map[int]struct{})
+		for _, newLabel := range *choreReq.LabelsV2 {
+			newLabelMap[newLabel.LabelID] = struct{}{}
 		}
-	}
+		// check what labels need to be added and what labels need to be deleted:
+		labelsV2ToAdd := make([]int, 0)
+		labelsV2ToBeRemoved := make([]int, 0)
 
-	if err := h.lRepo.AssignLabelsToChore(c, choreReq.ID, currentUser.ID, currentUser.CircleID, labelsV2ToAdd, labelsV2ToBeRemoved); err != nil {
-		c.JSON(500, gin.H{
-			"error": "Error adding labels",
-		})
-		return
+		for _, label := range *choreReq.LabelsV2 {
+			if _, ok := oldLabelsMap[label.LabelID]; !ok {
+				labelsV2ToAdd = append(labelsV2ToAdd, label.LabelID)
+			}
+		}
+		if oldChore.LabelsV2 != nil {
+			for _, oldLabel := range *oldChore.LabelsV2 {
+				if _, ok := newLabelMap[oldLabel.ID]; !ok {
+					labelsV2ToBeRemoved = append(labelsV2ToBeRemoved, oldLabel.ID)
+				}
+			}
+		}
+
+		if err := h.lRepo.AssignLabelsToChore(c, choreReq.ID, currentUser.ID, currentUser.CircleID, labelsV2ToAdd, labelsV2ToBeRemoved); err != nil {
+			c.JSON(500, gin.H{
+				"error": "Error adding labels",
+			})
+			return
+		}
 	}
 	description := ""
 	if choreReq.Description != nil {

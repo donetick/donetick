@@ -308,6 +308,7 @@ func (h *Handler) signAttachments(c *gin.Context, attachments []storageModel.Sto
 
 // region: request models
 type ChoreReq struct {
+	CompletionActions    *[]chModel.CompletionAction   `json:"completionActions"`
 	ID                   int                           `json:"id"`
 	Name                 string                        `json:"name" binding:"required"`
 	FrequencyType        chModel.FrequencyType         `json:"frequencyType" binding:"required,oneof=once daily weekly monthly yearly adaptive interval days_of_the_week day_of_the_month trigger no_repeat always"`
@@ -528,6 +529,10 @@ func (h *Handler) CreateChore(c *gin.Context) {
 		return
 	}
 
+	if err := h.validateCompletionActions(c, choreReq.CompletionActions, currentUser.ID); err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
 	warnings := setCreateChoreDefaults(&choreReq)
 	if !choreReq.Notification && choreReq.NotificationMetadata != nil {
 		warnings = append(warnings, "notificationMetadata provided while notification is false; ignoring metadata")
@@ -561,6 +566,9 @@ func (h *Handler) CreateChore(c *gin.Context) {
 		// SubTasks removed to prevent duplicate creation - handled by UpdateSubtask call below
 		// it's need custom logic to handle subtask creation as we send negative ids sometimes when we creating parent child releationship
 		// when the subtask is not yet created
+	}
+	if choreReq.CompletionActions != nil {
+		createdChore.CompletionActions = *choreReq.CompletionActions
 	}
 	assigneeIDs := make([]int, 0, len(choreReq.Assignees))
 	for _, assignee := range choreReq.Assignees {
@@ -795,6 +803,13 @@ func (h *Handler) EditChore(c *gin.Context) {
 		return
 	}
 
+	if choreReq.CompletionActions == nil {
+		choreReq.CompletionActions = &oldChore.CompletionActions
+	}
+	if err := h.validateCompletionActions(c, choreReq.CompletionActions, oldChore.CreatedBy); err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
 	// Create a map to store the existing labels for quick lookup
 	oldLabelsMap := make(map[int]struct{})
 	for _, oldLabel := range *oldChore.LabelsV2 {
@@ -846,6 +861,7 @@ func (h *Handler) EditChore(c *gin.Context) {
 	setEditChoreDefaults(&choreReq, oldChore)
 
 	updatedChore := &chModel.Chore{ // TODO: Assignees are missing
+		CompletionActions:      *choreReq.CompletionActions,
 		ID:                     choreReq.ID,
 		Name:                   choreReq.Name,
 		FrequencyType:          choreReq.FrequencyType,
@@ -4598,4 +4614,23 @@ func Routes(router *gin.Engine, h *Handler, multiAuthMiddleware *auth.MultiAuthM
 		choresRoutes.POST("/:id/nudge", h.SendNudgeNotification)
 		choresRoutes.POST("/:id/undo", h.UndoChore)
 	}
+}
+
+func (h *Handler) validateCompletionActions(c *gin.Context, actions *[]chModel.CompletionAction, ownerID int) error {
+	if actions == nil {
+		return nil
+	}
+	if len(*actions) > 20 {
+		return fmt.Errorf("A task can have at most 20 completion actions")
+	}
+	for _, action := range *actions {
+		thing, err := h.tRepo.GetThingByID(c, action.ThingID)
+		if err != nil || thing.UserID != ownerID {
+			return fmt.Errorf("Completion action Thing must belong to the task owner")
+		}
+		if _, err := action.NextState(thing); err != nil {
+			return err
+		}
+	}
+	return nil
 }

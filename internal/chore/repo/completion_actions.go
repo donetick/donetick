@@ -2,6 +2,7 @@ package chore
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -46,8 +47,18 @@ func (r *ChoreRepository) applyCompletionActions(ctx context.Context, tx *gorm.D
 			if !link.Matches(state) {
 				continue
 			}
+			// The Thing belongs to the completed chore's owner. Like a direct Thing
+			// update, it only activates chores that owner can still see, so a task
+			// in a project hidden from them is left alone.
 			var target chModel.Chore
-			if err := tx.First(&target, link.ChoreID).Error; err != nil {
+			err := privacyJoins(tx.Model(&chModel.Chore{}), chore.CreatedBy).
+				Where("chores.id = ? AND chores.circle_id = ?", link.ChoreID, chore.CircleID).
+				Where(privacyPredicate(chore.CreatedBy)).
+				First(&target).Error
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				continue
+			}
+			if err != nil {
 				return err
 			}
 			if target.IsActive && target.NextDueDate != nil {

@@ -415,3 +415,37 @@ func TestAccessPreviewSerializesForClients(t *testing.T) {
 	require.Contains(t, string(raw), `"before":{"visibility":"circle","memberIds":[]}`)
 	require.Contains(t, string(raw), `"after":{"visibility":"members","memberIds":[2]}`)
 }
+
+func TestDeleteProjectReportsChoresNeedingNewReminders(t *testing.T) {
+	r, db := newTestRepo(t)
+	seedCircle(t, db)
+	work := newSharedProject(t, r, "work", pModel.ProjectVisibilityMembers, memberID)
+	chore := newProjectChore(t, db, work.ID, "c", ownerID, chModel.AssignmentStrategyRandom, intp(ownerID), ownerID)
+	require.NoError(t, db.Create(&nModel.Notification{ChoreID: chore.ID, CircleID: sharingCirc, UserID: ownerID, Text: "reminder"}).Error)
+
+	ids, err := r.DeleteProjectWithResult(context.Background(), work.ID, ownerID, sharingCirc)
+	require.NoError(t, err)
+	require.Equal(t, []int{chore.ID}, ids, "the member lost sight of the chore, so its reminders were dropped and must be planned again")
+}
+
+func TestRemoveProjectsOwnedByDetachesAndDeletes(t *testing.T) {
+	r, db := newTestRepo(t)
+	seedCircle(t, db)
+	mine := newSharedProject(t, r, "mine", pModel.ProjectVisibilityMembers, memberID)
+	theirs := &pModel.Project{Name: "theirs", CircleID: sharingCirc, CreatedBy: memberID, IsPrivate: true}
+	require.NoError(t, r.CreateProject(context.Background(), theirs))
+	byMember := newProjectChore(t, db, mine.ID, "by member", memberID, chModel.AssignmentStrategyRandom, intp(memberID), memberID)
+	newSharedProject(t, r, "household", pModel.ProjectVisibilityCircle)
+
+	require.NoError(t, r.RemoveProjectsOwnedBy(context.Background(), sharingCirc, ownerID))
+
+	names := projectNames(t, r, memberID)
+	require.Equal(t, []string{"household", "theirs"}, names, "the owner's shared project is gone; circle-wide projects and the member's own project stay")
+	var reloaded chModel.Chore
+	require.NoError(t, db.First(&reloaded, byMember.ID).Error)
+	require.Nil(t, reloaded.ProjectID, "chores of the removed project are kept, detached")
+	restricted, err := r.GetRestrictedProjects(context.Background(), sharingCirc)
+	require.NoError(t, err)
+	require.Len(t, restricted, 1)
+	require.Contains(t, restricted, theirs.ID)
+}

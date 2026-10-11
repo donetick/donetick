@@ -316,11 +316,24 @@ func (h *Handler) deleteProject(c *gin.Context) {
 	// Remember who could see the project, to tell their clients it is gone.
 	before, _ := h.pRepo.GetProjectByID(c, projectID, currentUser.CircleID)
 
-	if err := h.pRepo.DeleteProject(c, projectID, currentUser.ID, currentUser.CircleID); err != nil {
+	notificationChores, err := h.pRepo.DeleteProjectWithResult(c, projectID, currentUser.ID, currentUser.CircleID)
+	if err != nil {
 		c.JSON(statusFor(err), gin.H{
 			"error": err.Error(),
 		})
 		return
+	}
+	// Reminders of detached chores were removed inside the transaction because
+	// somebody lost sight of them; plan them again for whoever still may see them.
+	if h.nPlanner != nil {
+		for _, choreID := range notificationChores {
+			chore, err := h.choreRepo.GetChoreForSystem(c, choreID)
+			if err != nil {
+				logging.FromContext(c).Error("Error reloading chore for notifications", "error", err, "choreID", choreID)
+				continue
+			}
+			h.nPlanner.GenerateNotifications(c, chore)
+		}
 	}
 
 	if before != nil && h.realTimeService != nil {

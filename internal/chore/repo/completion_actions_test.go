@@ -82,6 +82,29 @@ func TestCompletionActionsTriggerAnotherTask(t *testing.T) {
 	require.NotNil(t, target.NextDueDate)
 }
 
+func TestCompletionActionsOnlyTriggerTasksTheOwnerCanSee(t *testing.T) {
+	r, db := newTestChoreRepo(t)
+	thing := tModel.Thing{UserID: testOwnerID, Type: "boolean", State: "false"}
+	require.NoError(t, db.Create(&thing).Error)
+	// A trigger task in another user's private project, linked to the owner's
+	// Thing before that project was restricted.
+	hidden := createProject(t, db, testOtherID, true)
+	target := createChore(t, db, "triggered", testOtherID, false, &hidden.ID)
+	target.FrequencyType = "trigger"
+	target.IsActive = false
+	require.NoError(t, db.Save(target).Error)
+	require.NoError(t, db.Create(&tModel.ThingChore{ThingID: thing.ID, ChoreID: target.ID, TriggerState: "true"}).Error)
+	chore := createChore(t, db, "source", testOwnerID, false, nil)
+	chore.CompletionActions = []chModel.CompletionAction{{ThingID: thing.ID, Operation: "set", Value: "true"}}
+	require.NoError(t, db.Save(chore).Error)
+	now := time.Now().UTC()
+	require.NoError(t, r.CompleteChore(context.Background(), chore, nil, testOwnerID, nil, &now, nil, false))
+	require.NoError(t, db.First(&thing, thing.ID).Error)
+	require.Equal(t, "true", thing.State, "the owner's own Thing still changes")
+	require.NoError(t, db.First(target, target.ID).Error)
+	require.False(t, target.IsActive, "a task the Thing owner cannot see is not activated")
+}
+
 func TestCompletionActionsCannotChangeAnotherOwnersThing(t *testing.T) {
 	r, db := newTestChoreRepo(t)
 	thing := tModel.Thing{UserID: testOtherID, Type: "boolean", State: "true"}

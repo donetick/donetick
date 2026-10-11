@@ -16,6 +16,7 @@ import (
 	"donetick.com/core/internal/notifier/push"
 	"donetick.com/core/internal/notifier/service/fcm"
 	pRepo "donetick.com/core/internal/points/repo"
+	pjRepo "donetick.com/core/internal/project/repo"
 	"donetick.com/core/internal/storage"
 	uModel "donetick.com/core/internal/user/model"
 	uRepo "donetick.com/core/internal/user/repo"
@@ -29,6 +30,7 @@ type Handler struct {
 	choreRepo            *chRepo.ChoreRepository
 	pointRepo            *pRepo.PointsRepository
 	pushSender           *push.Sender
+	projectRepo          *pjRepo.ProjectRepository
 	signer               storage.URLSigner
 	isDonetickDotCom     bool
 	maxCircleMembers     int
@@ -37,13 +39,14 @@ type Handler struct {
 }
 
 func NewHandler(cr *cRepo.CircleRepository, ur *uRepo.UserRepository, c *chRepo.ChoreRepository, pr *pRepo.PointsRepository,
-	ps *push.Sender, signer storage.URLSigner, config *config.Config) *Handler {
+	ps *push.Sender, signer storage.URLSigner, config *config.Config, projectRepo *pjRepo.ProjectRepository) *Handler {
 	return &Handler{
 		circleRepo:           cr,
 		userRepo:             ur,
 		choreRepo:            c,
 		pointRepo:            pr,
 		pushSender:           ps,
+		projectRepo:          projectRepo,
 		signer:               signer,
 		isDonetickDotCom:     config.IsDoneTickDotCom,
 		maxCircleMembers:     config.FeatureLimits.MaxCircleMembers,
@@ -304,18 +307,39 @@ func (h *Handler) LeaveCircle(c *gin.Context) {
 // reassignChoresForLeavingUser moves the chores the user created in the circle
 // they are leaving to destinationCircleID (keeping them assigned to the user),
 // and hands the chores that were merely assigned to them back to the circle.
+//
+// Chores the user created inside a project that is private to or shared with
+// selected members belong to that project's work: they stay there and the
+// project owner takes them over, since nobody could see a restricted project's
+// chore in another circle. Restricted projects the user owns are removed (their
+// remaining chores are detached and kept); circle-wide projects stay.
 func reassignChoresForLeavingUser(h *Handler, c *gin.Context, leavingUser *uModel.User, destinationCircleID int) error {
 	userAssignedCircleChores, err := h.choreRepo.GetChores(c, leavingUser.CircleID, leavingUser.ID, true, nil, false)
 	if err != nil {
 		return err
 	}
+	restricted, err := h.projectRepo.GetRestrictedProjects(c, leavingUser.CircleID)
+	if err != nil {
+		return err
+	}
+	movedChoreIDs := make([]int, 0)
 	for _, ch := range userAssignedCircleChores {
+		if ch.CreatedBy == leavingUser.ID && ch.ProjectID != nil {
+			if project, ok := restricted[*ch.ProjectID]; ok && project.CreatedBy != leavingUser.ID {
+				chore.HandOverToProjectOwner(ch, leavingUser.ID, project.CreatedBy)
+				continue
+			}
+		}
 
 		if ch.CreatedBy == leavingUser.ID && (ch.AssignedTo == nil || *ch.AssignedTo != leavingUser.ID) {
 			ch.AssignedTo = &leavingUser.ID
 			ch.UpdatedAt = time.Now().UTC()
 			ch.UpdatedBy = leavingUser.ID
 			ch.CircleID = destinationCircleID
+			// The project belongs to the circle being left; a dangling reference would
+			// hide the chore in the new circle's project views.
+			ch.ProjectID = nil
+			movedChoreIDs = append(movedChoreIDs, ch.ID)
 		} else if ch.CreatedBy != leavingUser.ID && (ch.AssignedTo != nil && *ch.AssignedTo == leavingUser.ID) {
 			chore.RemoveAssigneeAndReassign(ch, leavingUser.ID)
 		}
@@ -323,7 +347,18 @@ func reassignChoresForLeavingUser(h *Handler, c *gin.Context, leavingUser *uMode
 	}
 
 	h.choreRepo.UpdateChores(c, userAssignedCircleChores)
+	// The moved chores now live in another circle; tell the remaining members'
+	// devices to drop their copies.
+	if err := h.choreRepo.TombstoneChoresLeavingCircle(c, leavingUser.CircleID, movedChoreIDs); err != nil {
+		logging.FromContext(c).Error("Error recording tombstones for moved chores", "error", err)
+	}
 	h.choreRepo.RemoveChoreAssigneeByCircleID(c, leavingUser.ID, leavingUser.CircleID)
+	if err := h.choreRepo.DeletePendingNotificationsForUser(c, leavingUser.CircleID, leavingUser.ID); err != nil {
+		logging.FromContext(c).Error("Error removing pending notifications of leaving user", "error", err)
+	}
+	if err := h.projectRepo.RemoveProjectsOwnedBy(c, leavingUser.CircleID, leavingUser.ID); err != nil {
+		logging.FromContext(c).Error("Error removing projects of leaving user", "error", err)
+	}
 	return nil
 }
 

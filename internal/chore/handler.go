@@ -1484,6 +1484,9 @@ func (h *Handler) StartChore(c *gin.Context) {
 		})
 		return
 	}
+	if !h.impersonationGuard(c, chore, actualUser, effectiveUser, hasImpersonation) {
+		return
+	}
 	if !validateActionVersion(c, "start", chore, req.ActionOptions) {
 		return
 	}
@@ -1656,6 +1659,9 @@ func (h *Handler) PauseChore(c *gin.Context) {
 		c.JSON(500, gin.H{
 			"error": "Failed to retrieve chore",
 		})
+		return
+	}
+	if !h.impersonationGuard(c, chore, actualUser, effectiveUser, hasImpersonation) {
 		return
 	}
 	if !validateActionVersion(c, "pause", chore, req.ActionOptions) {
@@ -1929,6 +1935,9 @@ func (h *Handler) SkipChore(c *gin.Context) {
 		c.JSON(500, gin.H{
 			"error": "Failed to retrieve chore",
 		})
+		return
+	}
+	if !h.impersonationGuard(c, chore, actualUser, effectiveUser, hasImpersonation) {
 		return
 	}
 
@@ -2352,6 +2361,9 @@ func (h *Handler) CompleteChore(c *gin.Context) {
 		})
 		return
 	}
+	if !h.impersonationGuard(c, chore, actualUser, effectiveUser, hasImpersonation) {
+		return
+	}
 	if !validateActionVersion(c, "complete", chore, req.ActionOptions) {
 		return
 	}
@@ -2387,6 +2399,14 @@ func (h *Handler) CompleteChore(c *gin.Context) {
 		// Use actualUser for authorization since this is an admin function
 		ok := authorizeChoreCompletionForUser(h, c, actualUser, req.CompletedBy)
 		if !ok {
+			return
+		}
+		// Credit only people who can see the chore: a completion (and its points)
+		// must not be attributed to somebody outside a restricted project.
+		if chore.Project != nil && chore.Project.IsPrivate && !chore.Project.CanView(*req.CompletedBy) {
+			c.JSON(403, gin.H{
+				"error": "The selected user cannot see this task",
+			})
 			return
 		}
 		completedBy = *req.CompletedBy
@@ -3126,6 +3146,9 @@ func (h *Handler) UpdateSubtaskCompletedAt(c *gin.Context) {
 		c.JSON(500, gin.H{
 			"error": "Failed to retrieve chore",
 		})
+		return
+	}
+	if !h.impersonationGuard(c, chore, actualUser, effectiveUser, hasImpersonation) {
 		return
 	}
 	circleUsers, err := h.circleRepo.GetCircleUsers(c, actualUser.CircleID)
@@ -4082,6 +4105,29 @@ func (h *Handler) updateTimer(c *gin.Context) { // TODO: Not used in Routes
 	})
 }
 
+// impersonationGuard keeps an admin or manager who acts as another member
+// (X-Impersonate-User-ID) from reaching into a chore they could not see
+// themselves, e.g. one in a project that is private to or shared with the
+// impersonated user only. Managing a sub-account stays possible: a parent may
+// act for their own child. Writes a 403 and returns false when blocked.
+func (h *Handler) impersonationGuard(c *gin.Context, chore *chModel.Chore, actualUser, effectiveUser *uModel.UserDetails, hasImpersonation bool) bool {
+	if !hasImpersonation || actualUser == nil || effectiveUser == nil || actualUser.ID == effectiveUser.ID {
+		return true
+	}
+	if effectiveUser.ParentUserID != nil && *effectiveUser.ParentUserID == actualUser.ID {
+		return true
+	}
+	if _, err := h.choreRepo.GetChore(c, chore.ID, actualUser.ID, actualUser.CircleID); err == nil {
+		return true
+	}
+	logging.FromContext(c).Warn("Impersonation into a chore the actual user cannot see was blocked",
+		"actualUserID", actualUser.ID, "impersonatedUserID", effectiveUser.ID, "choreID", chore.ID)
+	c.JSON(403, gin.H{
+		"error": "You are not allowed to act on this chore on behalf of another user",
+	})
+	return false
+}
+
 func checkNextAssignee(chore *chModel.Chore, choresHistory []*chModel.ChoreHistory, performerID int, circleUsers []*circle.UserCircleDetail) (*int, error) {
 	// copy the history to avoid modifying the original:
 	history := make([]*chModel.ChoreHistory, len(choresHistory))
@@ -4394,32 +4440,7 @@ func (h *Handler) SendNudgeNotification(c *gin.Context) {
 func (h *Handler) notifyApproversOfPendingApproval(c context.Context, chore *chModel.Chore, submittedBy *uModel.User, circleUsers []*circle.UserCircleDetail) {
 	log := logging.FromContext(c)
 
-	relatedToChore := map[int]bool{chore.CreatedBy: true}
-	if chore.AssignedTo != nil {
-		relatedToChore[*chore.AssignedTo] = true
-	}
-	for _, assignee := range chore.Assignees {
-		relatedToChore[assignee.UserID] = true
-	}
-
-	related := make([]int, 0, len(circleUsers))
-	fallback := make([]int, 0, len(circleUsers))
-	seen := make(map[int]bool, len(circleUsers))
-	for _, user := range circleUsers {
-		if user.UserID == submittedBy.ID || !user.IsActive || !user.IsManagerOrAdmin() || seen[user.UserID] {
-			continue
-		}
-		seen[user.UserID] = true
-		fallback = append(fallback, user.UserID)
-		if relatedToChore[user.UserID] {
-			related = append(related, user.UserID)
-		}
-	}
-
-	approverIDs := related
-	if len(approverIDs) == 0 {
-		approverIDs = fallback
-	}
+	approverIDs := pendingApprovalRecipients(chore, submittedBy, circleUsers)
 	if len(approverIDs) == 0 {
 		return
 	}
@@ -4446,6 +4467,44 @@ func (h *Handler) notifyApproversOfPendingApproval(c context.Context, chore *chM
 		"chore_id", chore.ID,
 		"approvers", len(approverIDs),
 		"devices", devices)
+}
+
+// pendingApprovalRecipients picks who is told about a completion waiting for
+// approval: active admins and managers tied to the task (its creator or an
+// assignee), or every active admin and manager when none of those can approve.
+// Only people who can see the chore count, so its name never reaches anyone
+// outside a private chore or a restricted project, who could not approve it
+// anyway.
+func pendingApprovalRecipients(chore *chModel.Chore, submittedBy *uModel.User, circleUsers []*circle.UserCircleDetail) []int {
+	relatedToChore := map[int]bool{chore.CreatedBy: true}
+	if chore.AssignedTo != nil {
+		relatedToChore[*chore.AssignedTo] = true
+	}
+	for _, assignee := range chore.Assignees {
+		relatedToChore[assignee.UserID] = true
+	}
+
+	related := make([]int, 0, len(circleUsers))
+	fallback := make([]int, 0, len(circleUsers))
+	seen := make(map[int]bool, len(circleUsers))
+	for _, user := range circleUsers {
+		if user.UserID == submittedBy.ID || !user.IsActive || !user.IsManagerOrAdmin() || seen[user.UserID] {
+			continue
+		}
+		if !chore.CanView(user.UserID, circleUsers) {
+			continue
+		}
+		seen[user.UserID] = true
+		fallback = append(fallback, user.UserID)
+		if relatedToChore[user.UserID] {
+			related = append(related, user.UserID)
+		}
+	}
+
+	if len(related) > 0 {
+		return related
+	}
+	return fallback
 }
 
 // bridgeClient returns the currently active Bridge client, or nil if the

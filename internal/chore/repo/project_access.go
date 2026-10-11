@@ -567,21 +567,61 @@ func sameIntPtr(a, b *int) bool {
 	return *a == *b
 }
 
+// TombstoneChoresLeavingCircle records circle-wide tombstones for chores (and
+// their history) that were moved out of circleID, e.g. when their creator leaves
+// the circle and takes them along. Without them, the devices of the remaining
+// members would keep showing the moved chores until their cache is rebuilt.
+func (r *ChoreRepository) TombstoneChoresLeavingCircle(ctx context.Context, circleID int, choreIDs []int) error {
+	if len(choreIDs) == 0 {
+		return nil
+	}
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var historyIDs []int
+		if err := tx.WithContext(ctx).Model(&chModel.ChoreHistory{}).Where("chore_id IN ?", choreIDs).
+			Order("id asc").Pluck("id", &historyIDs).Error; err != nil {
+			return err
+		}
+		next, err := r.nextSyncVersionRangeWithDB(ctx, tx, circleID, len(choreIDs)+len(historyIDs))
+		if err != nil {
+			return err
+		}
+		tombstones := make([]syncModel.Tombstone, 0, len(choreIDs)+len(historyIDs))
+		for _, id := range choreIDs {
+			tombstones = append(tombstones, syncModel.Tombstone{CircleID: circleID, EntityType: syncModel.EntityTypeChore, EntityID: id, SyncVersion: next})
+			next++
+		}
+		for _, id := range historyIDs {
+			tombstones = append(tombstones, syncModel.Tombstone{CircleID: circleID, EntityType: syncModel.EntityTypeChoreHistory, EntityID: id, SyncVersion: next})
+			next++
+		}
+		return tx.WithContext(ctx).CreateInBatches(&tombstones, 200).Error
+	})
+}
+
+// DeletePendingNotificationsForUser drops the not yet sent reminders addressed to a
+// user within a circle, e.g. when they leave it.
+func (r *ChoreRepository) DeletePendingNotificationsForUser(ctx context.Context, circleID int, userID int) error {
+	return r.db.WithContext(ctx).Where("circle_id = ? AND user_id = ? AND is_sent = ?", circleID, userID, false).
+		Delete(&nModel.Notification{}).Error
+}
+
 // DetachProjectChores moves every chore of a project that is being deleted out of
 // it. The chores keep their own privacy flag and follow the chore-level rule from
 // then on (creator and assignees for private chores, the circle otherwise), so
 // people who only saw them through the project lose them; they get user-scoped
-// tombstones, and people who now see them get their history re-versioned.
-func (r *ChoreRepository) DetachProjectChores(ctx context.Context, tx *gorm.DB, circleID int, project *pModel.Project) error {
+// tombstones, and people who now see them get their history re-versioned. It
+// returns the chores whose pending reminders were removed; the caller regenerates
+// them after the transaction commits.
+func (r *ChoreRepository) DetachProjectChores(ctx context.Context, tx *gorm.DB, circleID int, project *pModel.Project) ([]int, error) {
 	var chores []projectChoreRow
 	if err := tx.WithContext(ctx).Model(&chModel.Chore{}).
 		Select("id, name, is_private, created_by, assigned_to, assign_strategy").
 		Where("project_id = ? AND circle_id = ?", project.ID, circleID).
 		Order("id asc").Scan(&chores).Error; err != nil {
-		return err
+		return nil, err
 	}
 	if len(chores) == 0 {
-		return nil
+		return nil, nil
 	}
 	choreIDs := make([]int, 0, len(chores))
 	for _, chore := range chores {
@@ -590,11 +630,11 @@ func (r *ChoreRepository) DetachProjectChores(ctx context.Context, tx *gorm.DB, 
 
 	var circleUserIDs []int
 	if err := tx.WithContext(ctx).Table("user_circles").Where("circle_id = ? AND is_active = ?", circleID, true).Pluck("user_id", &circleUserIDs).Error; err != nil {
-		return err
+		return nil, err
 	}
 	var assignees []chModel.ChoreAssignees
 	if err := tx.WithContext(ctx).Where("chore_id IN ?", choreIDs).Find(&assignees).Error; err != nil {
-		return err
+		return nil, err
 	}
 	assigneesByChore := map[int][]int{}
 	for _, a := range assignees {
@@ -604,18 +644,18 @@ func (r *ChoreRepository) DetachProjectChores(ctx context.Context, tx *gorm.DB, 
 	if err := tx.WithContext(ctx).Model(&chModel.Chore{}).
 		Where("project_id = ? AND circle_id = ?", project.ID, circleID).
 		Update("project_id", nil).Error; err != nil {
-		return err
+		return nil, err
 	}
 	nextVersion, err := r.nextSyncVersionRangeWithDB(ctx, tx, circleID, len(chores))
 	if err != nil {
-		return err
+		return nil, err
 	}
 	deltas := make([]visibilityDelta, 0)
 	revokedChores := make([]int, 0)
 	for _, chore := range chores {
 		if err := tx.WithContext(ctx).Model(&chModel.Chore{}).Where("id = ?", chore.ID).
 			Update("sync_version", nextVersion).Error; err != nil {
-			return err
+			return nil, err
 		}
 		nextVersion++
 
@@ -645,9 +685,11 @@ func (r *ChoreRepository) DetachProjectChores(ctx context.Context, tx *gorm.DB, 
 	if len(revokedChores) > 0 {
 		if err := tx.WithContext(ctx).Where("chore_id IN ? AND is_sent = ?", revokedChores, false).
 			Delete(&nModel.Notification{}).Error; err != nil {
-			return err
+			return nil, err
 		}
 	}
-	_, err = r.applyVisibilityDeltas(ctx, tx, circleID, deltas)
-	return err
+	if _, err := r.applyVisibilityDeltas(ctx, tx, circleID, deltas); err != nil {
+		return nil, err
+	}
+	return revokedChores, nil
 }

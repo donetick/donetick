@@ -220,9 +220,18 @@ func (r *ProjectRepository) PreviewProjectAccess(ctx context.Context, projectID 
 }
 
 func (r *ProjectRepository) DeleteProject(ctx context.Context, projectID int, userID int, circleID int) error {
-	log := logging.FromContext(ctx)
+	_, err := r.DeleteProjectWithResult(ctx, projectID, userID, circleID)
+	return err
+}
 
-	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+// DeleteProjectWithResult deletes a project owned by the user and returns the
+// chores whose pending reminders were removed because somebody lost sight of
+// them; the caller regenerates those after commit.
+func (r *ProjectRepository) DeleteProjectWithResult(ctx context.Context, projectID int, userID int, circleID int) ([]int, error) {
+	log := logging.FromContext(ctx)
+	var notificationChores []int
+
+	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// Serialize deletion with project privacy changes and chore creation/moves.
 		project, err := r.lockOwnedProject(ctx, tx, projectID, userID, circleID, "user does not have permission to delete this project")
 		if err != nil {
@@ -232,10 +241,12 @@ func (r *ProjectRepository) DeleteProject(ctx context.Context, projectID int, us
 			return errors.New("cannot delete default project")
 		}
 
-		if err := r.choreRepo.DetachProjectChores(ctx, tx, circleID, project); err != nil {
+		detached, err := r.choreRepo.DetachProjectChores(ctx, tx, circleID, project)
+		if err != nil {
 			log.Error("Error detaching chores when deleting project", "error", err)
 			return err
 		}
+		notificationChores = detached
 		if err := tx.Where("project_id = ?", projectID).Delete(&pModel.ProjectMember{}).Error; err != nil {
 			log.Error("Error deleting project members", "error", err)
 			return err
@@ -243,6 +254,58 @@ func (r *ProjectRepository) DeleteProject(ctx context.Context, projectID int, us
 		if err := tx.Where("id = ? AND circle_id = ?", projectID, circleID).Delete(&pModel.Project{}).Error; err != nil {
 			log.Error("Error deleting project", "error", err)
 			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return notificationChores, nil
+}
+
+// GetRestrictedProjects returns the projects of a circle that are not visible to
+// the whole circle (private or shared with selected members), members loaded,
+// keyed by ID.
+func (r *ProjectRepository) GetRestrictedProjects(ctx context.Context, circleID int) (map[int]*pModel.Project, error) {
+	var projects []*pModel.Project
+	if err := r.db.WithContext(ctx).Where("circle_id = ? AND is_private = ?", circleID, true).Find(&projects).Error; err != nil {
+		return nil, err
+	}
+	if err := access.LoadMembers(ctx, r.db, projects...); err != nil {
+		return nil, err
+	}
+	byID := make(map[int]*pModel.Project, len(projects))
+	for _, p := range projects {
+		byID[p.ID] = p
+	}
+	return byID, nil
+}
+
+// RemoveProjectsOwnedBy deletes the restricted (private or shared with selected
+// members) projects a user owns in a circle they are leaving, so no such project
+// is left behind that nobody can change or re-scope: remaining chores are detached
+// and follow their own privacy from then on (members get tombstones for the ones
+// they only saw through the project). Circle-wide and default projects stay, as
+// upstream keeps them.
+func (r *ProjectRepository) RemoveProjectsOwnedBy(ctx context.Context, circleID int, ownerID int) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var projects []*pModel.Project
+		if err := tx.WithContext(ctx).Where("circle_id = ? AND created_by = ? AND is_default = ? AND is_private = ?", circleID, ownerID, false, true).Find(&projects).Error; err != nil {
+			return err
+		}
+		if err := access.LoadMembers(ctx, tx, projects...); err != nil {
+			return err
+		}
+		for _, project := range projects {
+			if _, err := r.choreRepo.DetachProjectChores(ctx, tx, circleID, project); err != nil {
+				return err
+			}
+			if err := tx.Where("project_id = ?", project.ID).Delete(&pModel.ProjectMember{}).Error; err != nil {
+				return err
+			}
+			if err := tx.Where("id = ?", project.ID).Delete(&pModel.Project{}).Error; err != nil {
+				return err
+			}
 		}
 		return nil
 	})

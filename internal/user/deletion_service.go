@@ -111,6 +111,8 @@ func (s *DeletionService) deleteUserAccount(ctx context.Context, userID int, tra
 			{"chore_history", s.countChoreHistory},
 			{"chore_assignees", s.countChoreAssignees},
 			{"project_members", s.countProjectMemberships},
+			{"projects", s.countOwnedProjects},
+			{"tombstones", s.countUserTombstones},
 			{"chore_labels", s.countChoreLabels},
 			{"subtasks", s.countUserSubtasks},
 			{"chores", s.countUserChores},
@@ -188,6 +190,8 @@ func (s *DeletionService) deleteUserAccount(ctx context.Context, userID int, tra
 		{"chore_history", s.deleteChoreHistory},
 		{"chore_assignees", s.deleteChoreAssignees},
 		{"project_members", s.deleteProjectMemberships},
+		{"projects", s.deleteOwnedProjects},
+		{"tombstones", s.deleteUserTombstones},
 		{"chore_labels", s.deleteChoreLabels},
 		{"subtasks", s.deleteUserSubtasks},
 		{"chores", s.deleteUserChores},
@@ -359,6 +363,37 @@ func (s *DeletionService) deleteProjectMemberships(tx *gorm.DB, userID int) (int
 
 func (s *DeletionService) countProjectMemberships(tx *gorm.DB, userID int) (int, error) {
 	return s.safeCount(tx, "SELECT COUNT(*) FROM project_members WHERE user_id = ?", userID)
+}
+
+// deleteOwnedProjects removes the restricted projects (private or shared with
+// selected members) the user created. Their remaining chores (created by others)
+// are detached first and follow their own privacy from then on; without this a
+// shared project would stay behind with nobody able to change or re-scope it.
+// Circle-wide projects stay, as upstream keeps them.
+func (s *DeletionService) deleteOwnedProjects(tx *gorm.DB, userID int) (int, error) {
+	const owned = "SELECT id FROM projects WHERE created_by = ? AND is_private = ?"
+	if _, err := s.safeDelete(tx, "UPDATE chores SET project_id = NULL WHERE project_id IN ("+owned+")", userID, true); err != nil {
+		return 0, err
+	}
+	if _, err := s.safeDelete(tx, "DELETE FROM project_members WHERE project_id IN ("+owned+")", userID, true); err != nil {
+		return 0, err
+	}
+	return s.safeDelete(tx, "DELETE FROM projects WHERE created_by = ? AND is_private = ?", userID, true)
+}
+
+func (s *DeletionService) countOwnedProjects(tx *gorm.DB, userID int) (int, error) {
+	return s.safeCount(tx, "SELECT COUNT(*) FROM projects WHERE created_by = ? AND is_private = ?", userID, true)
+}
+
+// deleteUserTombstones drops the sync tombstones addressed to the deleted user
+// only (revocations). Nobody can sync as that user any more; circle-wide
+// tombstones (user_id NULL) are kept.
+func (s *DeletionService) deleteUserTombstones(tx *gorm.DB, userID int) (int, error) {
+	return s.safeDelete(tx, "DELETE FROM tombstones WHERE user_id = ?", userID)
+}
+
+func (s *DeletionService) countUserTombstones(tx *gorm.DB, userID int) (int, error) {
+	return s.safeCount(tx, "SELECT COUNT(*) FROM tombstones WHERE user_id = ?", userID)
 }
 
 func (s *DeletionService) deleteChoreLabels(tx *gorm.DB, userID int) (int, error) {

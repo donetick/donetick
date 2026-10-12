@@ -91,3 +91,9 @@ donetick_cloud:
   google_android_client_id: ""
   google_ios_client_id: ""
   apple_client_id: "com.donetick.app"
+bridge:
+  enabled: true
+  base_url: "http://localhost:8080"
+  instance_id: ""
+  instance_token: ""
+  timeout_seconds: 15

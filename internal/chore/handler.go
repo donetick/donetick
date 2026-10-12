@@ -23,6 +23,7 @@ import (
 	lModel "donetick.com/core/internal/label/model"
 	lRepo "donetick.com/core/internal/label/repo"
 	"donetick.com/core/internal/notifier"
+	"donetick.com/core/internal/notifier/push"
 	nRepo "donetick.com/core/internal/notifier/repo"
 	nps "donetick.com/core/internal/notifier/service"
 	fcmService "donetick.com/core/internal/notifier/service/fcm"
@@ -53,6 +54,7 @@ type Handler struct {
 	lRepo           *lRepo.LabelRepository
 	uRepo           *uRepo.UserRepository
 	deviceRepo      *dRepo.DeviceRepository
+	pushSender      *push.Sender
 	eventProducer   *events.EventsProducer
 	stRepo          *stRepo.SubTasksRepository
 	storageRepo     *storageRepo.StorageRepository
@@ -68,6 +70,7 @@ func NewHandler(cr *chRepo.ChoreRepository, circleRepo *cRepo.CircleRepository, 
 	stor storage.Storage,
 	ur *uRepo.UserRepository,
 	dr *dRepo.DeviceRepository,
+	ps *push.Sender,
 	stoRepo *storageRepo.StorageRepository,
 	signer storage.URLSigner,
 	rts *realtime.RealTimeService,
@@ -77,6 +80,7 @@ func NewHandler(cr *chRepo.ChoreRepository, circleRepo *cRepo.CircleRepository, 
 		pjRepo:          projectRepo,
 		uRepo:           ur,
 		deviceRepo:      dr,
+		pushSender:      ps,
 		circleRepo:      circleRepo,
 		notifier:        nt,
 		nPlanner:        np,
@@ -2398,6 +2402,8 @@ func (h *Handler) CompleteChore(c *gin.Context) {
 			broadcaster.BroadcastChoreUpdated(updatedChore, &effectiveUser.User, changes, note)
 		}
 
+		h.notifyApproversOfPendingApproval(c, chore, &effectiveUser.User, circleUsers)
+
 		c.JSON(200, gin.H{
 			"res":     updatedChore,
 			"message": "Chore completion submitted for approval",
@@ -4297,6 +4303,69 @@ func (h *Handler) SendNudgeNotification(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, response)
+}
+
+// notifyApproversOfPendingApproval pushes a notification to the admins and
+// managers who can act on a completion that is waiting for approval. Approvers
+// tied to the task (its creator or an assignee) are preferred; if none of them
+// can approve, every admin and manager in the circle is notified so the request
+// is not left stranded. Failures are logged only: the submission already
+// succeeded.
+func (h *Handler) notifyApproversOfPendingApproval(c context.Context, chore *chModel.Chore, submittedBy *uModel.User, circleUsers []*circle.UserCircleDetail) {
+	log := logging.FromContext(c)
+
+	relatedToChore := map[int]bool{chore.CreatedBy: true}
+	if chore.AssignedTo != nil {
+		relatedToChore[*chore.AssignedTo] = true
+	}
+	for _, assignee := range chore.Assignees {
+		relatedToChore[assignee.UserID] = true
+	}
+
+	related := make([]int, 0, len(circleUsers))
+	fallback := make([]int, 0, len(circleUsers))
+	seen := make(map[int]bool, len(circleUsers))
+	for _, user := range circleUsers {
+		if user.UserID == submittedBy.ID || !user.IsActive || !user.IsManagerOrAdmin() || seen[user.UserID] {
+			continue
+		}
+		seen[user.UserID] = true
+		fallback = append(fallback, user.UserID)
+		if relatedToChore[user.UserID] {
+			related = append(related, user.UserID)
+		}
+	}
+
+	approverIDs := related
+	if len(approverIDs) == 0 {
+		approverIDs = fallback
+	}
+	if len(approverIDs) == 0 {
+		return
+	}
+
+	submitterName := submittedBy.DisplayName
+	if submitterName == "" {
+		submitterName = submittedBy.Username
+	}
+
+	payload := fcmService.FCMNotificationPayload{
+		Title: "Approval Needed",
+		Body:  fmt.Sprintf("%s completed '%s' and is waiting for your approval", submitterName, chore.Name),
+		Data: map[string]string{
+			"type":         "chore_pending_approval",
+			"chore_id":     fmt.Sprintf("%d", chore.ID),
+			"chore_name":   chore.Name,
+			"from_user_id": fmt.Sprintf("%d", submittedBy.ID),
+			"from_user":    submitterName,
+		},
+	}
+
+	devices := h.pushSender.SendToUsers(c, approverIDs, payload)
+	log.Debugw("Pending approval notification sent",
+		"chore_id", chore.ID,
+		"approvers", len(approverIDs),
+		"devices", devices)
 }
 
 func (h *Handler) sendNudgeToUser(c context.Context, userID int, chore *chModel.Chore, fromUser *uModel.UserDetails, customMessage string) (int, error) {

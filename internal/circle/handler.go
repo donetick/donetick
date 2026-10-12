@@ -1,6 +1,7 @@
 package circle
 
 import (
+	"fmt"
 	"log"
 
 	"strconv"
@@ -12,6 +13,8 @@ import (
 	chRepo "donetick.com/core/internal/chore/repo"
 	cModel "donetick.com/core/internal/circle/model"
 	cRepo "donetick.com/core/internal/circle/repo"
+	"donetick.com/core/internal/notifier/push"
+	"donetick.com/core/internal/notifier/service/fcm"
 	pRepo "donetick.com/core/internal/points/repo"
 	"donetick.com/core/internal/storage"
 	uModel "donetick.com/core/internal/user/model"
@@ -25,6 +28,7 @@ type Handler struct {
 	userRepo             *uRepo.UserRepository
 	choreRepo            *chRepo.ChoreRepository
 	pointRepo            *pRepo.PointsRepository
+	pushSender           *push.Sender
 	signer               storage.URLSigner
 	isDonetickDotCom     bool
 	maxCircleMembers     int
@@ -33,12 +37,13 @@ type Handler struct {
 }
 
 func NewHandler(cr *cRepo.CircleRepository, ur *uRepo.UserRepository, c *chRepo.ChoreRepository, pr *pRepo.PointsRepository,
-	signer storage.URLSigner, config *config.Config) *Handler {
+	ps *push.Sender, signer storage.URLSigner, config *config.Config) *Handler {
 	return &Handler{
 		circleRepo:           cr,
 		userRepo:             ur,
 		choreRepo:            c,
 		pointRepo:            pr,
+		pushSender:           ps,
 		signer:               signer,
 		isDonetickDotCom:     config.IsDoneTickDotCom,
 		maxCircleMembers:     config.FeatureLimits.MaxCircleMembers,
@@ -129,6 +134,13 @@ func (h *Handler) JoinCircle(c *gin.Context) {
 	}
 
 	circle, err := h.circleRepo.GetCircleByInviteCode(c, requestedCircleID)
+	if err != nil {
+		log.Error("Error getting circle by invite code:", err)
+		c.JSON(400, gin.H{
+			"error": "Invalid request",
+		})
+		return
+	}
 
 	if circle.ID == currentUser.CircleID {
 		c.JSON(409, gin.H{
@@ -152,9 +164,58 @@ func (h *Handler) JoinCircle(c *gin.Context) {
 		return
 	}
 
+	h.notifyAdminsOfJoinRequest(c, circle, &currentUser.User)
+
 	c.JSON(200, gin.H{
 		"res": "User Requested to join circle successfully",
 	})
+}
+
+// notifyAdminsOfJoinRequest pushes a notification to every admin of the circle
+// so they can review the pending join request. Failures are logged only: the
+// join request itself already succeeded.
+func (h *Handler) notifyAdminsOfJoinRequest(c *gin.Context, circle *cModel.Circle, requester *uModel.User) {
+	log := logging.FromContext(c)
+
+	admins, err := h.circleRepo.GetCircleAdmins(c, circle.ID)
+	if err != nil {
+		log.Error("Error getting circle admins for join request notification:", err)
+		return
+	}
+
+	adminIDs := make([]int, 0, len(admins))
+	seen := make(map[int]bool, len(admins))
+	for _, admin := range admins {
+		if admin.UserID == requester.ID || seen[admin.UserID] {
+			continue
+		}
+		seen[admin.UserID] = true
+		adminIDs = append(adminIDs, admin.UserID)
+	}
+	if len(adminIDs) == 0 {
+		return
+	}
+
+	payload := fcm.FCMNotificationPayload{
+		Title: "New Join Request",
+		Body:  fmt.Sprintf("%s wants to join %s", displayNameOrUsername(requester), circle.Name),
+		Data: map[string]string{
+			"type":           "circle_join_request",
+			"circle_id":      strconv.Itoa(circle.ID),
+			"circle_name":    circle.Name,
+			"requester_id":   strconv.Itoa(requester.ID),
+			"requester_name": displayNameOrUsername(requester),
+		},
+	}
+
+	h.pushSender.SendToUsers(c, adminIDs, payload)
+}
+
+func displayNameOrUsername(u *uModel.User) string {
+	if u.DisplayName != "" {
+		return u.DisplayName
+	}
+	return u.Username
 }
 
 // LeaveCircle godoc
@@ -240,7 +301,10 @@ func (h *Handler) LeaveCircle(c *gin.Context) {
 	})
 }
 
-func handleUserLeavingCircle(h *Handler, c *gin.Context, leavingUser *uModel.User, orginalCircleID int) error {
+// reassignChoresForLeavingUser moves the chores the user created in the circle
+// they are leaving to destinationCircleID (keeping them assigned to the user),
+// and hands the chores that were merely assigned to them back to the circle.
+func reassignChoresForLeavingUser(h *Handler, c *gin.Context, leavingUser *uModel.User, destinationCircleID int) error {
 	userAssignedCircleChores, err := h.choreRepo.GetChores(c, leavingUser.CircleID, leavingUser.ID, true, nil, false)
 	if err != nil {
 		return err
@@ -251,7 +315,7 @@ func handleUserLeavingCircle(h *Handler, c *gin.Context, leavingUser *uModel.Use
 			ch.AssignedTo = &leavingUser.ID
 			ch.UpdatedAt = time.Now().UTC()
 			ch.UpdatedBy = leavingUser.ID
-			ch.CircleID = orginalCircleID
+			ch.CircleID = destinationCircleID
 		} else if ch.CreatedBy != leavingUser.ID && (ch.AssignedTo != nil && *ch.AssignedTo == leavingUser.ID) {
 			chore.RemoveAssigneeAndReassign(ch, leavingUser.ID)
 		}
@@ -260,6 +324,13 @@ func handleUserLeavingCircle(h *Handler, c *gin.Context, leavingUser *uModel.Use
 
 	h.choreRepo.UpdateChores(c, userAssignedCircleChores)
 	h.choreRepo.RemoveChoreAssigneeByCircleID(c, leavingUser.ID, leavingUser.CircleID)
+	return nil
+}
+
+func handleUserLeavingCircle(h *Handler, c *gin.Context, leavingUser *uModel.User, orginalCircleID int) error {
+	if err := reassignChoresForLeavingUser(h, c, leavingUser, orginalCircleID); err != nil {
+		return err
+	}
 	h.circleRepo.AssignDefaultCircle(c, leavingUser.ID)
 	return nil
 }
@@ -453,6 +524,46 @@ func (h *Handler) GetPendingCircleMembers(c *gin.Context) {
 	})
 }
 
+// requireCircleAdmin writes an error response and returns false when userID is
+// not an admin among the given circle members.
+func (h *Handler) requireCircleAdmin(c *gin.Context, members []*cModel.UserCircleDetail, userID int) bool {
+	for _, member := range members {
+		if member.UserID == userID && member.Role == cModel.UserRoleAdmin {
+			return true
+		}
+	}
+	c.JSON(403, gin.H{
+		"error": "You are not an admin of this circle",
+	})
+	return false
+}
+
+// findPendingRequest resolves requestID to one of the circle's pending join
+// requests, writing an error response and returning false when it is not.
+func (h *Handler) findPendingRequest(c *gin.Context, circleID, requestID int) (*cModel.UserCircleDetail, bool) {
+	log := logging.FromContext(c)
+
+	pendingRequests, err := h.circleRepo.GetPendingJoinRequests(c, circleID)
+	if err != nil {
+		log.Error("Error getting pending circle members:", err)
+		c.JSON(500, gin.H{
+			"error": "Error getting pending circle members",
+		})
+		return nil, false
+	}
+
+	for _, request := range pendingRequests {
+		if request.ID == requestID {
+			return request, true
+		}
+	}
+
+	c.JSON(400, gin.H{
+		"error": "Invalid request",
+	})
+	return nil, false
+}
+
 // AcceptJoinRequest godoc
 //
 //	@Summary		Accept a join request
@@ -516,42 +627,22 @@ func (h *Handler) AcceptJoinRequest(c *gin.Context) {
 			return
 		}
 	}
-	// confirm that the current user is an admin:
-	isAdmin := false
-	for _, member := range currentMembers {
-		if member.UserID == currentUser.ID && member.Role == "admin" {
-			isAdmin = true
-			break
-		}
-	}
-	if !isAdmin {
-		c.JSON(403, gin.H{
-			"error": "You are not an admin of this circle",
-		})
+	if !h.requireCircleAdmin(c, currentMembers, currentUser.ID) {
 		return
 	}
-	pendingRequests, err := h.circleRepo.GetPendingJoinRequests(c, currentUser.CircleID)
-	if err != nil {
-		log.Error("Error getting pending circle members:", err)
-		c.JSON(500, gin.H{
-			"error": "Error getting pending circle members",
-		})
+
+	requestedCircle, ok := h.findPendingRequest(c, currentUser.CircleID, requestID)
+	if !ok {
 		return
 	}
-	isActiveRequest := false
-	var requestedCircle *cModel.UserCircleDetail
-	for _, request := range pendingRequests {
-		if request.ID == requestID {
-			requestedCircle = request
-			isActiveRequest = true
-			break
-		}
-	}
-	if !isActiveRequest {
-		c.JSON(400, gin.H{
-			"error": "Invalid request",
-		})
-		return
+
+	// Capture the circle the user is in before accepting: UpdateUserCircle
+	// below repoints them, and the cleanup afterwards needs the old value.
+	previousCircleID := 0
+	if requester, err := h.userRepo.GetUserByID(c, requestedCircle.UserID); err != nil {
+		log.Error("Error getting requester, skipping previous membership cleanup:", err)
+	} else {
+		previousCircleID = requester.CircleID
 	}
 
 	err = h.circleRepo.AcceptJoinRequest(c, currentUser.CircleID, requestID)
@@ -571,10 +662,190 @@ func (h *Handler) AcceptJoinRequest(c *gin.Context) {
 		return
 	}
 
+	h.removeStaleMembership(c, requestedCircle.UserID, previousCircleID, currentUser.CircleID)
+
+	h.notifyMemberOfAcceptedRequest(c, currentUser.CircleID, requestedCircle.UserID)
+
 	c.JSON(200, gin.H{
 		"res": "Join request accepted successfully",
 	})
 
+}
+
+// removeStaleMembership drops the membership the accepted user held in the
+// shared circle they just moved out of. Without this the old membership stays
+// is_active, so the user keeps a seat in its member list and stays in its chore
+// viewer set (which is what offline sync uses to decide what reaches a device).
+//
+// Memberships the user administers are left alone: that is their own circle,
+// and LeaveCircle needs it to send them back. Failures are logged only, since
+// the user has already been accepted into the new circle by this point.
+func (h *Handler) removeStaleMembership(c *gin.Context, userID, previousCircleID, newCircleID int) {
+	log := logging.FromContext(c)
+
+	if previousCircleID == 0 || previousCircleID == newCircleID {
+		return
+	}
+
+	previousRole, err := h.circleRepo.GetUserCircleRole(c, previousCircleID, userID)
+	if err != nil {
+		log.Error("Error getting previous circle role:", err)
+		return
+	}
+	if previousRole == cModel.RoleAdmin {
+		// Their own circle: keep the membership so they can return to it.
+		return
+	}
+	if previousRole == "" {
+		// No membership row there, nothing to clean up.
+		return
+	}
+
+	// Chores the user created in the old circle follow them out, but they are
+	// parked in the circle the user administers rather than the newly joined
+	// one, so that a shared circle's tasks never surface in another one.
+	destinationCircleID, err := h.circleRepo.GetUserOriginalCircle(c, userID)
+	if err != nil || destinationCircleID == 0 {
+		log.Warnw("Skipping previous membership cleanup: no circle to move the user's chores to",
+			"userID", userID, "previousCircleID", previousCircleID, "error", err)
+		return
+	}
+
+	leavingUser := &uModel.User{ID: userID, CircleID: previousCircleID}
+	if err := reassignChoresForLeavingUser(h, c, leavingUser, destinationCircleID); err != nil {
+		log.Error("Error reassigning chores from previous circle:", err)
+		return
+	}
+
+	if err := h.circleRepo.LeaveCircleByUserID(c, previousCircleID, userID); err != nil {
+		log.Error("Error removing previous circle membership:", err)
+		return
+	}
+
+	log.Infow("Removed previous circle membership after join request acceptance",
+		"userID", userID,
+		"previousCircleID", previousCircleID,
+		"newCircleID", newCircleID,
+		"choresMovedTo", destinationCircleID)
+}
+
+// DeclineJoinRequest godoc
+//
+//	@Summary		Decline a join request
+//	@Description	Declines a pending circle join request (admin only). The request is removed, so the user may request to join again later.
+//	@Tags			circles
+//	@Accept			json
+//	@Produce		json
+//	@Security		JWTKeyAuth
+//	@Security		APIKeyAuth
+//	@Param			requestId	query		int					true	"Request ID"
+//	@Success		200			{object}	map[string]string	"res: Join request declined successfully"
+//	@Failure		400			{object}	map[string]string	"error: Invalid request"
+//	@Failure		401			{object}	map[string]string	"error: Authentication failed"
+//	@Failure		403			{object}	map[string]string	"error: You are not an admin of this circle"
+//	@Failure		500			{object}	map[string]string	"error: Error declining join request"
+//	@Router			/circles/members/requests/decline [delete]
+func (h *Handler) DeclineJoinRequest(c *gin.Context) {
+	log := logging.FromContext(c)
+	currentUser, ok := auth.CurrentUser(c)
+	if !ok {
+		c.JSON(500, gin.H{
+			"error": "Error getting current user",
+		})
+		return
+	}
+
+	requestID, err := strconv.Atoi(c.Query("requestId"))
+	if err != nil {
+		c.JSON(400, gin.H{
+			"error": "Invalid request",
+		})
+		return
+	}
+
+	currentMembers, err := h.circleRepo.GetCircleUsers(c, currentUser.CircleID)
+	if err != nil {
+		log.Error("Error getting circle members:", err)
+		c.JSON(500, gin.H{
+			"error": "Error getting circle members",
+		})
+		return
+	}
+
+	if !h.requireCircleAdmin(c, currentMembers, currentUser.ID) {
+		return
+	}
+
+	requestedCircle, ok := h.findPendingRequest(c, currentUser.CircleID, requestID)
+	if !ok {
+		return
+	}
+
+	if err := h.circleRepo.DeclineJoinRequest(c, currentUser.CircleID, requestID); err != nil {
+		log.Error("Error declining join request:", err)
+		c.JSON(500, gin.H{
+			"error": "Error declining join request",
+		})
+		return
+	}
+
+	h.notifyMemberOfDeclinedRequest(c, currentUser.CircleID, requestedCircle.UserID)
+
+	c.JSON(200, gin.H{
+		"res": "Join request declined successfully",
+	})
+}
+
+// notifyMemberOfDeclinedRequest lets the requester know their join request was
+// turned down. Failures are logged only: the request was already removed.
+func (h *Handler) notifyMemberOfDeclinedRequest(c *gin.Context, circleID, memberID int) {
+	log := logging.FromContext(c)
+
+	circle, err := h.circleRepo.GetCircleByID(c, circleID)
+	if err != nil {
+		log.Error("Error getting circle for join decline notification:", err)
+		return
+	}
+
+	payload := fcm.FCMNotificationPayload{
+		Title: "Join Request Declined",
+		Body:  fmt.Sprintf("Your request to join %s was declined.", circle.Name),
+		Data: map[string]string{
+			"type":        "circle_join_declined",
+			"circle_id":   strconv.Itoa(circle.ID),
+			"circle_name": circle.Name,
+		},
+	}
+
+	if _, err := h.pushSender.SendToUser(c, memberID, payload); err != nil {
+		log.Warn("Failed to send join decline notification", "user_id", memberID, "error", err)
+	}
+}
+
+// notifyMemberOfAcceptedRequest welcomes the newly accepted member on their
+// devices. Failures are logged only: the member was already added.
+func (h *Handler) notifyMemberOfAcceptedRequest(c *gin.Context, circleID, memberID int) {
+	log := logging.FromContext(c)
+
+	circle, err := h.circleRepo.GetCircleByID(c, circleID)
+	if err != nil {
+		log.Error("Error getting circle for join acceptance notification:", err)
+		return
+	}
+
+	payload := fcm.FCMNotificationPayload{
+		Title: "Welcome to " + circle.Name,
+		Body:  fmt.Sprintf("Your request to join %s was approved. You can now see and complete its tasks.", circle.Name),
+		Data: map[string]string{
+			"type":        "circle_join_approved",
+			"circle_id":   strconv.Itoa(circle.ID),
+			"circle_name": circle.Name,
+		},
+	}
+
+	if _, err := h.pushSender.SendToUser(c, memberID, payload); err != nil {
+		log.Warn("Failed to send join acceptance notification", "user_id", memberID, "error", err)
+	}
 }
 
 // RedeemPoints godoc
@@ -810,6 +1081,7 @@ func Routes(router *gin.Engine, h *Handler, multiAuthMiddleware *auth.MultiAuthM
 
 		if !h.singleCircleInstance {
 			circleRoutes.PUT("/members/requests/accept", h.AcceptJoinRequest)
+			circleRoutes.DELETE("/members/requests/decline", h.DeclineJoinRequest)
 			circleRoutes.POST("/join", h.JoinCircle)
 			circleRoutes.DELETE("/leave", h.LeaveCircle)
 			circleRoutes.DELETE("/:id/members/delete", h.DeleteCircleMember)

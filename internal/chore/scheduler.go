@@ -48,7 +48,7 @@ func scheduleNextDueDate(ctx context.Context, chore *chModel.Chore, completedDat
 			if chore.NextDueDate != nil {
 				t = *chore.NextDueDate
 			} else {
-				t = time.Now()
+				t = time.Now().UTC()
 			}
 
 		}
@@ -446,4 +446,26 @@ func RemoveAssigneeAndReassign(chore *chModel.Chore, userID int) {
 		chore.AssignedTo = &userID
 	}
 	chore.UpdatedAt = time.Now().UTC()
+}
+
+// firstDueDateOnSelectedWeekday returns due if it falls on one of days in the
+// chore timezone, otherwise the first later selected day at the same wall-clock time.
+func firstDueDateOnSelectedWeekday(due time.Time, days []*string, tz string) time.Time {
+	loc := time.UTC
+	if tz != "" {
+		if l, err := time.LoadLocation(tz); err == nil {
+			loc = l
+		}
+	}
+	dueInTimezone := due.In(loc)
+	for i := 0; i < 7; i++ {
+		candidate := dueInTimezone.AddDate(0, 0, i)
+		weekday := strings.ToLower(candidate.Weekday().String())
+		for _, day := range days {
+			if day != nil && strings.ToLower(*day) == weekday {
+				return candidate.UTC()
+			}
+		}
+	}
+	return due.UTC()
 }

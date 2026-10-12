@@ -47,6 +47,7 @@ const (
 )
 
 type Chore struct {
+	CompletionActions      []CompletionAction         `json:"completionActions" gorm:"serializer:json;type:json"`
 	ID                     int                        `json:"id" gorm:"primary_key"`
 	Name                   string                     `json:"name" gorm:"column:name"`                                                                // Chore description
 	FrequencyType          FrequencyType              `json:"frequencyType" gorm:"column:frequency_type"`                                             // "daily", "weekly", "monthly", "yearly", "adaptive",or "custom"

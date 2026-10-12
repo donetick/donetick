@@ -277,6 +277,254 @@
                 }
             }
         },
+        "/chores/calendar/url": {
+            "get": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
+                    }
+                ],
+                "description": "Returns the current user's existing iCal calendar subscription URL. Returns 404 if none has been generated yet.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "chores"
+                ],
+                "summary": "Get calendar subscription URL",
+                "responses": {
+                    "200": {
+                        "description": "url: calendar subscription URL",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "error: Authentication failed",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "error: Only plus members can access this endpoint",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "error: No calendar URL generated",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
+                    }
+                ],
+                "description": "Generates a calendar subscription URL for the current user. Idempotent: returns the existing URL if one was already generated.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "chores"
+                ],
+                "summary": "Generate calendar subscription URL",
+                "responses": {
+                    "200": {
+                        "description": "url: existing calendar subscription URL",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "201": {
+                        "description": "url: newly generated calendar subscription URL",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "error: Authentication failed",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "error: Only plus members can access this endpoint",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
+                    }
+                ],
+                "description": "Revokes the current user's calendar subscription URL. Existing subscriptions stop working immediately.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "chores"
+                ],
+                "summary": "Revoke calendar subscription URL",
+                "responses": {
+                    "204": {
+                        "description": "No content",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "401": {
+                        "description": "error: Authentication failed",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "error: Only plus members can access this endpoint",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/chores/calendar/url/rotate": {
+            "post": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
+                    }
+                ],
+                "description": "Issues a new calendar subscription URL and immediately invalidates the previous one.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "chores"
+                ],
+                "summary": "Rotate calendar subscription URL",
+                "responses": {
+                    "200": {
+                        "description": "url: new calendar subscription URL",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "error: Authentication failed",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "error: Only plus members can access this endpoint",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/chores/calendar/{token}": {
+            "get": {
+                "description": "Serves an iCal (.ics) calendar file containing the user's chores. Authenticated via a revocable token in the URL.",
+                "produces": [
+                    "text/calendar"
+                ],
+                "tags": [
+                    "chores"
+                ],
+                "summary": "Serve iCal calendar feed",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Calendar token (obtained from /chores/calendar/url)",
+                        "name": "token",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "iCal calendar data",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "403": {
+                        "description": "Invalid calendar token, or the owner is not a plus member",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to generate calendar",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/chores/history": {
             "get": {
                 "security": [
@@ -4447,7 +4695,7 @@
                         "day_of_the_month",
                         "trigger",
                         "no_repeat",
-                        "anytime"
+                        "always"
                     ],
                     "allOf": [
                         {
@@ -5280,7 +5528,7 @@
                 "day_of_the_month",
                 "trigger",
                 "no_repeat",
-                "anytime"
+                "always"
             ],
             "x-enum-varnames": [
                 "FrequencyTypeOnce",
@@ -5294,7 +5542,7 @@
                 "FrequencyTypeDayOfTheMonth",
                 "FrequencyTypeTrigger",
                 "FrequencyTypeNoRepeat",
-                "FrequencyTypeAnytime"
+                "FrequencyTypeAlways"
             ]
         },
         "model.Label": {

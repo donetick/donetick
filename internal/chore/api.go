@@ -207,11 +207,11 @@ func (h *API) UpdateChore(c *gin.Context) {
 		c.JSON(500, gin.H{"error": "Failed to get circle members"})
 		return
 	}
-	// Check if user owns this chore
-	now := time.Now().UTC()
-	if err := existingChore.CanEdit(user.ID, circleUsers, &now); err != nil {
-		log.Debugw("chore.api.UpdateChore user does not own chore", "userID", user.ID, "choreCreatedBy", existingChore.CreatedBy)
-		c.JSON(403, gin.H{"error": "You can only update your own chores"})
+	// Match external API delete permissions. Partial updates do not supply a
+	// client updatedAt value, so the web editor's stale-data check does not apply.
+	if existingChore.CreatedBy != user.ID && !user.IsAdminOrManager(circleUsers) {
+		log.Debugw("chore.api.UpdateChore edit denied", "userID", user.ID, "circleID", user.CircleID, "choreCreatedBy", existingChore.CreatedBy)
+		c.JSON(403, gin.H{"error": "Only the chore creator or a circle admin/manager can update this chore"})
 		return
 	}
 
@@ -433,8 +433,15 @@ func (h *API) DeleteChore(c *gin.Context) {
 		return
 	}
 	if chore.CreatedBy != currentUser.ID {
-		c.JSON(403, gin.H{"error": "You can only delete your own chores"})
-		return
+		circleUsers, err := h.circleRepo.GetCircleUsers(c, currentUser.CircleID)
+		if err != nil {
+			c.JSON(500, gin.H{"error": "Failed to get circle members"})
+			return
+		}
+		if !currentUser.IsAdminOrManager(circleUsers) {
+			c.JSON(403, gin.H{"error": "Only the chore creator or a circle admin/manager can delete this chore"})
+			return
+		}
 	}
 	if _, err := h.choreRepo.DeleteChore(c, choreID); err != nil {
 		c.JSON(500, gin.H{"error": "Failed to delete chore"})

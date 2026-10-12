@@ -14,7 +14,9 @@ import (
 	"donetick.com/core/frontend"
 	auth "donetick.com/core/internal/auth"
 	"donetick.com/core/internal/auth/apple"
+	"donetick.com/core/internal/bridge"
 	"donetick.com/core/internal/calendar"
+	calRepo "donetick.com/core/internal/calendar/repo"
 	"donetick.com/core/internal/chore"
 	chRepo "donetick.com/core/internal/chore/repo"
 	"donetick.com/core/internal/circle"
@@ -36,6 +38,7 @@ import (
 	"donetick.com/core/internal/notifier/push"
 	nRepo "donetick.com/core/internal/notifier/repo"
 	nps "donetick.com/core/internal/notifier/service"
+	"donetick.com/core/internal/notifier/service/bridgenotifier"
 	discord "donetick.com/core/internal/notifier/service/discord"
 	"donetick.com/core/internal/notifier/service/fcm"
 	"donetick.com/core/internal/notifier/service/pushover"
@@ -93,6 +96,7 @@ func main() {
 		fx.Provide(chRepo.NewChoreRepository),
 		fx.Provide(chore.NewHandler),
 		fx.Provide(calendar.NewHandler),
+		fx.Provide(calRepo.NewCalendarRepository),
 		fx.Provide(uRepo.NewUserRepository),
 		fx.Provide(user.NewDeletionService),
 		fx.Provide(user.NewHandler),
@@ -103,6 +107,20 @@ func main() {
 		fx.Provide(dRepo.NewDeviceRepository),
 		fx.Provide(device.NewHandler),
 
+		// Donetick Bridge (hosted push-notification relay):
+		fx.Provide(func(cfg *config.Config) bridge.CoreConfig {
+			return bridge.CoreConfig{
+				Enabled:        cfg.Bridge.Enabled,
+				BaseURL:        cfg.Bridge.BaseURL,
+				InstanceID:     cfg.Bridge.InstanceID,
+				InstanceToken:  cfg.Bridge.InstanceToken,
+				TimeoutSeconds: cfg.Bridge.TimeoutSeconds,
+			}
+		}),
+		fx.Provide(bridge.NewSettingsRepository),
+		fx.Provide(bridge.NewService),
+		fx.Provide(bridge.NewHandler),
+
 		fx.Provide(nRepo.NewNotificationRepository),
 		fx.Provide(nps.NewNotificationPlanner),
 
@@ -110,6 +128,7 @@ func main() {
 		fx.Provide(pushover.NewPushover),
 		fx.Provide(telegram.NewTelegramNotifier),
 		fx.Provide(discord.NewDiscordNotifier),
+		fx.Provide(bridgenotifier.NewBridgeNotifier),
 		fx.Provide(notifier.NewNotifier),
 		fx.Provide(events.NewEventsProducer),
 		fx.Provide(fcm.NewFCMNotifier),
@@ -204,6 +223,7 @@ func main() {
 			user.Routes,
 			circle.Routes,
 			device.Routes,
+			bridge.Routes,
 			thing.Routes,
 			thing.APIs,
 			label.Routes,

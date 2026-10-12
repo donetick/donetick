@@ -79,6 +79,41 @@ func TestRegisterDeviceTokenDeactivatesStaleDeviceIDForSameToken(t *testing.T) {
 	require.Equal(t, "device-new", active[0].DeviceID)
 }
 
+func TestRegisterDeviceTokenAllowsTokenReplacementAtDeviceLimit(t *testing.T) {
+	repo := newDeviceTestRepository(t)
+	c := context.Background()
+
+	for i := 0; i < MaxDevicesPerUser; i++ {
+		require.NoError(t, repo.RegisterDeviceToken(c, &uModel.UserDeviceToken{
+			UserID:   1,
+			DeviceID: fmt.Sprintf("device-%d", i),
+			Token:    fmt.Sprintf("fcm-token-%d", i),
+			Platform: "ios",
+		}))
+	}
+
+	// Reusing a token under a new device ID replaces one active row, so it does
+	// not consume a sixth slot and must remain allowed at the limit.
+	require.NoError(t, repo.RegisterDeviceToken(c, &uModel.UserDeviceToken{
+		UserID:   1,
+		DeviceID: "replacement-device",
+		Token:    "fcm-token-0",
+		Platform: "ios",
+	}))
+
+	active, err := repo.GetActiveDeviceTokens(c, 1)
+	require.NoError(t, err)
+	require.Len(t, active, MaxDevicesPerUser)
+
+	var oldDeviceActive, replacementActive bool
+	for _, token := range active {
+		oldDeviceActive = oldDeviceActive || token.DeviceID == "device-0"
+		replacementActive = replacementActive || token.DeviceID == "replacement-device"
+	}
+	require.False(t, oldDeviceActive)
+	require.True(t, replacementActive)
+}
+
 func TestRegisterDeviceTokenEnforcesDeviceLimit(t *testing.T) {
 	repo := newDeviceTestRepository(t)
 	c := context.Background()

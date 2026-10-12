@@ -44,31 +44,37 @@ func (r *DeviceRepository) RegisterDeviceToken(c context.Context, deviceToken *u
 	log := logging.FromContext(c)
 
 	return r.db.WithContext(c).Transaction(func(tx *gorm.DB) error {
-		lockedActive := tx.Model(&uModel.UserDeviceToken{})
 		if r.dbType == "postgres" {
-			lockedActive = lockedActive.Clauses(clause.Locking{Strength: "UPDATE"})
+			// Lock a row that always exists for this user. Locking only the current
+			// device-token rows does not serialize registrations when the result is
+			// empty and permits concurrent requests to exceed the device limit.
+			var user uModel.User
+			if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+				Select("id").First(&user, deviceToken.UserID).Error; err != nil {
+				log.Error("Failed to lock user for device registration", "error", err)
+				return err
+			}
 		}
 
-		// Lock the user's active devices for the duration of the transaction so
-		// concurrent registrations for the same user can't both pass the device
-		// limit check before either commits.
 		var activeTokens []uModel.UserDeviceToken
-		if err := lockedActive.
-			Where("user_id = ? AND is_active = ?", deviceToken.UserID, true).
+		if err := tx.Where("user_id = ? AND is_active = ?", deviceToken.UserID, true).
 			Find(&activeTokens).Error; err != nil {
-			log.Error("Failed to lock active device tokens", "error", err)
+			log.Error("Failed to load active device tokens", "error", err)
 			return err
 		}
 
-		isNewDevice := true
+		// Re-registering an active device does not consume another slot. Neither
+		// does moving an existing FCM token to a new device ID, because that token's
+		// old row is deactivated below in the same transaction.
+		requiresAdditionalSlot := true
 		for _, t := range activeTokens {
-			if t.DeviceID == deviceToken.DeviceID {
-				isNewDevice = false
+			if t.DeviceID == deviceToken.DeviceID || (deviceToken.Token != "" && t.Token == deviceToken.Token) {
+				requiresAdditionalSlot = false
 				break
 			}
 		}
 
-		if isNewDevice && len(activeTokens) >= MaxDevicesPerUser {
+		if requiresAdditionalSlot && len(activeTokens) >= MaxDevicesPerUser {
 			return errorx.ErrDeviceLimitExceeded
 		}
 

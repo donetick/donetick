@@ -76,6 +76,22 @@ func (r *CircleRepository) AcceptJoinRequest(c context.Context, circleID, reques
 	return r.db.WithContext(c).Model(&cModel.UserCircle{}).Where("circle_id = ? AND id = ?", circleID, requestID).Update("is_active", true).Error
 }
 
+// DeclineJoinRequest removes a pending join request. The is_active = false
+// guard makes sure an already accepted membership can never be deleted through
+// this path. Returns gorm.ErrRecordNotFound when no pending request matched.
+func (r *CircleRepository) DeclineJoinRequest(c context.Context, circleID, requestID int) error {
+	result := r.db.WithContext(c).
+		Where("circle_id = ? AND id = ? AND is_active = ?", circleID, requestID, false).
+		Delete(&cModel.UserCircle{})
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+	return nil
+}
+
 func (r *CircleRepository) GetUserCircles(c context.Context, userID int) ([]*cModel.CircleDetail, error) {
 	var circles []*cModel.CircleDetail
 	if err := r.db.WithContext(c).Raw("SELECT circles.*, user_circles.role as role, user_circles.created_at uc_created_at  FROM circles Left JOIN user_circles on circles.id = user_circles.circle_id WHERE user_circles.user_id = ? ORDER BY uc_created_at desc", userID).Scan(&circles).Error; err != nil {

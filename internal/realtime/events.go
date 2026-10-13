@@ -23,6 +23,11 @@ const (
 	EventTypeChoreDueDateChanged  EventType = "chore.due_date_changed"
 	EventTypeChoreArchived        EventType = "chore.archived"
 
+	// Project events
+	// EventTypeProjectUpdated tells clients that a project or who can see it changed;
+	// they should refresh their project list and sync. Older clients ignore it.
+	EventTypeProjectUpdated EventType = "project.updated"
+
 	// Subtask events
 	EventTypeSubtaskUpdated   EventType = "subtask.updated"
 	EventTypeSubtaskCompleted EventType = "subtask.completed"
@@ -208,5 +213,23 @@ func NewErrorEvent(circleID int, code, message string) *Event {
 	return NewEvent(EventTypeError, circleID, &ErrorData{
 		Code:    code,
 		Message: message,
+	})
+}
+
+// ProjectEventData identifies the project that changed. It deliberately carries no
+// project details: recipients that may no longer see the project fetch the list
+// again and only get what they are allowed to see.
+type ProjectEventData struct {
+	ProjectID     int          `json:"projectId"`
+	AccessChanged bool         `json:"accessChanged"`
+	User          *uModel.User `json:"user"`
+}
+
+// NewProjectUpdatedEvent creates a project update event
+func NewProjectUpdatedEvent(circleID, projectID int, accessChanged bool, user *uModel.User) *Event {
+	return NewEvent(EventTypeProjectUpdated, circleID, &ProjectEventData{
+		ProjectID:     projectID,
+		AccessChanged: accessChanged,
+		User:          user,
 	})
 }

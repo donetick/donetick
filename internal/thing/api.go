@@ -155,6 +155,11 @@ func WebhookEvaluateTriggerAndScheduleDueDate(h *API, c *gin.Context, thing *tMo
 	for _, tc := range thingChores {
 		triggered := EvaluateThingChore(tc, thing.State)
 		if triggered {
+			// Same guard as the app path: no rescheduling of chores the thing's owner
+			// can no longer see.
+			if _, err := h.choreRepo.GetChore(c, tc.ChoreID, thing.UserID, triggerCircleID(c, thing)); err != nil {
+				continue
+			}
 			errSave := h.choreRepo.SetDueDate(c, tc.ChoreID, time.Now().UTC())
 			if errSave != nil {
 				log.Error("Error setting due date for chore ", errSave)

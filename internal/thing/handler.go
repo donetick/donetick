@@ -175,6 +175,11 @@ func EvaluateTriggerAndScheduleDueDate(h *Handler, c *gin.Context, thing *tModel
 	for _, tc := range thingChores {
 		triggered := EvaluateThingChore(tc, thing.State)
 		if triggered {
+			// A trigger set up by someone who can no longer see the chore (e.g. after
+			// being removed from the project) must not keep rescheduling it.
+			if _, err := h.choreRepo.GetChore(c, tc.ChoreID, thing.UserID, triggerCircleID(c, thing)); err != nil {
+				continue
+			}
 			err := h.choreRepo.SetDueDateIfNotExisted(c, tc.ChoreID, time.Now().UTC())
 			if err != nil {
 				c.JSON(500, gin.H{"error": err.Error()})
@@ -397,4 +402,15 @@ func Routes(r *gin.Engine, h *Handler, multiAuthMiddleware *auth.MultiAuthMiddle
 		thingRoutes.GET("/:id/history", h.GetThingHistory)
 		thingRoutes.DELETE("/:id", h.DeleteThing)
 	}
+}
+
+// triggerCircleID is the circle whose chores a thing may reschedule: the circle of
+// the thing's owner, who is the user making the request (both trigger paths check
+// ownership first). Things carry no reliable circle of their own: CreateThing
+// never sets Thing.CircleID, so it is 0 for every existing thing.
+func triggerCircleID(c *gin.Context, thing *tModel.Thing) int {
+	if user, ok := auth.CurrentUser(c); ok && user.ID == thing.UserID {
+		return user.CircleID
+	}
+	return thing.CircleID
 }

@@ -9,6 +9,7 @@ import (
 	chModel "donetick.com/core/internal/chore/model"
 	cModel "donetick.com/core/internal/circle/model"
 	nModel "donetick.com/core/internal/notifier/model"
+	pModel "donetick.com/core/internal/project/model"
 	syncModel "donetick.com/core/internal/sync/model"
 	"github.com/glebarez/sqlite"
 	"github.com/stretchr/testify/require"
@@ -24,6 +25,9 @@ func newVisibilityTestRepository(t *testing.T) (*ChoreRepository, *gorm.DB) {
 	require.NoError(t, db.AutoMigrate(
 		&chModel.Chore{},
 		&chModel.ChoreAssignees{},
+		&chModel.ChoreHistory{},
+		&pModel.Project{},
+		&pModel.ProjectMember{},
 		&cModel.UserCircle{},
 		&nModel.Notification{},
 		&syncModel.SyncCursor{},

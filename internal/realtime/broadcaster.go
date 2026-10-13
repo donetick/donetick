@@ -25,8 +25,9 @@ func NewEventBroadcaster(service *RealTimeService, config *config.Config) *Event
 }
 
 // broadcastChoreEvent enforces the same visibility boundary as the API. A
-// private project's owner is its sole recipient; standalone private chores go
-// only to their creator and assignees. Public chores remain circle-wide.
+// restricted project's audience (its owner, plus the selected members of a shared
+// project) are its sole recipients; standalone private chores go only to their
+// creator and assignees. Public chores remain circle-wide.
 func (b *EventBroadcaster) broadcastChoreEvent(chore *chModel.Chore, event *Event) {
 	// A caller that did not load the project cannot safely determine recipients.
 	// Fail closed rather than treating an unknown private project as a public one.
@@ -34,7 +35,10 @@ func (b *EventBroadcaster) broadcastChoreEvent(chore *chModel.Chore, event *Even
 		return
 	}
 	if chore.Project != nil && chore.Project.IsPrivate {
-		b.service.BroadcastToUsers(chore.CircleID, []int{chore.Project.CreatedBy}, event)
+		// ViewerIDs only lists members once they are loaded; until then the owner
+		// alone receives the event.
+		viewers, _ := chore.Project.ViewerIDs()
+		b.service.BroadcastToUsers(chore.CircleID, viewers, event)
 		return
 	}
 	if chore.IsPrivate {
@@ -49,6 +53,36 @@ func (b *EventBroadcaster) broadcastChoreEvent(chore *chModel.Chore, event *Even
 		return
 	}
 	b.service.BroadcastToCircle(chore.CircleID, event)
+}
+
+// BroadcastChoreAccessRevoked tells users who just lost sight of a chore to drop it,
+// using the regular deletion event so older clients handle it too. versions maps
+// each user to the sync version of their tombstone.
+func (b *EventBroadcaster) BroadcastChoreAccessRevoked(circleID, choreID int, choreName string, user *uModel.User, versions map[int]int64) {
+	if !b.service.config.Enabled {
+		return
+	}
+	for userID, version := range versions {
+		event := NewChoreDeletedEvent(choreID, choreName, circleID, user)
+		event.ID = b.generateEventID()
+		event.SyncVersion = version
+		b.service.BroadcastToUsers(circleID, []int{userID}, event)
+	}
+}
+
+// BroadcastProjectUpdated notifies users that a project changed. recipients nil
+// means the whole circle.
+func (b *EventBroadcaster) BroadcastProjectUpdated(circleID, projectID int, accessChanged bool, user *uModel.User, recipients []int) {
+	if !b.service.config.Enabled {
+		return
+	}
+	event := NewProjectUpdatedEvent(circleID, projectID, accessChanged, user)
+	event.ID = b.generateEventID()
+	if recipients == nil {
+		b.service.BroadcastToCircle(circleID, event)
+		return
+	}
+	b.service.BroadcastToUsers(circleID, recipients, event)
 }
 
 // BroadcastChoreCreated broadcasts a chore creation event

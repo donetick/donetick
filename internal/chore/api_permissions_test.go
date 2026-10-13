@@ -45,7 +45,7 @@ func newAPIPermissionTest(t *testing.T) (*gin.Engine, *gorm.DB) {
 		&uModel.User{}, &uModel.APIToken{}, &uModel.UserNotificationTarget{},
 		&cModel.Circle{}, &cModel.UserCircle{}, &chModel.Chore{}, &chModel.ChoreAssignees{},
 		&chModel.ChoreHistory{}, &chModel.TimeSession{}, &chModel.ChoreLabels{},
-		&stModel.SubTask{}, &lModel.Label{}, &pModel.Project{}, &tModel.Thing{}, &tModel.ThingChore{},
+		&stModel.SubTask{}, &lModel.Label{}, &pModel.Project{}, &pModel.ProjectMember{}, &tModel.Thing{}, &tModel.ThingChore{},
 		&nModel.Notification{}, &storageModel.StorageFile{}, &syncModel.SyncCursor{}, &syncModel.Tombstone{},
 	))
 	cfg := &config.Config{}

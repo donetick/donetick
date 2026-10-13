@@ -28,6 +28,7 @@ import (
 	nRepo "donetick.com/core/internal/notifier/repo"
 	nps "donetick.com/core/internal/notifier/service"
 	fcmService "donetick.com/core/internal/notifier/service/fcm"
+	pModel "donetick.com/core/internal/project/model"
 	pjRepo "donetick.com/core/internal/project/repo"
 	"donetick.com/core/internal/realtime"
 	storage "donetick.com/core/internal/storage"
@@ -589,6 +590,10 @@ func (h *Handler) CreateChore(c *gin.Context) {
 	id, err := h.choreRepo.CreateChoreWithAssignees(c, createdChore, assigneeIDs, currentUser.ID)
 	createdChore.ID = id
 
+	if errors.Is(err, chRepo.ErrAssigneeOutsideProject) {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
 	if err != nil {
 		logger.Error("Failed to create chore", "error", err, "userID", currentUser.ID, "circleID", currentUser.CircleID)
 		c.JSON(500, gin.H{
@@ -905,6 +910,10 @@ func (h *Handler) EditChore(c *gin.Context) {
 		assigneeIDs = append(assigneeIDs, assignee.UserID)
 	}
 	if err := h.choreRepo.UpdateChoreVisibilityForUser(c, updatedChore, assigneeIDs, currentUser.ID); err != nil {
+		if errors.Is(err, chRepo.ErrAssigneeOutsideProject) {
+			c.JSON(400, gin.H{"error": err.Error()})
+			return
+		}
 		c.JSON(500, gin.H{
 			"error": "Error adding chore",
 		})
@@ -1051,6 +1060,21 @@ func (h *Handler) inheritProjectPrivacy(c *gin.Context, choreReq *ChoreReq, user
 	choreReq.IsPrivate = &isPrivate
 
 	if !project.IsPrivate {
+		return nil
+	}
+
+	if project.Visibility() == pModel.ProjectVisibilityMembers {
+		// A shared project's audience is its owner plus the selected members: any
+		// of them can be assigned, nobody else. "Anyone" (no assignees) stays as it
+		// is and rotates and notifies within that audience only.
+		for _, assignee := range choreReq.Assignees {
+			if !project.CanView(assignee.UserID) {
+				return chRepo.ErrAssigneeOutsideProject
+			}
+		}
+		if choreReq.AssignedTo != nil && *choreReq.AssignedTo != 0 && !project.CanView(*choreReq.AssignedTo) {
+			return chRepo.ErrAssigneeOutsideProject
+		}
 		return nil
 	}
 
@@ -1460,6 +1484,9 @@ func (h *Handler) StartChore(c *gin.Context) {
 		})
 		return
 	}
+	if !h.impersonationGuard(c, chore, actualUser, effectiveUser, hasImpersonation) {
+		return
+	}
 	if !validateActionVersion(c, "start", chore, req.ActionOptions) {
 		return
 	}
@@ -1632,6 +1659,9 @@ func (h *Handler) PauseChore(c *gin.Context) {
 		c.JSON(500, gin.H{
 			"error": "Failed to retrieve chore",
 		})
+		return
+	}
+	if !h.impersonationGuard(c, chore, actualUser, effectiveUser, hasImpersonation) {
 		return
 	}
 	if !validateActionVersion(c, "pause", chore, req.ActionOptions) {
@@ -1907,6 +1937,9 @@ func (h *Handler) SkipChore(c *gin.Context) {
 		})
 		return
 	}
+	if !h.impersonationGuard(c, chore, actualUser, effectiveUser, hasImpersonation) {
+		return
+	}
 
 	completedDate := time.Now().UTC()
 	if chore.NextDueDate != nil {
@@ -2132,6 +2165,14 @@ func (h *Handler) ArchiveChore(c *gin.Context) {
 		return
 	}
 
+	// The repository only checks authorship; a creator who lost sight of the chore
+	// (e.g. removed from a shared project) must not be able to change it anymore.
+	if _, err := h.choreRepo.GetChore(c, id, currentUser.ID, currentUser.CircleID); err != nil {
+		c.JSON(404, gin.H{
+			"error": "Chore not found",
+		})
+		return
+	}
 	err = h.choreRepo.ArchiveChore(c, id, currentUser.ID, currentUser.CircleID)
 
 	if err != nil {
@@ -2193,6 +2234,14 @@ func (h *Handler) UnarchiveChore(c *gin.Context) {
 		logger.Error("Failed to get current user from authentication context")
 		c.JSON(401, gin.H{
 			"error": "Authentication failed",
+		})
+		return
+	}
+	// The repository only checks authorship; a creator who lost sight of the chore
+	// (e.g. removed from a shared project) must not be able to change it anymore.
+	if _, err := h.choreRepo.GetChore(c, id, currentUser.ID, currentUser.CircleID); err != nil {
+		c.JSON(404, gin.H{
+			"error": "Chore not found",
 		})
 		return
 	}
@@ -2312,6 +2361,9 @@ func (h *Handler) CompleteChore(c *gin.Context) {
 		})
 		return
 	}
+	if !h.impersonationGuard(c, chore, actualUser, effectiveUser, hasImpersonation) {
+		return
+	}
 	if !validateActionVersion(c, "complete", chore, req.ActionOptions) {
 		return
 	}
@@ -2347,6 +2399,14 @@ func (h *Handler) CompleteChore(c *gin.Context) {
 		// Use actualUser for authorization since this is an admin function
 		ok := authorizeChoreCompletionForUser(h, c, actualUser, req.CompletedBy)
 		if !ok {
+			return
+		}
+		// Credit only people who can see the chore: a completion (and its points)
+		// must not be attributed to somebody outside a restricted project.
+		if chore.Project != nil && chore.Project.IsPrivate && !chore.Project.CanView(*req.CompletedBy) {
+			c.JSON(403, gin.H{
+				"error": "The selected user cannot see this task",
+			})
 			return
 		}
 		completedBy = *req.CompletedBy
@@ -3088,6 +3148,9 @@ func (h *Handler) UpdateSubtaskCompletedAt(c *gin.Context) {
 		})
 		return
 	}
+	if !h.impersonationGuard(c, chore, actualUser, effectiveUser, hasImpersonation) {
+		return
+	}
 	circleUsers, err := h.circleRepo.GetCircleUsers(c, actualUser.CircleID)
 	if err != nil {
 		logger.Error("Failed to retrieve circle users", "error", err)
@@ -3124,7 +3187,12 @@ func (h *Handler) UpdateSubtaskCompletedAt(c *gin.Context) {
 
 	}
 
-	h.eventProducer.SubtaskUpdated(c, effectiveUser.WebhookURL,
+	webhookURL := effectiveUser.WebhookURL
+	if chore.Project != nil && chore.Project.IsPrivate {
+		// Restricted projects never reach the circle-wide webhook.
+		webhookURL = nil
+	}
+	h.eventProducer.SubtaskUpdated(c, webhookURL,
 		&stModel.SubTask{
 			ID:          req.ID,
 			ChoreID:     req.ChoreID,
@@ -4037,6 +4105,29 @@ func (h *Handler) updateTimer(c *gin.Context) { // TODO: Not used in Routes
 	})
 }
 
+// impersonationGuard keeps an admin or manager who acts as another member
+// (X-Impersonate-User-ID) from reaching into a chore they could not see
+// themselves, e.g. one in a project that is private to or shared with the
+// impersonated user only. Managing a sub-account stays possible: a parent may
+// act for their own child. Writes a 403 and returns false when blocked.
+func (h *Handler) impersonationGuard(c *gin.Context, chore *chModel.Chore, actualUser, effectiveUser *uModel.UserDetails, hasImpersonation bool) bool {
+	if !hasImpersonation || actualUser == nil || effectiveUser == nil || actualUser.ID == effectiveUser.ID {
+		return true
+	}
+	if effectiveUser.ParentUserID != nil && *effectiveUser.ParentUserID == actualUser.ID {
+		return true
+	}
+	if _, err := h.choreRepo.GetChore(c, chore.ID, actualUser.ID, actualUser.CircleID); err == nil {
+		return true
+	}
+	logging.FromContext(c).Warn("Impersonation into a chore the actual user cannot see was blocked",
+		"actualUserID", actualUser.ID, "impersonatedUserID", effectiveUser.ID, "choreID", chore.ID)
+	c.JSON(403, gin.H{
+		"error": "You are not allowed to act on this chore on behalf of another user",
+	})
+	return false
+}
+
 func checkNextAssignee(chore *chModel.Chore, choresHistory []*chModel.ChoreHistory, performerID int, circleUsers []*circle.UserCircleDetail) (*int, error) {
 	// copy the history to avoid modifying the original:
 	history := make([]*chModel.ChoreHistory, len(choresHistory))
@@ -4056,6 +4147,17 @@ func checkNextAssignee(chore *chModel.Chore, choresHistory []*chModel.ChoreHisto
 				UserID:  circleUser.UserID,
 			})
 		}
+	}
+	// In a restricted project only its audience may be picked, so "Anyone" means
+	// anyone who can see the project, and a stale assignee never gets a turn.
+	if chore.Project != nil && chore.Project.IsPrivate {
+		visible := make([]chModel.ChoreAssignees, 0, len(assignees))
+		for _, assignee := range assignees {
+			if chore.Project.CanView(assignee.UserID) {
+				visible = append(visible, assignee)
+			}
+		}
+		assignees = visible
 	}
 
 	assigneesMap := map[int]bool{}
@@ -4338,32 +4440,7 @@ func (h *Handler) SendNudgeNotification(c *gin.Context) {
 func (h *Handler) notifyApproversOfPendingApproval(c context.Context, chore *chModel.Chore, submittedBy *uModel.User, circleUsers []*circle.UserCircleDetail) {
 	log := logging.FromContext(c)
 
-	relatedToChore := map[int]bool{chore.CreatedBy: true}
-	if chore.AssignedTo != nil {
-		relatedToChore[*chore.AssignedTo] = true
-	}
-	for _, assignee := range chore.Assignees {
-		relatedToChore[assignee.UserID] = true
-	}
-
-	related := make([]int, 0, len(circleUsers))
-	fallback := make([]int, 0, len(circleUsers))
-	seen := make(map[int]bool, len(circleUsers))
-	for _, user := range circleUsers {
-		if user.UserID == submittedBy.ID || !user.IsActive || !user.IsManagerOrAdmin() || seen[user.UserID] {
-			continue
-		}
-		seen[user.UserID] = true
-		fallback = append(fallback, user.UserID)
-		if relatedToChore[user.UserID] {
-			related = append(related, user.UserID)
-		}
-	}
-
-	approverIDs := related
-	if len(approverIDs) == 0 {
-		approverIDs = fallback
-	}
+	approverIDs := pendingApprovalRecipients(chore, submittedBy, circleUsers)
 	if len(approverIDs) == 0 {
 		return
 	}
@@ -4390,6 +4467,44 @@ func (h *Handler) notifyApproversOfPendingApproval(c context.Context, chore *chM
 		"chore_id", chore.ID,
 		"approvers", len(approverIDs),
 		"devices", devices)
+}
+
+// pendingApprovalRecipients picks who is told about a completion waiting for
+// approval: active admins and managers tied to the task (its creator or an
+// assignee), or every active admin and manager when none of those can approve.
+// Only people who can see the chore count, so its name never reaches anyone
+// outside a private chore or a restricted project, who could not approve it
+// anyway.
+func pendingApprovalRecipients(chore *chModel.Chore, submittedBy *uModel.User, circleUsers []*circle.UserCircleDetail) []int {
+	relatedToChore := map[int]bool{chore.CreatedBy: true}
+	if chore.AssignedTo != nil {
+		relatedToChore[*chore.AssignedTo] = true
+	}
+	for _, assignee := range chore.Assignees {
+		relatedToChore[assignee.UserID] = true
+	}
+
+	related := make([]int, 0, len(circleUsers))
+	fallback := make([]int, 0, len(circleUsers))
+	seen := make(map[int]bool, len(circleUsers))
+	for _, user := range circleUsers {
+		if user.UserID == submittedBy.ID || !user.IsActive || !user.IsManagerOrAdmin() || seen[user.UserID] {
+			continue
+		}
+		if !chore.CanView(user.UserID, circleUsers) {
+			continue
+		}
+		seen[user.UserID] = true
+		fallback = append(fallback, user.UserID)
+		if relatedToChore[user.UserID] {
+			related = append(related, user.UserID)
+		}
+	}
+
+	if len(related) > 0 {
+		return related
+	}
+	return fallback
 }
 
 // bridgeClient returns the currently active Bridge client, or nil if the

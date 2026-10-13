@@ -2,8 +2,12 @@ package user
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"donetick.com/core/config"
@@ -219,24 +223,39 @@ func (r *UserRepository) UpdatePasswordByToken(ctx context.Context, email string
 	return nil
 }
 
-func (r *UserRepository) StoreAPIToken(c context.Context, userID int, name string, tokenCode string) (*uModel.APIToken, error) {
-	token := &uModel.APIToken{
+func (r *UserRepository) StoreAPIToken(c context.Context, userID int, name string, tokenBody string, tokenPrefix string) (*uModel.APIToken, error) {
+	fullToken := uModel.BuildFullToken(tokenPrefix, tokenBody)
+
+	hashHex := hashAPIToken(fullToken)
+
+	if len(tokenBody) < 4 {
+		return nil, errors.New("token body too short to derive a suffix")
+	}
+	suffix := tokenBody[len(tokenBody)-4:]
+
+	apiToken := &uModel.APIToken{
 		UserID:    userID,
 		Name:      name,
-		Token:     tokenCode,
+		Token:     hashHex,
+		Prefix:    &tokenPrefix,
+		Suffix:    &suffix,
 		CreatedAt: time.Now().UTC(),
 	}
 	if err := r.db.WithContext(c).Model(&uModel.APIToken{}).Save(
-		token).Error; err != nil {
+		apiToken).Error; err != nil {
 		return nil, err
 
 	}
-	return token, nil
+	return apiToken, nil
 }
 
 func (r *UserRepository) GetUserByToken(c context.Context, token string) (*uModel.UserDetails, error) {
 	var user *uModel.UserDetails
 	now := time.Now().UTC()
+
+	if strings.HasPrefix(token, uModel.APITokenPrefix) {
+		token = hashAPIToken(token)
+	}
 
 	if r.isDonetickDotCom {
 		if err := r.db.WithContext(c).Table("users u").Select("u.*, s.status as subscription, s.expires_at as expiration, c.webhook_url as webhook_url").Joins("left join api_tokens at on at.user_id = u.id").Joins("left join subscriptions s on s.circle_id = u.circle_id AND s.status = 'active' AND (s.expires_at IS NULL OR s.expires_at > ?)", now).Joins("left join circles c on c.id = u.circle_id").Where("at.token = ?", token).First(&user).Error; err != nil {
@@ -254,6 +273,12 @@ func (r *UserRepository) GetUserByToken(c context.Context, token string) (*uMode
 	}
 
 	return user, nil
+}
+
+// Hashes a full raw token for storage (on creation) and lookup comparison (on verification)
+func hashAPIToken(rawToken string) string {
+	hashBytes := sha256.Sum256([]byte(rawToken))
+	return hex.EncodeToString(hashBytes[:])
 }
 
 func (r *UserRepository) GetAllUserTokens(c context.Context, userID int) ([]*uModel.APIToken, error) {

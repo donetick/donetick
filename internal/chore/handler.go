@@ -1143,7 +1143,7 @@ func (h *Handler) DeleteChore(c *gin.Context) {
 	// Broadcast real-time chore deletion event
 	if h.realTimeService != nil {
 		broadcaster := h.realTimeService.GetEventBroadcaster()
-		broadcaster.BroadcastChoreDeleted(chore.ID, chore.Name, chore.CircleID, &currentUser.User, deletedSyncVersion)
+		broadcaster.BroadcastChoreDeleted(chore, &currentUser.User, deletedSyncVersion)
 	}
 
 	c.JSON(200, gin.H{
@@ -3003,11 +3003,10 @@ func (h *Handler) UpdateSubtaskCompletedAt(c *gin.Context) {
 		broadcaster := h.realTimeService.GetEventBroadcaster()
 
 		broadcaster.BroadcastSubtaskUpdated(
-			choreID,
+			chore,
 			req.ID,
 			req.CompletedAt,
 			&effectiveUser.User,
-			chore.CircleID,
 			chore.SyncVersion,
 		)
 

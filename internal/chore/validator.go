@@ -95,8 +95,8 @@ func validateNotifications(sl validator.StructLevel, req ChoreReq) {
 	hasNotificationMetadata := req.NotificationMetadata != nil && len(req.NotificationMetadata.Templates) != 0
 
 	if req.Notification {
-		// Notifications are invalid for 'trigger' frequency types
-		if req.FrequencyType == chModel.FrequencyTypeTrigger {
+		// Notifications are invalid for 'trigger' and 'always' frequency types since neither has a due date to notify against
+		if req.FrequencyType == chModel.FrequencyTypeTrigger || req.FrequencyType == chModel.FrequencyTypeAlways {
 			sl.ReportError(req.Notification, "Notification", "notification", "forbidden_with_trigger_frequency", "")
 		}
 

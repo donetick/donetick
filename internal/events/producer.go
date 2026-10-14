@@ -118,7 +118,7 @@ func (p *EventsProducer) processEvent(event Event) {
 }
 
 func (p *EventsProducer) ChoreCreated(ctx context.Context, webhookURL *string, chore *chModel.Chore, creator *uModel.User) {
-	if webhookURL == nil {
+	if webhookURL == nil || choreHiddenFromCircle(chore) {
 		p.logger.Debug("No subscribers for circle, skipping webhook")
 		return
 	}
@@ -137,7 +137,7 @@ func (p *EventsProducer) ChoreCreated(ctx context.Context, webhookURL *string, c
 }
 
 func (p *EventsProducer) ChoreCompleted(ctx context.Context, webhookURL *string, chore *chModel.Chore, performer *uModel.User) {
-	if webhookURL == nil {
+	if webhookURL == nil || choreHiddenFromCircle(chore) {
 		p.logger.Debug("No subscribers for circle, skipping webhook")
 		return
 	}
@@ -155,7 +155,7 @@ func (p *EventsProducer) ChoreCompleted(ctx context.Context, webhookURL *string,
 }
 
 func (p *EventsProducer) ChoreSkipped(ctx context.Context, webhookURL *string, chore *chModel.Chore, performer *uModel.User) {
-	if webhookURL == nil {
+	if webhookURL == nil || choreHiddenFromCircle(chore) {
 		p.logger.Debug("No Webhook URL for circle, skipping webhook")
 		return
 	}
@@ -208,4 +208,17 @@ func (p *EventsProducer) SubtaskUpdated(ctx context.Context, url *string, data i
 		Timestamp: time.Now().UTC(),
 		Data:      data,
 	})
+}
+
+// choreHiddenFromCircle reports whether a chore lives in a project that is not
+// visible to the whole circle. The circle webhook is a circle-wide integration, so
+// such chores are never sent to it. An unloaded project counts as hidden.
+func choreHiddenFromCircle(chore *chModel.Chore) bool {
+	if chore == nil {
+		return true
+	}
+	if chore.ProjectID != nil && chore.Project == nil {
+		return true
+	}
+	return chore.Project != nil && chore.Project.IsPrivate
 }

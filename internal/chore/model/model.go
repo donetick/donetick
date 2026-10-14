@@ -31,6 +31,7 @@ const (
 	FrequencyTypeDayOfTheMonth FrequencyType = "day_of_the_month"
 	FrequencyTypeTrigger       FrequencyType = "trigger"
 	FrequencyTypeNoRepeat      FrequencyType = "no_repeat"
+	FrequencyTypeAlways        FrequencyType = "always"
 )
 
 type AssignmentStrategy string
@@ -46,6 +47,7 @@ const (
 )
 
 type Chore struct {
+	CompletionActions      []CompletionAction         `json:"completionActions" gorm:"serializer:json;type:json"`
 	ID                     int                        `json:"id" gorm:"primary_key"`
 	Name                   string                     `json:"name" gorm:"column:name"`                                                                // Chore description
 	FrequencyType          FrequencyType              `json:"frequencyType" gorm:"column:frequency_type"`                                             // "daily", "weekly", "monthly", "yearly", "adaptive",or "custom"
@@ -184,6 +186,7 @@ type ChoreDetail struct {
 	CreatedBy           int                        `json:"createdBy" gorm:"column:created_by"`
 	CompletionWindow    *int                       `json:"completionWindow,omitempty" gorm:"column:completion_window"`
 	Subtasks            *[]stModel.SubTask         `json:"subTasks,omitempty" gorm:"foreignkey:ChoreID;references:ID"`
+	Assignees           []ChoreAssignees           `json:"assignees" gorm:"foreignkey:ChoreID;references:ID"`
 	Status              Status                     `json:"status" gorm:"column:status"`
 	Duration            int                        `json:"duration" gorm:"column:duration"` // Total duration in seconds for the chore
 	StartTime           *time.Time                 `json:"startTime" gorm:"column:start_time"`
@@ -201,11 +204,13 @@ type ChoreLabels struct {
 	Label   lModel.Label
 }
 type ChoreLiteReq struct { // TODO: Remove this when api is removed.
-	Name        string  `json:"name" binding:"required"`
-	Description *string `json:"description,omitempty"`
-	ID          int     `json:"id"`
-	DueDate     string  `json:"dueDate"`
-	CreatedBy   *int    `json:"createdBy,omitempty"`
+	Name           string  `json:"name" binding:"omitempty"`
+	Description    *string `json:"description,omitempty"`
+	ID             int     `json:"id"`
+	DueDate        string  `json:"dueDate"`
+	ForceUnarchive bool    `json:"forceUnarchive,omitempty"`
+	CreatedBy      *int    `json:"createdBy,omitempty"`
+	ProjectID      *int    `json:"projectId,omitempty"` // The project this chore belongs to
 }
 
 func (c *Chore) CanDeleteHistory(
@@ -268,7 +273,48 @@ func (c *Chore) CanEdit(userID int, circleUsers []*cModel.UserCircleDetail, upda
 	return nil
 
 }
+
+// CanDelegate reports whether userID may hand the chore to another assignee.
+// Unlike CanEdit, any active circle member may delegate, not only the creator
+// or an admin; the stale updatedAt check is the same.
+func (c *Chore) CanDelegate(userID int, circleUsers []*cModel.UserCircleDetail, updatedAt *time.Time) error {
+	isMember := false
+	for _, cu := range circleUsers {
+		if cu.UserID == userID && cu.IsActive {
+			isMember = true
+			break
+		}
+	}
+	if !isMember {
+		return errors.New("user is not a member of this circle")
+	}
+	if updatedAt != nil {
+		if c.UpdatedAt.After(*updatedAt) {
+			return errors.New("chore has been modified by another user, please refresh and try again")
+		}
+		if updatedAt.After(time.Now().UTC().Add(30 * time.Second)) {
+			return errors.New("updatedAt is in the future and cannot be used to edit the chore")
+		}
+	}
+	return nil
+}
+
+// restrictingProject returns the chore's project when that project limits who can
+// see its chores (private or shared with selected members) and is loaded.
+func (c *Chore) restrictingProject() *pModel.Project {
+	if c.Project != nil && c.Project.IsPrivate && (c.ProjectID == nil || *c.ProjectID == c.Project.ID) {
+		return c.Project
+	}
+	return nil
+}
+
 func (c *Chore) CanView(userID int, circleUsers []*cModel.UserCircleDetail) bool {
+	// A restricted project is the outer boundary: its audience sees every chore in
+	// it and nobody else does, whatever the chore's own flag or assignees say.
+	// This matches privacyPredicate in the repository.
+	if project := c.restrictingProject(); project != nil {
+		return project.CanView(userID)
+	}
 	// if private then only creator and assignees can view:
 	if c.IsPrivate {
 		if c.CreatedBy == userID {
@@ -291,6 +337,16 @@ func (c *Chore) CanView(userID int, circleUsers []*cModel.UserCircleDetail) bool
 	return false
 }
 func (c *Chore) CanComplete(userID int, circleUsers []*cModel.UserCircleDetail) bool {
+	if project := c.restrictingProject(); project != nil {
+		if !project.CanView(userID) {
+			return false
+		}
+		// Unassigned chores in a shared project can be picked up by anyone who
+		// can see the project, like unassigned public chores within the circle.
+		if c.AssignStrategy == AssignmentStrategyNoAssignee && (c.AssignedTo == nil || *c.AssignedTo == 0) {
+			return true
+		}
+	}
 	// If using no assignee strategy, allow any circle member to complete
 	if c.AssignStrategy == AssignmentStrategyNoAssignee && (c.AssignedTo == nil || *c.AssignedTo == 0) {
 		if !c.IsPrivate {

@@ -37,8 +37,12 @@ func (r *NotificationRepository) GetPendingNotification(c context.Context, lookb
 	start := time.Now().UTC().Add(-lookback)
 	end := time.Now().UTC()
 	if err := r.db.Table("notifications").
-		Select("notifications.*, circles.webhook_url as webhook_url").
+		// Reminders of chores in a project hidden from the circle are not mirrored to
+		// the circle-wide webhook.
+		Select("notifications.*, CASE WHEN projects.is_private = true THEN NULL ELSE circles.webhook_url END as webhook_url").
 		Joins("left join circles on circles.id = notifications.circle_id").
+		Joins("left join chores on chores.id = notifications.chore_id").
+		Joins("left join projects on projects.id = chores.project_id").
 		Where("notifications.is_sent = ? AND notifications.scheduled_for < ? AND notifications.scheduled_for > ?", false, end, start).
 		Find(&notifications).Error; err != nil {
 		return nil, err

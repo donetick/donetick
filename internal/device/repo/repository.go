@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"time"
 
+	config "donetick.com/core/config"
 	errorx "donetick.com/core/internal/error"
 	uModel "donetick.com/core/internal/user/model"
 	"donetick.com/core/logging"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 const MaxDevicesPerUser = 5
@@ -22,69 +24,90 @@ type IDeviceRepository interface {
 	GetActiveDeviceCount(c context.Context, userID int) (int64, error)
 	UpdateDeviceTokenActivity(c context.Context, userID int, deviceID string) error
 	CleanupInactiveTokens(c context.Context, inactiveDays int) error
+	GetActiveDeviceByDeviceID(c context.Context, userID int, deviceID string) (*uModel.UserDeviceToken, error)
+	GetActiveDeviceByToken(c context.Context, userID int, token string) (*uModel.UserDeviceToken, error)
+	UpdateBridgeSyncStatus(c context.Context, id int, bridgeDeviceID *string, status string) error
+	GetDevicesPendingBridgeSync(c context.Context, limit int) ([]*uModel.UserDeviceToken, error)
 }
 
 type DeviceRepository struct {
-	db *gorm.DB
+	db     *gorm.DB
+	dbType string
 }
 
-func NewDeviceRepository(db *gorm.DB) *DeviceRepository {
-	return &DeviceRepository{db: db}
+func NewDeviceRepository(db *gorm.DB, cfg *config.Config) *DeviceRepository {
+	return &DeviceRepository{db: db, dbType: cfg.Database.Type}
 }
 
-// RegisterDeviceToken registers or updates a device token for a user
+// RegisterDeviceToken registers or updates a device token for a user.
+//
+// (user_id, device_id) is unique at the DB level, so re-registering a known
+// device must be an upsert rather than deactivate-then-insert: inserting a new
+// row while the old one is merely deactivated collides with that unique index.
 func (r *DeviceRepository) RegisterDeviceToken(c context.Context, deviceToken *uModel.UserDeviceToken) error {
 	log := logging.FromContext(c)
 
-	// Check if adding this device would exceed the limit
-	var existingDevice uModel.UserDeviceToken
-	isNewDevice := r.db.WithContext(c).
-		Where("user_id = ? AND device_id = ? AND is_active = ?",
-			deviceToken.UserID, deviceToken.DeviceID, true).
-		First(&existingDevice).Error == gorm.ErrRecordNotFound
+	return r.db.WithContext(c).Transaction(func(tx *gorm.DB) error {
+		if r.dbType == "postgres" {
+			// Lock a row that always exists for this user. Locking only the current
+			// device-token rows does not serialize registrations when the result is
+			// empty and permits concurrent requests to exceed the device limit.
+			var user uModel.User
+			if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+				Select("id").First(&user, deviceToken.UserID).Error; err != nil {
+				log.Error("Failed to lock user for device registration", "error", err)
+				return err
+			}
+		}
 
-	if isNewDevice {
-		// Count current active devices for this user
-		var activeDeviceCount int64
-		if err := r.db.WithContext(c).Model(&uModel.UserDeviceToken{}).
-			Where("user_id = ? AND is_active = ?", deviceToken.UserID, true).
-			Count(&activeDeviceCount).Error; err != nil {
-			log.Error("Failed to count active devices", "error", err)
+		var activeTokens []uModel.UserDeviceToken
+		if err := tx.Where("user_id = ? AND is_active = ?", deviceToken.UserID, true).
+			Find(&activeTokens).Error; err != nil {
+			log.Error("Failed to load active device tokens", "error", err)
 			return err
 		}
 
-		if activeDeviceCount >= MaxDevicesPerUser {
+		// Re-registering an active device does not consume another slot. Neither
+		// does moving an existing FCM token to a new device ID, because that token's
+		// old row is deactivated below in the same transaction.
+		requiresAdditionalSlot := true
+		for _, t := range activeTokens {
+			if t.DeviceID == deviceToken.DeviceID || (deviceToken.Token != "" && t.Token == deviceToken.Token) {
+				requiresAdditionalSlot = false
+				break
+			}
+		}
+
+		if requiresAdditionalSlot && len(activeTokens) >= MaxDevicesPerUser {
 			return errorx.ErrDeviceLimitExceeded
 		}
-	}
 
-	// Start a transaction
-	return r.db.WithContext(c).Transaction(func(tx *gorm.DB) error {
-		// First, deactivate any existing token for this user/device combination
-		if err := tx.Model(&uModel.UserDeviceToken{}).
-			Where("user_id = ? AND device_id = ? AND is_active = ?", deviceToken.UserID, deviceToken.DeviceID, true).
-			Update("is_active", false).Error; err != nil {
-			log.Error("Failed to deactivate existing device token", "error", err)
-			return err
-		}
-
-		// Also deactivate any existing token with the same FCM token (in case device_id changed)
+		// Deactivate any other active token carrying the same FCM token (e.g. the
+		// device reinstalled the app and got a new device_id but reused the token).
 		if deviceToken.Token != "" {
 			if err := tx.Model(&uModel.UserDeviceToken{}).
-				Where("user_id = ? AND token = ? AND is_active = ?", deviceToken.UserID, deviceToken.Token, true).
+				Where("user_id = ? AND token = ? AND device_id <> ? AND is_active = ?",
+					deviceToken.UserID, deviceToken.Token, deviceToken.DeviceID, true).
 				Update("is_active", false).Error; err != nil {
 				log.Error("Failed to deactivate existing FCM token", "error", err)
 				return err
 			}
 		}
 
-		// Set token properties
 		deviceToken.IsActive = true
 		deviceToken.LastActiveAt = time.Now().UTC()
-		deviceToken.CreatedAt = time.Now().UTC()
+		if deviceToken.CreatedAt.IsZero() {
+			deviceToken.CreatedAt = time.Now().UTC()
+		}
 
-		// Create the new token
-		if err := tx.Create(deviceToken).Error; err != nil {
+		// Upsert on (user_id, device_id): re-registering a known device updates
+		// the existing row in place instead of inserting a colliding duplicate.
+		if err := tx.Clauses(clause.OnConflict{
+			Columns: []clause.Column{{Name: "user_id"}, {Name: "device_id"}},
+			DoUpdates: clause.AssignmentColumns([]string{
+				"token", "platform", "app_version", "device_model", "is_active", "last_active_at",
+			}),
+		}).Create(deviceToken).Error; err != nil {
 			log.Error("Failed to register device token", "error", err)
 			return err
 		}
@@ -179,6 +202,72 @@ func (r *DeviceRepository) GetActiveDeviceCount(c context.Context, userID int) (
 		Where("user_id = ? AND is_active = ?", userID, true).
 		Count(&count).Error
 	return count, err
+}
+
+// GetActiveDeviceByDeviceID returns the active device token row for a
+// user/deviceId pair, or nil if none exists. Used before unregistering
+// locally so the caller can still deactivate the corresponding Bridge
+// device afterward.
+func (r *DeviceRepository) GetActiveDeviceByDeviceID(c context.Context, userID int, deviceID string) (*uModel.UserDeviceToken, error) {
+	var token uModel.UserDeviceToken
+	err := r.db.WithContext(c).
+		Where("user_id = ? AND device_id = ? AND is_active = ?", userID, deviceID, true).
+		First(&token).Error
+	if err == gorm.ErrRecordNotFound {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &token, nil
+}
+
+// GetActiveDeviceByToken returns the active device token row for a
+// user/FCM-token pair, or nil if none exists. See GetActiveDeviceByDeviceID.
+func (r *DeviceRepository) GetActiveDeviceByToken(c context.Context, userID int, token string) (*uModel.UserDeviceToken, error) {
+	var t uModel.UserDeviceToken
+	err := r.db.WithContext(c).
+		Where("user_id = ? AND token = ? AND is_active = ?", userID, token, true).
+		First(&t).Error
+	if err == gorm.ErrRecordNotFound {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &t, nil
+}
+
+// UpdateBridgeSyncStatus records the outcome of a Bridge device
+// registration attempt. bridgeDeviceID is nil when registration failed
+// (status carries the sanitized failure category instead); it is non-nil
+// only on success. Never receives or stores a raw FCM token.
+func (r *DeviceRepository) UpdateBridgeSyncStatus(c context.Context, id int, bridgeDeviceID *string, status string) error {
+	updates := map[string]interface{}{"bridge_sync_status": status}
+	if bridgeDeviceID != nil {
+		now := time.Now().UTC()
+		updates["bridge_device_id"] = *bridgeDeviceID
+		updates["bridge_registered_at"] = now
+	}
+	return r.db.WithContext(c).Model(&uModel.UserDeviceToken{}).
+		Where("id = ?", id).
+		Updates(updates).Error
+}
+
+// GetDevicesPendingBridgeSync returns up to limit active devices that have
+// never been successfully registered with Bridge (bridge_device_id is
+// still empty). Used by the opportunistic, content-free retry job.
+func (r *DeviceRepository) GetDevicesPendingBridgeSync(c context.Context, limit int) ([]*uModel.UserDeviceToken, error) {
+	var tokens []*uModel.UserDeviceToken
+	err := r.db.WithContext(c).
+		Where("is_active = ? AND (bridge_device_id IS NULL OR bridge_device_id = ?)", true, "").
+		Order("created_at ASC").
+		Limit(limit).
+		Find(&tokens).Error
+	if err != nil {
+		return nil, err
+	}
+	return tokens, nil
 }
 
 // CleanupInactiveTokens removes tokens that haven't been active for the specified number of days

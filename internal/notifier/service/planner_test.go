@@ -168,3 +168,43 @@ func TestGenerateNotificationsFromTemplateFanOutPerMember(t *testing.T) {
 		}
 	}
 }
+
+func TestAnyoneChoreRecipientsSkipsMembersWhoCannotSeeAPrivateChore(t *testing.T) {
+	// An "Anyone" chore fans out to the whole circle, so a private one (every chore in a
+	// private project is private) must not reach members that can't see it.
+	circleMembers := []*cModel.UserCircleDetail{
+		member(1, true, nModel.NotificationPlatformPushover, "key-1"),
+		member(2, true, nModel.NotificationPlatformTelegram, "chat-2"),
+		member(3, true, nModel.NotificationPlatformPushover, "key-3"),
+	}
+
+	chore := choreDueTomorrow()
+	chore.CreatedBy = 1
+	chore.IsPrivate = true
+	chore.Assignees = []chModel.ChoreAssignees{{ChoreID: chore.ID, UserID: 2}}
+
+	got := anyoneChoreRecipients(chore, circleMembers)
+
+	recipients := map[int]bool{}
+	for _, r := range got {
+		recipients[r.UserID] = true
+	}
+	if len(got) != 2 || !recipients[1] || !recipients[2] {
+		t.Errorf("got recipients %v, want the creator (1) and the assignee (2) only", recipients)
+	}
+}
+
+func TestAnyoneChoreRecipientsKeepsWholeCircleForPublicChores(t *testing.T) {
+	circleMembers := []*cModel.UserCircleDetail{
+		member(1, true, nModel.NotificationPlatformPushover, "key-1"),
+		member(2, true, nModel.NotificationPlatformTelegram, "chat-2"),
+		member(3, false, nModel.NotificationPlatformPushover, "key-3"), // pending, excluded
+	}
+
+	chore := choreDueTomorrow()
+	chore.CreatedBy = 1
+
+	if got := anyoneChoreRecipients(chore, circleMembers); len(got) != 2 {
+		t.Errorf("expected 2 recipients for a public chore, got %d", len(got))
+	}
+}

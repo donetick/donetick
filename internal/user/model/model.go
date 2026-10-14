@@ -55,7 +55,15 @@ type APIToken struct {
 	Name      string    `json:"name" gorm:"column:name"`            // Name (display only, not unique)
 	UserID    int       `json:"userId" gorm:"column:user_id;index"` // Index on userID
 	Token     string    `json:"token" gorm:"column:token;index"`    // Index on token
+	Prefix    *string   `json:"prefix" gorm:"column:prefix"`        // Token format/type marker, e.g. "dt_"
+	Suffix    *string   `json:"suffix" gorm:"column:suffix"`        // Last few chars of the token, for masked display
 	CreatedAt time.Time `json:"createdAt" gorm:"column:created_at"`
+}
+
+const APITokenPrefix = "dt_"
+
+func BuildFullToken(prefix, body string) string {
+	return prefix + body
 }
 
 type UserNotificationTarget struct {
@@ -77,6 +85,19 @@ type UserDeviceToken struct {
 	IsActive     bool      `json:"isActive" gorm:"column:is_active;default:true;not null;index:idx_user_active"`   // Active status
 	LastActiveAt time.Time `json:"lastActiveAt,omitempty" gorm:"column:last_active_at"`                            // Last active timestamp
 	CreatedAt    time.Time `json:"createdAt" gorm:"column:created_at"`                                             // Created timestamp
+
+	// Donetick Bridge sync state (see ../../bridge). Nil/empty
+	// when Bridge is disabled or this device has never been registered
+	// with it. BridgeDeviceID is Bridge's opaque per-device UUID -- never
+	// a raw FCM token or fingerprint.
+	BridgeDeviceID     *string    `json:"-" gorm:"column:bridge_device_id;type:varchar(64)"`
+	BridgeRegisteredAt *time.Time `json:"-" gorm:"column:bridge_registered_at"`
+	// BridgeSyncStatus is a small sanitized category, not a message: one
+	// of "" (never attempted), "synced", "disabled", "unavailable",
+	// "unauthorized", "device_limit_reached", "validation_error",
+	// "rate_limited", "conflict", "not_found", "unknown". See
+	// internal/bridge.ErrorCategory -- keep these two enums in sync.
+	BridgeSyncStatus string `json:"-" gorm:"column:bridge_sync_status;type:varchar(32)"`
 }
 type AuthProviderType int
 

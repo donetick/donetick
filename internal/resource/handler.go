@@ -17,11 +17,14 @@ type Resource struct {
 	// DisablePasswordAuth tells the client to hide username/password login and
 	// signup, leaving only SSO (#438).
 	DisablePasswordAuth bool `json:"disable_password_auth"`
+	BridgeEnabled       bool `json:"bridge_enabled"`
 }
 type identityProvider struct {
-	Auth_url  string `json:"auth_url" binding:"omitempty"`
-	Client_ID string `json:"client_id" binding:"omitempty"`
-	Name      string `json:"name" binding:"omitempty"`
+	Auth_url  string   `json:"auth_url" binding:"omitempty"`
+	Client_ID string   `json:"client_id" binding:"omitempty"`
+	Name      string   `json:"name" binding:"omitempty"`
+	Scopes    []string `json:"scopes" binding:"omitempty"`
+	PKCE      bool     `json:"pkce" binding:"omitempty"`
 }
 
 type Handler struct {
@@ -40,6 +43,8 @@ func (h *Handler) getResource(c *gin.Context) {
 			Auth_url:  h.config.OAuth2Config.AuthURL,
 			Client_ID: h.config.OAuth2Config.ClientID,
 			Name:      h.config.OAuth2Config.Name,
+			Scopes:    h.config.OAuth2Config.Scopes,
+			PKCE:      h.config.OAuth2Config.PKCE,
 		},
 		MinVersion:             h.config.MinVersion,
 		APIVersion:             h.config.Info.Version,
@@ -47,6 +52,7 @@ func (h *Handler) getResource(c *gin.Context) {
 		IsUserCreationDisabled: h.config.IsUserCreationDisabled,
 		SingleCircleInstance:   h.config.SingleCircleInstance,
 		DisablePasswordAuth:    h.config.DisablePasswordAuth,
+		BridgeEnabled:          h.config.Bridge.Enabled,
 	})
 }
 

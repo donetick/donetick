@@ -10,6 +10,8 @@ import (
 
 	"donetick.com/core/config"
 	sModel "donetick.com/core/external/payment/model"
+	bridgeModel "donetick.com/core/internal/bridge"
+	calModel "donetick.com/core/internal/calendar/model"
 	chModel "donetick.com/core/internal/chore/model"
 	cModel "donetick.com/core/internal/circle/model"
 	filterModel "donetick.com/core/internal/filter/model"
@@ -54,6 +56,7 @@ func Migration(db *gorm.DB) error {
 		lModel.Label{},
 		chModel.ChoreLabels{},
 		projModel.Project{},
+		projModel.ProjectMember{},
 		filterModel.Filter{},
 		migrations.Migration{},
 		pModel.PointsHistory{},
@@ -66,6 +69,8 @@ func Migration(db *gorm.DB) error {
 		syncModel.Tombstone{},
 		rwModel.Reward{},
 		rwModel.RewardRedemption{},
+		bridgeModel.Settings{},
+		calModel.CalendarToken{},
 	); err != nil {
 		return err
 	}

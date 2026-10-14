@@ -173,6 +173,32 @@ func (s *RealTimeService) BroadcastToCircle(circleID int, event *Event) {
 	}
 }
 
+// BroadcastToUsers sends an event only to the listed users in a circle.
+func (s *RealTimeService) BroadcastToUsers(circleID int, userIDs []int, event *Event) {
+	if !s.started || !s.config.Enabled {
+		return
+	}
+
+	s.mu.RLock()
+	pool, exists := s.connectionPools[circleID]
+	s.mu.RUnlock()
+	if !exists {
+		return
+	}
+
+	seen := make(map[int]struct{}, len(userIDs))
+	for _, userID := range userIDs {
+		if _, duplicate := seen[userID]; duplicate {
+			continue
+		}
+		seen[userID] = struct{}{}
+		pool.BroadcastToUser(userID, event)
+	}
+	s.stats.mu.Lock()
+	s.stats.EventsPublished++
+	s.stats.mu.Unlock()
+}
+
 // GetStats returns current service statistics
 func (s *RealTimeService) GetStats() ServiceStats {
 	s.stats.mu.RLock()

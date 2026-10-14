@@ -1,0 +1,88 @@
+name: Self-Hosted Build (GHCR)
+
+# Builds and pushes a Docker image to GHCR from this fork's own frontend +
+# backend, independent of whether/when upstream merges. Point your
+# docker-compose at ghcr.io/<owner>/donetick instead of donetick/donetick
+# to run your own build. No secrets to configure — uses the default
+# GITHUB_TOKEN, scoped to this repo's own package registry.
+
+on:
+  push:
+    branches:
+      - feature/reward-store
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: Build and Push Docker Image
+    steps:
+      - name: Checkout backend
+        uses: actions/checkout@v4
+
+      - name: Checkout frontend (same-named branch on this account, falling back to develop)
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/frontend
+          ref: ${{ github.ref_name }}
+          path: frontend-code
+        continue-on-error: true
+        id: frontend-checkout
+
+      - name: Checkout frontend (fallback)
+        if: steps.frontend-checkout.outcome == 'failure'
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/frontend
+          ref: develop
+          path: frontend-code
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Build frontend
+        run: |
+          cd frontend-code
+          npm install
+          npm run build-selfhosted
+
+      - name: Copy frontend into backend build context
+        run: |
+          rm -rf ./frontend/dist
+          cp -r frontend-code/dist ./frontend/dist
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Resolve commit SHA
+        id: commit
+        run: echo "sha=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/donetick:latest
+            ghcr.io/${{ github.repository_owner }}/donetick:${{ steps.commit.outputs.sha }}
+          platforms: linux/amd64,linux/arm64
+          build-args: |
+            VERSION=self-hosted
+            COMMIT=${{ steps.commit.outputs.sha }}

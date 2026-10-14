@@ -19,6 +19,7 @@ import (
 	nModel "donetick.com/core/internal/notifier/model"
 	pModel "donetick.com/core/internal/points"
 	projModel "donetick.com/core/internal/project/model"
+	rwModel "donetick.com/core/internal/reward/model"
 	storageModel "donetick.com/core/internal/storage/model"
 	stModel "donetick.com/core/internal/subtask/model"
 	syncModel "donetick.com/core/internal/sync/model"
@@ -66,6 +67,8 @@ func Migration(db *gorm.DB) error {
 		uModel.UserDeviceToken{},
 		syncModel.SyncCursor{},
 		syncModel.Tombstone{},
+		rwModel.Reward{},
+		rwModel.RewardRedemption{},
 		bridgeModel.Settings{},
 		calModel.CalendarToken{},
 	); err != nil {

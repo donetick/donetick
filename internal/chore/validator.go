@@ -11,7 +11,13 @@ import (
 func ChoreReqStructLevelValidation(sl validator.StructLevel) {
 	req := sl.Current().Interface().(ChoreReq)
 
-	if req.FrequencyMetadata != nil || req.Frequency != nil {
+	// Always validate frequency logic for types that require metadata or frequency fields,
+	// regardless of whether those fields were provided in the request. This prevents
+	// invalid chores from being saved when required fields are omitted entirely.
+	switch req.FrequencyType {
+	case chModel.FrequencyTypeInterval,
+		chModel.FrequencyTypeDayOfTheWeek,
+		chModel.FrequencyTypeDayOfTheMonth:
 		validateFrequencyLogic(sl, req) // 1. Validate Frequency Logic
 	}
 	if req.AssignStrategy != "" || req.AssignedTo != nil || len(req.Assignees) > 0 {

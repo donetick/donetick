@@ -1,2 +1,2 @@
 -- +migrate Up
--- nothing here just to include in he embeded sql :) 
+-- nothing here just to include in the embedded sql :)

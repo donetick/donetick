@@ -77,7 +77,7 @@ func (r *LabelRepository) AssignLabelsToChore(ctx context.Context, choreID int, 
 	}
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if len(toBeRemoved) > 0 {
-			if err := r.db.WithContext(ctx).Where("chore_id = ? AND user_id = ? AND label_id IN (?)", choreID, userID, toBeRemoved).Delete(&chModel.ChoreLabels{}).Error; err != nil {
+			if err := r.db.WithContext(ctx).Where("chore_id = ? AND label_id IN (?)", choreID, toBeRemoved).Delete(&chModel.ChoreLabels{}).Error; err != nil {
 				return err
 			}
 		}

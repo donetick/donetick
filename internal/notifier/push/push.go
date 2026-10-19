@@ -6,9 +6,11 @@ package push
 
 import (
 	"context"
+	"time"
 
 	dRepo "donetick.com/core/internal/device/repo"
 	"donetick.com/core/internal/notifier"
+	nModel "donetick.com/core/internal/notifier/model"
 	"donetick.com/core/internal/notifier/service/fcm"
 	"donetick.com/core/logging"
 )
@@ -36,7 +38,7 @@ func (s *Sender) SendToUser(c context.Context, userID int, payload fcm.FCMNotifi
 	if len(tokens) == 0 {
 		return 0, nil
 	}
-	if err := s.sendToTokens(c, tokens, payload); err != nil {
+	if err := s.sendToTokens(c, userID, tokens, payload); err != nil {
 		return 0, err
 	}
 	return len(tokens), nil
@@ -73,11 +75,20 @@ func (s *Sender) tokensForUser(c context.Context, userID int) ([]string, error) 
 	return tokens, nil
 }
 
-func (s *Sender) sendToTokens(c context.Context, tokens []string, payload fcm.FCMNotificationPayload) error {
+// sendToTokens prefers Bridge when it is connected and enabled (self-hosted
+// instance relaying through Donetick Bridge); otherwise it falls back to
+// Core's own direct Firebase config, mirroring the provider selection in
+// Notifier.SendNotification.
+func (s *Sender) sendToTokens(c context.Context, userID int, tokens []string, payload fcm.FCMNotificationPayload) error {
 	log := logging.FromContext(c)
 
+	if s.notifier != nil && s.notifier.Bridge != nil && s.notifier.Bridge.Enabled() {
+		s.sendToTokensViaBridge(c, userID, tokens, payload)
+		return nil
+	}
+
 	if s.notifier == nil || s.notifier.FCM == nil {
-		log.Debug("FCM is not configured, skipping push notification")
+		log.Debug("Neither Bridge nor FCM is configured, skipping push notification")
 		return nil
 	}
 
@@ -97,4 +108,29 @@ func (s *Sender) sendToTokens(c context.Context, tokens []string, payload fcm.FC
 	}
 
 	return nil
+}
+
+func (s *Sender) sendToTokensViaBridge(c context.Context, userID int, tokens []string, payload fcm.FCMNotificationPayload) {
+	log := logging.FromContext(c)
+
+	for _, token := range tokens {
+		details := &nModel.NotificationDetails{
+			Notification: nModel.Notification{
+				UserID:       userID,
+				TargetID:     token,
+				ScheduledFor: time.Now(),
+				RawEvent: nModel.JSONB{
+					"payload": map[string]interface{}{
+						"title":     payload.Title,
+						"body":      payload.Body,
+						"image_url": payload.ImageURL,
+						"data":      payload.Data,
+					},
+				},
+			},
+		}
+		if err := s.notifier.Bridge.SendNotification(c, details); err != nil {
+			log.Warn("Failed to send push notification via bridge", "user_id", userID, "error", err)
+		}
+	}
 }

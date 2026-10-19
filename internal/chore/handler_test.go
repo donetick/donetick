@@ -250,3 +250,55 @@ func TestEditChoreWithoutLabelsV2KeepsLabels(t *testing.T) {
 	require.Equal(t, http.StatusOK, recorder.Code, recorder.Body.String())
 	require.Zero(t, labelCount(), "an empty labelsV2 still removes the labels")
 }
+
+// The edit form sends "nextDueDate": null when the due date is removed, while
+// older apps and API scripts may leave the field out altogether.
+func TestEditChoreNextDueDateNullClearsAbsentKeeps(t *testing.T) {
+	router, db := newEditChoreTestRouter(t)
+	due := time.Date(2026, time.November, 2, 9, 0, 0, 0, time.UTC)
+	newChore := func(isRolling bool) chModel.Chore {
+		t.Helper()
+		chore := chModel.Chore{Name: "file taxes", FrequencyType: chModel.FrequencyTypeOnce, NextDueDate: &due,
+			IsRolling: isRolling, AssignStrategy: chModel.AssignmentStrategyRandom, CircleID: 1, CreatedBy: 1, IsActive: true}
+		if isRolling {
+			chore.FrequencyType = chModel.FrequencyTypeDaily
+			chore.Frequency = 1
+		}
+		require.NoError(t, db.Create(&chore).Error)
+		return chore
+	}
+	edit := func(chore chModel.Chore, extra map[string]any) *chModel.Chore {
+		t.Helper()
+		body := map[string]any{
+			"id":             chore.ID,
+			"name":           chore.Name,
+			"frequencyType":  chore.FrequencyType,
+			"isRolling":      chore.IsRolling,
+			"assignStrategy": chModel.AssignmentStrategyRandom,
+		}
+		for key, value := range extra {
+			body[key] = value
+		}
+		raw, err := json.Marshal(body)
+		require.NoError(t, err)
+		recorder := httptest.NewRecorder()
+		router.ServeHTTP(recorder, httptest.NewRequest(http.MethodPut, "/chores", bytes.NewReader(raw)))
+		require.Equal(t, http.StatusOK, recorder.Code, recorder.Body.String())
+		var updated chModel.Chore
+		require.NoError(t, db.First(&updated, chore.ID).Error)
+		return &updated
+	}
+
+	chore := newChore(false)
+	updated := edit(chore, nil)
+	require.NotNil(t, updated.NextDueDate, "an edit without nextDueDate keeps the due date")
+	require.True(t, due.Equal(*updated.NextDueDate))
+
+	updated = edit(chore, map[string]any{"nextDueDate": nil})
+	require.Nil(t, updated.NextDueDate, "an explicit null removes the due date")
+
+	rolling := newChore(true)
+	updated = edit(rolling, map[string]any{"nextDueDate": nil})
+	require.NotNil(t, updated.NextDueDate, "a rolling chore keeps its due date")
+	require.True(t, due.Equal(*updated.NextDueDate))
+}

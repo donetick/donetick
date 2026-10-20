@@ -15,6 +15,7 @@ import (
 	"donetick.com/core/internal/bridge"
 	dRepo "donetick.com/core/internal/device/repo"
 	nModel "donetick.com/core/internal/notifier/model"
+	uModel "donetick.com/core/internal/user/model"
 	"donetick.com/core/logging"
 )
 
@@ -118,4 +119,56 @@ func (b *BridgeNotifier) SendNotification(ctx context.Context, notification *nMo
 		}
 	}
 	return sendErr
+}
+
+// SendMulticast sends one notification to many devices in a single Bridge
+// request (Bridge allows 1-20 targets per request). Devices that were never
+// successfully registered with Bridge (BridgeDeviceID unset) are skipped
+// rather than failing the whole send; excess targets beyond 20 are
+// truncated rather than chunked into further requests, since callers of
+// this path are small, interactively-triggered fan-outs (a user's own
+// devices, or admins of one circle), not bulk broadcasts.
+// idempotencyScope distinguishes callers (e.g. "push", "nudge") so
+// unrelated sends never collide on the same idempotency key.
+func (b *BridgeNotifier) SendMulticast(ctx context.Context, idempotencyScope string, deviceTokens []*uModel.UserDeviceToken, title, body string, data map[string]string) (int, error) {
+	client := b.bridgeSvc.Client()
+	if !client.Enabled() {
+		return 0, fmt.Errorf("bridge notifier is not enabled")
+	}
+
+	targets := make([]bridge.DeviceTarget, 0, len(deviceTokens))
+	for _, dt := range deviceTokens {
+		if dt.Token == "" || dt.BridgeDeviceID == nil || *dt.BridgeDeviceID == "" {
+			continue
+		}
+		targets = append(targets, bridge.DeviceTarget{BridgeDeviceID: *dt.BridgeDeviceID, Token: dt.Token})
+	}
+	if len(targets) == 0 {
+		return 0, nil
+	}
+	if len(targets) > 20 {
+		targets = targets[:20]
+	}
+
+	badge := 1
+	idempotencyKey := bridge.IdempotencyKey(idempotencyScope, strconv.FormatInt(time.Now().UTC().UnixNano(), 10))
+
+	res, err := client.SendNotification(ctx, idempotencyKey, targets,
+		bridge.NotificationPayload{Title: title, Body: body, Data: data},
+		bridge.NotificationOptions{AndroidChannelID: defaultAndroidChannelID, Sound: "default", Badge: &badge},
+	)
+	if err != nil {
+		return 0, fmt.Errorf("bridge send: %w", err)
+	}
+
+	log := logging.FromContext(ctx)
+	sent := 0
+	for _, r := range res.Results {
+		if r.Status == "sent" {
+			sent++
+			continue
+		}
+		log.Warn("Failed to send push notification via bridge multicast", "bridge_device_id", r.BridgeDeviceID, "status", r.Status)
+	}
+	return sent, nil
 }

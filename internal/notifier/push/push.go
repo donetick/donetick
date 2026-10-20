@@ -6,12 +6,11 @@ package push
 
 import (
 	"context"
-	"time"
 
 	dRepo "donetick.com/core/internal/device/repo"
 	"donetick.com/core/internal/notifier"
-	nModel "donetick.com/core/internal/notifier/model"
 	"donetick.com/core/internal/notifier/service/fcm"
+	uModel "donetick.com/core/internal/user/model"
 	"donetick.com/core/logging"
 )
 
@@ -31,17 +30,11 @@ func NewSender(dr *dRepo.DeviceRepository, n *notifier.Notifier) *Sender {
 // returns the number of devices targeted. Users without registered devices are
 // not an error.
 func (s *Sender) SendToUser(c context.Context, userID int, payload fcm.FCMNotificationPayload) (int, error) {
-	tokens, err := s.tokensForUser(c, userID)
+	deviceTokens, err := s.deviceRepo.GetActiveDeviceTokens(c, userID)
 	if err != nil {
 		return 0, err
 	}
-	if len(tokens) == 0 {
-		return 0, nil
-	}
-	if err := s.sendToTokens(c, userID, tokens, payload); err != nil {
-		return 0, err
-	}
-	return len(tokens), nil
+	return s.SendToDeviceTokens(c, "push", deviceTokens, payload)
 }
 
 // SendToUsers pushes a notification to every active device of each user. It is
@@ -61,40 +54,44 @@ func (s *Sender) SendToUsers(c context.Context, userIDs []int, payload fcm.FCMNo
 	return devices
 }
 
-func (s *Sender) tokensForUser(c context.Context, userID int) ([]string, error) {
-	deviceTokens, err := s.deviceRepo.GetActiveDeviceTokens(c, userID)
-	if err != nil {
-		return nil, err
+// SendToDeviceTokens sends payload to a set of already-resolved device
+// tokens, preferring Bridge (self-hosted instances relaying through Donetick
+// Bridge) when it is connected and enabled, and falling back to Core's own
+// direct Firebase config otherwise -- the same provider selection
+// Notifier.SendNotification uses for scheduled chore reminders. This is the
+// single place that selection lives, so callers that already hold device
+// rows (e.g. chore nudges) don't need to duplicate it.
+// idempotencyScope distinguishes callers for Bridge's idempotency key (e.g.
+// "push", "nudge") so unrelated sends never collide on the same key.
+func (s *Sender) SendToDeviceTokens(c context.Context, idempotencyScope string, deviceTokens []*uModel.UserDeviceToken, payload fcm.FCMNotificationPayload) (int, error) {
+	log := logging.FromContext(c)
+
+	if len(deviceTokens) == 0 {
+		return 0, nil
 	}
+
+	if s.notifier != nil && s.notifier.Bridge != nil && s.notifier.Bridge.Enabled() {
+		return s.notifier.Bridge.SendMulticast(c, idempotencyScope, deviceTokens, payload.Title, payload.Body, payload.Data)
+	}
+
+	if s.notifier == nil || s.notifier.FCM == nil {
+		log.Debug("Neither Bridge nor FCM is configured, skipping push notification")
+		return 0, nil
+	}
+
 	tokens := make([]string, 0, len(deviceTokens))
 	for _, deviceToken := range deviceTokens {
 		if deviceToken.Token != "" {
 			tokens = append(tokens, deviceToken.Token)
 		}
 	}
-	return tokens, nil
-}
-
-// sendToTokens prefers Bridge when it is connected and enabled (self-hosted
-// instance relaying through Donetick Bridge); otherwise it falls back to
-// Core's own direct Firebase config, mirroring the provider selection in
-// Notifier.SendNotification.
-func (s *Sender) sendToTokens(c context.Context, userID int, tokens []string, payload fcm.FCMNotificationPayload) error {
-	log := logging.FromContext(c)
-
-	if s.notifier != nil && s.notifier.Bridge != nil && s.notifier.Bridge.Enabled() {
-		s.sendToTokensViaBridge(c, userID, tokens, payload)
-		return nil
-	}
-
-	if s.notifier == nil || s.notifier.FCM == nil {
-		log.Debug("Neither Bridge nor FCM is configured, skipping push notification")
-		return nil
+	if len(tokens) == 0 {
+		return 0, nil
 	}
 
 	response, err := s.notifier.FCM.SendMulticast(c, tokens, payload)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	if response.FailureCount > 0 {
@@ -107,30 +104,5 @@ func (s *Sender) sendToTokens(c context.Context, userID int, tokens []string, pa
 		}
 	}
 
-	return nil
-}
-
-func (s *Sender) sendToTokensViaBridge(c context.Context, userID int, tokens []string, payload fcm.FCMNotificationPayload) {
-	log := logging.FromContext(c)
-
-	for _, token := range tokens {
-		details := &nModel.NotificationDetails{
-			Notification: nModel.Notification{
-				UserID:       userID,
-				TargetID:     token,
-				ScheduledFor: time.Now(),
-				RawEvent: nModel.JSONB{
-					"payload": map[string]interface{}{
-						"title":     payload.Title,
-						"body":      payload.Body,
-						"image_url": payload.ImageURL,
-						"data":      payload.Data,
-					},
-				},
-			},
-		}
-		if err := s.notifier.Bridge.SendNotification(c, details); err != nil {
-			log.Warn("Failed to send push notification via bridge", "user_id", userID, "error", err)
-		}
-	}
+	return response.SuccessCount, nil
 }

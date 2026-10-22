@@ -1604,6 +1604,11 @@ func (r *ChoreRepository) UndoChoreAction(c context.Context, choreID int, histor
 		if deleted.RowsAffected != 1 {
 			return errors.New("history already undone")
 		}
+		var award xpModel.Award
+		awardErr := tx.Where("history_id = ? AND circle_id = ?", historyID, circleID).First(&award).Error
+		if awardErr != nil && !errors.Is(awardErr, gorm.ErrRecordNotFound) {
+			return awardErr
+		}
 		if err := tx.Where("history_id = ? AND circle_id = ?", historyID, circleID).Delete(&xpModel.Award{}).Error; err != nil {
 			return err
 		}
@@ -1642,7 +1647,15 @@ func (r *ChoreRepository) UndoChoreAction(c context.Context, choreID int, histor
 		}
 
 		// Remove points if they were added during completion/approval
-		if historyToUndo.Points != nil && *historyToUndo.Points > 0 &&
+		if awardErr == nil {
+			// Use the immutable credited amount and membership incarnation. A
+			// rejoined user's new balance must not pay back an old membership's XP.
+			if err := tx.Model(&cModel.UserCircle{}).
+				Where("id = ? AND user_id = ? AND circle_id = ?", award.MembershipID, award.UserID, circleID).
+				Update("points", gorm.Expr("points - ?", award.Points)).Error; err != nil {
+				return err
+			}
+		} else if historyToUndo.Points != nil && *historyToUndo.Points > 0 &&
 			(historyToUndo.Status == chModel.ChoreHistoryStatusCompleted) {
 			// Get the chore to find circle ID
 			var chore chModel.Chore

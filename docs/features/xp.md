@@ -64,7 +64,10 @@ Pending approval, rejection, skipping, and completions where points are disabled
 do not earn XP. Approval uses the task configuration at approval time, matching
 the existing points award behavior. Deleting a task or its displayed history
 retains lifetime XP, matching existing points behavior. Undo deletes the award
-and subtracts the original history amount atomically. Stale concurrent
+and subtracts the immutable award amount from its original membership atomically.
+A departed membership cannot debit a later rejoined membership. Legacy and
+uncategorized completions have no category award; their existing history-based
+reversal behavior is retained. Stale concurrent
 completions/approvals are rejected; a client must reload the task. Fresh subsequent
 completions of an always task are distinct awards.
 

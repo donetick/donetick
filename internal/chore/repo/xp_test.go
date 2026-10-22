@@ -189,3 +189,36 @@ func TestXPAlwaysTaskFreshCompletions(t *testing.T) {
 	require.NoError(t, db.First(&m).Error)
 	require.Equal(t, 130, m.Points)
 }
+
+func TestXPUndoUsesAwardMembershipAndOriginalPoints(t *testing.T) {
+	for _, rejoin := range []bool{false, true} {
+		t.Run(map[bool]string{false: "stale history", true: "rejoined member"}[rejoin], func(t *testing.T) {
+			r, db, chore := xpFixture(t)
+			now := time.Now().UTC()
+			ctx := context.Background()
+			require.NoError(t, r.CompleteChore(ctx, chore, nil, 1, nil, &now, nil, true))
+			var award xp.Award
+			require.NoError(t, db.First(&award).Error)
+			var m circle.UserCircle
+			require.NoError(t, db.First(&m).Error)
+			expected := 30
+			if rejoin {
+				require.NoError(t, db.Delete(&m).Error)
+				m = circle.UserCircle{CircleID: 1, UserID: 1, IsActive: true, Points: 9}
+				require.NoError(t, db.Create(&m).Error)
+				require.NotEqual(t, award.MembershipID, m.ID)
+				expected = 9
+			} else {
+				// A history edit may have loaded pending state before approval and later
+				// saved that stale snapshot. The award remains the source for reversal.
+				require.NoError(t, db.Model(&chModel.ChoreHistory{}).Where("id = ?", award.HistoryID).Updates(map[string]interface{}{"points": 1, "status": chModel.ChoreHistoryStatusPendingApproval}).Error)
+			}
+			require.NoError(t, r.UndoChoreAction(ctx, chore.ID, award.HistoryID, 1, nil, nil))
+			require.NoError(t, db.First(&m, m.ID).Error)
+			require.Equal(t, expected, m.Points)
+			var n int64
+			require.NoError(t, db.Model(&xp.Award{}).Count(&n).Error)
+			require.Zero(t, n)
+		})
+	}
+}

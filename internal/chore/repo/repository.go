@@ -691,6 +691,10 @@ func (r *ChoreRepository) SetChorePendingApproval(c context.Context, chore *chMo
 		return err
 	}
 	err = r.db.WithContext(c).Transaction(func(tx *gorm.DB) error {
+		if err := claimCompletion(tx, chore, nextVersion); err != nil {
+			return err
+		}
+
 		// Look for existing chore history with start or pause status
 		var existingHistory chModel.ChoreHistory
 		err := tx.Where("chore_id = ? AND status = ? ",

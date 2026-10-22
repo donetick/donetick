@@ -222,3 +222,63 @@ func TestXPUndoUsesAwardMembershipAndOriginalPoints(t *testing.T) {
 		})
 	}
 }
+
+func TestXPPendingApprovalRejectsStaleCompletion(t *testing.T) {
+	for _, stage := range []string{"pending", "approved", "pending undone", "approved undone"} {
+		t.Run(stage, func(t *testing.T) {
+			r, db, task := xpFixture(t)
+			ctx := context.Background()
+			now := time.Now().UTC()
+			task.RequireApproval = true
+			task.FrequencyType = chModel.FrequencyTypeAlways
+			require.NoError(t, db.Save(task).Error)
+			stale := *task
+			require.NoError(t, r.SetChorePendingApproval(ctx, task, nil, 1, &now))
+			var history chModel.ChoreHistory
+			require.NoError(t, db.First(&history).Error)
+			approved := stage == "approved" || stage == "approved undone"
+			if approved {
+				require.NoError(t, db.First(task, task.ID).Error)
+				require.NoError(t, r.ApproveChore(ctx, task, 2, nil, nil, true))
+			}
+			undone := stage == "pending undone" || stage == "approved undone"
+			if undone {
+				require.NoError(t, r.UndoChoreAction(ctx, task.ID, history.ID, 1, nil, nil))
+			}
+			require.NoError(t, db.First(task, task.ID).Error)
+			before := *task
+			require.Error(t, r.SetChorePendingApproval(ctx, &stale, nil, 1, &now))
+			require.NoError(t, db.First(task, task.ID).Error)
+			require.Equal(t, before.SyncVersion, task.SyncVersion)
+			require.Equal(t, before.Status, task.Status)
+			expected := 30
+			awardCount := int64(0)
+			historyCount := int64(1)
+			if approved && !undone {
+				expected = 80
+				awardCount = 1
+			}
+			if undone {
+				historyCount = 0
+			}
+			var m circle.UserCircle
+			require.NoError(t, db.First(&m).Error)
+			require.Equal(t, expected, m.Points)
+			var n int64
+			require.NoError(t, db.Model(&xp.Award{}).Count(&n).Error)
+			require.Equal(t, awardCount, n)
+			require.NoError(t, db.Model(&chModel.ChoreHistory{}).Count(&n).Error)
+			require.Equal(t, historyCount, n)
+			if stage != "pending" {
+				// A fresh later completion after approval/undo is a distinct valid action.
+				require.NoError(t, r.SetChorePendingApproval(ctx, task, nil, 1, &now))
+				require.NoError(t, db.First(task, task.ID).Error)
+				require.NoError(t, r.ApproveChore(ctx, task, 2, nil, nil, true))
+				require.NoError(t, db.First(&m).Error)
+				require.Equal(t, expected+50, m.Points)
+				require.NoError(t, db.Model(&xp.Award{}).Count(&n).Error)
+				require.Equal(t, awardCount+1, n)
+			}
+		})
+	}
+}

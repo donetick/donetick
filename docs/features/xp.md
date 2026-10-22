@@ -68,7 +68,7 @@ and subtracts the immutable award amount from its original membership atomically
 A departed membership cannot debit a later rejoined membership. Legacy and
 uncategorized completions have no category award; their existing history-based
 reversal behavior is retained. Stale concurrent
-completions/approvals are rejected; a client must reload the task. Fresh subsequent
+completions, including pending-approval transitions, and approvals are rejected; a client must reload the task. Fresh subsequent
 completions of an always task are distinct awards.
 
 Validation: run `go test ./internal/chore/repo ./internal/xp ./internal/database`

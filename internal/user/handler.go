@@ -1377,14 +1377,31 @@ func (h *Handler) getStorageUsage(c *gin.Context) {
 
 // Account deletion request/response types
 type AccountDeletionRequest struct {
+	Password        string                 `json:"password" binding:"required"`
 	TransferOptions []CircleTransferOption `json:"transferOptions,omitempty"`
 	Confirmation    string                 `json:"confirmation" binding:"required"` // Must be "DELETE"
+}
+
+type AccountDeletionCheckRequest struct {
+	Password string `json:"password" binding:"required"`
 }
 
 func (h *Handler) checkAccountDeletion(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	var req AccountDeletionCheckRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Verify password
+	if auth.Matches(currentUser.Password, req.Password) != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid password"})
 		return
 	}
 
@@ -1414,6 +1431,12 @@ func (h *Handler) deleteAccount(c *gin.Context) {
 	// Validate confirmation text
 	if req.Confirmation != "DELETE" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Confirmation text must be 'DELETE'"})
+		return
+	}
+
+	// Verify password
+	if auth.Matches(currentUser.Password, req.Password) != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid password"})
 		return
 	}
 

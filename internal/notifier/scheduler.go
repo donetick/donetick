@@ -57,6 +57,24 @@ func (s *Scheduler) Start(c context.Context) {
 	go s.runScheduler(c, " NOTIFICATION_CLEANUP ", s.cleanupSentNotifications, 24*time.Hour*30)
 	go s.runScheduler(c, " BRIDGE_DEVICE_SYNC_RETRY ", s.retryPendingBridgeDeviceSyncJob, 10*time.Minute)
 	go s.runScheduler(c, " NOTIFICATION_DIGEST ", s.generateDigestsJob, 30*time.Minute)
+	go s.runScheduler(c, " DEVICE_TOKEN_CLEANUP ", s.cleanupInactiveDeviceTokensJob, 24*time.Hour)
+}
+
+// cleanupInactiveDeviceTokensJob removes device registrations whose client has
+// not checked in for InactiveDeviceRetentionDays. The repository method for
+// this already existed but was never reachable -- it was wired to neither a
+// route nor a job -- so stale registrations accumulated indefinitely and ate
+// into each user's MaxDevicesPerUser budget.
+func (s *Scheduler) cleanupInactiveDeviceTokensJob(c context.Context) (time.Duration, error) {
+	log := logging.FromContext(c)
+	startTime := time.Now().UTC()
+
+	if err := s.deviceRepo.CleanupInactiveTokens(c, dRepo.InactiveDeviceRetentionDays); err != nil {
+		log.Error("Error cleaning up inactive device tokens", "error", err)
+		return time.Since(startTime), err
+	}
+
+	return time.Since(startTime), nil
 }
 
 // generateDigestsJob runs every 30 minutes so that a user's configured digest

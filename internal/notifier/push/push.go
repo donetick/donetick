@@ -11,6 +11,7 @@ import (
 	"donetick.com/core/internal/notifier"
 	"donetick.com/core/internal/notifier/service/fcm"
 	"donetick.com/core/logging"
+	"firebase.google.com/go/v4/messaging"
 )
 
 type Sender struct {
@@ -86,15 +87,59 @@ func (s *Sender) sendToTokens(c context.Context, tokens []string, payload fcm.FC
 		return err
 	}
 
-	if response.FailureCount > 0 {
-		for i, result := range response.Responses {
-			if !result.Success {
-				log.Warn("Failed to send push notification to token",
-					"token_index", i,
-					"error", result.Error)
-			}
+	if response.FailureCount == 0 {
+		return nil
+	}
+
+	// SendEachForMulticast guarantees Responses[i] corresponds to tokens[i].
+	var dead []string
+	for i, result := range response.Responses {
+		if result.Success {
+			continue
+		}
+
+		log.Warn("Failed to send push notification to token",
+			"token_index", i,
+			"error", result.Error)
+
+		// Separate permanent rejections from transient ones (quota, timeouts,
+		// FCM being unavailable). Only permanent ones mean the token will
+		// never work again and should stop occupying a device slot; retrying
+		// a transient failure later is fine.
+		if isPermanentTokenFailure(result.Error) && i < len(tokens) {
+			dead = append(dead, tokens[i])
+		}
+	}
+
+	if len(dead) > 0 {
+		deactivated, err := s.deviceRepo.DeactivateTokens(c, dead)
+		if err != nil {
+			// Delivery already happened for the healthy tokens; a pruning
+			// failure is not worth failing the send over. The next send
+			// re-reports the same tokens and tries again.
+			log.Error("Failed to deactivate dead push tokens", "error", err)
+		} else {
+			log.Info("Deactivated dead push tokens", "count", deactivated)
 		}
 	}
 
 	return nil
+}
+
+// isPermanentTokenFailure reports whether an FCM per-token error means the
+// token is permanently unusable:
+//
+//   - UNREGISTERED: the app was uninstalled, or the token was replaced by a
+//     rotation the client never reported back to us.
+//
+// INVALID_ARGUMENT can describe a bad payload, so it must not deactivate tokens.
+//
+//   - SENDER_ID_MISMATCH: the token belongs to a different Firebase project,
+//     so this sender can never deliver to it.
+func isPermanentTokenFailure(err error) bool {
+	if err == nil {
+		return false
+	}
+	return messaging.IsUnregistered(err) ||
+		messaging.IsSenderIDMismatch(err)
 }

@@ -10,17 +10,21 @@ import (
 	cRepo "donetick.com/core/internal/circle/repo"
 	nModel "donetick.com/core/internal/notifier/model"
 	nRepo "donetick.com/core/internal/notifier/repo"
+	uModel "donetick.com/core/internal/user/model"
+	uRepo "donetick.com/core/internal/user/repo"
 	"donetick.com/core/logging"
 )
 
 type NotificationPlanner struct {
 	nRepo *nRepo.NotificationRepository
 	cRepo *cRepo.CircleRepository
+	uRepo *uRepo.UserRepository
 }
 
-func NewNotificationPlanner(nr *nRepo.NotificationRepository, cr *cRepo.CircleRepository) *NotificationPlanner {
+func NewNotificationPlanner(nr *nRepo.NotificationRepository, cr *cRepo.CircleRepository, ur *uRepo.UserRepository) *NotificationPlanner {
 	return &NotificationPlanner{nRepo: nr,
 		cRepo: cr,
+		uRepo: ur,
 	}
 }
 
@@ -51,18 +55,24 @@ func (n *NotificationPlanner) GenerateNotifications(c context.Context, chore *ch
 		return true
 	}
 
+	var directNotifications []*nModel.Notification
 	if len(chore.NotificationMetadataV2.Templates) > 0 {
 		if assignedUser != nil && canReceiveChore(chore, assignedUser.UserID, circleMembers) {
-			notifications = append(notifications, generateNotificationsFromTemplate(chore, assignedUser, assignedUser, nil)...)
+			directNotifications = append(directNotifications, generateNotificationsFromTemplate(chore, assignedUser, assignedUser, nil)...)
 		} else if assignedUser == nil {
 			// A chore assigned to "Anyone" has no assigned user to resolve, which previously
 			// meant no notifications were generated at all. Remind every circle member who
 			// can actually receive one instead.
 			for _, member := range anyoneChoreRecipients(chore, circleMembers) {
-				notifications = append(notifications, generateNotificationsFromTemplate(chore, member, nil, nil)...)
+				directNotifications = append(directNotifications, generateNotificationsFromTemplate(chore, member, nil, nil)...)
 			}
 		}
 	}
+	// Gate individually-targeted reminders by each recipient's own notification
+	// preference. The circle group chat message below is excluded from this: it's a
+	// shared message other circle members in that chat may still want, so it
+	// shouldn't be suppressed by the assigned user's personal profile.
+	notifications = append(notifications, n.filterByPreference(c, chore, directNotifications)...)
 
 	// A circle group chat reaches everybody in it, so chores of a restricted project
 	// (only me / selected members) are never posted there.
@@ -228,6 +238,60 @@ func generateNotificationsFromTemplate(chore *chModel.Chore, recipient *cModel.U
 	}
 
 	return notifications
+}
+
+// filterByPreference drops notifications the recipient's notification profile has
+// turned off. Fails open (returns notifications unfiltered) if preferences can't be
+// loaded, since silently dropping reminders is worse than a profile being briefly
+// ignored.
+func (n *NotificationPlanner) filterByPreference(c context.Context, chore *chModel.Chore, notifications []*nModel.Notification) []*nModel.Notification {
+	if len(notifications) == 0 {
+		return notifications
+	}
+
+	seen := make(map[int]bool, len(notifications))
+	userIDs := make([]int, 0, len(notifications))
+	for _, notif := range notifications {
+		if !seen[notif.UserID] {
+			seen[notif.UserID] = true
+			userIDs = append(userIDs, notif.UserID)
+		}
+	}
+
+	prefs, err := n.uRepo.GetNotificationPreferences(c, userIDs)
+	if err != nil {
+		logging.FromContext(c).Error("Error loading notification preferences, skipping preference gating", "err", err)
+		return notifications
+	}
+
+	filtered := make([]*nModel.Notification, 0, len(notifications))
+	for _, notif := range notifications {
+		eventType, _ := notif.RawEvent["type"].(EventType)
+		if allowedByPreference(prefs[notif.UserID], eventType, chore) {
+			filtered = append(filtered, notif)
+		}
+	}
+	return filtered
+}
+
+// allowedByPreference resolves whether a single notification should survive the
+// recipient's notification profile. EventTypeOverdue covers both "overdue follow-up"
+// (any priority) and "escalation" (high/urgent priority only, for profiles like Quiet
+// that otherwise mute due/overdue reminders).
+func allowedByPreference(pref *uModel.UserNotificationPreference, eventType EventType, chore *chModel.Chore) bool {
+	switch eventType {
+	case EventTypePreDue:
+		return pref.Enabled(uModel.NotificationEventPreDue)
+	case EventTypeDue:
+		return pref.Enabled(uModel.NotificationEventDue)
+	case EventTypeOverdue:
+		if pref.Enabled(uModel.NotificationEventOverdueFollowup) {
+			return true
+		}
+		return pref.Enabled(uModel.NotificationEventEscalation) && chore.Priority >= chModel.PriorityHigh
+	default:
+		return true
+	}
 }
 
 type EventType string

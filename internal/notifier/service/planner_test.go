@@ -7,6 +7,7 @@ import (
 	chModel "donetick.com/core/internal/chore/model"
 	cModel "donetick.com/core/internal/circle/model"
 	nModel "donetick.com/core/internal/notifier/model"
+	uModel "donetick.com/core/internal/user/model"
 )
 
 func member(userID int, active bool, platform nModel.NotificationPlatform, targetID string) *cModel.UserCircleDetail {
@@ -206,5 +207,42 @@ func TestAnyoneChoreRecipientsKeepsWholeCircleForPublicChores(t *testing.T) {
 
 	if got := anyoneChoreRecipients(chore, circleMembers); len(got) != 2 {
 		t.Errorf("expected 2 recipients for a public chore, got %d", len(got))
+	}
+}
+
+func TestAllowedByPreferenceQuietOnlyEscalatesHighPriorityOverdue(t *testing.T) {
+	quiet := &uModel.UserNotificationPreference{Profile: uModel.NotificationProfileQuiet}
+	lowPriorityOverdue := &chModel.Chore{Priority: chModel.PriorityMedium}
+	urgentOverdue := &chModel.Chore{Priority: chModel.PriorityUrgent}
+
+	if allowedByPreference(quiet, EventTypeDue, lowPriorityOverdue) {
+		t.Error("Quiet profile should suppress plain due reminders")
+	}
+	if allowedByPreference(quiet, EventTypeOverdue, lowPriorityOverdue) {
+		t.Error("Quiet profile should suppress overdue reminders below the high-priority threshold")
+	}
+	if !allowedByPreference(quiet, EventTypeOverdue, urgentOverdue) {
+		t.Error("Quiet profile should still escalate overdue reminders for urgent-priority chores")
+	}
+}
+
+func TestAllowedByPreferencePersistentFollowsUpOnAnyPriorityOverdue(t *testing.T) {
+	persistent := &uModel.UserNotificationPreference{Profile: uModel.NotificationProfilePersistent}
+	lowPriorityOverdue := &chModel.Chore{Priority: chModel.PriorityNone}
+
+	if !allowedByPreference(persistent, EventTypeOverdue, lowPriorityOverdue) {
+		t.Error("Persistent's overdue follow-up should fire regardless of chore priority")
+	}
+}
+
+func TestAllowedByPreferenceJustInTimeDropsPreDue(t *testing.T) {
+	jit := &uModel.UserNotificationPreference{Profile: uModel.NotificationProfileJustInTime}
+	chore := &chModel.Chore{}
+
+	if allowedByPreference(jit, EventTypePreDue, chore) {
+		t.Error("Just-in-time should drop pre-due reminders")
+	}
+	if !allowedByPreference(jit, EventTypeDue, chore) {
+		t.Error("Just-in-time should still remind right when the chore becomes actionable")
 	}
 }

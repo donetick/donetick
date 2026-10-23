@@ -69,13 +69,29 @@ func (r *UserRepository) GetAllUsers(c context.Context, circleID int) ([]*uModel
 	return users, nil
 }
 
-func (r *UserRepository) GetAllUsersForSystemOnly(c context.Context) ([]*uModel.User, error) {
-	var users []*uModel.User
-	if err := r.db.WithContext(c).Find(&users).Error; err != nil {
+// GetAllUserDigestSettings returns the narrow user/preference projection used
+// during digest generation. Users without a saved preference receive the same
+// defaults as DefaultNotificationPreference.
+func (r *UserRepository) GetAllUserDigestSettings(c context.Context) ([]uModel.UserDigestSettings, error) {
+	var users []uModel.UserDigestSettings
+	err := r.db.WithContext(c).
+		Table("users AS u").
+		Select(
+			"u.id, u.timezone, "+
+				"COALESCE(p.profile, ?) AS profile, "+
+				"COALESCE(p.overrides, '{}') AS overrides, "+
+				"COALESCE(p.digest_hour, ?) AS digest_hour",
+			uModel.NotificationProfileDefault,
+			uModel.DefaultDigestHour,
+		).
+		Joins("LEFT JOIN user_notification_preferences AS p ON p.user_id = u.id").
+		Scan(&users).Error
+	if err != nil {
 		return nil, err
 	}
 	return users, nil
 }
+
 func (r *UserRepository) CreateUser(c context.Context, user *uModel.User) (*uModel.User, error) {
 	if err := r.db.WithContext(c).Create(user).Error; err != nil {
 		return nil, err
@@ -309,6 +325,51 @@ func (r *UserRepository) DeleteNotificationTarget(c context.Context, userID int)
 func (r *UserRepository) UpdateNotificationTargetForAllNotifications(c context.Context, userID int, targetID string, targetType nModel.NotificationPlatform) error {
 	return r.db.WithContext(c).Model(&nModel.Notification{}).Where("user_id = ?", userID).Update("target_id", targetID).Update("type", targetType).Error
 }
+
+// GetNotificationPreference returns userID's saved preference, or the
+// Balanced default (not persisted) when the user never configured one.
+func (r *UserRepository) GetNotificationPreference(c context.Context, userID int) (*uModel.UserNotificationPreference, error) {
+	var pref uModel.UserNotificationPreference
+	err := r.db.WithContext(c).Where("user_id = ?", userID).First(&pref).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return uModel.DefaultNotificationPreference(userID), nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &pref, nil
+}
+
+// GetNotificationPreferences batch-loads preferences for userIDs, filling in
+// the Balanced default for any user with no saved row so callers always get
+// one entry per requested ID.
+func (r *UserRepository) GetNotificationPreferences(c context.Context, userIDs []int) (map[int]*uModel.UserNotificationPreference, error) {
+	out := make(map[int]*uModel.UserNotificationPreference, len(userIDs))
+	if len(userIDs) == 0 {
+		return out, nil
+	}
+	var prefs []*uModel.UserNotificationPreference
+	if err := r.db.WithContext(c).Where("user_id IN ?", userIDs).Find(&prefs).Error; err != nil {
+		return nil, err
+	}
+	for _, p := range prefs {
+		out[p.UserID] = p
+	}
+	for _, id := range userIDs {
+		if _, ok := out[id]; !ok {
+			out[id] = uModel.DefaultNotificationPreference(id)
+		}
+	}
+	return out, nil
+}
+
+// UpsertNotificationPreference saves userID's profile + overrides, replacing
+// any previous preference row.
+func (r *UserRepository) UpsertNotificationPreference(c context.Context, pref *uModel.UserNotificationPreference) error {
+	pref.UpdatedAt = time.Now().UTC()
+	return r.db.WithContext(c).Save(pref).Error
+}
+
 func (r *UserRepository) UpdatePasswordByUserId(c context.Context, userID int, password string) error {
 	return r.db.WithContext(c).Model(&uModel.User{}).Where("id = ?", userID).Update("password", password).Error
 }

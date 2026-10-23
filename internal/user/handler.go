@@ -1141,6 +1141,97 @@ func (h *Handler) DeleteUserToken(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{})
 }
 
+// GetNotificationPreference returns the current user's notification profile
+// and overrides, plus the resolved (profile ⊕ overrides) value for every
+// known event type so clients don't need to re-implement the resolution rule.
+func (h *Handler) GetNotificationPreference(c *gin.Context) {
+	currentUser, ok := auth.CurrentUser(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	pref, err := h.userRepo.GetNotificationPreference(c, currentUser.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get notification preference"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"profile":    pref.Profile,
+		"overrides":  pref.Overrides,
+		"digestHour": pref.DigestHour,
+		"effective":  resolvedNotificationPreference(pref),
+	})
+}
+
+type UpdateNotificationPreferenceReq struct {
+	Profile   uModel.NotificationProfile   `json:"profile" binding:"required,oneof=balanced planner just_in_time persistent quiet custom"`
+	Overrides uModel.NotificationOverrides `json:"overrides"`
+	// DigestHour is a pointer so an omitted field leaves the previously saved
+	// hour untouched instead of resetting it to 0 (midnight).
+	DigestHour *int `json:"digestHour" binding:"omitempty,gte=0,lte=23"`
+}
+
+func (h *Handler) UpdateNotificationPreference(c *gin.Context) {
+	currentUser, ok := auth.CurrentUser(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	var req UpdateNotificationPreferenceReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request: " + err.Error()})
+		return
+	}
+
+	current, err := h.userRepo.GetNotificationPreference(c, currentUser.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load existing notification preference"})
+		return
+	}
+
+	pref := &uModel.UserNotificationPreference{
+		UserID:     currentUser.ID,
+		Profile:    req.Profile,
+		Overrides:  req.Overrides,
+		DigestHour: current.DigestHour,
+	}
+	if req.DigestHour != nil {
+		pref.DigestHour = *req.DigestHour
+	}
+	if err := h.userRepo.UpsertNotificationPreference(c, pref); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update notification preference"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"profile":    pref.Profile,
+		"overrides":  pref.Overrides,
+		"digestHour": pref.DigestHour,
+		"effective":  resolvedNotificationPreference(pref),
+	})
+}
+
+// resolvedNotificationPreference returns the on/off value for every known
+// event type after applying overrides on top of the profile default.
+func resolvedNotificationPreference(pref *uModel.UserNotificationPreference) map[uModel.NotificationEventType]bool {
+	eventTypes := []uModel.NotificationEventType{
+		uModel.NotificationEventPreDue,
+		uModel.NotificationEventDue,
+		uModel.NotificationEventOverdueFollowup,
+		uModel.NotificationEventEscalation,
+		uModel.NotificationEventDailyDigest,
+		uModel.NotificationEventWeeklyDigest,
+	}
+	resolved := make(map[uModel.NotificationEventType]bool, len(eventTypes))
+	for _, t := range eventTypes {
+		resolved[t] = pref.Enabled(t)
+	}
+	return resolved
+}
+
 func (h *Handler) UpdateNotificationTarget(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
@@ -1812,6 +1903,8 @@ func Routes(router *gin.Engine, h *Handler, jwtAuth *jwt.GinJWTMiddleware, multi
 		userRoutes.DELETE("/tokens/:id", h.DeleteUserToken)
 		userRoutes.PUT("/webhook", h.setWebhook)
 		userRoutes.PUT("/targets", h.UpdateNotificationTarget)
+		userRoutes.GET("/notifications/preferences", h.GetNotificationPreference)
+		userRoutes.PUT("/notifications/preferences", h.UpdateNotificationPreference)
 		userRoutes.PUT("change_password", h.updateUserPasswordLoggedInOnly)
 		userRoutes.POST("profile_photo", h.updateProfilePhoto)
 		userRoutes.GET("storage", h.getStorageUsage)

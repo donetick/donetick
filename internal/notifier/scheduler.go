@@ -11,6 +11,7 @@ import (
 	dRepo "donetick.com/core/internal/device/repo"
 	"donetick.com/core/internal/events"
 	nRepo "donetick.com/core/internal/notifier/repo"
+	nps "donetick.com/core/internal/notifier/service"
 	uRepo "donetick.com/core/internal/user/repo"
 	"donetick.com/core/logging"
 )
@@ -30,10 +31,11 @@ type Scheduler struct {
 	notifier         *Notifier
 	eventsProducer   *events.EventsProducer
 	notificationRepo *nRepo.NotificationRepository
+	digestPlanner    *nps.DigestPlanner
 	SchedulerJobs    config.SchedulerConfig
 }
 
-func NewScheduler(cfg *config.Config, ur *uRepo.UserRepository, cr *chRepo.ChoreRepository, n *Notifier, nr *nRepo.NotificationRepository, ep *events.EventsProducer, dr *dRepo.DeviceRepository, bs *bridge.Service) *Scheduler {
+func NewScheduler(cfg *config.Config, ur *uRepo.UserRepository, cr *chRepo.ChoreRepository, n *Notifier, nr *nRepo.NotificationRepository, ep *events.EventsProducer, dr *dRepo.DeviceRepository, bs *bridge.Service, dp *nps.DigestPlanner) *Scheduler {
 	return &Scheduler{
 		choreRepo:        cr,
 		userRepo:         ur,
@@ -43,6 +45,7 @@ func NewScheduler(cfg *config.Config, ur *uRepo.UserRepository, cr *chRepo.Chore
 		notifier:         n,
 		notificationRepo: nr,
 		eventsProducer:   ep,
+		digestPlanner:    dp,
 		SchedulerJobs:    cfg.SchedulerJobs,
 	}
 }
@@ -53,6 +56,22 @@ func (s *Scheduler) Start(c context.Context) {
 	go s.runScheduler(c, " NOTIFICATION_SCHEDULER ", s.loadAndSendNotificationJob, 3*time.Minute)
 	go s.runScheduler(c, " NOTIFICATION_CLEANUP ", s.cleanupSentNotifications, 24*time.Hour*30)
 	go s.runScheduler(c, " BRIDGE_DEVICE_SYNC_RETRY ", s.retryPendingBridgeDeviceSyncJob, 10*time.Minute)
+	go s.runScheduler(c, " NOTIFICATION_DIGEST ", s.generateDigestsJob, 30*time.Minute)
+}
+
+// generateDigestsJob runs every 30 minutes so that a user's configured digest
+// hour is reliably hit at least once (DigestPlanner.GenerateDueDigests dedupes,
+// so being checked more than once inside the matching hour is harmless).
+func (s *Scheduler) generateDigestsJob(c context.Context) (time.Duration, error) {
+	log := logging.FromContext(c)
+	startTime := time.Now().UTC()
+	sent, err := s.digestPlanner.GenerateDueDigests(c, startTime)
+	if err != nil {
+		log.Error("Error generating digest notifications", "err", err)
+		return time.Since(startTime), err
+	}
+	log.Debug("Generated digest notifications", "count", sent)
+	return time.Since(startTime), nil
 }
 
 // retryPendingBridgeDeviceSyncJob opportunistically retries Bridge device

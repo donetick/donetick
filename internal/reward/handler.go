@@ -1,7 +1,9 @@
 package reward
 
 import (
+	"errors"
 	"fmt"
+	"io"
 	"strconv"
 	"time"
 
@@ -10,6 +12,7 @@ import (
 	cRepo "donetick.com/core/internal/circle/repo"
 	nModel "donetick.com/core/internal/notifier/model"
 	nRepo "donetick.com/core/internal/notifier/repo"
+	xpRepo "donetick.com/core/internal/points/repo"
 	rModel "donetick.com/core/internal/reward/model"
 	rRepo "donetick.com/core/internal/reward/repo"
 	"donetick.com/core/logging"
@@ -20,12 +23,13 @@ import (
 type RewardReq struct {
 	Name        string `json:"name" binding:"required"`
 	Description string `json:"description"`
-	PointsCost  int    `json:"pointsCost" binding:"required,gt=0"`
+	PointsCost  int    `json:"pointsCost" binding:"required,gt=0,lte=2147483647"`
 	IsActive    *bool  `json:"isActive"`
 }
 
 type RedeemReq struct {
-	Note *string `json:"note"`
+	Note       *string `json:"note"`
+	CategoryID *int    `json:"categoryId"`
 }
 
 type ResolveReq struct {
@@ -252,11 +256,17 @@ func (h *Handler) redeemReward(c *gin.Context) {
 	}
 
 	var req RedeemReq
-	// body is optional (note is optional), so ignore binding errors on an empty body
-	_ = c.ShouldBindJSON(&req)
+	if err := c.ShouldBindJSON(&req); err != nil && !errors.Is(err, io.EOF) {
+		c.JSON(400, gin.H{"error": "Invalid redemption request"})
+		return
+	}
 
-	redemption, err := h.rRepo.RequestRedemption(c, id, currentUser.ID, currentUser.CircleID, req.Note)
+	redemption, err := h.rRepo.RequestRedemption(c, id, currentUser.ID, currentUser.CircleID, req.Note, req.CategoryID)
 	if err != nil {
+		if errors.Is(err, xpRepo.ErrCategoryRequired) || errors.Is(err, xpRepo.ErrInvalidCategory) || errors.Is(err, xpRepo.ErrInvalidXP) {
+			c.JSON(400, gin.H{"error": err.Error()})
+			return
+		}
 		if err == rRepo.ErrInsufficientPoints {
 			c.JSON(400, gin.H{"error": "Not enough points to redeem this reward"})
 			return
@@ -344,6 +354,14 @@ func (h *Handler) approveRedemption(c *gin.Context) {
 	}
 
 	if err := h.rRepo.ApproveRedemption(c, id, currentUser.CircleID, currentUser.ID); err != nil {
+		if errors.Is(err, xpRepo.ErrCategoryRequired) || errors.Is(err, xpRepo.ErrInvalidCategory) || errors.Is(err, xpRepo.ErrInsufficientXP) {
+			c.JSON(400, gin.H{"error": err.Error()})
+			return
+		}
+		if errors.Is(err, xpRepo.ErrMembershipChanged) || errors.Is(err, xpRepo.ErrBalanceLimit) {
+			c.JSON(409, gin.H{"error": err.Error()})
+			return
+		}
 		if err == rRepo.ErrInsufficientPoints {
 			c.JSON(400, gin.H{"error": "User no longer has enough points for this redemption"})
 			return

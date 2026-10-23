@@ -45,6 +45,7 @@ import (
 	"donetick.com/core/internal/notifier/service/fcm"
 	"donetick.com/core/internal/notifier/service/pushover"
 	telegram "donetick.com/core/internal/notifier/service/telegram"
+	xpHandler "donetick.com/core/internal/points/handler"
 	pRepo "donetick.com/core/internal/points/repo"
 	"donetick.com/core/internal/realtime"
 	"donetick.com/core/internal/resource"
@@ -161,6 +162,7 @@ func main() {
 
 		// points
 		fx.Provide(pRepo.NewPointsRepository),
+		fx.Provide(xpHandler.NewHandler),
 		fx.Provide(spRepo.NewSubTasksRepository),
 
 		// Labels:
@@ -228,6 +230,7 @@ func main() {
 			chore.APIs,
 			user.Routes,
 			circle.Routes,
+			xpHandler.Routes,
 			device.Routes,
 			bridge.Routes,
 			thing.Routes,
@@ -295,6 +298,7 @@ func newServer(lc fx.Lifecycle, cfg *config.Config, db *gorm.DB, notifier *notif
 		"secretkey",
 		"Cache-Control",
 		"Content-Type",
+		"Idempotency-Key",
 		"Accept",
 		"Sec-Ch-Ua",
 		"Sec-Ch-Ua-Mobile",

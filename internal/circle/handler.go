@@ -201,7 +201,7 @@ func (h *Handler) notifyAdminsOfJoinRequest(c *gin.Context, circle *cModel.Circl
 
 	payload := fcm.FCMNotificationPayload{
 		Title: "New Join Request",
-		Body:  fmt.Sprintf("%s wants to join you Circle%s", displayNameOrUsername(requester), circle.Name),
+		Body:  fmt.Sprintf("%s wants to join your Circle (%s)", displayNameOrUsername(requester), circle.Name),
 		Data: map[string]string{
 			"type":           "circle_join_request",
 			"circle_id":      strconv.Itoa(circle.ID),

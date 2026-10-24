@@ -7,7 +7,20 @@ import (
 
 	cModel "donetick.com/core/internal/circle/model"
 	nModel "donetick.com/core/internal/notifier/model"
+	"gorm.io/gorm"
 )
+
+// NormalizeEmail normalises case so the same address always maps to one
+// account, regardless of the case used at signup, login, or by an IdP.
+func NormalizeEmail(email string) string {
+	return strings.ToLower(strings.TrimSpace(email))
+}
+
+// NormalizeUsername normalises case for IdP-provisioned accounts, which derive
+// the username from a provider id/sub and bypass signup's lowercase check.
+func NormalizeUsername(username string) string {
+	return strings.ToLower(strings.TrimSpace(username))
+}
 
 type User struct {
 	ID          int              `json:"id" gorm:"primary_key"`                                                      // Unique identifier
@@ -37,6 +50,15 @@ type User struct {
 	Expiration              *time.Time             `json:"expiration" gorm:"column:expiration;<-:false"`     // read only column
 	UserNotificationTargets UserNotificationTarget `json:"notification_target" gorm:"foreignKey:UserID;references:ID"`
 }
+// BeforeSave is the single chokepoint that keeps stored identity canonical, so
+// unique indexes enforce case-insensitive uniqueness and lookups stay plain
+// equality checks.
+func (u *User) BeforeSave(tx *gorm.DB) error {
+	u.Email = NormalizeEmail(u.Email)
+	u.Username = NormalizeUsername(u.Username)
+	return nil
+}
+
 type UserDetails struct {
 	User
 	WebhookURL *string `json:"webhookURL" gorm:"column:webhook_url;<-:false"` // read only column

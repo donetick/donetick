@@ -10,6 +10,7 @@ import (
 )
 
 type User struct {
+	XPMode      bool             `json:"xpMode" gorm:"not null;default:false"`
 	ID          int              `json:"id" gorm:"primary_key"`                                                      // Unique identifier
 	DisplayName string           `json:"displayName" gorm:"column:display_name"`                                     // Display name
 	Username    string           `json:"username" gorm:"column:username;unique"`                                     // Username (unique)

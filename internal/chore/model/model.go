@@ -56,6 +56,7 @@ const (
 )
 
 type Chore struct {
+	XPCategoryID           *int                       `json:"xpCategoryId" gorm:"column:xp_category_id"`
 	CompletionActions      []CompletionAction         `json:"completionActions" gorm:"serializer:json;type:json"`
 	ID                     int                        `json:"id" gorm:"primary_key"`
 	Name                   string                     `json:"name" gorm:"column:name"`                                                                // Chore description

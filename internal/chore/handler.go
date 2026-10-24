@@ -2,6 +2,7 @@ package chore
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -313,7 +314,18 @@ func (h *Handler) signAttachments(c *gin.Context, attachments []storageModel.Sto
 // UpdatedAt is for internal use only when syncing a chore updated offline
 
 // region: request models
+type OptionalCategoryID struct {
+	Value   *int
+	Present bool
+}
+
+func (id *OptionalCategoryID) UnmarshalJSON(data []byte) error {
+	id.Present = true
+	return json.Unmarshal(data, &id.Value)
+}
+
 type ChoreReq struct {
+	XPCategoryID         OptionalCategoryID            `json:"xpCategoryId"`
 	CompletionActions    *[]chModel.CompletionAction   `json:"completionActions"`
 	ID                   int                           `json:"id"`
 	Name                 string                        `json:"name" binding:"required"`
@@ -332,7 +344,7 @@ type ChoreReq struct {
 	UpdatedAt            *time.Time                    `json:"updatedAt"`
 	Priority             *int                          `json:"priority" binding:"omitempty"`
 	CompletionWindow     *int                          `json:"completionWindow" binding:"omitempty"`
-	Points               *int                          `json:"points" binding:"omitempty"`
+	Points               *int                          `json:"points" binding:"omitempty,min=0,max=1000"`
 	Description          *string                       `json:"description" binding:"omitempty"`
 	SubTasks             *[]stModel.SubTask            `json:"subTasks" binding:"omitempty,dive"`
 	RequireApproval      bool                          `json:"requireApproval" binding:"omitempty"`
@@ -567,6 +579,7 @@ func (h *Handler) CreateChore(c *gin.Context) {
 		CreatedAt:              time.Now().UTC(),
 		CircleID:               currentUser.CircleID,
 		Points:                 choreReq.Points,
+		XPCategoryID:           choreReq.XPCategoryID.Value,
 		CompletionWindow:       choreReq.CompletionWindow,
 		Description:            choreReq.Description,
 		Priority:               *choreReq.Priority,
@@ -587,7 +600,7 @@ func (h *Handler) CreateChore(c *gin.Context) {
 	id, err := h.choreRepo.CreateChoreWithAssignees(c, createdChore, assigneeIDs, currentUser.ID)
 	createdChore.ID = id
 
-	if errors.Is(err, chRepo.ErrAssigneeOutsideProject) {
+	if errors.Is(err, chRepo.ErrAssigneeOutsideProject) || errors.Is(err, chRepo.ErrInvalidXP) {
 		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
@@ -817,6 +830,10 @@ func (h *Handler) EditChore(c *gin.Context) {
 		return
 	}
 
+	if !choreReq.XPCategoryID.Present {
+		choreReq.XPCategoryID.Value = oldChore.XPCategoryID
+	}
+
 	if choreReq.CompletionActions == nil {
 		choreReq.CompletionActions = &oldChore.CompletionActions
 	}
@@ -901,6 +918,7 @@ func (h *Handler) EditChore(c *gin.Context) {
 		CreatedBy:              oldChore.CreatedBy,
 		CreatedAt:              oldChore.CreatedAt,
 		Points:                 choreReq.Points,
+		XPCategoryID:           choreReq.XPCategoryID.Value,
 		CompletionWindow:       choreReq.CompletionWindow,
 		Description:            choreReq.Description,
 		Priority:               *choreReq.Priority,
@@ -915,7 +933,7 @@ func (h *Handler) EditChore(c *gin.Context) {
 		assigneeIDs = append(assigneeIDs, assignee.UserID)
 	}
 	if err := h.choreRepo.UpdateChoreVisibilityForUser(c, updatedChore, assigneeIDs, currentUser.ID); err != nil {
-		if errors.Is(err, chRepo.ErrAssigneeOutsideProject) {
+		if errors.Is(err, chRepo.ErrAssigneeOutsideProject) || errors.Is(err, chRepo.ErrInvalidXP) {
 			c.JSON(400, gin.H{"error": err.Error()})
 			return
 		}

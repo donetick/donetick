@@ -16,6 +16,7 @@ import (
 	storageModel "donetick.com/core/internal/storage/model"
 	stModel "donetick.com/core/internal/subtask/model"
 	syncModel "donetick.com/core/internal/sync/model"
+	xpModel "donetick.com/core/internal/xp/model"
 	"donetick.com/core/logging"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -217,6 +218,9 @@ func (r *ChoreRepository) updateChoreVisibility(ctx context.Context, chore *chMo
 
 		var previousChore chModel.Chore
 		if err := lockedQuery().Where("id = ? AND circle_id = ?", chore.ID, chore.CircleID).First(&previousChore).Error; err != nil {
+			return err
+		}
+		if err := validateXP(tx, chore, &previousChore); err != nil {
 			return err
 		}
 		// The project cannot change between the snapshot and this lock without
@@ -447,12 +451,18 @@ func (r *ChoreRepository) UpdateChores(c context.Context, chores []*chModel.Chor
 	return r.db.WithContext(c).Save(&chores).Error
 }
 func (r *ChoreRepository) CreateChore(c context.Context, chore *chModel.Chore) (int, error) {
-	nextVersion, err := r.nextSyncVersion(c, chore.CircleID)
+	err := r.db.WithContext(c).Transaction(func(tx *gorm.DB) error {
+		if err := validateXP(tx, chore, nil); err != nil {
+			return err
+		}
+		nextVersion, err := r.nextSyncVersionWithDB(c, tx, chore.CircleID)
+		if err != nil {
+			return err
+		}
+		chore.SyncVersion = nextVersion
+		return tx.Create(chore).Error
+	})
 	if err != nil {
-		return 0, err
-	}
-	chore.SyncVersion = nextVersion
-	if err := r.db.WithContext(c).Create(chore).Error; err != nil {
 		return 0, err
 	}
 	return chore.ID, nil
@@ -463,6 +473,9 @@ func (r *ChoreRepository) CreateChore(c context.Context, chore *chModel.Chore) (
 // privacy change from missing the new chore or leaving stale foreign assignees.
 func (r *ChoreRepository) CreateChoreWithAssignees(ctx context.Context, chore *chModel.Chore, assigneeIDs []int, actingUserID int) (int, error) {
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := validateXP(tx, chore, nil); err != nil {
+			return err
+		}
 		if chore.ProjectID != nil {
 			query := tx.WithContext(ctx)
 			if r.dbType == "postgres" {
@@ -704,6 +717,10 @@ func (r *ChoreRepository) SetChorePendingApproval(c context.Context, chore *chMo
 		return err
 	}
 	err = r.db.WithContext(c).Transaction(func(tx *gorm.DB) error {
+		if err := claimCompletion(tx, chore, nextVersion); err != nil {
+			return err
+		}
+
 		// Look for existing chore history with start or pause status
 		var existingHistory chModel.ChoreHistory
 		err := tx.Where("chore_id = ? AND status = ? ",
@@ -769,6 +786,9 @@ func (r *ChoreRepository) ApproveChore(c context.Context, chore *chModel.Chore, 
 		return err
 	}
 	err = r.db.WithContext(c).Transaction(func(tx *gorm.DB) error {
+		if err := claimCompletion(tx, chore, nextVersion); err != nil {
+			return err
+		}
 		choreUpdates := map[string]interface{}{}
 		choreUpdates["next_due_date"] = dueDate
 		choreUpdates["status"] = chModel.ChoreStatusNoStatus
@@ -804,6 +824,10 @@ func (r *ChoreRepository) ApproveChore(c context.Context, chore *chModel.Chore, 
 
 		// Save the updated history
 		if err := tx.Save(&history).Error; err != nil {
+			return err
+		}
+
+		if err := recordXPAward(tx, chore, &history); err != nil {
 			return err
 		}
 
@@ -859,6 +883,9 @@ func (r *ChoreRepository) CompleteChore(c context.Context, chore *chModel.Chore,
 		return err
 	}
 	err = r.db.WithContext(c).Transaction(func(tx *gorm.DB) error {
+		if err := claimCompletion(tx, chore, nextVersion); err != nil {
+			return err
+		}
 
 		choreUpdates := map[string]interface{}{}
 		choreUpdates["next_due_date"] = dueDate
@@ -890,6 +917,7 @@ func (r *ChoreRepository) CompleteChore(c context.Context, chore *chModel.Chore,
 		switch {
 		case err == nil:
 			// Update existing history record
+			existingHistory.CompletedBy = userID
 			existingHistory.PerformedAt = completedDate
 			existingHistory.Note = note
 			existingHistory.Status = chModel.ChoreHistoryStatusCompleted
@@ -923,6 +951,9 @@ func (r *ChoreRepository) CompleteChore(c context.Context, chore *chModel.Chore,
 		}
 
 		if err := tx.Save(ch).Error; err != nil {
+			return err
+		}
+		if err := recordXPAward(tx, chore, ch); err != nil {
 			return err
 		}
 		// if there is any time session associated with the chore, mark them as finished:
@@ -1574,14 +1605,41 @@ func (r *ChoreRepository) GetUserLastChoreAction(c context.Context, choreID int,
 
 // UndoChoreAction undoes a chore action by restoring previous state and removing the history entry
 func (r *ChoreRepository) UndoChoreAction(c context.Context, choreID int, historyID int, circleID int, previousAssignedTo *int, previousDueDate *time.Time) error {
-	nextVersion, err := r.nextSyncVersion(c, circleID)
-	if err != nil {
-		return err
-	}
 	return r.db.WithContext(c).Transaction(func(tx *gorm.DB) error {
+		// Lock the task before reading history so approval and undo cannot observe
+		// different versions of the credited amount/status. A no-op UPDATE also
+		// obtains SQLite's write lock, while PostgreSQL locks this task row.
+		locked := tx.Model(&chModel.Chore{}).Where("id = ? AND circle_id = ?", choreID, circleID).Update("sync_version", gorm.Expr("sync_version"))
+		if locked.Error != nil {
+			return locked.Error
+		}
+		if locked.RowsAffected != 1 {
+			return gorm.ErrRecordNotFound
+		}
+		nextVersion, err := r.nextSyncVersionWithDB(c, tx, circleID)
+		if err != nil {
+			return err
+		}
+
 		// Get the history entry to undo
 		var historyToUndo chModel.ChoreHistory
-		if err := tx.First(&historyToUndo, historyID).Error; err != nil {
+		if err := tx.Where("id = ? AND chore_id = ?", historyID, choreID).First(&historyToUndo).Error; err != nil {
+			return err
+		}
+
+		deleted := tx.Where("id = ? AND chore_id = ?", historyID, choreID).Delete(&chModel.ChoreHistory{})
+		if deleted.Error != nil {
+			return deleted.Error
+		}
+		if deleted.RowsAffected != 1 {
+			return errors.New("history already undone")
+		}
+		var award xpModel.Award
+		awardErr := tx.Where("history_id = ? AND circle_id = ?", historyID, circleID).First(&award).Error
+		if awardErr != nil && !errors.Is(awardErr, gorm.ErrRecordNotFound) {
+			return awardErr
+		}
+		if err := tx.Where("history_id = ? AND circle_id = ?", historyID, circleID).Delete(&xpModel.Award{}).Error; err != nil {
 			return err
 		}
 
@@ -1619,7 +1677,15 @@ func (r *ChoreRepository) UndoChoreAction(c context.Context, choreID int, histor
 		}
 
 		// Remove points if they were added during completion/approval
-		if historyToUndo.Points != nil && *historyToUndo.Points > 0 &&
+		if awardErr == nil {
+			// Use the immutable credited amount and membership incarnation. A
+			// rejoined user's new balance must not pay back an old membership's XP.
+			if err := tx.Model(&cModel.UserCircle{}).
+				Where("id = ? AND user_id = ? AND circle_id = ?", award.MembershipID, award.UserID, circleID).
+				Update("points", gorm.Expr("points - ?", award.Points)).Error; err != nil {
+				return err
+			}
+		} else if historyToUndo.Points != nil && *historyToUndo.Points > 0 &&
 			(historyToUndo.Status == chModel.ChoreHistoryStatusCompleted) {
 			// Get the chore to find circle ID
 			var chore chModel.Chore
@@ -1632,11 +1698,6 @@ func (r *ChoreRepository) UndoChoreAction(c context.Context, choreID int, histor
 				Update("points", gorm.Expr("points - ?", *historyToUndo.Points)).Error; err != nil {
 				return err
 			}
-		}
-
-		// Delete the history entry being undone
-		if err := tx.Delete(&chModel.ChoreHistory{}, historyID).Error; err != nil {
-			return err
 		}
 
 		// Delete associated time sessions for this history entry

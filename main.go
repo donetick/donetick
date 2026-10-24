@@ -33,6 +33,7 @@ import (
 	pjRepo "donetick.com/core/internal/project/repo"
 	reward "donetick.com/core/internal/reward"
 	rwRepo "donetick.com/core/internal/reward/repo"
+	"donetick.com/core/internal/xp"
 
 	sRepo "donetick.com/core/external/payment/repo"
 	sService "donetick.com/core/external/payment/service"
@@ -171,6 +172,7 @@ func main() {
 		// Rewards:
 		fx.Provide(rwRepo.NewRewardRepository),
 		fx.Provide(reward.NewHandler),
+		fx.Provide(xp.NewHandler),
 
 		// Projects:
 		fx.Provide(pjRepo.NewProjectRepository),
@@ -235,6 +237,7 @@ func main() {
 			thing.APIs,
 			label.Routes,
 			reward.Routes,
+			xp.Routes,
 			project.Routes,
 			filter.Routes,
 

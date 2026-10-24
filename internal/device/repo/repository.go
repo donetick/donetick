@@ -15,10 +15,20 @@ import (
 
 const MaxDevicesPerUser = 5
 
+// InactiveDeviceRetentionDays is how long a device registration survives
+// without the client checking in before it is deleted.
+//
+// Clients refresh last_active_at on every launch (either by re-registering a
+// rotated token or via the lighter-weight activity heartbeat), so this only
+// catches installs that are genuinely gone. Kept well above a typical holiday
+// so an unused-but-alive phone is not dropped.
+const InactiveDeviceRetentionDays = 90
+
 type IDeviceRepository interface {
 	RegisterDeviceToken(c context.Context, deviceToken *uModel.UserDeviceToken) error
 	UnregisterDeviceToken(c context.Context, userID int, deviceID string) error
 	UnregisterDeviceTokenByToken(c context.Context, userID int, token string) error
+	DeactivateTokens(c context.Context, tokens []string) (int64, error)
 	GetUserDeviceTokens(c context.Context, userID int) ([]*uModel.UserDeviceToken, error)
 	GetActiveDeviceTokens(c context.Context, userID int) ([]*uModel.UserDeviceToken, error)
 	GetActiveDeviceCount(c context.Context, userID int) (int64, error)
@@ -82,12 +92,23 @@ func (r *DeviceRepository) RegisterDeviceToken(c context.Context, deviceToken *u
 			return errorx.ErrDeviceLimitExceeded
 		}
 
-		// Deactivate any other active token carrying the same FCM token (e.g. the
-		// device reinstalled the app and got a new device_id but reused the token).
+		// Deactivate every other active row carrying the same FCM token, for any
+		// user. An FCM token identifies one app install on one physical device,
+		// so at most one active row may own it.
+		//
+		// Scoping this to the registering user (as it previously was) left a
+		// cross-account delivery leak: if user A never unregistered cleanly --
+		// session expired, app force-deleted, logout while offline -- their row
+		// kept this device's token. When user B then signed in on the same phone,
+		// both rows were active with the same token and user B's device received
+		// user A's chore notifications. Clearing by token regardless of user_id
+		// also covers the same-user cases this already handled: a reinstall that
+		// produced a new device_id (iOS identifierForVendor reset) reusing the
+		// token, and a restore onto different hardware.
 		if deviceToken.Token != "" {
 			if err := tx.Model(&uModel.UserDeviceToken{}).
-				Where("user_id = ? AND token = ? AND device_id <> ? AND is_active = ?",
-					deviceToken.UserID, deviceToken.Token, deviceToken.DeviceID, true).
+				Where("token = ? AND is_active = ? AND NOT (user_id = ? AND device_id = ?)",
+					deviceToken.Token, true, deviceToken.UserID, deviceToken.DeviceID).
 				Update("is_active", false).Error; err != nil {
 				log.Error("Failed to deactivate existing FCM token", "error", err)
 				return err
@@ -118,6 +139,27 @@ func (r *DeviceRepository) RegisterDeviceToken(c context.Context, deviceToken *u
 			"platform", deviceToken.Platform)
 		return nil
 	})
+}
+
+// DeactivateTokens marks the given FCM tokens inactive across all users and
+// returns how many rows changed.
+//
+// Called after FCM reports a token as permanently invalid (UNREGISTERED /
+// INVALID_ARGUMENT / SENDER_ID_MISMATCH). Without this, dead tokens stayed
+// active forever and consumed the MaxDevicesPerUser budget, so a user who had
+// reinstalled the app a few times hit ErrDeviceLimitExceeded on a device they
+// were actively using. Deactivates rather than deletes so the row stays
+// visible in the user's device list until the inactivity cleanup removes it.
+func (r *DeviceRepository) DeactivateTokens(c context.Context, tokens []string) (int64, error) {
+	if len(tokens) == 0 {
+		return 0, nil
+	}
+
+	result := r.db.WithContext(c).Model(&uModel.UserDeviceToken{}).
+		Where("token IN ? AND is_active = ?", tokens, true).
+		Update("is_active", false)
+
+	return result.RowsAffected, result.Error
 }
 
 // UnregisterDeviceToken deletes a device token by device ID
@@ -188,11 +230,27 @@ func (r *DeviceRepository) GetActiveDeviceTokens(c context.Context, userID int) 
 	return tokens, nil
 }
 
-// UpdateDeviceTokenActivity updates the last active timestamp for a device token
+// UpdateDeviceTokenActivity updates the last active timestamp for a device
+// token, and reports errorx.ErrDeviceNotFound when the user has no active row
+// for that device.
+//
+// The not-found signal matters: the client uses this as a cheap launch-time
+// heartbeat instead of re-POSTing an unchanged token, so it needs to be able
+// to tell "noted" from "your registration is gone, register again" (the row
+// may have been pruned as dead, removed from another device's settings, or
+// cleaned up for inactivity).
 func (r *DeviceRepository) UpdateDeviceTokenActivity(c context.Context, userID int, deviceID string) error {
-	return r.db.WithContext(c).Model(&uModel.UserDeviceToken{}).
+	result := r.db.WithContext(c).Model(&uModel.UserDeviceToken{}).
 		Where("user_id = ? AND device_id = ? AND is_active = ?", userID, deviceID, true).
-		Update("last_active_at", time.Now().UTC()).Error
+		Update("last_active_at", time.Now().UTC())
+
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return errorx.ErrDeviceNotFound
+	}
+	return nil
 }
 
 // GetActiveDeviceCount returns the count of active devices for a user

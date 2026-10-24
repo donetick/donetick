@@ -34,6 +34,15 @@ const (
 	FrequencyTypeAlways        FrequencyType = "always"
 )
 
+// Priority levels for Chore.Priority (0-4, see handler.go PriorityReq binding).
+const (
+	PriorityNone   = 0
+	PriorityLow    = 1
+	PriorityMedium = 2
+	PriorityHigh   = 3
+	PriorityUrgent = 4
+)
+
 type AssignmentStrategy string
 
 const (

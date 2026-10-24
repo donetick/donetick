@@ -71,6 +71,7 @@ func Migration(db *gorm.DB) error {
 		rwModel.RewardRedemption{},
 		bridgeModel.Settings{},
 		calModel.CalendarToken{},
+		uModel.UserNotificationPreference{},
 	); err != nil {
 		return err
 	}

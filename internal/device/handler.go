@@ -2,6 +2,7 @@ package device
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"strconv"
 
@@ -106,7 +107,7 @@ func (h *Handler) RegisterDeviceToken(c *gin.Context) {
 		log.Error("Failed to register device token", "error", err)
 
 		// Check for device limit error
-		if err == errorx.ErrDeviceLimitExceeded {
+		if errors.Is(err, errorx.ErrDeviceLimitExceeded) {
 			c.JSON(http.StatusConflict, gin.H{
 				"error": err.Error(),
 				"code":  "DEVICE_LIMIT_EXCEEDED",
@@ -248,6 +249,16 @@ func (h *Handler) UpdateDeviceActivity(c *gin.Context) {
 	}
 
 	if err := h.deviceRepo.UpdateDeviceTokenActivity(c, currentUser.ID, deviceID); err != nil {
+		// 404 tells the client its cached registration is stale so it can
+		// re-register, instead of silently assuming it is still a push target.
+		if errors.Is(err, errorx.ErrDeviceNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{
+				"error": err.Error(),
+				"code":  "DEVICE_NOT_REGISTERED",
+			})
+			return
+		}
+
 		log.Error("Failed to update device activity", "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update device activity"})
 		return

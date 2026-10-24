@@ -74,6 +74,7 @@ func Migration(db *gorm.DB) error {
 		calModel.CalendarToken{},
 		xpModel.Category{},
 		xpModel.Award{},
+		uModel.UserNotificationPreference{},
 	); err != nil {
 		return err
 	}

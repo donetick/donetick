@@ -601,6 +601,32 @@ func (r *ChoreRepository) GetChores(c context.Context, circleID int, userID int,
 	return chores, nil
 }
 
+// GetChoresForDigest returns userID's own active chores (assigned directly to
+// them, not "Anyone" chores) across every circle in circleIDs that are either
+// already overdue or due before upcomingBefore -- the candidate set for a
+// daily/weekly digest. Visibility rules (private chores/projects) still apply
+// via privacyJoins/privacyPredicate, same as GetChores.
+func (r *ChoreRepository) GetChoresForDigest(c context.Context, userID int, circleIDs []int, upcomingBefore time.Time) ([]*chModel.Chore, error) {
+	if len(circleIDs) == 0 {
+		return nil, nil
+	}
+	var chores []*chModel.Chore
+	query := privacyJoins(r.db.WithContext(c), userID).
+		Preload("Project").
+		Where("chores.circle_id IN ?", circleIDs).
+		Where("chores.is_active = ?", true).
+		Where("chores.assigned_to = ?", userID).
+		Where("chores.next_due_date IS NOT NULL AND chores.next_due_date < ?", upcomingBefore).
+		Where(privacyPredicate(userID)).
+		Group("chores.id").
+		Order("chores.next_due_date asc")
+
+	if err := query.Find(&chores).Error; err != nil {
+		return nil, err
+	}
+	return chores, nil
+}
+
 func (r *ChoreRepository) GetArchivedChores(c context.Context, circleID int, userID int) ([]*chModel.Chore, error) {
 	var chores []*chModel.Chore
 	if err := privacyJoins(r.db.WithContext(c).Model(&chModel.Chore{}), userID).

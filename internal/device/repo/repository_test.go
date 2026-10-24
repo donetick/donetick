@@ -143,3 +143,99 @@ func TestRegisterDeviceTokenEnforcesDeviceLimit(t *testing.T) {
 		Platform: "ios",
 	}))
 }
+
+func TestRegisterDeviceTokenDeactivatesSameTokenForOtherUsers(t *testing.T) {
+	repo := newDeviceTestRepository(t)
+	c := context.Background()
+
+	// User 1 signs in on a phone and never unregisters cleanly (expired
+	// session, app force-deleted, logout while offline), so their row keeps
+	// this device's FCM token.
+	require.NoError(t, repo.RegisterDeviceToken(c, &uModel.UserDeviceToken{
+		UserID:   1,
+		DeviceID: "shared-device",
+		Token:    "fcm-token-shared",
+		Platform: "android",
+	}))
+
+	// User 2 then signs in on the same phone. An FCM token addresses one app
+	// install, so user 1's row must be deactivated — otherwise both rows stay
+	// active with the same token and user 2's phone receives user 1's chore
+	// notifications.
+	require.NoError(t, repo.RegisterDeviceToken(c, &uModel.UserDeviceToken{
+		UserID:   2,
+		DeviceID: "shared-device",
+		Token:    "fcm-token-shared",
+		Platform: "android",
+	}))
+
+	stale, err := repo.GetActiveDeviceTokens(c, 1)
+	require.NoError(t, err)
+	require.Empty(t, stale, "previous user must no longer be an active push target")
+
+	current, err := repo.GetActiveDeviceTokens(c, 2)
+	require.NoError(t, err)
+	require.Len(t, current, 1)
+	require.Equal(t, "fcm-token-shared", current[0].Token)
+}
+
+func TestDeactivateTokensFreesDeviceSlots(t *testing.T) {
+	repo := newDeviceTestRepository(t)
+	c := context.Background()
+
+	for i := 0; i < MaxDevicesPerUser; i++ {
+		require.NoError(t, repo.RegisterDeviceToken(c, &uModel.UserDeviceToken{
+			UserID:   1,
+			DeviceID: fmt.Sprintf("device-%d", i),
+			Token:    fmt.Sprintf("fcm-token-%d", i),
+			Platform: "ios",
+		}))
+	}
+
+	// FCM reports two of them as permanently gone (uninstalled apps).
+	affected, err := repo.DeactivateTokens(c, []string{"fcm-token-0", "fcm-token-1"})
+	require.NoError(t, err)
+	require.EqualValues(t, 2, affected)
+
+	count, err := repo.GetActiveDeviceCount(c, 1)
+	require.NoError(t, err)
+	require.EqualValues(t, MaxDevicesPerUser-2, count)
+
+	// The freed slots are usable again, instead of dead tokens permanently
+	// locking the user out of registering a device they actually use.
+	require.NoError(t, repo.RegisterDeviceToken(c, &uModel.UserDeviceToken{
+		UserID:   1,
+		DeviceID: "device-new",
+		Token:    "fcm-token-new",
+		Platform: "ios",
+	}))
+
+	// Deactivating nothing is a no-op, not an error.
+	affected, err = repo.DeactivateTokens(c, nil)
+	require.NoError(t, err)
+	require.EqualValues(t, 0, affected)
+}
+
+func TestUpdateDeviceTokenActivityReportsMissingRegistration(t *testing.T) {
+	repo := newDeviceTestRepository(t)
+	c := context.Background()
+
+	require.NoError(t, repo.RegisterDeviceToken(c, &uModel.UserDeviceToken{
+		UserID:   1,
+		DeviceID: "device-1",
+		Token:    "fcm-token-a",
+		Platform: "ios",
+	}))
+
+	require.NoError(t, repo.UpdateDeviceTokenActivity(c, 1, "device-1"))
+
+	// The client uses this as a launch-time heartbeat in place of re-POSTing
+	// an unchanged token, so an unknown device must be distinguishable from a
+	// successful check-in or the client would assume it is still registered.
+	err := repo.UpdateDeviceTokenActivity(c, 1, "device-unknown")
+	require.ErrorIs(t, err, errorx.ErrDeviceNotFound)
+
+	// Another user's device is equally not found.
+	err = repo.UpdateDeviceTokenActivity(c, 2, "device-1")
+	require.ErrorIs(t, err, errorx.ErrDeviceNotFound)
+}

@@ -103,6 +103,29 @@ func DefaultsForProfile(p NotificationProfile) NotificationOverrides {
 	return out
 }
 
+// SparseOverrides strips the entries that already match profile's default,
+// keeping only the event types the user actually flipped away from it. This
+// enforces the sparseness NotificationOverrides documents: a client that
+// posts back a fully-populated map (e.g. the resolved "effective" set) would
+// otherwise mask every profile default, making profile switches a no-op.
+func SparseOverrides(profile NotificationProfile, overrides NotificationOverrides) NotificationOverrides {
+	if len(overrides) == 0 {
+		return nil
+	}
+	defaults := DefaultsForProfile(profile)
+	sparse := make(NotificationOverrides, len(overrides))
+	for eventType, enabled := range overrides {
+		if defaults[eventType] == enabled {
+			continue
+		}
+		sparse[eventType] = enabled
+	}
+	if len(sparse) == 0 {
+		return nil
+	}
+	return sparse
+}
+
 // UserNotificationPreference is the single row per user storing their chosen
 // notification profile plus any per-type overrides. Scoped per-user (not
 // per-circle): a user's notification posture is a personal preference that
@@ -113,7 +136,12 @@ type UserNotificationPreference struct {
 	Overrides NotificationOverrides `json:"overrides" gorm:"column:overrides;serializer:json;type:json"`
 	// DigestHour is the local hour (0-23, in the user's own User.Timezone) that
 	// daily_digest and weekly_digest send at. Same hour drives both for now.
-	DigestHour int       `json:"digestHour" gorm:"column:digest_hour;default:8"`
+	//
+	// Deliberately carries no column default: gorm omits a zero-valued field
+	// with a `default` tag from the insert, which made hour 0 (midnight) --
+	// a legitimate choice -- silently save as 8. Rows are always written with
+	// an explicit hour; readers fill in DefaultDigestHour when there's no row.
+	DigestHour int       `json:"digestHour" gorm:"column:digest_hour"`
 	UpdatedAt  time.Time `json:"updatedAt" gorm:"column:updated_at"`
 }
 

@@ -212,37 +212,57 @@ func TestAnyoneChoreRecipientsKeepsWholeCircleForPublicChores(t *testing.T) {
 
 func TestAllowedByPreferenceQuietOnlyEscalatesHighPriorityOverdue(t *testing.T) {
 	quiet := &uModel.UserNotificationPreference{Profile: uModel.NotificationProfileQuiet}
-	lowPriorityOverdue := &chModel.Chore{Priority: chModel.PriorityMedium}
-	urgentOverdue := &chModel.Chore{Priority: chModel.PriorityUrgent}
 
-	if allowedByPreference(quiet, EventTypeDue, lowPriorityOverdue) {
+	if AllowedByPreference(quiet, string(EventTypeDue), chModel.PriorityMedium) {
 		t.Error("Quiet profile should suppress plain due reminders")
 	}
-	if allowedByPreference(quiet, EventTypeOverdue, lowPriorityOverdue) {
+	if AllowedByPreference(quiet, string(EventTypeOverdue), chModel.PriorityMedium) {
 		t.Error("Quiet profile should suppress overdue reminders below the high-priority threshold")
 	}
-	if !allowedByPreference(quiet, EventTypeOverdue, urgentOverdue) {
+	if !AllowedByPreference(quiet, string(EventTypeOverdue), chModel.PriorityUrgent) {
 		t.Error("Quiet profile should still escalate overdue reminders for urgent-priority chores")
 	}
 }
 
 func TestAllowedByPreferencePersistentFollowsUpOnAnyPriorityOverdue(t *testing.T) {
 	persistent := &uModel.UserNotificationPreference{Profile: uModel.NotificationProfilePersistent}
-	lowPriorityOverdue := &chModel.Chore{Priority: chModel.PriorityNone}
 
-	if !allowedByPreference(persistent, EventTypeOverdue, lowPriorityOverdue) {
+	if !AllowedByPreference(persistent, string(EventTypeOverdue), chModel.PriorityNone) {
 		t.Error("Persistent's overdue follow-up should fire regardless of chore priority")
 	}
 }
 
 func TestAllowedByPreferenceJustInTimeDropsPreDue(t *testing.T) {
 	jit := &uModel.UserNotificationPreference{Profile: uModel.NotificationProfileJustInTime}
-	chore := &chModel.Chore{}
 
-	if allowedByPreference(jit, EventTypePreDue, chore) {
+	if AllowedByPreference(jit, string(EventTypePreDue), chModel.PriorityNone) {
 		t.Error("Just-in-time should drop pre-due reminders")
 	}
-	if !allowedByPreference(jit, EventTypeDue, chore) {
+	if !AllowedByPreference(jit, string(EventTypeDue), chModel.PriorityNone) {
 		t.Error("Just-in-time should still remind right when the chore becomes actionable")
+	}
+}
+
+// Digest rows are created by DigestPlanner with an already-checked preference,
+// but the scheduler re-checks every pending row at send time, so the resolver
+// has to understand the digest event types too.
+func TestAllowedByPreferenceGatesDigests(t *testing.T) {
+	quiet := &uModel.UserNotificationPreference{Profile: uModel.NotificationProfileQuiet}
+	planner := &uModel.UserNotificationPreference{Profile: uModel.NotificationProfilePlanner}
+
+	if AllowedByPreference(quiet, string(uModel.NotificationEventDailyDigest), chModel.PriorityNone) {
+		t.Error("Quiet profile should suppress a daily digest queued under a chattier profile")
+	}
+	if !AllowedByPreference(planner, string(uModel.NotificationEventWeeklyDigest), chModel.PriorityNone) {
+		t.Error("Planner profile should allow the weekly digest")
+	}
+}
+
+// An event type the preference system doesn't know about must not be dropped.
+func TestAllowedByPreferenceAllowsUnknownEventTypes(t *testing.T) {
+	quiet := &uModel.UserNotificationPreference{Profile: uModel.NotificationProfileQuiet}
+
+	if !AllowedByPreference(quiet, "", chModel.PriorityNone) {
+		t.Error("An untyped notification should be delivered rather than silently dropped")
 	}
 }

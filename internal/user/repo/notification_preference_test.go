@@ -135,3 +135,35 @@ func TestGetAllUserDigestSettingsReturnsSavedAndDefaultPreferences(t *testing.T)
 	require.True(t, defaults.Enabled(uModel.NotificationEventDailyDigest))
 	require.False(t, defaults.Enabled(uModel.NotificationEventWeeklyDigest))
 }
+
+// Midnight is a legitimate digest hour, and a column default on DigestHour
+// would make gorm drop the zero value from the insert and store 8 instead.
+func TestUpsertNotificationPreferencePersistsMidnightDigestHour(t *testing.T) {
+	repo := newNotificationPreferenceTestRepository(t)
+	c := context.Background()
+
+	// GetAllUserDigestSettings drives off the users table, so the row has to
+	// exist for the join below to see the preference at all.
+	user := &uModel.User{ID: 11, Username: "midnight", DisplayName: "Midnight", Timezone: "UTC"}
+	require.NoError(t, repo.db.Create(user).Error)
+
+	require.NoError(t, repo.UpsertNotificationPreference(c, &uModel.UserNotificationPreference{
+		UserID:     11,
+		Profile:    uModel.NotificationProfilePlanner,
+		DigestHour: 0,
+	}))
+
+	pref, err := repo.GetNotificationPreference(c, 11)
+	require.NoError(t, err)
+	if pref.DigestHour != 0 {
+		t.Errorf("expected the saved digest hour 0, got %d", pref.DigestHour)
+	}
+
+	settings, err := repo.GetAllUserDigestSettings(c)
+	require.NoError(t, err)
+	for _, s := range settings {
+		if s.ID == 11 && s.DigestHour != 0 {
+			t.Errorf("expected digest settings to report hour 0, got %d", s.DigestHour)
+		}
+	}
+}

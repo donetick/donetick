@@ -364,9 +364,14 @@ func (r *UserRepository) GetNotificationPreferences(c context.Context, userIDs [
 }
 
 // UpsertNotificationPreference saves userID's profile + overrides, replacing
-// any previous preference row.
+// any previous preference row. Callers must set Profile and DigestHour
+// explicitly; neither falls back to a column default (see
+// UserNotificationPreference).
 func (r *UserRepository) UpsertNotificationPreference(c context.Context, pref *uModel.UserNotificationPreference) error {
 	pref.UpdatedAt = time.Now().UTC()
+	if pref.Profile == "" {
+		pref.Profile = uModel.NotificationProfileDefault
+	}
 	return r.db.WithContext(c).Save(pref).Error
 }
 

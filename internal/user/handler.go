@@ -1192,10 +1192,20 @@ func (h *Handler) UpdateNotificationPreference(c *gin.Context) {
 		return
 	}
 
+	// Picking a different named profile means "give me this profile's posture",
+	// so any overrides carried over from the previous one are dropped. Without
+	// this a client that posts back the resolved set it was showing (every event
+	// type, not just the flipped ones) would pin the old behavior and make the
+	// new profile cosmetic. Custom is exempt: it *is* the overrides.
+	overrides := req.Overrides
+	if req.Profile != current.Profile && req.Profile != uModel.NotificationProfileCustom {
+		overrides = nil
+	}
+
 	pref := &uModel.UserNotificationPreference{
 		UserID:     currentUser.ID,
 		Profile:    req.Profile,
-		Overrides:  req.Overrides,
+		Overrides:  uModel.SparseOverrides(req.Profile, overrides),
 		DigestHour: current.DigestHour,
 	}
 	if req.DigestHour != nil {

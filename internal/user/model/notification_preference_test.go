@@ -90,3 +90,46 @@ func TestDefaultsForProfileReturnsIndependentCopies(t *testing.T) {
 		t.Error("mutating one DefaultsForProfile result should not affect another call's result")
 	}
 }
+
+// A client that posts back the full resolved set it was displaying must not
+// end up pinning every event type: those entries aren't user intent, and as
+// overrides they would mask the profile for good.
+func TestSparseOverridesDropsEntriesMatchingTheProfile(t *testing.T) {
+	dense := NotificationOverrides{
+		NotificationEventPreDue:          true,
+		NotificationEventDue:             true,
+		NotificationEventOverdueFollowup: true,
+		NotificationEventEscalation:      false,
+		NotificationEventDailyDigest:     true,
+		NotificationEventWeeklyDigest:    true, // the only one Balanced disables
+	}
+
+	sparse := SparseOverrides(NotificationProfileBalanced, dense)
+
+	if len(sparse) != 1 {
+		t.Fatalf("expected only the flipped event type to survive, got %v", sparse)
+	}
+	if !sparse[NotificationEventWeeklyDigest] {
+		t.Errorf("expected the weekly digest override to survive, got %v", sparse)
+	}
+}
+
+func TestSparseOverridesReturnsNilWhenNothingDiffersFromTheProfile(t *testing.T) {
+	if got := SparseOverrides(NotificationProfileQuiet, DefaultsForProfile(NotificationProfileQuiet)); got != nil {
+		t.Errorf("expected no overrides when every entry matches the profile, got %v", got)
+	}
+}
+
+// Custom has no profile defaults, so everything is opt-in: only the event
+// types explicitly turned on carry information.
+func TestSparseOverridesKeepsEnabledEntriesForCustom(t *testing.T) {
+	sparse := SparseOverrides(NotificationProfileCustom, NotificationOverrides{
+		NotificationEventDue:          true,
+		NotificationEventDailyDigest:  false,
+		NotificationEventWeeklyDigest: false,
+	})
+
+	if len(sparse) != 1 || !sparse[NotificationEventDue] {
+		t.Errorf("expected only the enabled event type to survive, got %v", sparse)
+	}
+}

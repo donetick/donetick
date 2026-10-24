@@ -1,6 +1,7 @@
 package circle
 
 import (
+	"errors"
 	"fmt"
 	"log"
 
@@ -902,8 +903,9 @@ func (h *Handler) notifyMemberOfAcceptedRequest(c *gin.Context, circleID, member
 //	@Router			/circles/{id}/members/points/redeem [post]
 func (h *Handler) RedeemPoints(c *gin.Context) {
 	type RedeemPointsRequest struct {
-		Points int `json:"points"`
-		UserID int `json:"userId"`
+		Points     int  `json:"points"`
+		UserID     int  `json:"userId"`
+		CategoryID *int `json:"categoryId"`
 	}
 
 	log := logging.FromContext(c)
@@ -984,7 +986,7 @@ func (h *Handler) RedeemPoints(c *gin.Context) {
 		})
 		return
 	}
-	if member.Points-redeemReq.Points < 0 {
+	if member.Points-member.PointsRedeemed-redeemReq.Points < 0 {
 		log.Error("Error redeeming points: user does not have enough points")
 		c.JSON(400, gin.H{
 			"error": "User does not have enough points",
@@ -992,8 +994,12 @@ func (h *Handler) RedeemPoints(c *gin.Context) {
 		return
 	}
 
-	err = h.circleRepo.RedeemPoints(c, currentUser.CircleID, redeemReq.UserID, redeemReq.Points, currentUser.ID)
+	err = h.circleRepo.RedeemPoints(c, currentUser.CircleID, redeemReq.UserID, redeemReq.Points, currentUser.ID, redeemReq.CategoryID)
 	if err != nil {
+		if errors.Is(err, pRepo.ErrInsufficientXP) || errors.Is(err, pRepo.ErrCategoryRequired) || errors.Is(err, pRepo.ErrInvalidCategory) || errors.Is(err, pRepo.ErrInvalidXP) {
+			c.JSON(400, gin.H{"error": err.Error()})
+			return
+		}
 		log.Error("Error redeeming points:", err)
 		c.JSON(500, gin.H{
 			"error": "Error redeeming points",

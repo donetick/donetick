@@ -332,7 +332,8 @@ type ChoreReq struct {
 	UpdatedAt            *time.Time                    `json:"updatedAt"`
 	Priority             *int                          `json:"priority" binding:"omitempty"`
 	CompletionWindow     *int                          `json:"completionWindow" binding:"omitempty"`
-	Points               *int                          `json:"points" binding:"omitempty"`
+	Points               *int                          `json:"points" binding:"omitempty,min=0,max=1000000000"`
+	XPCategoryID         optionalXPCategory            `json:"xpCategoryId"`
 	Description          *string                       `json:"description" binding:"omitempty"`
 	SubTasks             *[]stModel.SubTask            `json:"subTasks" binding:"omitempty,dive"`
 	RequireApproval      bool                          `json:"requireApproval" binding:"omitempty"`
@@ -567,6 +568,7 @@ func (h *Handler) CreateChore(c *gin.Context) {
 		CreatedAt:              time.Now().UTC(),
 		CircleID:               currentUser.CircleID,
 		Points:                 choreReq.Points,
+		XPCategoryID:           choreReq.XPCategoryID.Value,
 		CompletionWindow:       choreReq.CompletionWindow,
 		Description:            choreReq.Description,
 		Priority:               *choreReq.Priority,
@@ -881,6 +883,9 @@ func (h *Handler) EditChore(c *gin.Context) {
 	}
 
 	setEditChoreDefaults(&choreReq, oldChore)
+	if !choreReq.XPCategoryID.Set {
+		choreReq.XPCategoryID.Value = oldChore.XPCategoryID
+	}
 
 	updatedChore := &chModel.Chore{ // TODO: Assignees are missing
 		CompletionActions:      *choreReq.CompletionActions,
@@ -901,6 +906,7 @@ func (h *Handler) EditChore(c *gin.Context) {
 		CreatedBy:              oldChore.CreatedBy,
 		CreatedAt:              oldChore.CreatedAt,
 		Points:                 choreReq.Points,
+		XPCategoryID:           choreReq.XPCategoryID.Value,
 		CompletionWindow:       choreReq.CompletionWindow,
 		Description:            choreReq.Description,
 		Priority:               *choreReq.Priority,
@@ -2466,6 +2472,10 @@ func (h *Handler) CompleteChore(c *gin.Context) {
 	if chore.RequireApproval {
 		// Set chore status to pending approval instead of completing
 		if err := h.choreRepo.SetChorePendingApproval(c, chore, note, completedBy, &completedDate); err != nil {
+			if errors.Is(err, chRepo.ErrChoreChanged) {
+				c.JSON(409, gin.H{"error": err.Error()})
+				return
+			}
 			c.JSON(500, gin.H{
 				"error": "Error setting chore pending approval",
 			})
@@ -2516,6 +2526,10 @@ func (h *Handler) CompleteChore(c *gin.Context) {
 	}
 
 	if err := h.choreRepo.CompleteChore(c, chore, note, completedBy, nextDueDate, &completedDate, nextAssignedTo, true); err != nil {
+		if errors.Is(err, chRepo.ErrChoreChanged) {
+			c.JSON(409, gin.H{"error": err.Error()})
+			return
+		}
 		c.JSON(500, gin.H{
 			"error": "Error completing chore",
 		})
@@ -4710,19 +4724,6 @@ func (h *Handler) UndoChore(c *gin.Context) {
 			logger.Error("Failed to reactivate one-time chore after undo", "error", err)
 			c.JSON(500, gin.H{
 				"error": "Failed to restore chore state",
-			})
-			return
-		}
-	}
-
-	// Special handling for rejected actions - restore to pending approval
-	if lastAction.Status == chModel.ChoreHistoryStatusRejected {
-		if err := h.choreRepo.UpdateChoreFields(c, choreID, map[string]interface{}{
-			"status": chModel.ChoreStatusPendingApproval,
-		}); err != nil {
-			logger.Error("Failed to restore pending approval status", "error", err)
-			c.JSON(500, gin.H{
-				"error": "Failed to restore pending approval status",
 			})
 			return
 		}

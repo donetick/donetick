@@ -2,8 +2,9 @@ package repo
 
 import (
 	"context"
-	"path/filepath"
 	"testing"
+
+	"github.com/google/uuid"
 
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
@@ -15,11 +16,16 @@ import (
 
 func setupTestDB(t *testing.T) *gorm.DB {
 	t.Helper()
-	dbPath := filepath.Join(t.TempDir(), "test_reward.db")
+	dbPath := "file:reward-" + uuid.NewString() + "?mode=memory&cache=shared"
 	db, err := gorm.Open(sqlite.Open(dbPath), &gorm.Config{})
 	if err != nil {
 		t.Fatalf("failed to open sqlite: %v", err)
 	}
+	conn, err := db.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = conn.Close() })
 	if err := database.Migration(db); err != nil {
 		t.Fatalf("AutoMigrate failed: %v", err)
 	}
@@ -30,6 +36,9 @@ func setupTestDB(t *testing.T) *gorm.DB {
 // package) so tests don't need a full user/circle signup flow.
 func seedMember(t *testing.T, db *gorm.DB, userID, circleID, points, pointsRedeemed int) {
 	t.Helper()
+	if err := db.FirstOrCreate(&cModel.Circle{ID: circleID}).Error; err != nil {
+		t.Fatal(err)
+	}
 	member := &cModel.UserCircle{
 		UserID:         userID,
 		CircleID:       circleID,

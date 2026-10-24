@@ -574,7 +574,7 @@ func (h *Handler) CreateChore(c *gin.Context) {
 		IsPrivate:              *choreReq.IsPrivate,
 		ProjectID:              choreReq.ProjectID,
 		// SubTasks removed to prevent duplicate creation - handled by UpdateSubtask call below
-		// it's need custom logic to handle subtask creation as we send negative ids sometimes when we creating parent child releationship
+		// it's need custom logic to handle subtask creation as we send negative ids sometimes when we creating parent child relationship
 		// when the subtask is not yet created
 	}
 	if choreReq.CompletionActions != nil {

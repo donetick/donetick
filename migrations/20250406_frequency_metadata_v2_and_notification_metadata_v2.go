@@ -50,7 +50,7 @@ func (m MigrateFrequencyMetadataV2AndNotificationMetadataV2Migration20250406) Up
 	}
 	// Start a transaction
 	return db.Transaction(func(tx *gorm.DB) error {
-		// Update all chore where notification metadata is a null stirng 'null' to empty json {}:
+		// Update all chore where notification metadata is a null string 'null' to empty json {}:
 
 		// if err := tx.Table("chores").Where("notification_meta = ?", "null").Update("notification_meta", "{}").Error; err != nil {
 		// 	log.Errorf("Failed to update chores with null notification metadata: %v", err)

@@ -61,14 +61,8 @@ func scheduleNextDueDate(ctx context.Context, chore *chModel.Chore, completedDat
 	}
 
 	switch chore.FrequencyType {
-	case "daily":
-		baseDate = baseDate.AddDate(0, 0, 1)
-	case "weekly":
-		baseDate = baseDate.AddDate(0, 0, 7)
-	case "monthly":
-		baseDate = baseDate.AddDate(0, 1, 0)
-	case "yearly":
-		baseDate = baseDate.AddDate(1, 0, 0)
+	case "daily", "weekly", "monthly", "yearly":
+		baseDate = nextFixedOccurrence(baseDate, chore.FrequencyType, completedDate.UTC())
 	case "adaptive":
 		// TODO: Implement a more sophisticated adaptive logic
 		diff := completedDate.UTC().Sub(chore.NextDueDate.UTC())
@@ -223,6 +217,33 @@ func toUTC(t *time.Time, err error) (*time.Time, error) {
 	}
 	utc := t.UTC()
 	return &utc, nil
+}
+
+// nextFixedOccurrence returns the first occurrence of a daily, weekly,
+// monthly or yearly schedule anchored at anchor that falls after
+// completedDate. It always moves at least one period forward, so a chore
+// completed early still advances by exactly one period, while a chore that
+// is overdue by several periods skips the occurrences that are already past.
+// Each candidate is computed from the anchor so the day of the month is not
+// shifted by repeated month arithmetic.
+func nextFixedOccurrence(anchor time.Time, frequencyType chModel.FrequencyType, completedDate time.Time) time.Time {
+	addPeriods := func(n int) time.Time {
+		switch frequencyType {
+		case "daily":
+			return anchor.AddDate(0, 0, n)
+		case "weekly":
+			return anchor.AddDate(0, 0, 7*n)
+		case "monthly":
+			return anchor.AddDate(0, n, 0)
+		default:
+			return anchor.AddDate(n, 0, 0)
+		}
+	}
+	next := addPeriods(1)
+	for n := 2; !next.After(completedDate); n++ {
+		next = addPeriods(n)
+	}
+	return next
 }
 
 // getOccurrences returns the occurrences from metadata, supporting both new and legacy formats

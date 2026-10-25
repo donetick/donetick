@@ -27,6 +27,10 @@ const (
 	// EventTypeProjectUpdated tells clients that a project or who can see it changed;
 	// they should refresh their project list and sync. Older clients ignore it.
 	EventTypeProjectUpdated EventType = "project.updated"
+	// EventTypeProjectBoardUpdated tells clients that a project's shared board
+	// (its sections or the section/position of its chores) changed; they should
+	// refetch the board. It carries no board details, same as EventTypeProjectUpdated.
+	EventTypeProjectBoardUpdated EventType = "project.board_updated"
 
 	// Subtask events
 	EventTypeSubtaskUpdated   EventType = "subtask.updated"
@@ -231,5 +235,13 @@ func NewProjectUpdatedEvent(circleID, projectID int, accessChanged bool, user *u
 		ProjectID:     projectID,
 		AccessChanged: accessChanged,
 		User:          user,
+	})
+}
+
+// NewProjectBoardUpdatedEvent creates a project board update event.
+func NewProjectBoardUpdatedEvent(circleID, projectID int, user *uModel.User) *Event {
+	return NewEvent(EventTypeProjectBoardUpdated, circleID, &ProjectEventData{
+		ProjectID: projectID,
+		User:      user,
 	})
 }

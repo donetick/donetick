@@ -59,6 +59,13 @@ type Project struct {
 	// closed for everybody but the owner.
 	MemberIDs     []int `json:"-" gorm:"-"`
 	membersLoaded bool
+
+	// View is the current user's own, private layout preference (board, list,
+	// cards, compact, calendar) for this project. It is not a database column:
+	// the handler fills
+	// it in per-request from ProjectViewPreference before marshaling a
+	// response, so it is never persisted via Save/Updates on this struct.
+	View ProjectView `json:"view,omitempty" gorm:"-"`
 }
 
 // ProjectMember grants one user of the project's circle access to a project whose
@@ -73,6 +80,58 @@ type ProjectMember struct {
 }
 
 func (ProjectMember) TableName() string { return "project_members" }
+
+// ProjectSection is a column of a project's board (e.g. "To Do", "In Progress",
+// "Done"). It is shared state: every user who can see the project sees the same
+// sections in the same order, whether they view the project as a board or a list.
+type ProjectSection struct {
+	ID        int       `json:"id" gorm:"primaryKey"`
+	ProjectID int       `json:"projectId" gorm:"column:project_id;not null;index:idx_project_sections_project"`
+	CircleID  int       `json:"circleId" gorm:"column:circle_id;not null;index"`
+	Name      string    `json:"name" gorm:"column:name;not null"`
+	Position  int       `json:"position" gorm:"column:position;not null"`
+	CreatedAt time.Time `json:"createdAt" gorm:"column:created_at;autoCreateTime"`
+	UpdatedAt time.Time `json:"updatedAt" gorm:"column:updated_at;autoUpdateTime"`
+}
+
+func (ProjectSection) TableName() string { return "project_sections" }
+
+// ProjectView is which layout a user prefers to look at a project in. It has no
+// effect on the shared section/task ordering, only on how it is rendered.
+type ProjectView string
+
+const (
+	ProjectViewBoard ProjectView = "board"
+	ProjectViewList  ProjectView = "list"
+	// The layouts below are the general task views, which a user can also be
+	// looking at a single project through. They are stored the same way as
+	// board/list so leaving a project in any layout is remembered.
+	ProjectViewDefault  ProjectView = "default"
+	ProjectViewCompact  ProjectView = "compact"
+	ProjectViewCalendar ProjectView = "calendar"
+)
+
+// Valid reports whether v is a known view.
+func (v ProjectView) Valid() bool {
+	switch v {
+	case ProjectViewBoard, ProjectViewList,
+		ProjectViewDefault, ProjectViewCompact, ProjectViewCalendar:
+		return true
+	}
+	return false
+}
+
+// ProjectViewPreference is a single user's private choice of layout for a
+// project. Unlike ProjectSection, it is never shared between users.
+type ProjectViewPreference struct {
+	ID        int         `json:"id" gorm:"primaryKey"`
+	ProjectID int         `json:"projectId" gorm:"column:project_id;not null;uniqueIndex:idx_project_view_pref_project_user,priority:1"`
+	UserID    int         `json:"userId" gorm:"column:user_id;not null;uniqueIndex:idx_project_view_pref_project_user,priority:2"`
+	View      ProjectView `json:"view" gorm:"column:view;not null"`
+	UpdatedAt time.Time   `json:"updatedAt" gorm:"column:updated_at;autoUpdateTime"`
+}
+
+func (ProjectViewPreference) TableName() string { return "project_view_preferences" }
 
 // Visibility returns the effective audience of the project.
 func (p *Project) Visibility() ProjectVisibility {
@@ -165,7 +224,11 @@ func (p Project) MarshalJSON() ([]byte, error) {
 }
 
 type ProjectReq struct {
-	Name        string  `json:"name" binding:"required"`
+	// Name has no binding:"required" tag because a request that only sets
+	// View (e.g. toggling board/list from the view menu) sends nothing else.
+	// Handlers that apply the other fields must reject an empty Name
+	// themselves.
+	Name        string  `json:"name"`
 	Description *string `json:"description"`
 	Color       *string `json:"color"`
 	Icon        *string `json:"icon"`
@@ -179,6 +242,19 @@ type ProjectReq struct {
 	// MemberIDs is only read together with visibility "members". When omitted
 	// there, the current member list is kept.
 	MemberIDs *[]int `json:"memberIds"`
+	// View is the caller's own, private layout preference. Unlike every other
+	// field above, it never needs project ownership to change: any user who
+	// can see the project may set their own view, so it is applied
+	// independently of the owner-only field update below.
+	View *ProjectView `json:"view"`
+}
+
+// HasProjectFields reports whether the request sets anything that actually
+// changes the shared project itself. A request with only View set should
+// skip the owner-only update path entirely.
+func (r *ProjectReq) HasProjectFields() bool {
+	return r.Name != "" || r.Description != nil || r.Color != nil || r.Icon != nil ||
+		r.IsPrivate != nil || r.Visibility != nil || r.MemberIDs != nil
 }
 
 // ResolveAccess turns a request into the access the project should end up with,

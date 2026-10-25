@@ -338,8 +338,12 @@ type ChoreReq struct {
 	RequireApproval      bool                          `json:"requireApproval" binding:"omitempty"`
 	IsPrivate            *bool                         `json:"isPrivate" binding:"omitempty"`
 	ProjectID            *int                          `json:"projectId" binding:"omitempty"`
-	ThingTrigger         *tModel.ThingTrigger          `json:"thingTrigger"`
-	DraftId              *string                       `json:"draftId,omitempty"`
+	// SectionID places a new chore directly into one of projectId's board
+	// columns. Ignored when ProjectID is nil; a chore without a section falls
+	// back to the project's first one when rendered.
+	SectionID    *int                 `json:"sectionId" binding:"omitempty"`
+	ThingTrigger *tModel.ThingTrigger `json:"thingTrigger"`
+	DraftId      *string              `json:"draftId,omitempty"`
 }
 
 type ActionOptions struct {
@@ -549,6 +553,13 @@ func (h *Handler) CreateChore(c *gin.Context) {
 		choreReq.NotificationMetadata = nil
 	}
 
+	// A section only means something inside its project; drop it if the
+	// request didn't also place the chore in one.
+	var sectionID *int
+	if choreReq.ProjectID != nil {
+		sectionID = choreReq.SectionID
+	}
+
 	createdChore := &chModel.Chore{
 
 		Name:                   choreReq.Name,
@@ -573,6 +584,7 @@ func (h *Handler) CreateChore(c *gin.Context) {
 		RequireApproval:        choreReq.RequireApproval,
 		IsPrivate:              *choreReq.IsPrivate,
 		ProjectID:              choreReq.ProjectID,
+		SectionID:              sectionID,
 		// SubTasks removed to prevent duplicate creation - handled by UpdateSubtask call below
 		// it's need custom logic to handle subtask creation as we send negative ids sometimes when we creating parent child releationship
 		// when the subtask is not yet created
@@ -593,6 +605,10 @@ func (h *Handler) CreateChore(c *gin.Context) {
 	}
 	if err != nil {
 		logger.Error("Failed to create chore", "error", err, "userID", currentUser.ID, "circleID", currentUser.CircleID)
+		if errors.Is(err, chRepo.ErrSectionOutsideProject) {
+			c.JSON(400, gin.H{"error": err.Error()})
+			return
+		}
 		c.JSON(500, gin.H{
 			"error": "Failed to create chore",
 		})

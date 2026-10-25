@@ -247,6 +247,20 @@ func (r *ChoreRepository) updateChoreVisibility(ctx context.Context, chore *chMo
 			}
 		}
 
+		// A board placement only means something inside the project it was made in;
+		// carry it over when the project did not change, drop it (the chore lands
+		// unplaced, in the destination's first section) when it did, same as
+		// DetachProjectChores does when a project is deleted.
+		samePlacementScope := (previousChore.ProjectID == nil && chore.ProjectID == nil) ||
+			(previousChore.ProjectID != nil && chore.ProjectID != nil && *previousChore.ProjectID == *chore.ProjectID)
+		if samePlacementScope {
+			chore.SectionID = previousChore.SectionID
+			chore.BoardPosition = previousChore.BoardPosition
+		} else {
+			chore.SectionID = nil
+			chore.BoardPosition = 0
+		}
+
 		var previousAssignees []chModel.ChoreAssignees
 		if err := lockedQuery().Where("chore_id = ?", chore.ID).Find(&previousAssignees).Error; err != nil {
 			return err
@@ -446,7 +460,33 @@ func (r *ChoreRepository) UpdateChores(c context.Context, chores []*chModel.Chor
 	}
 	return r.db.WithContext(c).Save(&chores).Error
 }
+// validateChorePlacement rejects a board section the chore's project does not
+// own, the same guard MoveChore applies. Without it any section id a client
+// sends is persisted as-is and the chore lands on another project's board or on
+// no board at all.
+func validateChorePlacement(ctx context.Context, db *gorm.DB, chore *chModel.Chore) error {
+	if chore.SectionID == nil {
+		return nil
+	}
+	if chore.ProjectID == nil {
+		return ErrSectionOutsideProject
+	}
+	var sectionCount int64
+	if err := db.WithContext(ctx).Model(&pModel.ProjectSection{}).
+		Where("id = ? AND project_id = ?", *chore.SectionID, *chore.ProjectID).
+		Count(&sectionCount).Error; err != nil {
+		return err
+	}
+	if sectionCount == 0 {
+		return ErrSectionOutsideProject
+	}
+	return nil
+}
+
 func (r *ChoreRepository) CreateChore(c context.Context, chore *chModel.Chore) (int, error) {
+	if err := validateChorePlacement(c, r.db, chore); err != nil {
+		return 0, err
+	}
 	nextVersion, err := r.nextSyncVersion(c, chore.CircleID)
 	if err != nil {
 		return 0, err
@@ -484,6 +524,11 @@ func (r *ChoreRepository) CreateChoreWithAssignees(ctx context.Context, chore *c
 			if err != nil {
 				return err
 			}
+		}
+		// Checked under the project's lock so a section cannot be moved or deleted
+		// between the check and the insert.
+		if err := validateChorePlacement(ctx, tx, chore); err != nil {
+			return err
 		}
 
 		nextVersion, err := r.nextSyncVersionWithDB(ctx, tx, chore.CircleID)

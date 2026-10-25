@@ -35,7 +35,7 @@ func NewHandler(pRepo *pRepo.ProjectRepository, choreRepo *chRepo.ChoreRepositor
 // statusFor maps repository errors to HTTP status codes.
 func statusFor(err error) int {
 	switch {
-	case errors.Is(err, pRepo.ErrProjectNotFound), errors.Is(err, pRepo.ErrNotProjectViewer),
+	case errors.Is(err, pRepo.ErrProjectNotFound),
 		errors.Is(err, pRepo.ErrSectionNotFound), errors.Is(err, pRepo.ErrChoreNotFound):
 		return 404
 	case errors.Is(err, pRepo.ErrInvalidVisibility), errors.Is(err, pRepo.ErrMemberNotInCircle),
@@ -83,8 +83,12 @@ func (h *Handler) getProjects(c *gin.Context) {
 	for i, p := range projects {
 		ids[i] = p.ID
 	}
+	// A missing preference is not fatal — the client falls back to its default
+	// layout — but a failure here must not pass unnoticed.
 	views, err := h.pRepo.GetViewPreferences(c, currentUser.ID, ids)
-	if err == nil {
+	if err != nil {
+		logging.FromContext(c).Error("Error getting project view preferences", "error", err, "userID", currentUser.ID)
+	} else {
 		for i := range projects {
 			projects[i].View = views[projects[i].ID]
 		}
@@ -162,8 +166,12 @@ func (h *Handler) createProject(c *gin.Context) {
 		return
 	}
 
+	// The project itself is created either way; a view that could not be stored is
+	// simply not echoed back, so the client sees its own default instead.
 	if req.View != nil {
-		if err := h.pRepo.SetViewPreference(c, project.ID, currentUser.CircleID, currentUser.ID, *req.View); err == nil {
+		if err := h.pRepo.SetViewPreference(c, project.ID, currentUser.CircleID, currentUser.ID, *req.View); err != nil {
+			logging.FromContext(c).Error("Error storing project view preference", "error", err, "projectID", project.ID, "userID", currentUser.ID)
+		} else {
 			project.View = *req.View
 		}
 	}
@@ -216,6 +224,15 @@ func (h *Handler) updateProject(c *gin.Context) {
 		return
 	}
 
+	// Name is no longer required by the binding (a view-only request sends
+	// nothing else), so an empty request would otherwise reach the response
+	// below without passing either the view check or the ownership check and
+	// hand the project to anybody in the circle.
+	if req.View == nil && !req.HasProjectFields() {
+		c.JSON(400, gin.H{"error": "Nothing to update"})
+		return
+	}
+
 	// View is a private, per-user preference: anyone who can see the project
 	// may set their own, independent of who owns it. Applied before the
 	// owner-only fields below so a view-only request (no other field sent)
@@ -261,6 +278,11 @@ func (h *Handler) updateProject(c *gin.Context) {
 		c.JSON(500, gin.H{
 			"error": "Error getting updated project",
 		})
+		return
+	}
+	// GetProjectByID is not access-checked; the response must be.
+	if !updatedProject.CanView(currentUser.ID) {
+		c.JSON(404, gin.H{"error": pRepo.ErrProjectNotFound.Error()})
 		return
 	}
 	if view, err := h.pRepo.GetViewPreference(c, projectID, currentUser.CircleID, currentUser.ID); err == nil {

@@ -567,6 +567,10 @@ func (h *Handler) CreateChore(c *gin.Context) {
 
 	if err != nil {
 		logger.Error("Failed to create chore", "error", err, "userID", currentUser.ID, "circleID", currentUser.CircleID)
+		if errors.Is(err, chRepo.ErrSectionOutsideProject) {
+			c.JSON(400, gin.H{"error": err.Error()})
+			return
+		}
 		c.JSON(500, gin.H{
 			"error": "Failed to create chore",
 		})

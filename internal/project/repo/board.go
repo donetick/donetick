@@ -18,9 +18,6 @@ var (
 	// ErrLastSection rejects deleting a project's only section; a board always
 	// needs somewhere to place its chores.
 	ErrLastSection = errors.New("cannot delete the last section")
-	// ErrNotProjectViewer rejects a board/view-preference change by a user who
-	// cannot see the project.
-	ErrNotProjectViewer = errors.New("project not found")
 	// ErrInvalidView rejects an unknown view preference.
 	ErrInvalidView = errors.New("invalid project view")
 	// ErrChoreNotFound rejects moving a chore that is not in the given project.
@@ -31,8 +28,27 @@ var (
 // user can see it. It returns ErrProjectNotFound both when the project truly
 // does not exist and when the user cannot see it, so existence never leaks.
 func (r *ProjectRepository) viewableProject(ctx context.Context, tx *gorm.DB, projectID, circleID, userID int) (*pModel.Project, error) {
+	return r.loadViewableProject(ctx, tx, projectID, circleID, userID, false)
+}
+
+// lockedViewableProject is viewableProject with the project row locked, which
+// serializes the board writes of one project against each other and against the
+// chore repository's project-scoped writes. Every mutating path must use it:
+// taking the project lock first is the same order EditChore and
+// CreateChoreWithAssignees use (project, then chore rows), so board moves cannot
+// deadlock against them or against one another, and a section cannot be deleted
+// out from under a chore that is being moved into it.
+func (r *ProjectRepository) lockedViewableProject(ctx context.Context, tx *gorm.DB, projectID, circleID, userID int) (*pModel.Project, error) {
+	return r.loadViewableProject(ctx, tx, projectID, circleID, userID, true)
+}
+
+func (r *ProjectRepository) loadViewableProject(ctx context.Context, tx *gorm.DB, projectID, circleID, userID int, lock bool) (*pModel.Project, error) {
+	query := tx.WithContext(ctx)
+	if lock {
+		query = lockedQuery(ctx, tx)
+	}
 	var project pModel.Project
-	if err := tx.WithContext(ctx).Where("id = ? AND circle_id = ?", projectID, circleID).First(&project).Error; err != nil {
+	if err := query.Where("id = ? AND circle_id = ?", projectID, circleID).First(&project).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, ErrProjectNotFound
 		}
@@ -133,7 +149,7 @@ func (r *ProjectRepository) GetSections(ctx context.Context, projectID, circleID
 func (r *ProjectRepository) CreateSection(ctx context.Context, projectID, circleID, userID int, name string) (*pModel.ProjectSection, error) {
 	var section pModel.ProjectSection
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if _, err := r.viewableProject(ctx, tx, projectID, circleID, userID); err != nil {
+		if _, err := r.lockedViewableProject(ctx, tx, projectID, circleID, userID); err != nil {
 			return err
 		}
 		var maxPosition int
@@ -197,7 +213,7 @@ func renumberSections(ctx context.Context, tx *gorm.DB, siblings []pModel.Projec
 // than from a client-supplied snapshot of the whole list.
 func (r *ProjectRepository) MoveSection(ctx context.Context, projectID, sectionID int, afterSectionID *int, circleID, userID int) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if _, err := r.viewableProject(ctx, tx, projectID, circleID, userID); err != nil {
+		if _, err := r.lockedViewableProject(ctx, tx, projectID, circleID, userID); err != nil {
 			return err
 		}
 		var sections []pModel.ProjectSection
@@ -216,6 +232,10 @@ func (r *ProjectRepository) MoveSection(ctx context.Context, projectID, sectionI
 		}
 		if !moving {
 			return ErrSectionNotFound
+		}
+		// Dropping a column onto itself asks for the position it already has.
+		if afterSectionID != nil && *afterSectionID == sectionID {
+			return nil
 		}
 
 		siblings := make([]positioned, len(others))
@@ -248,7 +268,7 @@ func (r *ProjectRepository) MoveSection(ctx context.Context, projectID, sectionI
 // sync versions so clients pick up the move.
 func (r *ProjectRepository) DeleteSection(ctx context.Context, projectID, sectionID, circleID, userID int) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if _, err := r.viewableProject(ctx, tx, projectID, circleID, userID); err != nil {
+		if _, err := r.lockedViewableProject(ctx, tx, projectID, circleID, userID); err != nil {
 			return err
 		}
 		var sections []pModel.ProjectSection
@@ -286,10 +306,17 @@ func (r *ProjectRepository) DeleteSection(ctx context.Context, projectID, sectio
 			Order("board_position ASC").Pluck("id", &choreIDs).Error; err != nil {
 			return err
 		}
-		for _, choreID := range choreIDs {
-			maxPosition += 1000
-			if err := tx.WithContext(ctx).Model(&chModel.Chore{}).Where("id = ?", choreID).
-				Updates(map[string]interface{}{"section_id": fallback.ID, "board_position": maxPosition}).Error; err != nil {
+		if len(choreIDs) > 0 {
+			// One statement for the whole column instead of one per card. Shifting
+			// every moved card by the same offset puts them all after the fallback
+			// section's last card and keeps their relative order; cards that already
+			// shared a position stay tied, exactly as they were before the move.
+			if err := tx.WithContext(ctx).Model(&chModel.Chore{}).
+				Where("section_id = ? AND project_id = ?", sectionID, projectID).
+				Updates(map[string]interface{}{
+					"section_id":     fallback.ID,
+					"board_position": gorm.Expr("board_position + ?", maxPosition+1000),
+				}).Error; err != nil {
 				return err
 			}
 		}
@@ -304,7 +331,7 @@ func (r *ProjectRepository) DeleteSection(ctx context.Context, projectID, sectio
 // renumberChores spaces a section's chores evenly (1000, 2000, ...) in their
 // current order and returns their fresh positions. Must run inside tx, with
 // siblings already row-locked.
-func renumberChores(ctx context.Context, tx *gorm.DB, siblings []chModel.Chore) ([]positioned, error) {
+func renumberChores(ctx context.Context, tx *gorm.DB, siblings []positioned) ([]positioned, error) {
 	result := make([]positioned, len(siblings))
 	for i, c := range siblings {
 		pos := (i + 1) * 1000
@@ -324,37 +351,68 @@ func renumberChores(ctx context.Context, tx *gorm.DB, siblings []chModel.Chore) 
 // each other the way overwriting a client-supplied full order would.
 func (r *ProjectRepository) MoveChore(ctx context.Context, projectID, choreID, targetSectionID int, afterChoreID *int, circleID, userID int) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if _, err := r.viewableProject(ctx, tx, projectID, circleID, userID); err != nil {
+		if _, err := r.lockedViewableProject(ctx, tx, projectID, circleID, userID); err != nil {
 			return err
 		}
-		var sectionCount int64
+		var sections []positioned
 		if err := tx.WithContext(ctx).Model(&pModel.ProjectSection{}).
-			Where("id = ? AND project_id = ?", targetSectionID, projectID).Count(&sectionCount).Error; err != nil {
+			Select("id, position").Where("project_id = ?", projectID).
+			Order("position ASC").Scan(&sections).Error; err != nil {
 			return err
 		}
-		if sectionCount == 0 {
+		targetExists := false
+		for _, s := range sections {
+			if s.ID == targetSectionID {
+				targetExists = true
+				break
+			}
+		}
+		if !targetExists {
 			return ErrSectionNotFound
 		}
+		// A chore in the project that has no section of its own is shown in the
+		// project's first column (see Chore.SectionID), and clients compute
+		// afterChoreID from what they show. So when the first column is the
+		// destination, those chores are siblings too: leaving them out makes an
+		// afterChoreID pointing at one of them look like a stranger and rejects
+		// the drop.
+		includesUnplaced := sections[0].ID == targetSectionID
 
 		var moving chModel.Chore
-		if err := lockedQuery(ctx, tx).Where("id = ? AND project_id = ? AND circle_id = ?", choreID, projectID, circleID).
+		if err := lockedQuery(ctx, tx).Select("id, section_id").
+			Where("id = ? AND project_id = ? AND circle_id = ?", choreID, projectID, circleID).
 			First(&moving).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return ErrChoreNotFound
 			}
 			return err
 		}
+		// Dropping a card onto itself asks for the position it already has.
+		if afterChoreID != nil && *afterChoreID == choreID {
+			alreadyThere := moving.SectionID != nil && *moving.SectionID == targetSectionID
+			if alreadyThere || (moving.SectionID == nil && includesUnplaced) {
+				return nil
+			}
+			return ErrChoreNotFound
+		}
 
-		var siblingChores []chModel.Chore
-		if err := lockedQuery(ctx, tx).Where("section_id = ? AND project_id = ? AND id != ?", targetSectionID, projectID, choreID).
-			Order("board_position ASC").Find(&siblingChores).Error; err != nil {
+		// Only the id and the position are needed to find the gap, so this reads
+		// (and row-locks) two columns per card instead of every chore column.
+		// Unplaced chores sort at board_position 0, i.e. at the top, which is
+		// where clients show them.
+		siblingQuery := lockedQuery(ctx, tx).Model(&chModel.Chore{}).
+			Select("id, board_position AS position").
+			Where("project_id = ? AND id != ?", projectID, choreID)
+		if includesUnplaced {
+			siblingQuery = siblingQuery.Where("(section_id = ? OR section_id IS NULL)", targetSectionID)
+		} else {
+			siblingQuery = siblingQuery.Where("section_id = ?", targetSectionID)
+		}
+		var siblings []positioned
+		if err := siblingQuery.Order("board_position ASC").Scan(&siblings).Error; err != nil {
 			return err
 		}
 
-		siblings := make([]positioned, len(siblingChores))
-		for i, c := range siblingChores {
-			siblings[i] = positioned{ID: c.ID, Position: c.BoardPosition}
-		}
 		pos, needsRenumber, ok := gapPosition(siblings, afterChoreID)
 		if !ok {
 			return ErrChoreNotFound
@@ -362,7 +420,7 @@ func (r *ProjectRepository) MoveChore(ctx context.Context, projectID, choreID, t
 		renumberedIDs := []int{}
 		if needsRenumber {
 			var err error
-			siblings, err = renumberChores(ctx, tx, siblingChores)
+			siblings, err = renumberChores(ctx, tx, siblings)
 			if err != nil {
 				return err
 			}

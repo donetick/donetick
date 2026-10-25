@@ -16,6 +16,10 @@ import (
 // be assigned to somebody who cannot see that project.
 var ErrAssigneeOutsideProject = errors.New("chores in this project can only be assigned to people who can see the project")
 
+// ErrSectionOutsideProject is returned when a chore would be placed in a board
+// section that does not belong to the project it is being put in.
+var ErrSectionOutsideProject = errors.New("section does not belong to this project")
+
 // ProjectAccess is the audience of a project: its visibility and, for "members",
 // the users it is shared with (the owner is implied and never listed).
 type ProjectAccess struct {

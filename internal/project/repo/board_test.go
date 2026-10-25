@@ -5,6 +5,7 @@ import (
 	"errors"
 	"testing"
 
+	chModel "donetick.com/core/internal/chore/model"
 	pModel "donetick.com/core/internal/project/model"
 )
 
@@ -222,5 +223,212 @@ func TestBoardOperationsRejectNonViewers(t *testing.T) {
 
 	if _, err := r.CreateSection(context.Background(), project.ID, testCircleID, testOtherID, "Todo"); !errors.Is(err, ErrProjectNotFound) {
 		t.Fatalf("expected ErrProjectNotFound for non-viewer, got %v", err)
+	}
+}
+
+// Nothing links the board tables to the project by foreign key, so deleting a
+// project has to take its sections and the per-user view preferences with it;
+// orphans would reappear under a recycled project id.
+func TestDeleteProjectRemovesItsBoardRows(t *testing.T) {
+	r, db := newTestRepo(t)
+	ctx := context.Background()
+	project := createTestProject(t, db, "shared", testOwnerID, false)
+	kept := createTestProject(t, db, "kept", testOwnerID, false)
+
+	if _, err := r.CreateSection(ctx, project.ID, testCircleID, testOwnerID, "To Do"); err != nil {
+		t.Fatalf("CreateSection: %v", err)
+	}
+	if err := r.SetViewPreference(ctx, project.ID, testCircleID, testOwnerID, pModel.ProjectViewBoard); err != nil {
+		t.Fatalf("SetViewPreference: %v", err)
+	}
+	if _, err := r.CreateSection(ctx, kept.ID, testCircleID, testOwnerID, "To Do"); err != nil {
+		t.Fatalf("CreateSection: %v", err)
+	}
+	if err := r.SetViewPreference(ctx, kept.ID, testCircleID, testOwnerID, pModel.ProjectViewList); err != nil {
+		t.Fatalf("SetViewPreference: %v", err)
+	}
+
+	if _, err := r.DeleteProjectWithResult(ctx, project.ID, testOwnerID, testCircleID); err != nil {
+		t.Fatalf("DeleteProjectWithResult: %v", err)
+	}
+
+	var sections, prefs int64
+	db.Model(&pModel.ProjectSection{}).Where("project_id = ?", project.ID).Count(&sections)
+	db.Model(&pModel.ProjectViewPreference{}).Where("project_id = ?", project.ID).Count(&prefs)
+	if sections != 0 || prefs != 0 {
+		t.Errorf("deleted project left %d sections and %d view preferences behind", sections, prefs)
+	}
+
+	db.Model(&pModel.ProjectSection{}).Where("project_id = ?", kept.ID).Count(&sections)
+	db.Model(&pModel.ProjectViewPreference{}).Where("project_id = ?", kept.ID).Count(&prefs)
+	if sections != 1 || prefs != 1 {
+		t.Errorf("untouched project has %d sections and %d view preferences, want 1 and 1", sections, prefs)
+	}
+}
+
+// Repeatedly dropping a card at the top of a column halves the gap each time
+// until there is none left, which forces the renumber path.
+func TestMoveChoreRenumbersWhenNoIntegerGapIsLeft(t *testing.T) {
+	r, db := newTestRepo(t)
+	ctx := context.Background()
+	project := createTestProject(t, db, "shared", testOwnerID, false)
+	section, _ := r.CreateSection(ctx, project.ID, testCircleID, testOwnerID, "Todo")
+
+	anchor := createTestChore(t, db, project.ID, false)
+	if err := r.MoveChore(ctx, project.ID, anchor.ID, section.ID, nil, testCircleID, testOwnerID); err != nil {
+		t.Fatalf("MoveChore anchor: %v", err)
+	}
+	// Each of these lands first, taking half of the remaining gap below the
+	// previous head, so the positions collapse towards 0.
+	heads := make([]*chModel.Chore, 0, 14)
+	for i := 0; i < 14; i++ {
+		chore := createTestChore(t, db, project.ID, false)
+		if err := r.MoveChore(ctx, project.ID, chore.ID, section.ID, nil, testCircleID, testOwnerID); err != nil {
+			t.Fatalf("MoveChore head %d: %v", i, err)
+		}
+		heads = append(heads, chore)
+	}
+
+	// Whatever happened in between, the column must still read newest-first with
+	// strictly increasing positions and no duplicates.
+	var order []positioned
+	if err := db.Model(&chModel.Chore{}).Select("id, board_position AS position").
+		Where("section_id = ?", section.ID).Order("board_position ASC").Scan(&order).Error; err != nil {
+		t.Fatalf("reading column: %v", err)
+	}
+	if len(order) != len(heads)+1 {
+		t.Fatalf("column has %d cards, want %d", len(order), len(heads)+1)
+	}
+	for i := 1; i < len(order); i++ {
+		if order[i].Position <= order[i-1].Position {
+			t.Fatalf("positions are not strictly increasing: %+v", order)
+		}
+	}
+	want := make([]int, 0, len(order))
+	for i := len(heads) - 1; i >= 0; i-- {
+		want = append(want, heads[i].ID)
+	}
+	want = append(want, anchor.ID)
+	for i, p := range order {
+		if p.ID != want[i] {
+			t.Fatalf("column order = %+v, want ids %v", order, want)
+		}
+	}
+}
+
+// A drag that drops a card or a column back onto itself is a no-op, not a
+// "reference row is not a sibling" error.
+func TestDroppingOntoItselfIsANoOp(t *testing.T) {
+	r, db := newTestRepo(t)
+	ctx := context.Background()
+	project := createTestProject(t, db, "shared", testOwnerID, false)
+	first, _ := r.CreateSection(ctx, project.ID, testCircleID, testOwnerID, "Todo")
+	second, _ := r.CreateSection(ctx, project.ID, testCircleID, testOwnerID, "Done")
+
+	chore := createTestChore(t, db, project.ID, false)
+	if err := r.MoveChore(ctx, project.ID, chore.ID, first.ID, nil, testCircleID, testOwnerID); err != nil {
+		t.Fatalf("MoveChore: %v", err)
+	}
+	placed := reloadChore(t, db, chore.ID)
+
+	if err := r.MoveChore(ctx, project.ID, chore.ID, first.ID, &chore.ID, testCircleID, testOwnerID); err != nil {
+		t.Fatalf("dropping a card onto itself: %v", err)
+	}
+	if again := reloadChore(t, db, chore.ID); again.BoardPosition != placed.BoardPosition || *again.SectionID != first.ID {
+		t.Fatalf("card moved: section %v position %d, want section %d position %d",
+			again.SectionID, again.BoardPosition, first.ID, placed.BoardPosition)
+	}
+	// "After itself" in a section it is not in has no meaning.
+	if err := r.MoveChore(ctx, project.ID, chore.ID, second.ID, &chore.ID, testCircleID, testOwnerID); !errors.Is(err, ErrChoreNotFound) {
+		t.Fatalf("err = %v, want ErrChoreNotFound", err)
+	}
+
+	if err := r.MoveSection(ctx, project.ID, second.ID, &second.ID, testCircleID, testOwnerID); err != nil {
+		t.Fatalf("dropping a column onto itself: %v", err)
+	}
+	sections, _ := r.GetSections(ctx, project.ID, testCircleID)
+	if len(sections) != 2 || sections[0].ID != first.ID || sections[1].ID != second.ID {
+		t.Fatalf("columns reordered: %+v", sections)
+	}
+}
+
+// Merging a deleted column into the fallback must keep the moved cards in
+// their old order, below the cards already there.
+func TestDeleteSectionKeepsTheMergedOrder(t *testing.T) {
+	r, db := newTestRepo(t)
+	ctx := context.Background()
+	project := createTestProject(t, db, "shared", testOwnerID, false)
+	todo, _ := r.CreateSection(ctx, project.ID, testCircleID, testOwnerID, "Todo")
+	doomed, _ := r.CreateSection(ctx, project.ID, testCircleID, testOwnerID, "Doomed")
+
+	stays := createTestChore(t, db, project.ID, false)
+	if err := r.MoveChore(ctx, project.ID, stays.ID, todo.ID, nil, testCircleID, testOwnerID); err != nil {
+		t.Fatalf("MoveChore: %v", err)
+	}
+	first := createTestChore(t, db, project.ID, false)
+	second := createTestChore(t, db, project.ID, false)
+	if err := r.MoveChore(ctx, project.ID, first.ID, doomed.ID, nil, testCircleID, testOwnerID); err != nil {
+		t.Fatalf("MoveChore: %v", err)
+	}
+	if err := r.MoveChore(ctx, project.ID, second.ID, doomed.ID, &first.ID, testCircleID, testOwnerID); err != nil {
+		t.Fatalf("MoveChore: %v", err)
+	}
+
+	if err := r.DeleteSection(ctx, project.ID, doomed.ID, testCircleID, testOwnerID); err != nil {
+		t.Fatalf("DeleteSection: %v", err)
+	}
+
+	var order []int
+	if err := db.Model(&chModel.Chore{}).Where("section_id = ?", todo.ID).
+		Order("board_position ASC").Pluck("id", &order).Error; err != nil {
+		t.Fatalf("reading column: %v", err)
+	}
+	want := []int{stays.ID, first.ID, second.ID}
+	if len(order) != len(want) {
+		t.Fatalf("fallback column = %v, want %v", order, want)
+	}
+	for i := range want {
+		if order[i] != want[i] {
+			t.Fatalf("fallback column = %v, want %v", order, want)
+		}
+	}
+}
+
+// Chores that were never placed in a section (everything created before the
+// board existed, anything created through the API, anything moved in from
+// another project) are shown at the top of the first column, and clients pass
+// the id of whatever card they show as afterChoreId. Dropping a card below one
+// of them must work.
+func TestMoveChoreCanBeDroppedAfterAnUnplacedChore(t *testing.T) {
+	r, db := newTestRepo(t)
+	ctx := context.Background()
+	project := createTestProject(t, db, "shared", testOwnerID, false)
+	first, _ := r.CreateSection(ctx, project.ID, testCircleID, testOwnerID, "Todo")
+	second, _ := r.CreateSection(ctx, project.ID, testCircleID, testOwnerID, "Done")
+
+	unplaced := createTestChore(t, db, project.ID, false)
+	if reloadChore(t, db, unplaced.ID).SectionID != nil {
+		t.Fatal("expected the chore to start without a section")
+	}
+	dragged := createTestChore(t, db, project.ID, false)
+
+	if err := r.MoveChore(ctx, project.ID, dragged.ID, first.ID, &unplaced.ID, testCircleID, testOwnerID); err != nil {
+		t.Fatalf("dropping a card after an unplaced one: %v", err)
+	}
+	placed := reloadChore(t, db, dragged.ID)
+	if placed.SectionID == nil || *placed.SectionID != first.ID {
+		t.Fatalf("section = %v, want %d", placed.SectionID, first.ID)
+	}
+	if placed.BoardPosition <= reloadChore(t, db, unplaced.ID).BoardPosition {
+		t.Fatalf("card at %d did not land after the unplaced one at %d",
+			placed.BoardPosition, reloadChore(t, db, unplaced.ID).BoardPosition)
+	}
+	// The unplaced chore keeps its own row: it is read as a sibling, not rewritten.
+	if reloadChore(t, db, unplaced.ID).SectionID != nil {
+		t.Fatal("the unplaced chore should not have been adopted into the section")
+	}
+	// It only counts as a sibling of the first column, which is where it shows.
+	if err := r.MoveChore(ctx, project.ID, dragged.ID, second.ID, &unplaced.ID, testCircleID, testOwnerID); !errors.Is(err, ErrChoreNotFound) {
+		t.Fatalf("err = %v, want ErrChoreNotFound for a later column", err)
 	}
 }

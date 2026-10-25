@@ -3,7 +3,6 @@ package chore
 import (
 	"context"
 	"errors"
-	"path/filepath"
 	"testing"
 
 	"github.com/google/uuid"

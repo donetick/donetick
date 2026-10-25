@@ -10,7 +10,10 @@ import (
 	chRepo "donetick.com/core/internal/chore/repo"
 	dRepo "donetick.com/core/internal/device/repo"
 	"donetick.com/core/internal/events"
+	nModel "donetick.com/core/internal/notifier/model"
 	nRepo "donetick.com/core/internal/notifier/repo"
+	nps "donetick.com/core/internal/notifier/service"
+	uModel "donetick.com/core/internal/user/model"
 	uRepo "donetick.com/core/internal/user/repo"
 	"donetick.com/core/logging"
 )
@@ -30,10 +33,11 @@ type Scheduler struct {
 	notifier         *Notifier
 	eventsProducer   *events.EventsProducer
 	notificationRepo *nRepo.NotificationRepository
+	digestPlanner    *nps.DigestPlanner
 	SchedulerJobs    config.SchedulerConfig
 }
 
-func NewScheduler(cfg *config.Config, ur *uRepo.UserRepository, cr *chRepo.ChoreRepository, n *Notifier, nr *nRepo.NotificationRepository, ep *events.EventsProducer, dr *dRepo.DeviceRepository, bs *bridge.Service) *Scheduler {
+func NewScheduler(cfg *config.Config, ur *uRepo.UserRepository, cr *chRepo.ChoreRepository, n *Notifier, nr *nRepo.NotificationRepository, ep *events.EventsProducer, dr *dRepo.DeviceRepository, bs *bridge.Service, dp *nps.DigestPlanner) *Scheduler {
 	return &Scheduler{
 		choreRepo:        cr,
 		userRepo:         ur,
@@ -43,6 +47,7 @@ func NewScheduler(cfg *config.Config, ur *uRepo.UserRepository, cr *chRepo.Chore
 		notifier:         n,
 		notificationRepo: nr,
 		eventsProducer:   ep,
+		digestPlanner:    dp,
 		SchedulerJobs:    cfg.SchedulerJobs,
 	}
 }
@@ -53,6 +58,40 @@ func (s *Scheduler) Start(c context.Context) {
 	go s.runScheduler(c, " NOTIFICATION_SCHEDULER ", s.loadAndSendNotificationJob, 3*time.Minute)
 	go s.runScheduler(c, " NOTIFICATION_CLEANUP ", s.cleanupSentNotifications, 24*time.Hour*30)
 	go s.runScheduler(c, " BRIDGE_DEVICE_SYNC_RETRY ", s.retryPendingBridgeDeviceSyncJob, 10*time.Minute)
+	go s.runScheduler(c, " NOTIFICATION_DIGEST ", s.generateDigestsJob, 30*time.Minute)
+	go s.runScheduler(c, " DEVICE_TOKEN_CLEANUP ", s.cleanupInactiveDeviceTokensJob, 24*time.Hour)
+}
+
+// cleanupInactiveDeviceTokensJob removes device registrations whose client has
+// not checked in for InactiveDeviceRetentionDays. The repository method for
+// this already existed but was never reachable -- it was wired to neither a
+// route nor a job -- so stale registrations accumulated indefinitely and ate
+// into each user's MaxDevicesPerUser budget.
+func (s *Scheduler) cleanupInactiveDeviceTokensJob(c context.Context) (time.Duration, error) {
+	log := logging.FromContext(c)
+	startTime := time.Now().UTC()
+
+	if err := s.deviceRepo.CleanupInactiveTokens(c, dRepo.InactiveDeviceRetentionDays); err != nil {
+		log.Error("Error cleaning up inactive device tokens", "error", err)
+		return time.Since(startTime), err
+	}
+
+	return time.Since(startTime), nil
+}
+
+// generateDigestsJob runs every 30 minutes so that a user's configured digest
+// hour is reliably hit at least once (DigestPlanner.GenerateDueDigests dedupes,
+// so being checked more than once inside the matching hour is harmless).
+func (s *Scheduler) generateDigestsJob(c context.Context) (time.Duration, error) {
+	log := logging.FromContext(c)
+	startTime := time.Now().UTC()
+	sent, err := s.digestPlanner.GenerateDueDigests(c, startTime)
+	if err != nil {
+		log.Error("Error generating digest notifications", "err", err)
+		return time.Since(startTime), err
+	}
+	log.Debug("Generated digest notifications", "count", sent)
+	return time.Since(startTime), nil
 }
 
 // retryPendingBridgeDeviceSyncJob opportunistically retries Bridge device
@@ -111,6 +150,30 @@ func (s *Scheduler) cleanupSentNotifications(c context.Context) (time.Duration, 
 	return time.Duration(0), nil
 }
 
+// pendingNotificationPreferences loads the notification preference of every
+// recipient in notifications, or nil if they can't be loaded. Callers skip
+// gating entirely on nil rather than treating it as "no preference": dropping
+// reminders over a transient database error is worse than briefly ignoring a
+// profile, and the default profile is not a safe stand-in (it mutes event
+// types that other profiles enable).
+func (s *Scheduler) pendingNotificationPreferences(c context.Context, notifications []*nModel.NotificationDetails) map[int]*uModel.UserNotificationPreference {
+	seen := make(map[int]bool, len(notifications))
+	userIDs := make([]int, 0, len(notifications))
+	for _, notification := range notifications {
+		if !seen[notification.UserID] {
+			seen[notification.UserID] = true
+			userIDs = append(userIDs, notification.UserID)
+		}
+	}
+
+	prefs, err := s.userRepo.GetNotificationPreferences(c, userIDs)
+	if err != nil {
+		logging.FromContext(c).Error("Error loading notification preferences, sending without preference gating", "error", err)
+		return nil
+	}
+	return prefs
+}
+
 func (s *Scheduler) loadAndSendNotificationJob(c context.Context) (time.Duration, error) {
 	log := logging.FromContext(c)
 	startTime := time.Now().UTC()
@@ -122,7 +185,20 @@ func (s *Scheduler) loadAndSendNotificationJob(c context.Context) (time.Duration
 		return time.Since(startTime), err
 	}
 
+	// Preferences are re-checked here, not just when the notification row was
+	// created: a user who switches to a quieter profile expects it to apply to
+	// reminders already queued for their existing chores, which would otherwise
+	// keep firing until each chore happened to be edited or completed.
+	prefs := s.pendingNotificationPreferences(c, getAllPendingNotifications)
+
 	for _, notification := range getAllPendingNotifications {
+		eventType, _ := notification.RawEvent["type"].(string)
+		if prefs != nil && !nps.AllowedByPreference(prefs[notification.UserID], eventType, notification.ChorePriority) {
+			log.Debug("Skipping notification muted by user preference", "user_id", notification.UserID, "type", eventType)
+			notification.IsSent = true
+			continue
+		}
+
 		err := s.notifier.SendNotification(c, notification)
 		if err != nil {
 			log.Error("Error sending notification", err)

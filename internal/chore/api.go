@@ -165,7 +165,7 @@ func (h *API) CreateChore(c *gin.Context) {
 	id, err := h.choreRepo.CreateChoreWithAssignees(c, chore, []int{createdBy}, user.ID)
 	if err != nil {
 		log.Errorw("chore.api.CreateChore failed to create chore", "error", err)
-		if errors.Is(err, chRepo.ErrAssigneeOutsideProject) {
+		if errors.Is(err, chRepo.ErrAssigneeOutsideProject) || errors.Is(err, chRepo.ErrSectionOutsideProject) {
 			c.JSON(400, gin.H{"error": err.Error()})
 			return
 		}

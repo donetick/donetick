@@ -2,6 +2,8 @@ package chore
 
 import (
 	"context"
+	"errors"
+	"path/filepath"
 	"testing"
 
 	"github.com/google/uuid"
@@ -259,5 +261,54 @@ func TestGetChoreDetailByIDIncludesAssignees(t *testing.T) {
 	}
 	if len(detail.Assignees) != 2 || !got[testOwnerID] || !got[testOtherID] {
 		t.Errorf("assignees = %+v, want users %d and %d", detail.Assignees, testOwnerID, testOtherID)
+	}
+}
+
+// A section belongs to exactly one project's board: a chore must never be
+// created in a section another project owns, or in one that does not exist, or
+// it silently disappears from both boards.
+func TestCreateChoreRejectsSectionOutsideItsProject(t *testing.T) {
+	r, db := newTestChoreRepo(t)
+	ctx := context.Background()
+
+	project := createProject(t, db, testOwnerID, false)
+	other := createProject(t, db, testOwnerID, false)
+	foreignSection := &pModel.ProjectSection{ProjectID: other.ID, CircleID: testCircleID, Name: "Theirs", Position: 1}
+	if err := db.Create(foreignSection).Error; err != nil {
+		t.Fatalf("failed to create section: %v", err)
+	}
+	ownSection := &pModel.ProjectSection{ProjectID: project.ID, CircleID: testCircleID, Name: "To Do", Position: 1}
+	if err := db.Create(ownSection).Error; err != nil {
+		t.Fatalf("failed to create section: %v", err)
+	}
+	missingSectionID := foreignSection.ID + ownSection.ID + 1
+
+	newChore := func(projectID *int, sectionID *int) *chModel.Chore {
+		return &chModel.Chore{
+			Name:           "card",
+			CircleID:       testCircleID,
+			CreatedBy:      testOwnerID,
+			ProjectID:      projectID,
+			SectionID:      sectionID,
+			AssignStrategy: chModel.AssignmentStrategyRandom,
+		}
+	}
+
+	for name, chore := range map[string]*chModel.Chore{
+		"another project's section": newChore(&project.ID, &foreignSection.ID),
+		"a section that is gone":    newChore(&project.ID, &missingSectionID),
+		"no project at all":         newChore(nil, &ownSection.ID),
+	} {
+		if _, err := r.CreateChore(ctx, chore); !errors.Is(err, ErrSectionOutsideProject) {
+			t.Errorf("CreateChore with %s: err = %v, want ErrSectionOutsideProject", name, err)
+		}
+		if _, err := r.CreateChoreWithAssignees(ctx, chore, []int{testOwnerID}, testOwnerID); !errors.Is(err, ErrSectionOutsideProject) {
+			t.Errorf("CreateChoreWithAssignees with %s: err = %v, want ErrSectionOutsideProject", name, err)
+		}
+	}
+
+	placed := newChore(&project.ID, &ownSection.ID)
+	if _, err := r.CreateChore(ctx, placed); err != nil {
+		t.Fatalf("CreateChore in its own project's section failed: %v", err)
 	}
 }

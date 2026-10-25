@@ -57,6 +57,8 @@ func Migration(db *gorm.DB) error {
 		chModel.ChoreLabels{},
 		projModel.Project{},
 		projModel.ProjectMember{},
+		projModel.ProjectSection{},
+		projModel.ProjectViewPreference{},
 		filterModel.Filter{},
 		migrations.Migration{},
 		pModel.PointsHistory{},
@@ -73,6 +75,7 @@ func Migration(db *gorm.DB) error {
 		rwModel.RewardRedemption{},
 		bridgeModel.Settings{},
 		calModel.CalendarToken{},
+		uModel.UserNotificationPreference{},
 	); err != nil {
 		return err
 	}

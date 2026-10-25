@@ -85,6 +85,22 @@ func (b *EventBroadcaster) BroadcastProjectUpdated(circleID, projectID int, acce
 	b.service.BroadcastToUsers(circleID, recipients, event)
 }
 
+// BroadcastProjectBoardUpdated notifies users that a project's shared board
+// (sections, or the section/position of its chores) changed. recipients nil
+// means the whole circle.
+func (b *EventBroadcaster) BroadcastProjectBoardUpdated(circleID, projectID int, user *uModel.User, recipients []int) {
+	if !b.service.config.Enabled {
+		return
+	}
+	event := NewProjectBoardUpdatedEvent(circleID, projectID, user)
+	event.ID = b.generateEventID()
+	if recipients == nil {
+		b.service.BroadcastToCircle(circleID, event)
+		return
+	}
+	b.service.BroadcastToUsers(circleID, recipients, event)
+}
+
 // BroadcastChoreCreated broadcasts a chore creation event
 func (b *EventBroadcaster) BroadcastChoreCreated(chore *chModel.Chore, user *uModel.User) {
 	if !b.service.config.Enabled {

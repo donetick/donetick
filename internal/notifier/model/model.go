@@ -23,7 +23,10 @@ type Notification struct {
 type NotificationDetails struct {
 	Notification
 	WebhookURL *string `json:"webhook_url" gorm:"column:webhook_url;<-:null"` // read-only, will only be used if webhook enabled
-
+	// ChorePriority is the priority of the chore this notification is about,
+	// joined in so the scheduler can apply the priority-gated escalation rule
+	// without loading the chore. 0 for digests, which aren't about one chore.
+	ChorePriority int `json:"-" gorm:"column:chore_priority;<-:false"`
 }
 
 func (n *Notification) IsValid() bool {

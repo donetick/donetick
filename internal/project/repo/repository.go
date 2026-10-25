@@ -251,6 +251,16 @@ func (r *ProjectRepository) DeleteProjectWithResult(ctx context.Context, project
 			log.Error("Error deleting project members", "error", err)
 			return err
 		}
+		// The board tables carry no foreign key, so their rows have to go with the
+		// project; left behind they would resurface on a recycled project id.
+		if err := tx.Where("project_id = ?", projectID).Delete(&pModel.ProjectSection{}).Error; err != nil {
+			log.Error("Error deleting project sections", "error", err)
+			return err
+		}
+		if err := tx.Where("project_id = ?", projectID).Delete(&pModel.ProjectViewPreference{}).Error; err != nil {
+			log.Error("Error deleting project view preferences", "error", err)
+			return err
+		}
 		if err := tx.Where("id = ? AND circle_id = ?", projectID, circleID).Delete(&pModel.Project{}).Error; err != nil {
 			log.Error("Error deleting project", "error", err)
 			return err

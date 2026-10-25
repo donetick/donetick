@@ -125,6 +125,7 @@ func main() {
 
 		fx.Provide(nRepo.NewNotificationRepository),
 		fx.Provide(nps.NewNotificationPlanner),
+		fx.Provide(nps.NewDigestPlanner),
 
 		// add notifier
 		fx.Provide(pushover.NewPushover),

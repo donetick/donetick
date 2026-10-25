@@ -247,6 +247,20 @@ func (r *ChoreRepository) updateChoreVisibility(ctx context.Context, chore *chMo
 			}
 		}
 
+		// A board placement only means something inside the project it was made in;
+		// carry it over when the project did not change, drop it (the chore lands
+		// unplaced, in the destination's first section) when it did, same as
+		// DetachProjectChores does when a project is deleted.
+		samePlacementScope := (previousChore.ProjectID == nil && chore.ProjectID == nil) ||
+			(previousChore.ProjectID != nil && chore.ProjectID != nil && *previousChore.ProjectID == *chore.ProjectID)
+		if samePlacementScope {
+			chore.SectionID = previousChore.SectionID
+			chore.BoardPosition = previousChore.BoardPosition
+		} else {
+			chore.SectionID = nil
+			chore.BoardPosition = 0
+		}
+
 		var previousAssignees []chModel.ChoreAssignees
 		if err := lockedQuery().Where("chore_id = ?", chore.ID).Find(&previousAssignees).Error; err != nil {
 			return err
@@ -446,13 +460,89 @@ func (r *ChoreRepository) UpdateChores(c context.Context, chores []*chModel.Chor
 	}
 	return r.db.WithContext(c).Save(&chores).Error
 }
-func (r *ChoreRepository) CreateChore(c context.Context, chore *chModel.Chore) (int, error) {
-	nextVersion, err := r.nextSyncVersion(c, chore.CircleID)
-	if err != nil {
-		return 0, err
+
+// validateChorePlacement rejects a board section the chore's project does not
+// own, the same guard MoveChore applies. Without it any section id a client
+// sends is persisted as-is and the chore lands on another project's board or on
+// no board at all.
+func validateChorePlacement(ctx context.Context, db *gorm.DB, chore *chModel.Chore) error {
+	if chore.SectionID == nil {
+		return nil
 	}
-	chore.SyncVersion = nextVersion
-	if err := r.db.WithContext(c).Create(chore).Error; err != nil {
+	if chore.ProjectID == nil {
+		return ErrSectionOutsideProject
+	}
+	var sectionCount int64
+	if err := db.WithContext(ctx).Model(&pModel.ProjectSection{}).
+		Where("id = ? AND project_id = ?", *chore.SectionID, *chore.ProjectID).
+		Count(&sectionCount).Error; err != nil {
+		return err
+	}
+	if sectionCount == 0 {
+		return ErrSectionOutsideProject
+	}
+	return nil
+}
+
+// appendNewChore places newly created cards after every existing card. The
+// project lock also serializes creates with board moves on PostgreSQL; SQLite
+// serializes writes through the surrounding transaction.
+func (r *ChoreRepository) appendNewChore(ctx context.Context, tx *gorm.DB, chore *chModel.Chore) error {
+	if chore.ProjectID != nil && r.dbType == "postgres" {
+		var project pModel.Project
+		if err := tx.WithContext(ctx).Clauses(clause.Locking{Strength: "UPDATE"}).
+			Select("id").Where("id = ? AND circle_id = ?", *chore.ProjectID, chore.CircleID).
+			First(&project).Error; err != nil {
+			return err
+		}
+	}
+	if err := validateChorePlacement(ctx, tx, chore); err != nil {
+		return err
+	}
+	chore.BoardPosition = 0 // Never trust a copied or client-supplied position.
+	if chore.ProjectID == nil {
+		return nil
+	}
+	var firstSection pModel.ProjectSection
+	err := tx.WithContext(ctx).Where("project_id = ?", *chore.ProjectID).
+		Order("position ASC, id ASC").First(&firstSection).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil // The board has not been initialized yet.
+	}
+	if err != nil {
+		return err
+	}
+	if chore.SectionID == nil {
+		chore.SectionID = &firstSection.ID
+	}
+	query := tx.WithContext(ctx).Model(&chModel.Chore{}).
+		Where("project_id = ?", *chore.ProjectID)
+	if *chore.SectionID == firstSection.ID {
+		query = query.Where("(section_id = ? OR section_id IS NULL)", *chore.SectionID)
+	} else {
+		query = query.Where("section_id = ?", *chore.SectionID)
+	}
+	var lastPosition int
+	if err := query.Select("COALESCE(MAX(board_position), 0)").Scan(&lastPosition).Error; err != nil {
+		return err
+	}
+	chore.BoardPosition = max(0, lastPosition) + 1000
+	return nil
+}
+
+func (r *ChoreRepository) CreateChore(c context.Context, chore *chModel.Chore) (int, error) {
+	err := r.db.WithContext(c).Transaction(func(tx *gorm.DB) error {
+		if err := r.appendNewChore(c, tx, chore); err != nil {
+			return err
+		}
+		nextVersion, err := r.nextSyncVersionWithDB(c, tx, chore.CircleID)
+		if err != nil {
+			return err
+		}
+		chore.SyncVersion = nextVersion
+		return tx.WithContext(c).Create(chore).Error
+	})
+	if err != nil {
 		return 0, err
 	}
 	return chore.ID, nil
@@ -484,6 +574,11 @@ func (r *ChoreRepository) CreateChoreWithAssignees(ctx context.Context, chore *c
 			if err != nil {
 				return err
 			}
+		}
+		// Checked under the project's lock so a section cannot be moved or deleted
+		// between the check and the insert.
+		if err := r.appendNewChore(ctx, tx, chore); err != nil {
+			return err
 		}
 
 		nextVersion, err := r.nextSyncVersionWithDB(ctx, tx, chore.CircleID)
@@ -581,6 +676,32 @@ func (r *ChoreRepository) GetChores(c context.Context, circleID int, userID int,
 		// Normal ordering when not syncing.
 		query = query.Order("next_due_date asc")
 	}
+
+	if err := query.Find(&chores).Error; err != nil {
+		return nil, err
+	}
+	return chores, nil
+}
+
+// GetChoresForDigest returns userID's own active chores (assigned directly to
+// them, not "Anyone" chores) across every circle in circleIDs that are either
+// already overdue or due before upcomingBefore -- the candidate set for a
+// daily/weekly digest. Visibility rules (private chores/projects) still apply
+// via privacyJoins/privacyPredicate, same as GetChores.
+func (r *ChoreRepository) GetChoresForDigest(c context.Context, userID int, circleIDs []int, upcomingBefore time.Time) ([]*chModel.Chore, error) {
+	if len(circleIDs) == 0 {
+		return nil, nil
+	}
+	var chores []*chModel.Chore
+	query := privacyJoins(r.db.WithContext(c), userID).
+		Preload("Project").
+		Where("chores.circle_id IN ?", circleIDs).
+		Where("chores.is_active = ?", true).
+		Where("chores.assigned_to = ?", userID).
+		Where("chores.next_due_date IS NOT NULL AND chores.next_due_date < ?", upcomingBefore).
+		Where(privacyPredicate(userID)).
+		Group("chores.id").
+		Order("chores.next_due_date asc")
 
 	if err := query.Find(&chores).Error; err != nil {
 		return nil, err

@@ -460,6 +460,7 @@ func (r *ChoreRepository) UpdateChores(c context.Context, chores []*chModel.Chor
 	}
 	return r.db.WithContext(c).Save(&chores).Error
 }
+
 // validateChorePlacement rejects a board section the chore's project does not
 // own, the same guard MoveChore applies. Without it any section id a client
 // sends is persisted as-is and the chore lands on another project's board or on
@@ -483,16 +484,65 @@ func validateChorePlacement(ctx context.Context, db *gorm.DB, chore *chModel.Cho
 	return nil
 }
 
-func (r *ChoreRepository) CreateChore(c context.Context, chore *chModel.Chore) (int, error) {
-	if err := validateChorePlacement(c, r.db, chore); err != nil {
-		return 0, err
+// appendNewChore places newly created cards after every existing card. The
+// project lock also serializes creates with board moves on PostgreSQL; SQLite
+// serializes writes through the surrounding transaction.
+func (r *ChoreRepository) appendNewChore(ctx context.Context, tx *gorm.DB, chore *chModel.Chore) error {
+	if chore.ProjectID != nil && r.dbType == "postgres" {
+		var project pModel.Project
+		if err := tx.WithContext(ctx).Clauses(clause.Locking{Strength: "UPDATE"}).
+			Select("id").Where("id = ? AND circle_id = ?", *chore.ProjectID, chore.CircleID).
+			First(&project).Error; err != nil {
+			return err
+		}
 	}
-	nextVersion, err := r.nextSyncVersion(c, chore.CircleID)
+	if err := validateChorePlacement(ctx, tx, chore); err != nil {
+		return err
+	}
+	chore.BoardPosition = 0 // Never trust a copied or client-supplied position.
+	if chore.ProjectID == nil {
+		return nil
+	}
+	var firstSection pModel.ProjectSection
+	err := tx.WithContext(ctx).Where("project_id = ?", *chore.ProjectID).
+		Order("position ASC, id ASC").First(&firstSection).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil // The board has not been initialized yet.
+	}
 	if err != nil {
-		return 0, err
+		return err
 	}
-	chore.SyncVersion = nextVersion
-	if err := r.db.WithContext(c).Create(chore).Error; err != nil {
+	if chore.SectionID == nil {
+		chore.SectionID = &firstSection.ID
+	}
+	query := tx.WithContext(ctx).Model(&chModel.Chore{}).
+		Where("project_id = ?", *chore.ProjectID)
+	if *chore.SectionID == firstSection.ID {
+		query = query.Where("(section_id = ? OR section_id IS NULL)", *chore.SectionID)
+	} else {
+		query = query.Where("section_id = ?", *chore.SectionID)
+	}
+	var lastPosition int
+	if err := query.Select("COALESCE(MAX(board_position), 0)").Scan(&lastPosition).Error; err != nil {
+		return err
+	}
+	chore.BoardPosition = max(0, lastPosition) + 1000
+	return nil
+}
+
+func (r *ChoreRepository) CreateChore(c context.Context, chore *chModel.Chore) (int, error) {
+	err := r.db.WithContext(c).Transaction(func(tx *gorm.DB) error {
+		if err := r.appendNewChore(c, tx, chore); err != nil {
+			return err
+		}
+		nextVersion, err := r.nextSyncVersionWithDB(c, tx, chore.CircleID)
+		if err != nil {
+			return err
+		}
+		chore.SyncVersion = nextVersion
+		return tx.WithContext(c).Create(chore).Error
+	})
+	if err != nil {
 		return 0, err
 	}
 	return chore.ID, nil
@@ -527,7 +577,7 @@ func (r *ChoreRepository) CreateChoreWithAssignees(ctx context.Context, chore *c
 		}
 		// Checked under the project's lock so a section cannot be moved or deleted
 		// between the check and the insert.
-		if err := validateChorePlacement(ctx, tx, chore); err != nil {
+		if err := r.appendNewChore(ctx, tx, chore); err != nil {
 			return err
 		}
 

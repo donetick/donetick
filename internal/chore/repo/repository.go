@@ -247,6 +247,20 @@ func (r *ChoreRepository) updateChoreVisibility(ctx context.Context, chore *chMo
 			}
 		}
 
+		// A board placement only means something inside the project it was made in;
+		// carry it over when the project did not change, drop it (the chore lands
+		// unplaced, in the destination's first section) when it did, same as
+		// DetachProjectChores does when a project is deleted.
+		samePlacementScope := (previousChore.ProjectID == nil && chore.ProjectID == nil) ||
+			(previousChore.ProjectID != nil && chore.ProjectID != nil && *previousChore.ProjectID == *chore.ProjectID)
+		if samePlacementScope {
+			chore.SectionID = previousChore.SectionID
+			chore.BoardPosition = previousChore.BoardPosition
+		} else {
+			chore.SectionID = nil
+			chore.BoardPosition = 0
+		}
+
 		var previousAssignees []chModel.ChoreAssignees
 		if err := lockedQuery().Where("chore_id = ?", chore.ID).Find(&previousAssignees).Error; err != nil {
 			return err

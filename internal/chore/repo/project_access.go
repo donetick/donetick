@@ -643,7 +643,7 @@ func (r *ChoreRepository) DetachProjectChores(ctx context.Context, tx *gorm.DB, 
 
 	if err := tx.WithContext(ctx).Model(&chModel.Chore{}).
 		Where("project_id = ? AND circle_id = ?", project.ID, circleID).
-		Update("project_id", nil).Error; err != nil {
+		Updates(map[string]interface{}{"project_id": nil, "section_id": nil, "board_position": 0}).Error; err != nil {
 		return nil, err
 	}
 	nextVersion, err := r.nextSyncVersionRangeWithDB(ctx, tx, circleID, len(chores))

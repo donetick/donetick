@@ -35,9 +35,11 @@ func NewHandler(pRepo *pRepo.ProjectRepository, choreRepo *chRepo.ChoreRepositor
 // statusFor maps repository errors to HTTP status codes.
 func statusFor(err error) int {
 	switch {
-	case errors.Is(err, pRepo.ErrProjectNotFound):
+	case errors.Is(err, pRepo.ErrProjectNotFound), errors.Is(err, pRepo.ErrNotProjectViewer),
+		errors.Is(err, pRepo.ErrSectionNotFound), errors.Is(err, pRepo.ErrChoreNotFound):
 		return 404
-	case errors.Is(err, pRepo.ErrInvalidVisibility), errors.Is(err, pRepo.ErrMemberNotInCircle):
+	case errors.Is(err, pRepo.ErrInvalidVisibility), errors.Is(err, pRepo.ErrMemberNotInCircle),
+		errors.Is(err, pRepo.ErrLastSection), errors.Is(err, pRepo.ErrInvalidView):
 		return 400
 	case err != nil && (err.Error() == "user does not have permission to update this project" ||
 		err.Error() == "user does not have permission to delete this project"):
@@ -77,6 +79,17 @@ func (h *Handler) getProjects(c *gin.Context) {
 		return
 	}
 
+	ids := make([]int, len(projects))
+	for i, p := range projects {
+		ids[i] = p.ID
+	}
+	views, err := h.pRepo.GetViewPreferences(c, currentUser.ID, ids)
+	if err == nil {
+		for i := range projects {
+			projects[i].View = views[projects[i].ID]
+		}
+	}
+
 	c.JSON(200, projects)
 }
 
@@ -111,8 +124,16 @@ func (h *Handler) createProject(c *gin.Context) {
 		})
 		return
 	}
+	if req.Name == "" {
+		c.JSON(400, gin.H{"error": "Project name is required"})
+		return
+	}
 	if req.Visibility != nil && !req.Visibility.Valid() {
 		c.JSON(400, gin.H{"error": pRepo.ErrInvalidVisibility.Error()})
+		return
+	}
+	if req.View != nil && !req.View.Valid() {
+		c.JSON(400, gin.H{"error": pRepo.ErrInvalidView.Error()})
 		return
 	}
 	visibility, members := req.ResolveAccess(pModel.ProjectVisibilityCircle, nil)
@@ -139,6 +160,12 @@ func (h *Handler) createProject(c *gin.Context) {
 			"error": msg,
 		})
 		return
+	}
+
+	if req.View != nil {
+		if err := h.pRepo.SetViewPreference(c, project.ID, currentUser.CircleID, currentUser.ID, *req.View); err == nil {
+			project.View = *req.View
+		}
 	}
 
 	c.JSON(200, gin.H{
@@ -189,20 +216,44 @@ func (h *Handler) updateProject(c *gin.Context) {
 		return
 	}
 
-	project := &pModel.Project{
-		ID:          projectID,
-		Name:        req.Name,
-		Description: req.Description,
-		Color:       req.Color,
-		Icon:        req.Icon,
+	// View is a private, per-user preference: anyone who can see the project
+	// may set their own, independent of who owns it. Applied before the
+	// owner-only fields below so a view-only request (no other field sent)
+	// never has to pass the ownership check that guards the rest of this
+	// endpoint.
+	if req.View != nil {
+		if !req.View.Valid() {
+			c.JSON(400, gin.H{"error": pRepo.ErrInvalidView.Error()})
+			return
+		}
+		if err := h.pRepo.SetViewPreference(c, projectID, currentUser.CircleID, currentUser.ID, *req.View); err != nil {
+			c.JSON(statusFor(err), gin.H{"error": err.Error()})
+			return
+		}
 	}
 
-	result, err := h.pRepo.UpdateProjectWithAccess(c, project, &req, currentUser.ID, currentUser.CircleID)
-	if err != nil {
-		c.JSON(statusFor(err), gin.H{
-			"error": err.Error(),
-		})
-		return
+	var result *chRepo.ProjectAccessResult
+	if req.HasProjectFields() {
+		if req.Name == "" {
+			c.JSON(400, gin.H{"error": "Project name is required"})
+			return
+		}
+		project := &pModel.Project{
+			ID:          projectID,
+			Name:        req.Name,
+			Description: req.Description,
+			Color:       req.Color,
+			Icon:        req.Icon,
+		}
+
+		var err error
+		result, err = h.pRepo.UpdateProjectWithAccess(c, project, &req, currentUser.ID, currentUser.CircleID)
+		if err != nil {
+			c.JSON(statusFor(err), gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
 	}
 
 	updatedProject, err := h.pRepo.GetProjectByID(c, projectID, currentUser.CircleID)
@@ -212,8 +263,13 @@ func (h *Handler) updateProject(c *gin.Context) {
 		})
 		return
 	}
+	if view, err := h.pRepo.GetViewPreference(c, projectID, currentUser.CircleID, currentUser.ID); err == nil {
+		updatedProject.View = view
+	}
 
-	h.afterAccessChange(c, currentUser.CircleID, updatedProject, result, &currentUser.User)
+	if result != nil {
+		h.afterAccessChange(c, currentUser.CircleID, updatedProject, result, &currentUser.User)
+	}
 
 	c.JSON(200, gin.H{
 		"res": updatedProject,
@@ -411,6 +467,285 @@ func (h *Handler) afterAccessChange(c *gin.Context, circleID int, project *pMode
 	broadcaster.BroadcastProjectUpdated(circleID, project.ID, accessChanged, user, recipients)
 }
 
+// broadcastBoardUpdated tells everyone who can see the project (owner and
+// members only, for a restricted project) that its shared board changed.
+func (h *Handler) broadcastBoardUpdated(c *gin.Context, circleID, projectID int, user *uModel.User) {
+	if h.realTimeService == nil {
+		return
+	}
+	project, err := h.pRepo.GetProjectByID(c, projectID, circleID)
+	if err != nil {
+		return
+	}
+	var recipients []int
+	if ids, restricted := project.ViewerIDs(); restricted {
+		recipients = ids
+	}
+	h.realTimeService.GetEventBroadcaster().BroadcastProjectBoardUpdated(circleID, projectID, user, recipients)
+}
+
+// getSections godoc
+//
+//	@Summary		Get a project's board sections
+//	@Description	Lists the sections (board columns) of a project, ordered by position. Shared by every user who can see the project.
+//	@Tags			projects
+//	@Produce		json
+//	@Security		JWTKeyAuth
+//	@Security		APIKeyAuth
+//	@Param			id	path		int						true	"Project ID"
+//	@Success		200	{object}	map[string]interface{}	"res: array of pModel.ProjectSection"
+//	@Failure		404	{object}	map[string]string		"error: project not found"
+//	@Router			/projects/{id}/sections [get]
+func (h *Handler) getSections(c *gin.Context) {
+	currentUser, ok := auth.CurrentUser(c)
+	if !ok {
+		c.JSON(401, gin.H{"error": "Error getting current user"})
+		return
+	}
+	projectID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(400, gin.H{"error": "Invalid project ID"})
+		return
+	}
+	project, err := h.pRepo.GetProjectByID(c, projectID, currentUser.CircleID)
+	if err != nil || !project.CanView(currentUser.ID) {
+		c.JSON(404, gin.H{"error": pRepo.ErrProjectNotFound.Error()})
+		return
+	}
+	sections, err := h.pRepo.GetSections(c, projectID, currentUser.CircleID)
+	if err != nil {
+		c.JSON(500, gin.H{"error": "Error getting sections"})
+		return
+	}
+	c.JSON(200, gin.H{"res": sections})
+}
+
+// SectionReq is the body of a section create/rename request.
+type SectionReq struct {
+	Name string `json:"name" binding:"required"`
+}
+
+// createSection godoc
+//
+//	@Summary		Create a board section
+//	@Description	Adds a column to a project's shared board. Any user who can see the project may add one.
+//	@Tags			projects
+//	@Accept			json
+//	@Produce		json
+//	@Security		JWTKeyAuth
+//	@Security		APIKeyAuth
+//	@Param			id		path		int						true	"Project ID"
+//	@Param			section	body		SectionReq				true	"Section name"
+//	@Success		200		{object}	map[string]interface{}	"res: created pModel.ProjectSection"
+//	@Failure		404		{object}	map[string]string		"error: project not found"
+//	@Router			/projects/{id}/sections [post]
+func (h *Handler) createSection(c *gin.Context) {
+	currentUser, ok := auth.CurrentUser(c)
+	if !ok {
+		c.JSON(401, gin.H{"error": "Error getting current user"})
+		return
+	}
+	projectID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(400, gin.H{"error": "Invalid project ID"})
+		return
+	}
+	var req SectionReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"error": "Error binding section data"})
+		return
+	}
+	section, err := h.pRepo.CreateSection(c, projectID, currentUser.CircleID, currentUser.ID, req.Name)
+	if err != nil {
+		c.JSON(statusFor(err), gin.H{"error": err.Error()})
+		return
+	}
+	h.broadcastBoardUpdated(c, currentUser.CircleID, projectID, &currentUser.User)
+	c.JSON(200, gin.H{"res": section})
+}
+
+// renameSection godoc
+//
+//	@Summary		Rename a board section
+//	@Tags			projects
+//	@Accept			json
+//	@Produce		json
+//	@Security		JWTKeyAuth
+//	@Security		APIKeyAuth
+//	@Param			id			path		int					true	"Project ID"
+//	@Param			sectionId	path		int					true	"Section ID"
+//	@Param			section		body		SectionReq			true	"New section name"
+//	@Success		200			{object}	map[string]string	"res: ok"
+//	@Failure		404			{object}	map[string]string	"error: project or section not found"
+//	@Router			/projects/{id}/sections/{sectionId} [put]
+func (h *Handler) renameSection(c *gin.Context) {
+	currentUser, ok := auth.CurrentUser(c)
+	if !ok {
+		c.JSON(401, gin.H{"error": "Error getting current user"})
+		return
+	}
+	projectID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(400, gin.H{"error": "Invalid project ID"})
+		return
+	}
+	sectionID, err := strconv.Atoi(c.Param("sectionId"))
+	if err != nil {
+		c.JSON(400, gin.H{"error": "Invalid section ID"})
+		return
+	}
+	var req SectionReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"error": "Error binding section data"})
+		return
+	}
+	if err := h.pRepo.RenameSection(c, projectID, sectionID, currentUser.CircleID, currentUser.ID, req.Name); err != nil {
+		c.JSON(statusFor(err), gin.H{"error": err.Error()})
+		return
+	}
+	h.broadcastBoardUpdated(c, currentUser.CircleID, projectID, &currentUser.User)
+	c.JSON(200, gin.H{"res": "ok"})
+}
+
+// deleteSection godoc
+//
+//	@Summary		Delete a board section
+//	@Description	Deletes a section, moving its chores into the project's remaining section with the lowest position. Fails if it is the only section.
+//	@Tags			projects
+//	@Produce		json
+//	@Security		JWTKeyAuth
+//	@Security		APIKeyAuth
+//	@Param			id			path		int					true	"Project ID"
+//	@Param			sectionId	path		int					true	"Section ID"
+//	@Success		200			{object}	map[string]string	"res: ok"
+//	@Failure		400			{object}	map[string]string	"error: cannot delete the last section"
+//	@Failure		404			{object}	map[string]string	"error: project or section not found"
+//	@Router			/projects/{id}/sections/{sectionId} [delete]
+func (h *Handler) deleteSection(c *gin.Context) {
+	currentUser, ok := auth.CurrentUser(c)
+	if !ok {
+		c.JSON(401, gin.H{"error": "Error getting current user"})
+		return
+	}
+	projectID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(400, gin.H{"error": "Invalid project ID"})
+		return
+	}
+	sectionID, err := strconv.Atoi(c.Param("sectionId"))
+	if err != nil {
+		c.JSON(400, gin.H{"error": "Invalid section ID"})
+		return
+	}
+	if err := h.pRepo.DeleteSection(c, projectID, sectionID, currentUser.CircleID, currentUser.ID); err != nil {
+		c.JSON(statusFor(err), gin.H{"error": err.Error()})
+		return
+	}
+	h.broadcastBoardUpdated(c, currentUser.CircleID, projectID, &currentUser.User)
+	c.JSON(200, gin.H{"res": "ok"})
+}
+
+// MoveSectionReq places a section right after afterSectionId, or first when
+// afterSectionId is omitted.
+type MoveSectionReq struct {
+	AfterSectionID *int `json:"afterSectionId"`
+}
+
+// moveSection godoc
+//
+//	@Summary		Move a board section
+//	@Description	Repositions one section to sort right after afterSectionId (first, when omitted). Computed from the current server-side order, so two users reordering columns at the same time cannot clobber each other.
+//	@Tags			projects
+//	@Accept			json
+//	@Produce		json
+//	@Security		JWTKeyAuth
+//	@Security		APIKeyAuth
+//	@Param			id			path		int					true	"Project ID"
+//	@Param			sectionId	path		int					true	"Section ID"
+//	@Param			move		body		MoveSectionReq		true	"Section to place it after"
+//	@Success		200			{object}	map[string]string	"res: ok"
+//	@Failure		404			{object}	map[string]string	"error: project or section not found"
+//	@Router			/projects/{id}/sections/{sectionId}/move [put]
+func (h *Handler) moveSection(c *gin.Context) {
+	currentUser, ok := auth.CurrentUser(c)
+	if !ok {
+		c.JSON(401, gin.H{"error": "Error getting current user"})
+		return
+	}
+	projectID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(400, gin.H{"error": "Invalid project ID"})
+		return
+	}
+	sectionID, err := strconv.Atoi(c.Param("sectionId"))
+	if err != nil {
+		c.JSON(400, gin.H{"error": "Invalid section ID"})
+		return
+	}
+	var req MoveSectionReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"error": "Error binding move data"})
+		return
+	}
+	if err := h.pRepo.MoveSection(c, projectID, sectionID, req.AfterSectionID, currentUser.CircleID, currentUser.ID); err != nil {
+		c.JSON(statusFor(err), gin.H{"error": err.Error()})
+		return
+	}
+	h.broadcastBoardUpdated(c, currentUser.CircleID, projectID, &currentUser.User)
+	c.JSON(200, gin.H{"res": "ok"})
+}
+
+// MoveChoreReq places a chore into sectionId, right after afterChoreId, or
+// first when afterChoreId is omitted.
+type MoveChoreReq struct {
+	SectionID    int  `json:"sectionId" binding:"required"`
+	AfterChoreID *int `json:"afterChoreId"`
+}
+
+// moveChore godoc
+//
+//	@Summary		Move a chore within a project's board
+//	@Description	Places one chore into sectionId, sorted right after afterChoreId (first, when omitted), moving it in from a different section of the same project if needed. Computed from the current server-side order of that section, so two users dragging different cards at the same time cannot clobber each other.
+//	@Tags			projects
+//	@Accept			json
+//	@Produce		json
+//	@Security		JWTKeyAuth
+//	@Security		APIKeyAuth
+//	@Param			id		path		int					true	"Project ID"
+//	@Param			choreId	path		int					true	"Chore ID"
+//	@Param			move	body		MoveChoreReq		true	"Destination section and chore to place it after"
+//	@Success		200		{object}	map[string]string	"res: ok"
+//	@Failure		404		{object}	map[string]string	"error: project, section or chore not found"
+//	@Router			/projects/{id}/board/chores/{choreId}/move [put]
+func (h *Handler) moveChore(c *gin.Context) {
+	currentUser, ok := auth.CurrentUser(c)
+	if !ok {
+		c.JSON(401, gin.H{"error": "Error getting current user"})
+		return
+	}
+	projectID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(400, gin.H{"error": "Invalid project ID"})
+		return
+	}
+	choreID, err := strconv.Atoi(c.Param("choreId"))
+	if err != nil {
+		c.JSON(400, gin.H{"error": "Invalid chore ID"})
+		return
+	}
+	var req MoveChoreReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"error": "Error binding move data"})
+		return
+	}
+	if err := h.pRepo.MoveChore(c, projectID, choreID, req.SectionID, req.AfterChoreID, currentUser.CircleID, currentUser.ID); err != nil {
+		c.JSON(statusFor(err), gin.H{"error": err.Error()})
+		return
+	}
+	h.broadcastBoardUpdated(c, currentUser.CircleID, projectID, &currentUser.User)
+	c.JSON(200, gin.H{"res": "ok"})
+}
+
 func Routes(r *gin.Engine, h *Handler, multiAuthMiddleware *auth.MultiAuthMiddleware) {
 	projectRoutes := r.Group("api/v1/projects")
 	projectRoutes.Use(multiAuthMiddleware.MiddlewareFunc())
@@ -420,5 +755,13 @@ func Routes(r *gin.Engine, h *Handler, multiAuthMiddleware *auth.MultiAuthMiddle
 		projectRoutes.PUT("/:id", h.updateProject)
 		projectRoutes.POST("/:id/access-preview", h.previewProjectAccess)
 		projectRoutes.DELETE("/:id", h.deleteProject)
+
+		projectRoutes.GET("/:id/sections", h.getSections)
+		projectRoutes.POST("/:id/sections", h.createSection)
+		projectRoutes.PUT("/:id/sections/:sectionId", h.renameSection)
+		projectRoutes.PUT("/:id/sections/:sectionId/move", h.moveSection)
+		projectRoutes.DELETE("/:id/sections/:sectionId", h.deleteSection)
+
+		projectRoutes.PUT("/:id/board/chores/:choreId/move", h.moveChore)
 	}
 }

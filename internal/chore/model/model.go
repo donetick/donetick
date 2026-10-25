@@ -78,6 +78,8 @@ type Chore struct {
 	IsPrivate              bool                       `json:"isPrivate" gorm:"column:is_private;default:false"`                                       // Whether the chore is private
 	ProjectID              *int                       `json:"projectId,omitempty" gorm:"column:project_id;index"`                                     // The project this chore belongs to
 	Project                *pModel.Project            `json:"project,omitempty" gorm:"foreignkey:ProjectID;references:ID"`                            // Project relationship
+	SectionID              *int                       `json:"sectionId,omitempty" gorm:"column:section_id;index"`                                     // The project section (board column) this chore is placed in; nil falls back to the project's first section
+	BoardPosition          int                        `json:"boardPosition" gorm:"column:board_position;not null;default:0"`                          // Ordering of the chore within its section, shared by every viewer of the project
 	SyncVersion            int64                      `json:"syncVersion" gorm:"column:sync_version;not null;default:0;index;index:idx_chores_circle_sync_version,priority:2"`
 	Attachments            []storageModel.StorageFile `json:"attachments,omitempty" gorm:"-"`
 }

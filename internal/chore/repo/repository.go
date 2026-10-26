@@ -619,7 +619,7 @@ func (r *ChoreRepository) GetChore(c context.Context, choreID int, userID int, c
 		Preload("Assignees").
 		Preload("Project").
 		Preload("ThingChore").
-		Preload("LabelsV2").
+		Preload("LabelsV2", "is_shared = ? OR created_by = ?", true, userID).
 		Where("chores.id = ? AND chores.circle_id = ?", choreID, circleID).
 		Where(privacyPredicate(userID))
 
@@ -655,7 +655,7 @@ func (r *ChoreRepository) GetChores(c context.Context, circleID int, userID int,
 
 	query := privacyJoins(r.db.WithContext(c).Model(&chModel.Chore{}), userID).
 		Preload("Assignees").
-		Preload("LabelsV2").
+		Preload("LabelsV2", "is_shared = ? OR created_by = ?", true, userID).
 		Where("chores.circle_id = ?", circleID).
 		Where(privacyPredicate(userID)).
 		Group("chores.id")
@@ -713,7 +713,7 @@ func (r *ChoreRepository) GetArchivedChores(c context.Context, circleID int, use
 	var chores []*chModel.Chore
 	if err := privacyJoins(r.db.WithContext(c).Model(&chModel.Chore{}), userID).
 		Preload("Assignees").
-		Preload("LabelsV2").
+		Preload("LabelsV2", "is_shared = ? OR created_by = ?", true, userID).
 		Where("chores.circle_id = ?", circleID).
 		Where(privacyPredicate(userID)).
 		Where("is_active = ?", false).

@@ -40,7 +40,7 @@ func (h *Handler) getFilters(c *gin.Context) {
 		return
 	}
 
-	filters, err := h.fRepo.GetCircleFilters(c, currentUser.CircleID)
+	filters, err := h.fRepo.GetCircleFilters(c, currentUser.CircleID, currentUser.ID)
 	if err != nil {
 		c.JSON(500, gin.H{
 			"error": "Error getting filters",
@@ -91,7 +91,7 @@ func (h *Handler) getFilterByID(c *gin.Context) {
 		return
 	}
 
-	filter, err := h.fRepo.GetFilterByID(c, filterID, currentUser.CircleID)
+	filter, err := h.fRepo.GetFilterByID(c, filterID, currentUser.CircleID, currentUser.ID)
 	if err != nil {
 		c.JSON(404, gin.H{
 			"error": "Filter not found",
@@ -141,7 +141,7 @@ func (h *Handler) createFilter(c *gin.Context) {
 	}
 
 	// Check if filter name already exists
-	exists, err := h.fRepo.FilterNameExists(c, req.Name, currentUser.CircleID, nil)
+	exists, err := h.fRepo.FilterNameExists(c, req.Name, currentUser.CircleID, currentUser.ID, nil)
 	if err != nil {
 		c.JSON(500, gin.H{
 			"error": "Error checking filter name",
@@ -173,6 +173,9 @@ func (h *Handler) createFilter(c *gin.Context) {
 		IsPinned:    req.IsPinned,
 	}
 
+	if req.IsShared != nil {
+		filter.IsShared = *req.IsShared
+	}
 	if err := h.fRepo.CreateFilter(c, filter); err != nil {
 		c.JSON(500, gin.H{
 			"error": "Error creating filter",
@@ -241,7 +244,7 @@ func (h *Handler) updateFilter(c *gin.Context) {
 	}
 
 	// Check if filter name already exists (excluding current filter)
-	exists, err := h.fRepo.FilterNameExists(c, req.Name, currentUser.CircleID, &filterID)
+	exists, err := h.fRepo.FilterNameExists(c, req.Name, currentUser.CircleID, currentUser.ID, &filterID)
 	if err != nil {
 		c.JSON(500, gin.H{
 			"error": "Error checking filter name",
@@ -271,7 +274,7 @@ func (h *Handler) updateFilter(c *gin.Context) {
 		IsPinned:    req.IsPinned,
 	}
 
-	if err := h.fRepo.UpdateFilter(c, filter, currentUser.ID, currentUser.CircleID); err != nil {
+	if err := h.fRepo.UpdateFilter(c, filter, currentUser.ID, currentUser.CircleID, req.IsShared); err != nil {
 		c.JSON(500, gin.H{
 			"error": err.Error(),
 		})
@@ -279,7 +282,7 @@ func (h *Handler) updateFilter(c *gin.Context) {
 	}
 
 	// Get updated filter to return
-	updatedFilter, err := h.fRepo.GetFilterByID(c, filterID, currentUser.CircleID)
+	updatedFilter, err := h.fRepo.GetFilterByID(c, filterID, currentUser.CircleID, currentUser.ID)
 	if err != nil {
 		c.JSON(500, gin.H{
 			"error": "Error getting updated filter",
@@ -418,7 +421,7 @@ func (h *Handler) getPinnedFilters(c *gin.Context) {
 		return
 	}
 
-	filters, err := h.fRepo.GetPinnedFilters(c, currentUser.CircleID)
+	filters, err := h.fRepo.GetPinnedFilters(c, currentUser.CircleID, currentUser.ID)
 	if err != nil {
 		c.JSON(500, gin.H{
 			"error": "Error getting pinned filters",
@@ -450,7 +453,7 @@ func (h *Handler) getFiltersByUsage(c *gin.Context) {
 		return
 	}
 
-	filters, err := h.fRepo.GetFiltersByUsage(c, currentUser.CircleID)
+	filters, err := h.fRepo.GetFiltersByUsage(c, currentUser.CircleID, currentUser.ID)
 	if err != nil {
 		c.JSON(500, gin.H{
 			"error": "Error getting filters by usage",

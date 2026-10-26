@@ -23,7 +23,7 @@ func NewLabelRepository(db *gorm.DB, cfg *config.Config) *LabelRepository {
 
 func (r *LabelRepository) GetUserLabels(ctx context.Context, userID int, circleID int) ([]*lModel.Label, error) {
 	var labels []*lModel.Label
-	if err := r.db.WithContext(ctx).Where("created_by = ? OR circle_id = ? ", userID, circleID).Find(&labels).Error; err != nil {
+	if err := r.db.WithContext(ctx).Where("created_by = ? OR (circle_id = ? AND is_shared = ?)", userID, circleID, true).Find(&labels).Error; err != nil {
 		return nil, err
 	}
 	return labels, nil
@@ -52,7 +52,7 @@ func (r *LabelRepository) isLabelsAssignableByUser(ctx context.Context, userID i
 
 	log := logging.FromContext(ctx)
 	var count int64
-	if err := r.db.WithContext(ctx).Model(&lModel.Label{}).Where("id IN (?) AND (created_by = ?  OR circle_id = ?) ", labelIDs, userID, circleID).Count(&count).Error; err != nil {
+	if err := r.db.WithContext(ctx).Model(&lModel.Label{}).Where("id IN (?) AND (created_by = ? OR (circle_id = ? AND is_shared = ?))", labelIDs, userID, circleID, true).Count(&count).Error; err != nil {
 		log.Error(err)
 		return false
 	}
@@ -239,15 +239,21 @@ func (r *LabelRepository) DeleteLabels(ctx context.Context, userID int, ids []in
 	return nil
 }
 
-func (r *LabelRepository) UpdateLabel(ctx context.Context, userID int, label *lModel.Label) error {
+func (r *LabelRepository) UpdateLabel(ctx context.Context, userID int, label *lModel.Label, isShared *bool) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		result := tx.WithContext(ctx).Model(&lModel.Label{}).Where("id = ? and created_by = ?", label.ID, userID).Updates(label)
+		updates := map[string]interface{}{"name": label.Name, "color": label.Color}
+		if isShared != nil {
+			updates["is_shared"] = *isShared
+		}
+		result := tx.WithContext(ctx).Model(&lModel.Label{}).Where("id = ? and created_by = ?", label.ID, userID).Updates(updates)
 		if result.Error != nil {
 			return result.Error
 		}
-		// Not the owner (or no such label): nothing changed, so nothing to sync.
 		if result.RowsAffected < 1 {
-			return nil
+			return gorm.ErrRecordNotFound
+		}
+		if err := tx.First(label, label.ID).Error; err != nil {
+			return err
 		}
 
 		// Chores embed the label (name/color) in their payload, so they have to be

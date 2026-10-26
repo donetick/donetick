@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"donetick.com/core/config"
+	chRepo "donetick.com/core/internal/chore/repo"
 	"donetick.com/core/logging"
 	"go.uber.org/zap"
 )
@@ -36,7 +37,7 @@ type ServiceStats struct {
 }
 
 // NewRealTimeService creates a new real-time service instance
-func NewRealTimeService(cfg *config.Config) *RealTimeService {
+func NewRealTimeService(cfg *config.Config, choreRepo *chRepo.ChoreRepository) *RealTimeService {
 	// Validate configuration
 	if err := validateConfig(&cfg.RealTimeConfig); err != nil {
 		panic(fmt.Sprintf("Invalid real-time configuration: %v", err))
@@ -54,7 +55,7 @@ func NewRealTimeService(cfg *config.Config) *RealTimeService {
 		stats:           &ServiceStats{},
 	}
 
-	service.broadcaster = NewEventBroadcaster(service, cfg)
+	service.broadcaster = NewEventBroadcaster(service, cfg, choreRepo)
 
 	return service
 }

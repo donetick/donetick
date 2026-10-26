@@ -25,7 +25,7 @@ func TestAssignLabelsToChoreRemovesLabelAddedByAnotherMember(t *testing.T) {
 	ctx := context.Background()
 
 	circleID := 1
-	label := lModel.Label{Name: "kitchen", Color: "#ff9800", CircleID: &circleID, CreatedBy: 2}
+	label := lModel.Label{Name: "kitchen", Color: "#ff9800", CircleID: &circleID, CreatedBy: 2, IsShared: true}
 	require.NoError(t, db.Create(&label).Error)
 	chore := chModel.Chore{Name: "dishes", FrequencyType: chModel.FrequencyTypeOnce,
 		AssignStrategy: chModel.AssignmentStrategyRandom, CircleID: circleID, CreatedBy: 2, IsActive: true}

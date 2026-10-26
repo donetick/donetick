@@ -18,19 +18,24 @@ func NewFilterRepository(db *gorm.DB, cfg *config.Config) *FilterRepository {
 	return &FilterRepository{db: db}
 }
 
-// GetCircleFilters gets all filters for a circle
-func (r *FilterRepository) GetCircleFilters(ctx context.Context, circleID int) ([]*fModel.Filter, error) {
+// visibleFilters scopes reads to the circle and hides other users' private filters.
+func (r *FilterRepository) visibleFilters(ctx context.Context, circleID, userID int) *gorm.DB {
+	return r.db.WithContext(ctx).Where("circle_id = ? AND (is_shared = ? OR created_by = ?)", circleID, true, userID)
+}
+
+// GetCircleFilters gets the filters visible to a user in a circle
+func (r *FilterRepository) GetCircleFilters(ctx context.Context, circleID int, userID int) ([]*fModel.Filter, error) {
 	var filters []*fModel.Filter
-	if err := r.db.WithContext(ctx).Where("circle_id = ?", circleID).Order("name ASC").Find(&filters).Error; err != nil {
+	if err := r.visibleFilters(ctx, circleID, userID).Order("name ASC").Find(&filters).Error; err != nil {
 		return nil, err
 	}
 	return filters, nil
 }
 
 // GetFilterByID gets a specific filter by ID
-func (r *FilterRepository) GetFilterByID(ctx context.Context, filterID int, circleID int) (*fModel.Filter, error) {
+func (r *FilterRepository) GetFilterByID(ctx context.Context, filterID int, circleID int, userID int) (*fModel.Filter, error) {
 	var filter fModel.Filter
-	if err := r.db.WithContext(ctx).Where("id = ? AND circle_id = ?", filterID, circleID).First(&filter).Error; err != nil {
+	if err := r.visibleFilters(ctx, circleID, userID).Where("id = ?", filterID).First(&filter).Error; err != nil {
 		return nil, err
 	}
 	return &filter, nil
@@ -45,7 +50,7 @@ func (r *FilterRepository) CreateFilter(ctx context.Context, filter *fModel.Filt
 }
 
 // UpdateFilter updates an existing filter
-func (r *FilterRepository) UpdateFilter(ctx context.Context, filter *fModel.Filter, userID int, circleID int) error {
+func (r *FilterRepository) UpdateFilter(ctx context.Context, filter *fModel.Filter, userID int, circleID int, isShared *bool) error {
 	log := logging.FromContext(ctx)
 
 	// Check if user has permission to update this filter
@@ -73,6 +78,9 @@ func (r *FilterRepository) UpdateFilter(ctx context.Context, filter *fModel.Filt
 		"is_pinned":   filter.IsPinned,
 	}
 
+	if isShared != nil {
+		updates["is_shared"] = *isShared
+	}
 	if err := r.db.WithContext(ctx).Model(&fModel.Filter{}).Where("id = ? AND circle_id = ?", filter.ID, circleID).Updates(updates).Error; err != nil {
 		return err
 	}
@@ -133,27 +141,27 @@ func (r *FilterRepository) ToggleFilterPin(ctx context.Context, filterID int, us
 }
 
 // GetPinnedFilters gets all pinned filters for a circle
-func (r *FilterRepository) GetPinnedFilters(ctx context.Context, circleID int) ([]*fModel.Filter, error) {
+func (r *FilterRepository) GetPinnedFilters(ctx context.Context, circleID int, userID int) ([]*fModel.Filter, error) {
 	var filters []*fModel.Filter
-	if err := r.db.WithContext(ctx).Where("circle_id = ? AND is_pinned = ?", circleID, true).Order("name ASC").Find(&filters).Error; err != nil {
+	if err := r.visibleFilters(ctx, circleID, userID).Where("is_pinned = ?", true).Order("name ASC").Find(&filters).Error; err != nil {
 		return nil, err
 	}
 	return filters, nil
 }
 
 // GetFiltersByUsage gets filters sorted by usage count
-func (r *FilterRepository) GetFiltersByUsage(ctx context.Context, circleID int) ([]*fModel.Filter, error) {
+func (r *FilterRepository) GetFiltersByUsage(ctx context.Context, circleID int, userID int) ([]*fModel.Filter, error) {
 	var filters []*fModel.Filter
-	if err := r.db.WithContext(ctx).Where("circle_id = ?", circleID).Order("usage_count DESC, name ASC").Find(&filters).Error; err != nil {
+	if err := r.visibleFilters(ctx, circleID, userID).Order("usage_count DESC, name ASC").Find(&filters).Error; err != nil {
 		return nil, err
 	}
 	return filters, nil
 }
 
 // FilterNameExists checks if a filter name already exists (case-insensitive)
-func (r *FilterRepository) FilterNameExists(ctx context.Context, name string, circleID int, excludeFilterID *int) (bool, error) {
+func (r *FilterRepository) FilterNameExists(ctx context.Context, name string, circleID int, userID int, excludeFilterID *int) (bool, error) {
 	var count int64
-	query := r.db.WithContext(ctx).Model(&fModel.Filter{}).Where("LOWER(name) = LOWER(?) AND circle_id = ?", name, circleID)
+	query := r.visibleFilters(ctx, circleID, userID).Model(&fModel.Filter{}).Where("LOWER(name) = LOWER(?)", name)
 
 	if excludeFilterID != nil {
 		query = query.Where("id != ?", *excludeFilterID)

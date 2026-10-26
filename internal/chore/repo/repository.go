@@ -10,6 +10,7 @@ import (
 	config "donetick.com/core/config"
 	chModel "donetick.com/core/internal/chore/model"
 	cModel "donetick.com/core/internal/circle/model"
+	lModel "donetick.com/core/internal/label/model"
 	nModel "donetick.com/core/internal/notifier/model"
 	"donetick.com/core/internal/project/access"
 	pModel "donetick.com/core/internal/project/model"
@@ -645,6 +646,18 @@ func (r *ChoreRepository) GetChoreForSystem(c context.Context, choreID int) (*ch
 		return nil, err
 	}
 	return &chore, nil
+}
+
+// GetChoreLabelsForSystem is only for internal broadcasts, which redact labels
+// separately for each recipient. Never return its result directly from an API.
+func (r *ChoreRepository) GetChoreLabelsForSystem(ctx context.Context, choreID, circleID int) ([]lModel.Label, error) {
+	var labels []lModel.Label
+	err := r.db.WithContext(ctx).Model(&lModel.Label{}).
+		Joins("JOIN chore_labels ON chore_labels.label_id = labels.id").
+		Joins("JOIN chores ON chores.id = chore_labels.chore_id").
+		Where("chores.id = ? AND chores.circle_id = ?", choreID, circleID).
+		Distinct("labels.*").Find(&labels).Error
+	return labels, err
 }
 
 // GetChores retrieves chores for a user in a circle, respecting privacy and optionally filtered by sync version.

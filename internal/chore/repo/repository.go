@@ -9,6 +9,7 @@ import (
 
 	config "donetick.com/core/config"
 	chModel "donetick.com/core/internal/chore/model"
+	lModel "donetick.com/core/internal/label/model"
 	nModel "donetick.com/core/internal/notifier/model"
 	xpRepo "donetick.com/core/internal/points/repo"
 	"donetick.com/core/internal/project/access"
@@ -641,7 +642,7 @@ func (r *ChoreRepository) GetChore(c context.Context, choreID int, userID int, c
 		Preload("Assignees").
 		Preload("Project").
 		Preload("ThingChore").
-		Preload("LabelsV2").
+		Preload("LabelsV2", "is_shared = ? OR created_by = ?", true, userID).
 		Where("chores.id = ? AND chores.circle_id = ?", choreID, circleID).
 		Where(privacyPredicate(userID))
 
@@ -669,6 +670,18 @@ func (r *ChoreRepository) GetChoreForSystem(c context.Context, choreID int) (*ch
 	return &chore, nil
 }
 
+// GetChoreLabelsForSystem is only for internal broadcasts, which redact labels
+// separately for each recipient. Never return its result directly from an API.
+func (r *ChoreRepository) GetChoreLabelsForSystem(ctx context.Context, choreID, circleID int) ([]lModel.Label, error) {
+	var labels []lModel.Label
+	err := r.db.WithContext(ctx).Model(&lModel.Label{}).
+		Joins("JOIN chore_labels ON chore_labels.label_id = labels.id").
+		Joins("JOIN chores ON chores.id = chore_labels.chore_id").
+		Where("chores.id = ? AND chores.circle_id = ?", choreID, circleID).
+		Distinct("labels.*").Find(&labels).Error
+	return labels, err
+}
+
 // GetChores retrieves chores for a user in a circle, respecting privacy and optionally filtered by sync version.
 // If syncOptions is nil or syncOptions.SyncVersion is nil, returns all visible chores ordered by next_due_date.
 // If syncOptions.SyncVersion is set, returns only chores with sync_version > *SyncVersion, ordered by sync_version.
@@ -677,7 +690,7 @@ func (r *ChoreRepository) GetChores(c context.Context, circleID int, userID int,
 
 	query := privacyJoins(r.db.WithContext(c).Model(&chModel.Chore{}), userID).
 		Preload("Assignees").
-		Preload("LabelsV2").
+		Preload("LabelsV2", "is_shared = ? OR created_by = ?", true, userID).
 		Where("chores.circle_id = ?", circleID).
 		Where(privacyPredicate(userID)).
 		Group("chores.id")
@@ -735,7 +748,7 @@ func (r *ChoreRepository) GetArchivedChores(c context.Context, circleID int, use
 	var chores []*chModel.Chore
 	if err := privacyJoins(r.db.WithContext(c).Model(&chModel.Chore{}), userID).
 		Preload("Assignees").
-		Preload("LabelsV2").
+		Preload("LabelsV2", "is_shared = ? OR created_by = ?", true, userID).
 		Where("chores.circle_id = ?", circleID).
 		Where(privacyPredicate(userID)).
 		Where("is_active = ?", false).

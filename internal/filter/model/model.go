@@ -130,6 +130,7 @@ func (fc FilterConditions) Value() (driver.Value, error) {
 }
 
 type Filter struct {
+	IsShared    bool             `json:"isShared" gorm:"column:is_shared;not null;default:false"`
 	ID          int              `json:"id" gorm:"primary_key"`
 	Name        string           `json:"name" gorm:"column:name;not null"`
 	Description *string          `json:"description" gorm:"column:description"`
@@ -145,6 +146,8 @@ type Filter struct {
 }
 
 type FilterReq struct {
+	// Omitted on update preserves the current privacy setting.
+	IsShared    *bool            `json:"isShared"`
 	Name        string           `json:"name" binding:"required,min=1,max=100"`
 	Description *string          `json:"description" binding:"omitempty,max=500"`
 	Color       *string          `json:"color" binding:"omitempty,hexcolor|rgb|rgba"`

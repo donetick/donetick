@@ -10,8 +10,10 @@ import (
 )
 
 type LabelReq struct {
-	Name  string `json:"name" binding:"required"`
-	Color string `json:"color"`
+	// Omitted on update preserves the current privacy setting.
+	IsShared *bool  `json:"isShared"`
+	Name     string `json:"name" binding:"required"`
+	Color    string `json:"color"`
 }
 
 type UpdateLabelReq struct {
@@ -75,6 +77,9 @@ func (h *Handler) createLabel(c *gin.Context) {
 		CreatedBy: currentUser.ID,
 		CircleID:  &currentUser.CircleID,
 	}
+	if req.IsShared != nil {
+		label.IsShared = *req.IsShared
+	}
 	if err := h.lRepo.CreateLabels(c, []*lModel.Label{label}); err != nil {
 		c.JSON(500, gin.H{
 			"error": "Error creating label",
@@ -110,7 +115,7 @@ func (h *Handler) updateLabel(c *gin.Context) {
 		ID:       req.ID,
 		CircleID: &currentUser.CircleID,
 	}
-	if err := h.lRepo.UpdateLabel(c, currentUser.ID, label); err != nil {
+	if err := h.lRepo.UpdateLabel(c, currentUser.ID, label, req.IsShared); err != nil {
 		c.JSON(500, gin.H{
 			"error": "Error updating label",
 		})

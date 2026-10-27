@@ -8,6 +8,7 @@ import (
 	chModel "donetick.com/core/internal/chore/model"
 	cModel "donetick.com/core/internal/circle/model"
 	cRepo "donetick.com/core/internal/circle/repo"
+	dRepo "donetick.com/core/internal/device/repo"
 	nModel "donetick.com/core/internal/notifier/model"
 	nRepo "donetick.com/core/internal/notifier/repo"
 	uModel "donetick.com/core/internal/user/model"
@@ -16,15 +17,17 @@ import (
 )
 
 type NotificationPlanner struct {
-	nRepo *nRepo.NotificationRepository
-	cRepo *cRepo.CircleRepository
-	uRepo *uRepo.UserRepository
+	nRepo      *nRepo.NotificationRepository
+	cRepo      *cRepo.CircleRepository
+	uRepo      *uRepo.UserRepository
+	deviceRepo *dRepo.DeviceRepository
 }
 
-func NewNotificationPlanner(nr *nRepo.NotificationRepository, cr *cRepo.CircleRepository, ur *uRepo.UserRepository) *NotificationPlanner {
+func NewNotificationPlanner(nr *nRepo.NotificationRepository, cr *cRepo.CircleRepository, ur *uRepo.UserRepository, dr *dRepo.DeviceRepository) *NotificationPlanner {
 	return &NotificationPlanner{nRepo: nr,
-		cRepo: cr,
-		uRepo: ur,
+		cRepo:      cr,
+		uRepo:      ur,
+		deviceRepo: dr,
 	}
 }
 
@@ -44,7 +47,16 @@ func (n *NotificationPlanner) GenerateNotifications(c context.Context, chore *ch
 		}
 	}
 
-	n.nRepo.DeleteAllChoreNotifications(chore.ID)
+	// Preserve a pending assignment across ordinary edits, but not after the task
+	// is completed/deactivated or the recipient loses access or membership.
+	var assignmentRecipient *int
+	if chore.IsActive && assignedUser != nil && assignedUser.IsActive && CanReceiveChore(chore, assignedUser.UserID, circleMembers) {
+		assignmentRecipient = chore.AssignedTo
+	}
+	if err := n.nRepo.DeleteChoreReminders(c, chore.ID, assignmentRecipient); err != nil {
+		log.Error("Error clearing chore reminders", "error", err)
+		return false
+	}
 	notifications := make([]*nModel.Notification, 0)
 	if !chore.Notification || chore.FrequencyType == "trigger" {
 
@@ -57,7 +69,7 @@ func (n *NotificationPlanner) GenerateNotifications(c context.Context, chore *ch
 
 	var directNotifications []*nModel.Notification
 	if len(chore.NotificationMetadataV2.Templates) > 0 {
-		if assignedUser != nil && canReceiveChore(chore, assignedUser.UserID, circleMembers) {
+		if assignedUser != nil && CanReceiveChore(chore, assignedUser.UserID, circleMembers) {
 			directNotifications = append(directNotifications, generateNotificationsFromTemplate(chore, assignedUser, assignedUser, nil)...)
 		} else if assignedUser == nil {
 			// A chore assigned to "Anyone" has no assigned user to resolve, which previously
@@ -76,12 +88,97 @@ func (n *NotificationPlanner) GenerateNotifications(c context.Context, chore *ch
 
 	// A circle group chat reaches everybody in it, so chores of a restricted project
 	// (only me / selected members) are never posted there.
-	if chore.NotificationMetadataV2.CircleGroup && !inRestrictedProject(chore) && assignedUser != nil && canReceiveChore(chore, assignedUser.UserID, circleMembers) {
+	if chore.NotificationMetadataV2.CircleGroup && !inRestrictedProject(chore) && assignedUser != nil && CanReceiveChore(chore, assignedUser.UserID, circleMembers) {
 		notifications = append(notifications, generateNotificationsFromTemplate(chore, assignedUser, assignedUser, chore.NotificationMetadataV2.CircleGroupID)...)
 	}
 
 	log.Debug("Generated notifications", "count", len(notifications))
 	n.nRepo.BatchInsertNotifications(notifications)
+	return true
+}
+
+// GenerateAssignmentNotification queues an event independently of due-date reminders.
+// Only the current assignee is notified, and ordinary edits / unchanged rotations
+// do not produce another event. A nil previous assignee represents task creation.
+func (n *NotificationPlanner) GenerateAssignmentNotification(c context.Context, chore *chModel.Chore, previousAssignee *int) bool {
+	log := logging.FromContext(c)
+	if chore.AssignedTo == nil || *chore.AssignedTo <= 0 || !chore.IsActive ||
+		(previousAssignee != nil && *previousAssignee == *chore.AssignedTo) {
+		log.Debugw("Skipping assignment notification: no new active assignment", "chore_id", chore.ID)
+		return true
+	}
+	members, err := n.cRepo.GetCircleUsers(c, chore.CircleID)
+	if err != nil {
+		logging.FromContext(c).Error("Error loading assignment recipient", "error", err)
+		return false
+	}
+	for _, recipient := range members {
+		if recipient.UserID != *chore.AssignedTo || !recipient.IsActive || !CanReceiveChore(chore, recipient.UserID, members) {
+			continue
+		}
+		pref, err := n.uRepo.GetNotificationPreference(c, recipient.UserID)
+		if err != nil {
+			log.Errorw("Error loading assignment preference", "error", err, "user_id", recipient.UserID)
+			return false
+		}
+		if !pref.Enabled(uModel.NotificationEventOnAssignment) {
+			log.Debugw("Skipping assignment notification: muted by preference", "chore_id", chore.ID, "user_id", recipient.UserID)
+			return true
+		}
+		tokens, err := n.deviceRepo.GetActiveDeviceTokens(c, recipient.UserID)
+		if err != nil {
+			log.Errorw("Error loading assignment push devices", "error", err, "user_id", recipient.UserID)
+			return false
+		}
+		now := time.Now().UTC()
+		text := fmt.Sprintf("📋 Assigned to you: %s", chore.Name)
+		base := nModel.Notification{
+			ChoreID: chore.ID, CircleID: chore.CircleID, UserID: recipient.UserID,
+			TypeID: recipient.NotificationType, TargetID: recipient.TargetID,
+			ScheduledFor: now, CreatedAt: now, Text: text,
+			RawEvent: map[string]interface{}{
+				"id": chore.ID, "type": EventTypeOnAssignment, "name": chore.Name,
+				"due_date": chore.NextDueDate, "assignee": recipient.DisplayName,
+				"assignee_username": recipient.Username,
+				"payload": map[string]interface{}{
+					"title": "Task assigned to you", "body": chore.Name,
+					"data": map[string]string{"choreId": fmt.Sprint(chore.ID), "type": string(EventTypeOnAssignment)},
+				},
+			},
+		}
+		// Mobile registrations are independent of the legacy notification target.
+		// Queue one row per active device, as digests do, for FCM/Bridge delivery.
+		notifications := make([]*nModel.Notification, 0, len(tokens)+1)
+		seen := make(map[string]bool, len(tokens))
+		for _, token := range tokens {
+			if token.Token == "" || seen[token.Token] {
+				continue
+			}
+			seen[token.Token] = true
+			push := base
+			push.TypeID = nModel.NotificationPlatformFCM
+			push.TargetID = token.Token
+			notifications = append(notifications, &push)
+		}
+		// Preserve third-party channels. A legacy FCM target is only a fallback
+		// when there are no registered devices, never a second push to an old token.
+		if recipient.NotificationType != nModel.NotificationPlatformNone && recipient.TargetID != "" &&
+			(recipient.NotificationType != nModel.NotificationPlatformFCM || len(notifications) == 0) {
+			legacy := base
+			notifications = append(notifications, &legacy)
+		}
+		if len(notifications) == 0 {
+			log.Infow("Skipping assignment notification: no delivery target or active push devices", "chore_id", chore.ID, "user_id", recipient.UserID)
+			return true
+		}
+		if err := n.nRepo.BatchInsertNotifications(notifications); err != nil {
+			logging.FromContext(c).Error("Error queuing assignment notification", "error", err)
+			return false
+		}
+		log.Infow("Queued assignment notifications", "chore_id", chore.ID, "user_id", recipient.UserID, "count", len(notifications))
+		return true
+	}
+	log.Debugw("Skipping assignment notification: assignee is not an active member or cannot view task", "chore_id", chore.ID, "user_id", *chore.AssignedTo)
 	return true
 }
 
@@ -103,12 +200,11 @@ func notifiableMembers(circleMembers []*cModel.UserCircleDetail) []*cModel.UserC
 	return members
 }
 
-// anyoneChoreRecipients returns the circle members to remind about a chore assigned to
-// "Anyone": those that can actually receive a notification and are allowed to see the
-// chore. Without the visibility check a private chore with no assignee would leak its
-// name to the whole circle, which project-level privacy makes easy to hit (every chore
-// in a private project is private).
-func canReceiveChore(chore *chModel.Chore, userID int, circleMembers []*cModel.UserCircleDetail) bool {
+// CanReceiveChore reports whether userID may be told about chore -- the single
+// visibility rule for anything that puts a chore's name in front of somebody.
+// Stricter than Chore.CanView: a chore whose project was not loaded fails
+// closed, since project privacy cannot be evaluated without it.
+func CanReceiveChore(chore *chModel.Chore, userID int, circleMembers []*cModel.UserCircleDetail) bool {
 	if chore.ProjectID != nil && chore.Project == nil {
 		return false
 	}
@@ -128,11 +224,16 @@ func inRestrictedProject(chore *chModel.Chore) bool {
 	return chore.Project != nil && chore.Project.IsPrivate
 }
 
+// anyoneChoreRecipients returns the circle members to remind about a chore assigned to
+// "Anyone": those that can actually receive a notification and are allowed to see the
+// chore. Without the visibility check a private chore with no assignee would leak its
+// name to the whole circle, which project-level privacy makes easy to hit (every chore
+// in a private project is private).
 func anyoneChoreRecipients(chore *chModel.Chore, circleMembers []*cModel.UserCircleDetail) []*cModel.UserCircleDetail {
 	members := notifiableMembers(circleMembers)
 	recipients := make([]*cModel.UserCircleDetail, 0, len(members))
 	for _, member := range members {
-		if !canReceiveChore(chore, member.UserID, circleMembers) {
+		if !CanReceiveChore(chore, member.UserID, circleMembers) {
 			continue
 		}
 		recipients = append(recipients, member)
@@ -286,6 +387,10 @@ func (n *NotificationPlanner) filterByPreference(c context.Context, chore *chMod
 // preferences is never silently dropped.
 func AllowedByPreference(pref *uModel.UserNotificationPreference, eventType string, priority int) bool {
 	switch eventType {
+	case string(EventTypeOnAssignment):
+		return pref.Enabled(uModel.NotificationEventOnAssignment)
+	case string(EventTypeOnPendingApproval):
+		return pref.Enabled(uModel.NotificationEventOnPendingApproval)
 	case string(EventTypePreDue):
 		return pref.Enabled(uModel.NotificationEventPreDue)
 	case string(EventTypeDue):
@@ -307,8 +412,10 @@ func AllowedByPreference(pref *uModel.UserNotificationPreference, eventType stri
 type EventType string
 
 const (
-	EventTypeUnknown EventType = "unknown"
-	EventTypeDue     EventType = "due"
-	EventTypePreDue  EventType = "pre_due"
-	EventTypeOverdue EventType = "overdue"
+	EventTypeOnAssignment      EventType = "on_assignment"
+	EventTypeOnPendingApproval EventType = "on_pending_approval"
+	EventTypeUnknown           EventType = "unknown"
+	EventTypeDue               EventType = "due"
+	EventTypePreDue            EventType = "pre_due"
+	EventTypeOverdue           EventType = "overdue"
 )

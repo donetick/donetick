@@ -33,6 +33,12 @@ func TestPendingApprovalRecipientsStayInsideTheAudience(t *testing.T) {
 	project.SetMembers([]int{colleague})
 	require.Empty(t, pendingApprovalRecipients(inProject, submitter, circleUsers), "nobody outside the project hears about it")
 
+	// Project privacy cannot be evaluated without the project, so an unloaded one
+	// tells nobody rather than falling back to "any circle member can see it".
+	unloaded := &chModel.Chore{ID: 3, CircleID: 1, CreatedBy: owner, ProjectID: &project.ID,
+		AssignedTo: intPtr(colleague), Assignees: []chModel.ChoreAssignees{{UserID: colleague}}}
+	require.Empty(t, pendingApprovalRecipients(unloaded, submitter, circleUsers))
+
 	public := &chModel.Chore{ID: 2, CircleID: 1, CreatedBy: owner,
 		AssignedTo: intPtr(colleague), Assignees: []chModel.ChoreAssignees{{UserID: colleague}}}
 	require.ElementsMatch(t, []int{outsideAdmin, insideManager}, pendingApprovalRecipients(public, submitter, circleUsers),

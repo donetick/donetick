@@ -20,6 +20,30 @@ func (r *NotificationRepository) DeleteAllChoreNotifications(choreID int) error 
 	return r.db.Where("chore_id = ?", choreID).Delete(&nModel.Notification{}).Error
 }
 
+// DeleteChoreReminders resets due-date reminders without losing a pending assignment
+// event during a subsequent edit. Events for a superseded assignee are discarded.
+// Inspect JSON in Go to keep this portable across SQLite and Postgres.
+func (r *NotificationRepository) DeleteChoreReminders(c context.Context, choreID int, assignedTo *int) error {
+	return r.db.WithContext(c).Transaction(func(tx *gorm.DB) error {
+		var notifications []nModel.Notification
+		if err := tx.Where("chore_id = ?", choreID).Find(&notifications).Error; err != nil {
+			return err
+		}
+		var ids []int
+		for _, notification := range notifications {
+			if notification.RawEvent["type"] == "on_assignment" && !notification.IsSent &&
+				assignedTo != nil && notification.UserID == *assignedTo {
+				continue
+			}
+			ids = append(ids, notification.ID)
+		}
+		if len(ids) == 0 {
+			return nil
+		}
+		return tx.Where("id IN ?", ids).Delete(&nModel.Notification{}).Error
+	})
+}
+
 func (r *NotificationRepository) BatchInsertNotifications(notifications []*nModel.Notification) error {
 	return r.db.Create(&notifications).Error
 }

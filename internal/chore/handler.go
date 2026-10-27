@@ -663,8 +663,14 @@ func (h *Handler) CreateChore(c *gin.Context) {
 		c.JSON(500, gin.H{"error": "Failed to reload created chore"})
 		return
 	}
+	// Copy Gin's pooled context before leaving the handler and detach request
+	// cancellation so notification planning can finish after the response.
+	notificationContext := context.WithoutCancel(c.Copy())
 	go func() {
-		h.nPlanner.GenerateNotifications(c, eventChore)
+		ctx, cancel := context.WithTimeout(notificationContext, 30*time.Second)
+		defer cancel()
+		h.nPlanner.GenerateNotifications(ctx, eventChore)
+		h.nPlanner.GenerateAssignmentNotification(ctx, eventChore, nil)
 	}()
 
 	h.eventProducer.ChoreCreated(c, currentUser.WebhookURL, eventChore, &currentUser.User)
@@ -1008,8 +1014,12 @@ func (h *Handler) EditChore(c *gin.Context) {
 		c.JSON(500, gin.H{"error": "Failed to reload updated chore"})
 		return
 	}
+	notificationContext := context.WithoutCancel(c.Copy())
 	go func() {
-		h.nPlanner.GenerateNotifications(c, eventChore)
+		ctx, cancel := context.WithTimeout(notificationContext, 30*time.Second)
+		defer cancel()
+		h.nPlanner.GenerateNotifications(ctx, eventChore)
+		h.nPlanner.GenerateAssignmentNotification(ctx, eventChore, oldChore.AssignedTo)
 	}()
 
 	// Broadcast real-time chore update event
@@ -1419,6 +1429,9 @@ func (h *Handler) UpdateAssignee(c *gin.Context) {
 		})
 		return
 	}
+
+	h.nPlanner.GenerateNotifications(c, updatedChore)
+	h.nPlanner.GenerateAssignmentNotification(c, updatedChore, chore.AssignedTo)
 
 	// Broadcast real-time assignee update event
 	if h.realTimeService != nil {
@@ -2507,13 +2520,9 @@ func (h *Handler) CompleteChore(c *gin.Context) {
 			broadcaster.BroadcastChoreUpdated(updatedChore, &effectiveUser.User, changes, note)
 		}
 
-		h.notifyApproversOfPendingApproval(c, chore, &effectiveUser.User, circleUsers)
-
-		completerName := effectiveUser.DisplayName
-		if completerName == "" {
-			completerName = effectiveUser.Username
-		}
-		h.notifyAdminsOfPendingApproval(c, actualUser.CircleID, completerName, updatedChore)
+		// updatedChore, not chore: the reloaded row carries the status and
+		// relations the recipients are decided from.
+		h.notifyApproversOfPendingApproval(c, updatedChore, &effectiveUser.User, circleUsers)
 
 		c.JSON(200, gin.H{
 			"res":     updatedChore,
@@ -2554,6 +2563,7 @@ func (h *Handler) CompleteChore(c *gin.Context) {
 	// 	h.notifier.SendChoreCompletion(c, chore, effectiveUser)
 	// }()
 	h.nPlanner.GenerateNotifications(c, updatedChore)
+	h.nPlanner.GenerateAssignmentNotification(c, updatedChore, chore.AssignedTo)
 	h.eventProducer.ChoreCompleted(c, effectiveUser.WebhookURL, chore, &effectiveUser.User)
 	if h.realTimeService != nil {
 		broadcaster := h.realTimeService.GetEventBroadcaster()
@@ -3577,49 +3587,6 @@ func (h *Handler) DeleteTimeSession(c *gin.Context) {
 	}
 }
 
-// notifyAdminsOfPendingApproval fans out one Notification row per admin/manager's
-// registered delivery target when a completion is submitted for approval —
-// same shape used by reward.notifyAdminsOfRedemptionRequest for redemption
-// requests, and the same notifiableMembers filtering chore reminders already
-// apply (active member, has a configured platform + target). See issue #456.
-func (h *Handler) notifyAdminsOfPendingApproval(c *gin.Context, circleID int, completerName string, chore *chModel.Chore) {
-	circleUsers, err := h.circleRepo.GetCircleUsers(c, circleID)
-	if err != nil {
-		logging.FromContext(c).Error("Failed to fetch circle users for approval notification", "error", err)
-		return
-	}
-
-	text := fmt.Sprintf("%s marked \"%s\" done — needs your approval", completerName, chore.Name)
-	now := time.Now().UTC()
-
-	var notifications []*nModel.Notification
-	for _, member := range circleUsers {
-		if !(member.Role == circle.UserRoleAdmin || member.Role == circle.UserRoleManager) {
-			continue
-		}
-		if !member.IsActive || member.NotificationType == nModel.NotificationPlatformNone || member.TargetID == "" {
-			continue
-		}
-		notifications = append(notifications, &nModel.Notification{
-			ChoreID:      chore.ID,
-			CircleID:     circleID,
-			UserID:       member.UserID,
-			TargetID:     member.TargetID,
-			Text:         text,
-			TypeID:       member.NotificationType,
-			ScheduledFor: now,
-			CreatedAt:    now,
-		})
-	}
-
-	if len(notifications) == 0 {
-		return
-	}
-	if err := h.nRepo.BatchInsertNotifications(notifications); err != nil {
-		logging.FromContext(c).Error("Failed to insert approval-pending notifications", "error", err)
-	}
-}
-
 // ApproveChore godoc
 //
 //	@Summary		Approve a chore completion
@@ -3797,6 +3764,7 @@ func (h *Handler) ApproveChore(c *gin.Context) {
 	}
 
 	h.nPlanner.GenerateNotifications(c, updatedChore)
+	h.nPlanner.GenerateAssignmentNotification(c, updatedChore, chore.AssignedTo)
 	h.eventProducer.ChoreCompleted(c, currentUser.WebhookURL, chore, &currentUser.User)
 
 	// Broadcast real-time chore approved event
@@ -4501,16 +4469,21 @@ func (h *Handler) SendNudgeNotification(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-// notifyApproversOfPendingApproval pushes a notification to the admins and
-// managers who can act on a completion that is waiting for approval. Approvers
-// tied to the task (its creator or an assignee) are preferred; if none of them
-// can approve, every admin and manager in the circle is notified so the request
-// is not left stranded. Failures are logged only: the submission already
-// succeeded.
+// notifyApproversOfPendingApproval tells the admins and managers who can act on
+// a completion that it is waiting for approval. Approvers tied to the task (its
+// creator or an assignee) are preferred; if none of them can approve, every
+// admin and manager in the circle is notified so the request is not left
+// stranded. Failures are logged only: the submission already succeeded.
+//
+// This is the only pending-approval notification path, so each approver hears
+// about it exactly once: registered devices get an immediate push, and a
+// configured legacy target (Telegram/Discord/Pushover, or FCM when the user has
+// no devices) gets a queued row -- the same no-double-push split
+// NotificationPlanner.GenerateAssignmentNotification uses.
 func (h *Handler) notifyApproversOfPendingApproval(c context.Context, chore *chModel.Chore, submittedBy *uModel.User, circleUsers []*circle.UserCircleDetail) {
 	log := logging.FromContext(c)
 
-	approverIDs := pendingApprovalRecipients(chore, submittedBy, circleUsers)
+	approverIDs := h.pendingApprovalAudience(c, chore, submittedBy, circleUsers)
 	if len(approverIDs) == 0 {
 		return
 	}
@@ -4519,24 +4492,100 @@ func (h *Handler) notifyApproversOfPendingApproval(c context.Context, chore *chM
 	if submitterName == "" {
 		submitterName = submittedBy.Username
 	}
-
-	payload := fcmService.FCMNotificationPayload{
-		Title: "Approval Needed",
-		Body:  fmt.Sprintf("%s completed '%s' and is waiting for your approval", submitterName, chore.Name),
-		Data: map[string]string{
-			"type":         "chore_pending_approval",
-			"chore_id":     fmt.Sprintf("%d", chore.ID),
-			"chore_name":   chore.Name,
-			"from_user_id": fmt.Sprintf("%d", submittedBy.ID),
-			"from_user":    submitterName,
-		},
+	title := "Approval Needed"
+	body := fmt.Sprintf("%s completed '%s' and is waiting for your approval", submitterName, chore.Name)
+	data := map[string]string{
+		"type":         "chore_pending_approval",
+		"chore_id":     fmt.Sprintf("%d", chore.ID),
+		"chore_name":   chore.Name,
+		"from_user_id": fmt.Sprintf("%d", submittedBy.ID),
+		"from_user":    submitterName,
 	}
 
-	devices := h.pushSender.SendToUsers(c, approverIDs, payload)
+	payload := fcmService.FCMNotificationPayload{Title: title, Body: body, Data: data}
+	now := time.Now().UTC()
+	devices := 0
+	var queued []*nModel.Notification
+
+	for _, member := range circleUsers {
+		if !approverIDs[member.UserID] {
+			continue
+		}
+		tokens, err := h.deviceRepo.GetActiveDeviceTokens(c, member.UserID)
+		if err != nil {
+			log.Errorw("Failed to load approver push devices", "error", err, "chore_id", chore.ID, "user_id", member.UserID)
+		}
+		if len(tokens) > 0 {
+			sent, err := h.pushSender.SendToDeviceTokens(c, "approval", tokens, payload)
+			if err != nil {
+				log.Warnw("Failed to push pending approval notification", "error", err, "chore_id", chore.ID, "user_id", member.UserID)
+			}
+			devices += sent
+		}
+
+		// Only non-FCM channels are additive here. A legacy FCM target would
+		// repeat the push above, so it stays a fallback for approvers with no
+		// registered device.
+		if member.NotificationType == nModel.NotificationPlatformNone || member.TargetID == "" {
+			continue
+		}
+		if member.NotificationType == nModel.NotificationPlatformFCM && len(tokens) > 0 {
+			continue
+		}
+		queued = append(queued, &nModel.Notification{
+			ChoreID:      chore.ID,
+			CircleID:     chore.CircleID,
+			UserID:       member.UserID,
+			TargetID:     member.TargetID,
+			TypeID:       member.NotificationType,
+			Text:         fmt.Sprintf("%s marked \"%s\" done — needs your approval", submitterName, chore.Name),
+			ScheduledFor: now,
+			CreatedAt:    now,
+			RawEvent: map[string]interface{}{
+				"id": chore.ID, "type": nps.EventTypeOnPendingApproval, "name": chore.Name,
+				"payload": map[string]interface{}{"title": title, "body": body, "data": data},
+			},
+		})
+	}
+
+	if len(queued) > 0 {
+		if err := h.nRepo.BatchInsertNotifications(queued); err != nil {
+			log.Errorw("Failed to queue pending approval notifications", "error", err, "chore_id", chore.ID)
+		}
+	}
+
 	log.Debugw("Pending approval notification sent",
 		"chore_id", chore.ID,
 		"approvers", len(approverIDs),
-		"devices", devices)
+		"devices", devices,
+		"queued", len(queued))
+}
+
+// pendingApprovalAudience narrows pendingApprovalRecipients to the approvers who
+// actually want to hear about it. A failure to load preferences leaves everyone
+// in rather than dropping an approval request somebody is waiting on, matching
+// Scheduler.pendingNotificationPreferences.
+func (h *Handler) pendingApprovalAudience(c context.Context, chore *chModel.Chore, submittedBy *uModel.User, circleUsers []*circle.UserCircleDetail) map[int]bool {
+	recipients := pendingApprovalRecipients(chore, submittedBy, circleUsers)
+	audience := make(map[int]bool, len(recipients))
+	for _, userID := range recipients {
+		audience[userID] = true
+	}
+	if len(audience) == 0 {
+		return audience
+	}
+
+	prefs, err := h.uRepo.GetNotificationPreferences(c, recipients)
+	if err != nil {
+		logging.FromContext(c).Errorw("Error loading approver notification preferences, skipping preference gating", "error", err, "chore_id", chore.ID)
+		return audience
+	}
+	for _, userID := range recipients {
+		if !prefs[userID].Enabled(uModel.NotificationEventOnPendingApproval) {
+			delete(audience, userID)
+		}
+	}
+	return audience
 }
 
 // pendingApprovalRecipients picks who is told about a completion waiting for
@@ -4544,7 +4593,8 @@ func (h *Handler) notifyApproversOfPendingApproval(c context.Context, chore *chM
 // assignee), or every active admin and manager when none of those can approve.
 // Only people who can see the chore count, so its name never reaches anyone
 // outside a private chore or a restricted project, who could not approve it
-// anyway.
+// anyway -- using the same visibility rule as the notification planner, which
+// also fails closed when the chore's project was not loaded.
 func pendingApprovalRecipients(chore *chModel.Chore, submittedBy *uModel.User, circleUsers []*circle.UserCircleDetail) []int {
 	relatedToChore := map[int]bool{chore.CreatedBy: true}
 	if chore.AssignedTo != nil {
@@ -4561,7 +4611,7 @@ func pendingApprovalRecipients(chore *chModel.Chore, submittedBy *uModel.User, c
 		if user.UserID == submittedBy.ID || !user.IsActive || !user.IsManagerOrAdmin() || seen[user.UserID] {
 			continue
 		}
-		if !chore.CanView(user.UserID, circleUsers) {
+		if !nps.CanReceiveChore(chore, user.UserID, circleUsers) {
 			continue
 		}
 		seen[user.UserID] = true

@@ -20,6 +20,11 @@ const (
 type NotificationEventType string
 
 const (
+	// NotificationEventOnAssignment notifies a user when they become the assigned user.
+	NotificationEventOnAssignment NotificationEventType = "on_assignment"
+	// NotificationEventOnPendingApproval tells an approver (admin/manager) that
+	// somebody's completion is waiting on them.
+	NotificationEventOnPendingApproval NotificationEventType = "on_pending_approval"
 	// NotificationEventPreDue reminds before a chore is due.
 	NotificationEventPreDue NotificationEventType = "pre_due"
 	// NotificationEventDue reminds at/around the moment a chore becomes due.
@@ -48,44 +53,54 @@ type NotificationOverrides map[NotificationEventType]bool
 // once a user leaves the named profiles).
 var profileDefaults = map[NotificationProfile]NotificationOverrides{
 	NotificationProfileBalanced: {
-		NotificationEventPreDue:          true,
-		NotificationEventDue:             true,
-		NotificationEventOverdueFollowup: true,
-		NotificationEventEscalation:      false,
-		NotificationEventDailyDigest:     true,
-		NotificationEventWeeklyDigest:    false,
+		NotificationEventOnAssignment:      true,
+		NotificationEventOnPendingApproval: true,
+		NotificationEventPreDue:            true,
+		NotificationEventDue:               true,
+		NotificationEventOverdueFollowup:   true,
+		NotificationEventEscalation:        false,
+		NotificationEventDailyDigest:       true,
+		NotificationEventWeeklyDigest:      false,
 	},
 	NotificationProfilePlanner: {
-		NotificationEventPreDue:          false,
-		NotificationEventDue:             true,
-		NotificationEventOverdueFollowup: false,
-		NotificationEventEscalation:      false,
-		NotificationEventDailyDigest:     true,
-		NotificationEventWeeklyDigest:    true,
+		NotificationEventOnAssignment:      true,
+		NotificationEventOnPendingApproval: true,
+		NotificationEventPreDue:            false,
+		NotificationEventDue:               true,
+		NotificationEventOverdueFollowup:   false,
+		NotificationEventEscalation:        false,
+		NotificationEventDailyDigest:       true,
+		NotificationEventWeeklyDigest:      true,
 	},
 	NotificationProfileJustInTime: {
-		NotificationEventPreDue:          false,
-		NotificationEventDue:             true,
-		NotificationEventOverdueFollowup: false,
-		NotificationEventEscalation:      false,
-		NotificationEventDailyDigest:     false,
-		NotificationEventWeeklyDigest:    false,
+		NotificationEventOnAssignment:      true,
+		NotificationEventOnPendingApproval: true,
+		NotificationEventPreDue:            false,
+		NotificationEventDue:               true,
+		NotificationEventOverdueFollowup:   false,
+		NotificationEventEscalation:        false,
+		NotificationEventDailyDigest:       false,
+		NotificationEventWeeklyDigest:      false,
 	},
 	NotificationProfilePersistent: {
-		NotificationEventPreDue:          false,
-		NotificationEventDue:             true,
-		NotificationEventOverdueFollowup: true,
-		NotificationEventEscalation:      true,
-		NotificationEventDailyDigest:     true,
-		NotificationEventWeeklyDigest:    false,
+		NotificationEventOnAssignment:      true,
+		NotificationEventOnPendingApproval: true,
+		NotificationEventPreDue:            false,
+		NotificationEventDue:               true,
+		NotificationEventOverdueFollowup:   true,
+		NotificationEventEscalation:        true,
+		NotificationEventDailyDigest:       true,
+		NotificationEventWeeklyDigest:      false,
 	},
 	NotificationProfileQuiet: {
-		NotificationEventPreDue:          false,
-		NotificationEventDue:             false,
-		NotificationEventOverdueFollowup: false,
-		NotificationEventEscalation:      true,
-		NotificationEventDailyDigest:     false,
-		NotificationEventWeeklyDigest:    false,
+		NotificationEventOnAssignment:      false,
+		NotificationEventOnPendingApproval: false,
+		NotificationEventPreDue:            false,
+		NotificationEventDue:               false,
+		NotificationEventOverdueFollowup:   false,
+		NotificationEventEscalation:        true,
+		NotificationEventDailyDigest:       false,
+		NotificationEventWeeklyDigest:      false,
 	},
 }
 

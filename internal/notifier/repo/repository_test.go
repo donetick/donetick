@@ -24,6 +24,31 @@ func newNotificationTestRepo(t *testing.T) (*NotificationRepository, *gorm.DB) {
 	return NewNotificationRepository(db), db
 }
 
+func TestDeleteChoreRemindersPreservesOnlyCurrentPendingAssignment(t *testing.T) {
+	repo, db := newNotificationTestRepo(t)
+	ctx := context.Background()
+	userID := 2
+	rows := []*nModel.Notification{
+		{ChoreID: 1, UserID: userID, RawEvent: nModel.JSONB{"type": "on_assignment"}},
+		{ChoreID: 1, UserID: 3, RawEvent: nModel.JSONB{"type": "on_assignment"}},
+		{ChoreID: 1, UserID: userID, IsSent: true, RawEvent: nModel.JSONB{"type": "on_assignment"}},
+		{ChoreID: 1, UserID: userID, RawEvent: nModel.JSONB{"type": "due"}},
+		{ChoreID: 2, UserID: 3, RawEvent: nModel.JSONB{"type": "due"}},
+	}
+	require.NoError(t, repo.BatchInsertNotifications(rows))
+	require.NoError(t, repo.DeleteChoreReminders(ctx, 1, &userID))
+	var remaining []nModel.Notification
+	require.NoError(t, db.Order("id").Find(&remaining).Error)
+	require.Len(t, remaining, 2)
+	require.Equal(t, rows[0].ID, remaining[0].ID)
+	require.Equal(t, rows[4].ID, remaining[1].ID)
+	require.NoError(t, repo.DeleteChoreReminders(ctx, 1, nil))
+	remaining = nil
+	require.NoError(t, db.Find(&remaining).Error)
+	require.Len(t, remaining, 1)
+	require.Equal(t, 2, remaining[0].ChoreID)
+}
+
 // TestGetPendingNotificationSuppressesWebhookForDigests checks that a digest
 // notification (negative, sentinel chore_id -- it isn't about one real chore)
 // never gets a webhook_url, even when its circle has one configured, while an

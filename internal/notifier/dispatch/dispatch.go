@@ -123,7 +123,7 @@ func (d *Dispatcher) NotifyUsers(c context.Context, req Request, audience []*cMo
 		}
 		// A legacy FCM target would repeat the push above, so it is only a
 		// fallback for recipients with no registered device -- the same rule
-		// NotificationPlanner.GenerateAssignmentNotification applies.
+		// NotificationPlanner's assignment delivery applies.
 		if recipient.NotificationType == nModel.NotificationPlatformFCM && len(tokens) > 0 {
 			continue
 		}

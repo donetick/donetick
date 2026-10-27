@@ -22,7 +22,7 @@ func TestAssignmentNotificationLifecycle(t *testing.T) {
 	chore := &chModel.Chore{Name: "No due date", CircleID: user.CircleID, AssignedTo: &user.ID, CreatedBy: user.ID, IsActive: true}
 	require.NoError(t, db.Create(chore).Error)
 	// Assignment is independent of the per-task due-date reminder switch/templates.
-	require.True(t, planner.GenerateAssignmentNotification(ctx, chore, nil))
+	require.True(t, planner.GenerateChoreNotifications(ctx, chore, nil))
 	var rows []nModel.Notification
 	require.NoError(t, db.Where("chore_id = ?", chore.ID).Find(&rows).Error)
 	require.Len(t, rows, 1)
@@ -33,15 +33,14 @@ func TestAssignmentNotificationLifecycle(t *testing.T) {
 	payload := rows[0].RawEvent["payload"].(map[string]interface{})
 	require.Equal(t, "on_assignment", payload["data"].(map[string]interface{})["type"])
 	// Unrelated edits must neither duplicate nor delete a pending assignment event.
-	require.True(t, planner.GenerateNotifications(ctx, chore))
-	require.True(t, planner.GenerateAssignmentNotification(ctx, chore, &user.ID))
+	require.True(t, planner.GenerateChoreNotifications(ctx, chore, &user.ID))
 	rows = nil
 	require.NoError(t, db.Where("chore_id = ?", chore.ID).Find(&rows).Error)
 	require.Len(t, rows, 1)
 	// Removing the assignment cancels the pending event to the previous assignee.
-	chore.AssignedTo = nil
-	require.True(t, planner.GenerateNotifications(ctx, chore))
-	require.True(t, planner.GenerateAssignmentNotification(ctx, chore, &user.ID))
+	require.NoError(t, db.Model(chore).Update("assigned_to", nil).Error)
+	require.NoError(t, db.First(chore, chore.ID).Error)
+	require.True(t, planner.GenerateChoreNotifications(ctx, chore, &user.ID))
 	rows = nil
 	require.NoError(t, db.Where("chore_id = ?", chore.ID).Find(&rows).Error)
 	require.Empty(t, rows)
@@ -93,7 +92,7 @@ func TestAssignmentNotificationPreferenceAndVisibility(t *testing.T) {
 			case "unchanged":
 				previous = &user.ID
 			}
-			require.True(t, planner.GenerateAssignmentNotification(ctx, chore, previous))
+			require.True(t, planner.generateAssignmentNotification(ctx, chore, previous))
 			var count int64
 			require.NoError(t, db.Model(&nModel.Notification{}).Count(&count).Error)
 			expected := map[string]int64{

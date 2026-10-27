@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	chModel "donetick.com/core/internal/chore/model"
@@ -21,6 +22,8 @@ type NotificationPlanner struct {
 	cRepo      *cRepo.CircleRepository
 	uRepo      *uRepo.UserRepository
 	deviceRepo *dRepo.DeviceRepository
+	// Bounded, per-task serialization for this planner (shared by all handlers).
+	planningLocks [64]sync.Mutex
 }
 
 func NewNotificationPlanner(nr *nRepo.NotificationRepository, cr *cRepo.CircleRepository, ur *uRepo.UserRepository, dr *dRepo.DeviceRepository) *NotificationPlanner {
@@ -31,7 +34,40 @@ func NewNotificationPlanner(nr *nRepo.NotificationRepository, cr *cRepo.CircleRe
 	}
 }
 
+// GenerateChoreNotifications plans reminders and assignment events as one ordered
+// operation. Never split these across jobs: an older job could otherwise delete
+// the newer assignment or insert a notification for a superseded assignee.
+func (n *NotificationPlanner) GenerateChoreNotifications(c context.Context, chore *chModel.Chore, previousAssignee *int) bool {
+	return n.planCurrentChore(c, chore, func() bool {
+		return n.generateNotifications(c, chore) && n.generateAssignmentNotification(c, chore, previousAssignee)
+	})
+}
+
 func (n *NotificationPlanner) GenerateNotifications(c context.Context, chore *chModel.Chore) bool {
+	return n.planCurrentChore(c, chore, func() bool { return n.generateNotifications(c, chore) })
+}
+
+func (n *NotificationPlanner) planCurrentChore(c context.Context, chore *chModel.Chore, plan func() bool) bool {
+	lock := &n.planningLocks[uint(chore.ID)%uint(len(n.planningLocks))]
+	lock.Lock()
+	defer lock.Unlock()
+
+	// Check after acquiring the lock, since another job may have planned a newer
+	// revision while this one was waiting. If a mutation happens during planning,
+	// its job must wait for this lock and will replace this plan afterwards.
+	current, err := n.nRepo.IsCurrentChore(c, chore)
+	if err != nil {
+		logging.FromContext(c).Errorw("Failed to check chore notification revision", "error", err, "chore_id", chore.ID)
+		return false
+	}
+	if !current {
+		logging.FromContext(c).Debugw("Skipping stale chore notification plan", "chore_id", chore.ID)
+		return true
+	}
+	return plan()
+}
+
+func (n *NotificationPlanner) generateNotifications(c context.Context, chore *chModel.Chore) bool {
 	log := logging.FromContext(c)
 	circleMembers, err := n.cRepo.GetCircleUsers(c, chore.CircleID)
 	if err != nil {
@@ -53,7 +89,15 @@ func (n *NotificationPlanner) GenerateNotifications(c context.Context, chore *ch
 	if chore.IsActive && assignedUser != nil && assignedUser.IsActive && CanReceiveChore(chore, assignedUser.UserID, circleMembers) {
 		assignmentRecipient = chore.AssignedTo
 	}
-	if err := n.nRepo.DeleteChoreReminders(c, chore.ID, assignmentRecipient); err != nil {
+	var approvalRecipients []int
+	if chore.Status == chModel.ChoreStatusPendingApproval {
+		for _, member := range circleMembers {
+			if member.IsActive && member.IsManagerOrAdmin() && CanReceiveChore(chore, member.UserID, circleMembers) {
+				approvalRecipients = append(approvalRecipients, member.UserID)
+			}
+		}
+	}
+	if err := n.nRepo.DeleteChoreReminders(c, chore.ID, assignmentRecipient, approvalRecipients); err != nil {
 		log.Error("Error clearing chore reminders", "error", err)
 		return false
 	}
@@ -97,10 +141,11 @@ func (n *NotificationPlanner) GenerateNotifications(c context.Context, chore *ch
 	return true
 }
 
-// GenerateAssignmentNotification queues an event independently of due-date reminders.
+// generateAssignmentNotification queues an event independently of due-date reminders.
+// Production callers use GenerateChoreNotifications to serialize it with reminder cleanup.
 // Only the current assignee is notified, and ordinary edits / unchanged rotations
 // do not produce another event. A nil previous assignee represents task creation.
-func (n *NotificationPlanner) GenerateAssignmentNotification(c context.Context, chore *chModel.Chore, previousAssignee *int) bool {
+func (n *NotificationPlanner) generateAssignmentNotification(c context.Context, chore *chModel.Chore, previousAssignee *int) bool {
 	log := logging.FromContext(c)
 	if chore.AssignedTo == nil || *chore.AssignedTo <= 0 || !chore.IsActive ||
 		(previousAssignee != nil && *previousAssignee == *chore.AssignedTo) {

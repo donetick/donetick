@@ -36,17 +36,47 @@ func TestDeleteChoreRemindersPreservesOnlyCurrentPendingAssignment(t *testing.T)
 		{ChoreID: 2, UserID: 3, RawEvent: nModel.JSONB{"type": "due"}},
 	}
 	require.NoError(t, repo.BatchInsertNotifications(rows))
-	require.NoError(t, repo.DeleteChoreReminders(ctx, 1, &userID))
+	require.NoError(t, repo.DeleteChoreReminders(ctx, 1, &userID, nil))
 	var remaining []nModel.Notification
 	require.NoError(t, db.Order("id").Find(&remaining).Error)
 	require.Len(t, remaining, 2)
 	require.Equal(t, rows[0].ID, remaining[0].ID)
 	require.Equal(t, rows[4].ID, remaining[1].ID)
-	require.NoError(t, repo.DeleteChoreReminders(ctx, 1, nil))
+	require.NoError(t, repo.DeleteChoreReminders(ctx, 1, nil, nil))
 	remaining = nil
 	require.NoError(t, db.Find(&remaining).Error)
 	require.Len(t, remaining, 1)
 	require.Equal(t, 2, remaining[0].ChoreID)
+}
+
+func TestDeleteChoreRemindersPreservesPendingApprovalUntilResolved(t *testing.T) {
+	for _, pending := range []bool{true, false} {
+		t.Run(map[bool]string{true: "pending", false: "resolved"}[pending], func(t *testing.T) {
+			repo, db := newNotificationTestRepo(t)
+			rows := []*nModel.Notification{
+				{ChoreID: 1, UserID: 2, RawEvent: nModel.JSONB{"type": "on_pending_approval"}},
+				{ChoreID: 1, UserID: 3, RawEvent: nModel.JSONB{"type": "on_pending_approval"}},
+				{ChoreID: 1, UserID: 4, IsSent: true, RawEvent: nModel.JSONB{"type": "on_pending_approval"}},
+				{ChoreID: 1, UserID: 2, RawEvent: nModel.JSONB{"type": "due"}},
+				{ChoreID: 1, UserID: 5, RawEvent: nModel.JSONB{"type": "on_pending_approval"}}, // lost access
+			}
+			require.NoError(t, repo.BatchInsertNotifications(rows))
+			var approvers []int
+			if pending {
+				approvers = []int{2, 3}
+			}
+			require.NoError(t, repo.DeleteChoreReminders(context.Background(), 1, nil, approvers))
+			var remaining []nModel.Notification
+			require.NoError(t, db.Order("id").Find(&remaining).Error)
+			if pending {
+				require.Len(t, remaining, 2)
+				require.Equal(t, rows[0].ID, remaining[0].ID)
+				require.Equal(t, rows[1].ID, remaining[1].ID)
+			} else {
+				require.Empty(t, remaining)
+			}
+		})
+	}
 }
 
 // TestGetPendingNotificationSuppressesWebhookForDigests checks that a digest

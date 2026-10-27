@@ -672,8 +672,7 @@ func (h *Handler) CreateChore(c *gin.Context) {
 	go func() {
 		ctx, cancel := context.WithTimeout(notificationContext, 30*time.Second)
 		defer cancel()
-		h.nPlanner.GenerateNotifications(ctx, eventChore)
-		h.nPlanner.GenerateAssignmentNotification(ctx, eventChore, nil)
+		h.nPlanner.GenerateChoreNotifications(ctx, eventChore, nil)
 	}()
 
 	h.eventProducer.ChoreCreated(c, currentUser.WebhookURL, eventChore, &currentUser.User)
@@ -1021,8 +1020,7 @@ func (h *Handler) EditChore(c *gin.Context) {
 	go func() {
 		ctx, cancel := context.WithTimeout(notificationContext, 30*time.Second)
 		defer cancel()
-		h.nPlanner.GenerateNotifications(ctx, eventChore)
-		h.nPlanner.GenerateAssignmentNotification(ctx, eventChore, oldChore.AssignedTo)
+		h.nPlanner.GenerateChoreNotifications(ctx, eventChore, oldChore.AssignedTo)
 	}()
 
 	// Broadcast real-time chore update event
@@ -1433,8 +1431,7 @@ func (h *Handler) UpdateAssignee(c *gin.Context) {
 		return
 	}
 
-	h.nPlanner.GenerateNotifications(c, updatedChore)
-	h.nPlanner.GenerateAssignmentNotification(c, updatedChore, chore.AssignedTo)
+	h.nPlanner.GenerateChoreNotifications(c, updatedChore, chore.AssignedTo)
 
 	// Broadcast real-time assignee update event
 	if h.realTimeService != nil {
@@ -2565,8 +2562,7 @@ func (h *Handler) CompleteChore(c *gin.Context) {
 
 	// 	h.notifier.SendChoreCompletion(c, chore, effectiveUser)
 	// }()
-	h.nPlanner.GenerateNotifications(c, updatedChore)
-	h.nPlanner.GenerateAssignmentNotification(c, updatedChore, chore.AssignedTo)
+	h.nPlanner.GenerateChoreNotifications(c, updatedChore, chore.AssignedTo)
 	h.eventProducer.ChoreCompleted(c, effectiveUser.WebhookURL, chore, &effectiveUser.User)
 	if h.realTimeService != nil {
 		broadcaster := h.realTimeService.GetEventBroadcaster()
@@ -3766,8 +3762,7 @@ func (h *Handler) ApproveChore(c *gin.Context) {
 		h.stRepo.ResetSubtasksCompletion(c, updatedChore.ID)
 	}
 
-	h.nPlanner.GenerateNotifications(c, updatedChore)
-	h.nPlanner.GenerateAssignmentNotification(c, updatedChore, chore.AssignedTo)
+	h.nPlanner.GenerateChoreNotifications(c, updatedChore, chore.AssignedTo)
 	h.eventProducer.ChoreCompleted(c, currentUser.WebhookURL, chore, &currentUser.User)
 
 	// Broadcast real-time chore approved event
@@ -4482,7 +4477,7 @@ func (h *Handler) SendNudgeNotification(c *gin.Context) {
 // about it exactly once: registered devices get an immediate push, and a
 // configured legacy target (Telegram/Discord/Pushover, or FCM when the user has
 // no devices) gets a queued row -- the same no-double-push split
-// NotificationPlanner.GenerateAssignmentNotification uses.
+// NotificationPlanner's assignment delivery uses.
 func (h *Handler) notifyApproversOfPendingApproval(c context.Context, chore *chModel.Chore, submittedBy *uModel.User, circleUsers []*circle.UserCircleDetail) {
 	approvers := pendingApprovalRecipients(chore, submittedBy, circleUsers)
 	if len(approvers) == 0 {

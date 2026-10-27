@@ -391,6 +391,8 @@ func AllowedByPreference(pref *uModel.UserNotificationPreference, eventType stri
 		return pref.Enabled(uModel.NotificationEventOnAssignment)
 	case string(EventTypeOnPendingApproval):
 		return pref.Enabled(uModel.NotificationEventOnPendingApproval)
+	case string(EventTypeOnRedemptionRequest):
+		return pref.Enabled(uModel.NotificationEventOnRedemptionRequest)
 	case string(EventTypePreDue):
 		return pref.Enabled(uModel.NotificationEventPreDue)
 	case string(EventTypeDue):
@@ -412,10 +414,11 @@ func AllowedByPreference(pref *uModel.UserNotificationPreference, eventType stri
 type EventType string
 
 const (
-	EventTypeOnAssignment      EventType = "on_assignment"
-	EventTypeOnPendingApproval EventType = "on_pending_approval"
-	EventTypeUnknown           EventType = "unknown"
-	EventTypeDue               EventType = "due"
-	EventTypePreDue            EventType = "pre_due"
-	EventTypeOverdue           EventType = "overdue"
+	EventTypeOnAssignment        EventType = "on_assignment"
+	EventTypeOnPendingApproval   EventType = "on_pending_approval"
+	EventTypeOnRedemptionRequest EventType = "on_redemption_request"
+	EventTypeUnknown             EventType = "unknown"
+	EventTypeDue                 EventType = "due"
+	EventTypePreDue              EventType = "pre_due"
+	EventTypeOverdue             EventType = "overdue"
 )

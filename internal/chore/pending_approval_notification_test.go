@@ -13,6 +13,7 @@ import (
 	cModel "donetick.com/core/internal/circle/model"
 	"donetick.com/core/internal/database"
 	dRepo "donetick.com/core/internal/device/repo"
+	"donetick.com/core/internal/notifier/dispatch"
 	nModel "donetick.com/core/internal/notifier/model"
 	"donetick.com/core/internal/notifier/push"
 	nRepo "donetick.com/core/internal/notifier/repo"
@@ -41,7 +42,7 @@ func newPendingApprovalTestHandler(t *testing.T) (*Handler, *gorm.DB, *uRepo.Use
 
 	// A nil notifier means no push provider is configured, so the immediate push
 	// is a no-op; what the queued rows do is what these tests assert.
-	return &Handler{uRepo: ur, nRepo: nr, deviceRepo: dr, pushSender: push.NewSender(dr, nil)}, db, ur, dr
+	return &Handler{dispatcher: dispatch.NewDispatcher(nr, ur, dr, push.NewSender(dr, nil))}, db, ur, dr
 }
 
 // approvalCircle returns a submitter (plain member) and one admin approver whose
@@ -68,6 +69,9 @@ func queuedApprovalNotifications(t *testing.T, db *gorm.DB) []nModel.Notificatio
 
 // A third-party channel is the approver's only delivery target, so it gets a
 // queued row the scheduler can send.
+// The delivery rules themselves (one message per approver across devices and
+// legacy channels) belong to the dispatcher and are tested there; these cover
+// this path's wiring: wording, event type, and that gating actually applies.
 func TestPendingApprovalNotifiesThirdPartyTarget(t *testing.T) {
 	h, db, _, _ := newPendingApprovalTestHandler(t)
 	submitter := &uModel.User{ID: approvalSubmitterID, DisplayName: "Sam"}
@@ -89,33 +93,6 @@ func TestPendingApprovalNotifiesThirdPartyTarget(t *testing.T) {
 		rows[0].RawEvent["type"].(string), chModel.PriorityNone))
 }
 
-// An approver with registered devices is pushed to directly; a legacy FCM target
-// must not queue a second copy of the same message.
-func TestPendingApprovalDoesNotDoublePushFCMTargets(t *testing.T) {
-	h, db, _, dr := newPendingApprovalTestHandler(t)
-	ctx := context.Background()
-	require.NoError(t, dr.RegisterDeviceToken(ctx, &uModel.UserDeviceToken{
-		UserID: approvalApproverID, DeviceID: "device-1", Token: "fcm-token-1", Platform: "ios"}))
-
-	h.notifyApproversOfPendingApproval(ctx, approvalChore(), &uModel.User{ID: approvalSubmitterID, DisplayName: "Sam"},
-		approvalCircle(nModel.NotificationPlatformFCM, "fcm-token-1"))
-
-	require.Empty(t, queuedApprovalNotifications(t, db), "the device push already reached this approver")
-}
-
-// Without a registered device the legacy FCM target is still the only way to
-// reach the approver, so it stays a fallback.
-func TestPendingApprovalFallsBackToLegacyFCMTargetWithoutDevices(t *testing.T) {
-	h, db, _, _ := newPendingApprovalTestHandler(t)
-
-	h.notifyApproversOfPendingApproval(context.Background(), approvalChore(), &uModel.User{ID: approvalSubmitterID, DisplayName: "Sam"},
-		approvalCircle(nModel.NotificationPlatformFCM, "fcm-token-1"))
-
-	rows := queuedApprovalNotifications(t, db)
-	require.Len(t, rows, 1)
-	require.Equal(t, nModel.NotificationPlatformFCM, rows[0].TypeID)
-}
-
 // An approver who muted approval requests hears nothing on any channel.
 func TestPendingApprovalRespectsNotificationPreference(t *testing.T) {
 	h, db, ur, dr := newPendingApprovalTestHandler(t)
@@ -129,5 +106,4 @@ func TestPendingApprovalRespectsNotificationPreference(t *testing.T) {
 		approvalCircle(nModel.NotificationPlatformTelegram, "chat-1"))
 
 	require.Empty(t, queuedApprovalNotifications(t, db))
-	require.Empty(t, h.pendingApprovalAudience(ctx, approvalChore(), &uModel.User{ID: approvalSubmitterID}, approvalCircle(nModel.NotificationPlatformTelegram, "chat-1")))
 }

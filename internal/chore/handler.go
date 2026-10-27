@@ -23,7 +23,7 @@ import (
 	lModel "donetick.com/core/internal/label/model"
 	lRepo "donetick.com/core/internal/label/repo"
 	"donetick.com/core/internal/notifier"
-	nModel "donetick.com/core/internal/notifier/model"
+	"donetick.com/core/internal/notifier/dispatch"
 	"donetick.com/core/internal/notifier/push"
 	nRepo "donetick.com/core/internal/notifier/repo"
 	nps "donetick.com/core/internal/notifier/service"
@@ -57,6 +57,7 @@ type Handler struct {
 	uRepo           *uRepo.UserRepository
 	deviceRepo      *dRepo.DeviceRepository
 	pushSender      *push.Sender
+	dispatcher      *dispatch.Dispatcher
 	eventProducer   *events.EventsProducer
 	stRepo          *stRepo.SubTasksRepository
 	storageRepo     *storageRepo.StorageRepository
@@ -76,6 +77,7 @@ func NewHandler(cr *chRepo.ChoreRepository, circleRepo *cRepo.CircleRepository, 
 	stoRepo *storageRepo.StorageRepository,
 	signer storage.URLSigner,
 	rts *realtime.RealTimeService,
+	dispatcher *dispatch.Dispatcher,
 	projectRepo *pjRepo.ProjectRepository) *Handler {
 	return &Handler{
 		choreRepo:       cr,
@@ -83,6 +85,7 @@ func NewHandler(cr *chRepo.ChoreRepository, circleRepo *cRepo.CircleRepository, 
 		uRepo:           ur,
 		deviceRepo:      dr,
 		pushSender:      ps,
+		dispatcher:      dispatcher,
 		circleRepo:      circleRepo,
 		notifier:        nt,
 		nPlanner:        np,
@@ -4481,10 +4484,8 @@ func (h *Handler) SendNudgeNotification(c *gin.Context) {
 // no devices) gets a queued row -- the same no-double-push split
 // NotificationPlanner.GenerateAssignmentNotification uses.
 func (h *Handler) notifyApproversOfPendingApproval(c context.Context, chore *chModel.Chore, submittedBy *uModel.User, circleUsers []*circle.UserCircleDetail) {
-	log := logging.FromContext(c)
-
-	approverIDs := h.pendingApprovalAudience(c, chore, submittedBy, circleUsers)
-	if len(approverIDs) == 0 {
+	approvers := pendingApprovalRecipients(chore, submittedBy, circleUsers)
+	if len(approvers) == 0 {
 		return
 	}
 
@@ -4492,100 +4493,25 @@ func (h *Handler) notifyApproversOfPendingApproval(c context.Context, chore *chM
 	if submitterName == "" {
 		submitterName = submittedBy.Username
 	}
-	title := "Approval Needed"
-	body := fmt.Sprintf("%s completed '%s' and is waiting for your approval", submitterName, chore.Name)
-	data := map[string]string{
-		"type":         "chore_pending_approval",
-		"chore_id":     fmt.Sprintf("%d", chore.ID),
-		"chore_name":   chore.Name,
-		"from_user_id": fmt.Sprintf("%d", submittedBy.ID),
-		"from_user":    submitterName,
-	}
 
-	payload := fcmService.FCMNotificationPayload{Title: title, Body: body, Data: data}
-	now := time.Now().UTC()
-	devices := 0
-	var queued []*nModel.Notification
-
-	for _, member := range circleUsers {
-		if !approverIDs[member.UserID] {
-			continue
-		}
-		tokens, err := h.deviceRepo.GetActiveDeviceTokens(c, member.UserID)
-		if err != nil {
-			log.Errorw("Failed to load approver push devices", "error", err, "chore_id", chore.ID, "user_id", member.UserID)
-		}
-		if len(tokens) > 0 {
-			sent, err := h.pushSender.SendToDeviceTokens(c, "approval", tokens, payload)
-			if err != nil {
-				log.Warnw("Failed to push pending approval notification", "error", err, "chore_id", chore.ID, "user_id", member.UserID)
-			}
-			devices += sent
-		}
-
-		// Only non-FCM channels are additive here. A legacy FCM target would
-		// repeat the push above, so it stays a fallback for approvers with no
-		// registered device.
-		if member.NotificationType == nModel.NotificationPlatformNone || member.TargetID == "" {
-			continue
-		}
-		if member.NotificationType == nModel.NotificationPlatformFCM && len(tokens) > 0 {
-			continue
-		}
-		queued = append(queued, &nModel.Notification{
-			ChoreID:      chore.ID,
-			CircleID:     chore.CircleID,
-			UserID:       member.UserID,
-			TargetID:     member.TargetID,
-			TypeID:       member.NotificationType,
-			Text:         fmt.Sprintf("%s marked \"%s\" done — needs your approval", submitterName, chore.Name),
-			ScheduledFor: now,
-			CreatedAt:    now,
-			RawEvent: map[string]interface{}{
-				"id": chore.ID, "type": nps.EventTypeOnPendingApproval, "name": chore.Name,
-				"payload": map[string]interface{}{"title": title, "body": body, "data": data},
-			},
-		})
-	}
-
-	if len(queued) > 0 {
-		if err := h.nRepo.BatchInsertNotifications(queued); err != nil {
-			log.Errorw("Failed to queue pending approval notifications", "error", err, "chore_id", chore.ID)
-		}
-	}
-
-	log.Debugw("Pending approval notification sent",
-		"chore_id", chore.ID,
-		"approvers", len(approverIDs),
-		"devices", devices,
-		"queued", len(queued))
-}
-
-// pendingApprovalAudience narrows pendingApprovalRecipients to the approvers who
-// actually want to hear about it. A failure to load preferences leaves everyone
-// in rather than dropping an approval request somebody is waiting on, matching
-// Scheduler.pendingNotificationPreferences.
-func (h *Handler) pendingApprovalAudience(c context.Context, chore *chModel.Chore, submittedBy *uModel.User, circleUsers []*circle.UserCircleDetail) map[int]bool {
-	recipients := pendingApprovalRecipients(chore, submittedBy, circleUsers)
-	audience := make(map[int]bool, len(recipients))
-	for _, userID := range recipients {
-		audience[userID] = true
-	}
-	if len(audience) == 0 {
-		return audience
-	}
-
-	prefs, err := h.uRepo.GetNotificationPreferences(c, recipients)
-	if err != nil {
-		logging.FromContext(c).Errorw("Error loading approver notification preferences, skipping preference gating", "error", err, "chore_id", chore.ID)
-		return audience
-	}
-	for _, userID := range recipients {
-		if !prefs[userID].Enabled(uModel.NotificationEventOnPendingApproval) {
-			delete(audience, userID)
-		}
-	}
-	return audience
+	h.dispatcher.NotifyUsers(c, dispatch.Request{
+		EventType: nps.EventTypeOnPendingApproval,
+		Priority:  chore.Priority,
+		CircleID:  chore.CircleID,
+		ChoreID:   chore.ID,
+		Subject:   chore.Name,
+		PushTitle: "Approval Needed",
+		PushBody:  fmt.Sprintf("%s completed '%s' and is waiting for your approval", submitterName, chore.Name),
+		PushData: map[string]string{
+			"type":         "chore_pending_approval",
+			"chore_id":     fmt.Sprintf("%d", chore.ID),
+			"chore_name":   chore.Name,
+			"from_user_id": fmt.Sprintf("%d", submittedBy.ID),
+			"from_user":    submitterName,
+		},
+		Text:             fmt.Sprintf("%s marked \"%s\" done — needs your approval", submitterName, chore.Name),
+		IdempotencyScope: "approval",
+	}, approvers)
 }
 
 // pendingApprovalRecipients picks who is told about a completion waiting for
@@ -4595,7 +4521,7 @@ func (h *Handler) pendingApprovalAudience(c context.Context, chore *chModel.Chor
 // outside a private chore or a restricted project, who could not approve it
 // anyway -- using the same visibility rule as the notification planner, which
 // also fails closed when the chore's project was not loaded.
-func pendingApprovalRecipients(chore *chModel.Chore, submittedBy *uModel.User, circleUsers []*circle.UserCircleDetail) []int {
+func pendingApprovalRecipients(chore *chModel.Chore, submittedBy *uModel.User, circleUsers []*circle.UserCircleDetail) []*circle.UserCircleDetail {
 	relatedToChore := map[int]bool{chore.CreatedBy: true}
 	if chore.AssignedTo != nil {
 		relatedToChore[*chore.AssignedTo] = true
@@ -4604,8 +4530,8 @@ func pendingApprovalRecipients(chore *chModel.Chore, submittedBy *uModel.User, c
 		relatedToChore[assignee.UserID] = true
 	}
 
-	related := make([]int, 0, len(circleUsers))
-	fallback := make([]int, 0, len(circleUsers))
+	related := make([]*circle.UserCircleDetail, 0, len(circleUsers))
+	fallback := make([]*circle.UserCircleDetail, 0, len(circleUsers))
 	seen := make(map[int]bool, len(circleUsers))
 	for _, user := range circleUsers {
 		if user.UserID == submittedBy.ID || !user.IsActive || !user.IsManagerOrAdmin() || seen[user.UserID] {
@@ -4615,9 +4541,9 @@ func pendingApprovalRecipients(chore *chModel.Chore, submittedBy *uModel.User, c
 			continue
 		}
 		seen[user.UserID] = true
-		fallback = append(fallback, user.UserID)
+		fallback = append(fallback, user)
 		if relatedToChore[user.UserID] {
-			related = append(related, user.UserID)
+			related = append(related, user)
 		}
 	}
 

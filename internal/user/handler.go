@@ -1230,6 +1230,7 @@ func resolvedNotificationPreference(pref *uModel.UserNotificationPreference) map
 	eventTypes := []uModel.NotificationEventType{
 		uModel.NotificationEventOnAssignment,
 		uModel.NotificationEventOnPendingApproval,
+		uModel.NotificationEventOnRedemptionRequest,
 		uModel.NotificationEventPreDue,
 		uModel.NotificationEventDue,
 		uModel.NotificationEventOverdueFollowup,

@@ -38,8 +38,11 @@ func (r *NotificationRepository) GetPendingNotification(c context.Context, lookb
 	end := time.Now().UTC()
 	if err := r.db.Table("notifications").
 		// Reminders of chores in a project hidden from the circle are not mirrored to
-		// the circle-wide webhook.
-		Select("notifications.*, CASE WHEN projects.is_private = true THEN NULL ELSE circles.webhook_url END as webhook_url").
+		// the circle-wide webhook. Digest notifications (chore_id is a negative
+		// sentinel, see service.DigestChoreIDDaily/Weekly -- they aren't about one
+		// real chore) never are either: they're a push-only summary, not an event
+		// about a specific chore a webhook consumer would expect.
+		Select("notifications.*, CASE WHEN notifications.chore_id < 0 THEN NULL WHEN projects.is_private = true THEN NULL ELSE circles.webhook_url END as webhook_url, COALESCE(chores.priority, 0) as chore_priority").
 		Joins("left join circles on circles.id = notifications.circle_id").
 		Joins("left join chores on chores.id = notifications.chore_id").
 		Joins("left join projects on projects.id = chores.project_id").
@@ -52,4 +55,19 @@ func (r *NotificationRepository) GetPendingNotification(c context.Context, lookb
 
 func (r *NotificationRepository) DeleteSentNotifications(c context.Context, since time.Time) error {
 	return r.db.WithContext(c).Where("is_sent = ? AND scheduled_for < ?", true, since).Delete(&nModel.Notification{}).Error
+}
+
+// ExistsNotification reports whether a notification with this sentinel choreID
+// (a digest run uses a negative sentinel, see service.DigestChoreIDDaily /
+// DigestChoreIDWeekly, since it isn't about one real chore) was already created
+// for userID since the given time. Used to avoid sending the same digest twice
+// if the digest scheduler job runs more than once inside a user's send hour.
+func (r *NotificationRepository) ExistsNotification(c context.Context, userID int, choreID int, since time.Time) (bool, error) {
+	var count int64
+	if err := r.db.WithContext(c).Model(&nModel.Notification{}).
+		Where("user_id = ? AND chore_id = ? AND created_at >= ?", userID, choreID, since).
+		Count(&count).Error; err != nil {
+		return false, err
+	}
+	return count > 0, nil
 }

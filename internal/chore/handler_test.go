@@ -33,6 +33,7 @@ import (
 	tModel "donetick.com/core/internal/thing/model"
 	tRepo "donetick.com/core/internal/thing/repo"
 	uModel "donetick.com/core/internal/user/model"
+	urRepo "donetick.com/core/internal/user/repo"
 )
 
 func TestDueDatesDiffer(t *testing.T) {
@@ -85,7 +86,7 @@ func newCreateChoreTestRouter(t *testing.T) (*gin.Engine, *gorm.DB) {
 		choreRepo:     chRepo.NewChoreRepository(db, cfg),
 		circleRepo:    circleRepository,
 		tRepo:         tRepo.NewThingRepository(db, cfg),
-		nPlanner:      nps.NewNotificationPlanner(nRepo.NewNotificationRepository(db), circleRepository),
+		nPlanner:      nps.NewNotificationPlanner(nRepo.NewNotificationRepository(db), circleRepository, urRepo.NewUserRepository(db, cfg)),
 		eventProducer: eventProducer,
 	}
 
@@ -195,7 +196,7 @@ func newEditChoreTestRouter(t *testing.T) (*gin.Engine, *gorm.DB) {
 		tRepo:         tRepo.NewThingRepository(db, cfg),
 		storage:       storage.NewLocalStorage(cfg),
 		storageRepo:   storageRepo.NewStorageRepository(db, cfg),
-		nPlanner:      nps.NewNotificationPlanner(nRepo.NewNotificationRepository(db), circleRepository),
+		nPlanner:      nps.NewNotificationPlanner(nRepo.NewNotificationRepository(db), circleRepository, urRepo.NewUserRepository(db, cfg)),
 		eventProducer: eventProducer,
 	}
 

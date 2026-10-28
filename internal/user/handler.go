@@ -1234,7 +1234,6 @@ func resolvedNotificationPreference(pref *uModel.UserNotificationPreference) map
 		uModel.NotificationEventPreDue,
 		uModel.NotificationEventDue,
 		uModel.NotificationEventOverdueFollowup,
-		uModel.NotificationEventEscalation,
 		uModel.NotificationEventDailyDigest,
 		uModel.NotificationEventWeeklyDigest,
 	}

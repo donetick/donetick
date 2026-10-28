@@ -129,7 +129,7 @@ func TestUpdateNotificationPreferenceCustomKeepsOverrides(t *testing.T) {
 
 	w := putNotificationPreference(t, h, 5, `{
 		"profile": "custom",
-		"overrides": {"due": true, "escalation": true}
+		"overrides": {"due": true, "overdue_followup": true}
 	}`)
 	if w.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d (body=%s)", w.Code, w.Body.String())
@@ -137,7 +137,7 @@ func TestUpdateNotificationPreferenceCustomKeepsOverrides(t *testing.T) {
 
 	saved, err := h.userRepo.GetNotificationPreference(c, 5)
 	require.NoError(t, err)
-	if !saved.Enabled(uModel.NotificationEventDue) || !saved.Enabled(uModel.NotificationEventEscalation) {
+	if !saved.Enabled(uModel.NotificationEventDue) || !saved.Enabled(uModel.NotificationEventOverdueFollowup) {
 		t.Errorf("expected custom overrides to be kept, got %v", saved.Overrides)
 	}
 	if saved.Enabled(uModel.NotificationEventDailyDigest) {
@@ -191,7 +191,7 @@ func TestUpdateNotificationPreferenceResponseReflectsSavedPreference(t *testing.
 	if resp.Effective["due"] || resp.Effective["daily_digest"] {
 		t.Errorf("expected the response to report the quiet profile's resolved set, got %v", resp.Effective)
 	}
-	if !resp.Effective["escalation"] {
-		t.Errorf("expected quiet to keep escalation on, got %v", resp.Effective)
+	if resp.Effective["overdue_followup"] {
+		t.Errorf("expected quiet to keep overdue follow-up off, got %v", resp.Effective)
 	}
 }

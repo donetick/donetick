@@ -34,10 +34,6 @@ const (
 	NotificationEventDue NotificationEventType = "due"
 	// NotificationEventOverdueFollowup reminds about an unresolved overdue chore.
 	NotificationEventOverdueFollowup NotificationEventType = "overdue_followup"
-	// NotificationEventEscalation is a priority-gated push nudge: it only fires
-	// for high/urgent priority chores (see chModel.PriorityHigh), independent
-	// of whether OverdueFollowup is also enabled.
-	NotificationEventEscalation NotificationEventType = "escalation"
 	// NotificationEventDailyDigest sends one message/day summarizing overdue + upcoming chores.
 	NotificationEventDailyDigest NotificationEventType = "daily_digest"
 	// NotificationEventWeeklyDigest sends one message/week previewing the week ahead.
@@ -62,7 +58,6 @@ var profileDefaults = map[NotificationProfile]NotificationOverrides{
 		NotificationEventPreDue:              true,
 		NotificationEventDue:                 true,
 		NotificationEventOverdueFollowup:     true,
-		NotificationEventEscalation:          false,
 		NotificationEventDailyDigest:         true,
 		NotificationEventWeeklyDigest:        false,
 	},
@@ -73,7 +68,6 @@ var profileDefaults = map[NotificationProfile]NotificationOverrides{
 		NotificationEventPreDue:              false,
 		NotificationEventDue:                 true,
 		NotificationEventOverdueFollowup:     false,
-		NotificationEventEscalation:          false,
 		NotificationEventDailyDigest:         true,
 		NotificationEventWeeklyDigest:        true,
 	},
@@ -84,7 +78,6 @@ var profileDefaults = map[NotificationProfile]NotificationOverrides{
 		NotificationEventPreDue:              false,
 		NotificationEventDue:                 true,
 		NotificationEventOverdueFollowup:     false,
-		NotificationEventEscalation:          false,
 		NotificationEventDailyDigest:         false,
 		NotificationEventWeeklyDigest:        false,
 	},
@@ -95,7 +88,6 @@ var profileDefaults = map[NotificationProfile]NotificationOverrides{
 		NotificationEventPreDue:              false,
 		NotificationEventDue:                 true,
 		NotificationEventOverdueFollowup:     true,
-		NotificationEventEscalation:          true,
 		NotificationEventDailyDigest:         true,
 		NotificationEventWeeklyDigest:        false,
 	},
@@ -106,7 +98,6 @@ var profileDefaults = map[NotificationProfile]NotificationOverrides{
 		NotificationEventPreDue:              false,
 		NotificationEventDue:                 false,
 		NotificationEventOverdueFollowup:     false,
-		NotificationEventEscalation:          true,
 		NotificationEventDailyDigest:         false,
 		NotificationEventWeeklyDigest:        false,
 	},

@@ -55,9 +55,6 @@ type Request struct {
 	// through, so a new kind of notification is never silently dropped -- but it
 	// is also not something a user can turn off, so add a case there for it.
 	EventType nps.EventType
-	// Priority is the chore priority escalation is gated on; leave it at
-	// PriorityNone for notifications that aren't about a chore.
-	Priority int
 	CircleID int
 	// ChoreID links the notification to a chore, and is 0 for subjects that
 	// aren't one (a reward redemption, say).
@@ -161,7 +158,7 @@ func (d *Dispatcher) wantNotification(c context.Context, req Request, audience [
 
 	recipients := make([]*cModel.UserCircleDetail, 0, len(audience))
 	for _, member := range audience {
-		if !nps.AllowedByPreference(prefs[member.UserID], string(req.EventType), req.Priority) {
+		if !nps.AllowedByPreference(prefs[member.UserID], string(req.EventType)) {
 			continue
 		}
 		recipients = append(recipients, member)

@@ -413,7 +413,7 @@ func (n *NotificationPlanner) filterByPreference(c context.Context, chore *chMod
 	filtered := make([]*nModel.Notification, 0, len(notifications))
 	for _, notif := range notifications {
 		eventType, _ := notif.RawEvent["type"].(EventType)
-		if AllowedByPreference(prefs[notif.UserID], string(eventType), chore.Priority) {
+		if AllowedByPreference(prefs[notif.UserID], string(eventType)) {
 			filtered = append(filtered, notif)
 		}
 	}
@@ -421,16 +421,14 @@ func (n *NotificationPlanner) filterByPreference(c context.Context, chore *chMod
 }
 
 // AllowedByPreference resolves whether a single notification should survive the
-// recipient's notification profile. EventTypeOverdue covers both "overdue follow-up"
-// (any priority) and "escalation" (high/urgent priority only, for profiles like Quiet
-// that otherwise mute due/overdue reminders).
+// recipient's notification profile.
 //
 // eventType is the raw string from Notification.RawEvent["type"] rather than a
 // typed value: the scheduler re-checks this at send time, where the event has
 // been through a JSON round-trip and typed constants no longer survive. An
 // unrecognized type is allowed through, so a notification kind that predates
 // preferences is never silently dropped.
-func AllowedByPreference(pref *uModel.UserNotificationPreference, eventType string, priority int) bool {
+func AllowedByPreference(pref *uModel.UserNotificationPreference, eventType string) bool {
 	switch eventType {
 	case string(EventTypeOnAssignment):
 		return pref.Enabled(uModel.NotificationEventOnAssignment)
@@ -443,10 +441,7 @@ func AllowedByPreference(pref *uModel.UserNotificationPreference, eventType stri
 	case string(EventTypeDue):
 		return pref.Enabled(uModel.NotificationEventDue)
 	case string(EventTypeOverdue):
-		if pref.Enabled(uModel.NotificationEventOverdueFollowup) {
-			return true
-		}
-		return pref.Enabled(uModel.NotificationEventEscalation) && priority >= chModel.PriorityHigh
+		return pref.Enabled(uModel.NotificationEventOverdueFollowup)
 	case string(uModel.NotificationEventDailyDigest):
 		return pref.Enabled(uModel.NotificationEventDailyDigest)
 	case string(uModel.NotificationEventWeeklyDigest):

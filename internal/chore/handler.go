@@ -4491,7 +4491,6 @@ func (h *Handler) notifyApproversOfPendingApproval(c context.Context, chore *chM
 
 	h.dispatcher.NotifyUsers(c, dispatch.Request{
 		EventType: nps.EventTypeOnPendingApproval,
-		Priority:  chore.Priority,
 		CircleID:  chore.CircleID,
 		ChoreID:   chore.ID,
 		Subject:   chore.Name,

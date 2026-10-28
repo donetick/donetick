@@ -35,12 +35,14 @@ const (
 )
 
 // Priority levels for Chore.Priority (0-4, see handler.go PriorityReq binding).
+// Matches the frontend's P1-P4 convention: lower numbers are MORE urgent
+// (P1/PriorityUrgent is the most urgent, P4/PriorityLow is the least).
 const (
 	PriorityNone   = 0
-	PriorityLow    = 1
-	PriorityMedium = 2
-	PriorityHigh   = 3
-	PriorityUrgent = 4
+	PriorityUrgent = 1
+	PriorityHigh   = 2
+	PriorityMedium = 3
+	PriorityLow    = 4
 )
 
 type AssignmentStrategy string

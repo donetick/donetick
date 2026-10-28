@@ -108,8 +108,8 @@ func TestAssignmentNotificationProfileDefaultsAndSendTimeGating(t *testing.T) {
 	for _, profile := range []uModel.NotificationProfile{uModel.NotificationProfileBalanced, uModel.NotificationProfilePlanner, uModel.NotificationProfileJustInTime, uModel.NotificationProfilePersistent, uModel.NotificationProfileQuiet, uModel.NotificationProfileCustom} {
 		pref := &uModel.UserNotificationPreference{Profile: profile}
 		expected := profile != uModel.NotificationProfileQuiet && profile != uModel.NotificationProfileCustom
-		require.Equal(t, expected, AllowedByPreference(pref, "on_assignment", chModel.PriorityNone))
+		require.Equal(t, expected, AllowedByPreference(pref, "on_assignment"))
 		pref.Overrides = uModel.NotificationOverrides{uModel.NotificationEventOnAssignment: !expected}
-		require.Equal(t, !expected, AllowedByPreference(pref, "on_assignment", chModel.PriorityNone))
+		require.Equal(t, !expected, AllowedByPreference(pref, "on_assignment"))
 	}
 }

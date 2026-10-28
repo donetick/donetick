@@ -90,7 +90,7 @@ func TestPendingApprovalNotifiesThirdPartyTarget(t *testing.T) {
 	require.Equal(t, string(nps.EventTypeOnPendingApproval), rows[0].RawEvent["type"])
 	require.False(t, nps.AllowedByPreference(
 		&uModel.UserNotificationPreference{Profile: uModel.NotificationProfileQuiet},
-		rows[0].RawEvent["type"].(string), chModel.PriorityNone))
+		rows[0].RawEvent["type"].(string)))
 }
 
 // An approver who muted approval requests hears nothing on any channel.

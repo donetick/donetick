@@ -90,7 +90,7 @@ func (r *NotificationRepository) GetPendingNotification(c context.Context, lookb
 		// sentinel, see service.DigestChoreIDDaily/Weekly -- they aren't about one
 		// real chore) never are either: they're a push-only summary, not an event
 		// about a specific chore a webhook consumer would expect.
-		Select("notifications.*, CASE WHEN notifications.chore_id < 0 THEN NULL WHEN projects.is_private = true THEN NULL ELSE circles.webhook_url END as webhook_url, COALESCE(chores.priority, 0) as chore_priority").
+		Select("notifications.*, CASE WHEN notifications.chore_id < 0 THEN NULL WHEN projects.is_private = true THEN NULL ELSE circles.webhook_url END as webhook_url").
 		Joins("left join circles on circles.id = notifications.circle_id").
 		Joins("left join chores on chores.id = notifications.chore_id").
 		Joins("left join projects on projects.id = chores.project_id").

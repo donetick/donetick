@@ -1228,6 +1228,9 @@ func (h *Handler) UpdateNotificationPreference(c *gin.Context) {
 // event type after applying overrides on top of the profile default.
 func resolvedNotificationPreference(pref *uModel.UserNotificationPreference) map[uModel.NotificationEventType]bool {
 	eventTypes := []uModel.NotificationEventType{
+		uModel.NotificationEventOnAssignment,
+		uModel.NotificationEventOnPendingApproval,
+		uModel.NotificationEventOnRedemptionRequest,
 		uModel.NotificationEventPreDue,
 		uModel.NotificationEventDue,
 		uModel.NotificationEventOverdueFollowup,

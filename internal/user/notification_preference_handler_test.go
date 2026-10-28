@@ -1,6 +1,7 @@
 package user
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -146,6 +147,27 @@ func TestUpdateNotificationPreferenceCustomKeepsOverrides(t *testing.T) {
 
 // The response has to describe what was saved, not what was posted, or the
 // client re-renders the toggles it sent and the switch looks like it failed.
+func TestUpdateNotificationPreferenceOnAssignment(t *testing.T) {
+	h, _ := newNotificationPreferenceHandler(t)
+	for _, enabled := range []bool{true, false} {
+		body, err := json.Marshal(map[string]interface{}{
+			"profile": "custom", "overrides": map[string]bool{"on_assignment": enabled},
+		})
+		require.NoError(t, err)
+		w := putNotificationPreference(t, h, 8, string(body))
+		require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+		var resp struct {
+			Effective map[string]bool `json:"effective"`
+		}
+		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+		require.Contains(t, resp.Effective, "on_assignment")
+		require.Equal(t, enabled, resp.Effective["on_assignment"])
+		pref, err := h.userRepo.GetNotificationPreference(context.Background(), 8)
+		require.NoError(t, err)
+		require.Equal(t, enabled, pref.Enabled(uModel.NotificationEventOnAssignment))
+	}
+}
+
 func TestUpdateNotificationPreferenceResponseReflectsSavedPreference(t *testing.T) {
 	h, _ := newNotificationPreferenceHandler(t)
 

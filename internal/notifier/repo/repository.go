@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	chModel "donetick.com/core/internal/chore/model"
 	nModel "donetick.com/core/internal/notifier/model"
 	"gorm.io/gorm"
 )
@@ -18,6 +19,53 @@ func NewNotificationRepository(db *gorm.DB) *NotificationRepository {
 
 func (r *NotificationRepository) DeleteAllChoreNotifications(choreID int) error {
 	return r.db.Where("chore_id = ?", choreID).Delete(&nModel.Notification{}).Error
+}
+
+// IsCurrentChore rejects delayed planning jobs for an older task revision.
+func (r *NotificationRepository) IsCurrentChore(c context.Context, chore *chModel.Chore) (bool, error) {
+	var current chModel.Chore
+	err := r.db.WithContext(c).Select("id", "sync_version", "updated_at", "assigned_to", "is_active", "status").First(&current, chore.ID).Error
+	if err == gorm.ErrRecordNotFound {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	sameAssignee := current.AssignedTo == nil && chore.AssignedTo == nil ||
+		current.AssignedTo != nil && chore.AssignedTo != nil && *current.AssignedTo == *chore.AssignedTo
+	return current.SyncVersion == chore.SyncVersion && current.UpdatedAt.Equal(chore.UpdatedAt) &&
+		sameAssignee && current.IsActive == chore.IsActive && current.Status == chore.Status, nil
+}
+
+// DeleteChoreReminders resets due-date reminders without losing pending assignment
+// or approval events during a subsequent edit. Superseded events are discarded.
+// Inspect JSON in Go to keep this portable across SQLite and Postgres.
+func (r *NotificationRepository) DeleteChoreReminders(c context.Context, choreID int, assignedTo *int, approvalRecipients []int) error {
+	approvers := make(map[int]bool, len(approvalRecipients))
+	for _, userID := range approvalRecipients {
+		approvers[userID] = true
+	}
+	return r.db.WithContext(c).Transaction(func(tx *gorm.DB) error {
+		var notifications []nModel.Notification
+		if err := tx.Where("chore_id = ?", choreID).Find(&notifications).Error; err != nil {
+			return err
+		}
+		var ids []int
+		for _, notification := range notifications {
+			if notification.RawEvent["type"] == "on_assignment" && !notification.IsSent &&
+				assignedTo != nil && notification.UserID == *assignedTo {
+				continue
+			}
+			if approvers[notification.UserID] && !notification.IsSent && notification.RawEvent["type"] == "on_pending_approval" {
+				continue
+			}
+			ids = append(ids, notification.ID)
+		}
+		if len(ids) == 0 {
+			return nil
+		}
+		return tx.Where("id IN ?", ids).Delete(&nModel.Notification{}).Error
+	})
 }
 
 func (r *NotificationRepository) BatchInsertNotifications(notifications []*nModel.Notification) error {

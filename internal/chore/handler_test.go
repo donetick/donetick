@@ -22,6 +22,7 @@ import (
 	cModel "donetick.com/core/internal/circle/model"
 	cRepo "donetick.com/core/internal/circle/repo"
 	"donetick.com/core/internal/database"
+	dRepo "donetick.com/core/internal/device/repo"
 	"donetick.com/core/internal/events"
 	lModel "donetick.com/core/internal/label/model"
 	lRepo "donetick.com/core/internal/label/repo"
@@ -86,7 +87,7 @@ func newCreateChoreTestRouter(t *testing.T) (*gin.Engine, *gorm.DB) {
 		choreRepo:     chRepo.NewChoreRepository(db, cfg),
 		circleRepo:    circleRepository,
 		tRepo:         tRepo.NewThingRepository(db, cfg),
-		nPlanner:      nps.NewNotificationPlanner(nRepo.NewNotificationRepository(db), circleRepository, urRepo.NewUserRepository(db, cfg)),
+		nPlanner:      nps.NewNotificationPlanner(nRepo.NewNotificationRepository(db), circleRepository, urRepo.NewUserRepository(db, cfg), dRepo.NewDeviceRepository(db, cfg)),
 		eventProducer: eventProducer,
 	}
 
@@ -196,7 +197,7 @@ func newEditChoreTestRouter(t *testing.T) (*gin.Engine, *gorm.DB) {
 		tRepo:         tRepo.NewThingRepository(db, cfg),
 		storage:       storage.NewLocalStorage(cfg),
 		storageRepo:   storageRepo.NewStorageRepository(db, cfg),
-		nPlanner:      nps.NewNotificationPlanner(nRepo.NewNotificationRepository(db), circleRepository, urRepo.NewUserRepository(db, cfg)),
+		nPlanner:      nps.NewNotificationPlanner(nRepo.NewNotificationRepository(db), circleRepository, urRepo.NewUserRepository(db, cfg), dRepo.NewDeviceRepository(db, cfg)),
 		eventProducer: eventProducer,
 	}
 

@@ -11,6 +11,15 @@ import (
 	uModel "donetick.com/core/internal/user/model"
 )
 
+// recipientIDs flattens the audience to the user IDs these assertions care about.
+func recipientIDs(members []*cModel.UserCircleDetail) []int {
+	ids := make([]int, 0, len(members))
+	for _, member := range members {
+		ids = append(ids, member.UserID)
+	}
+	return ids
+}
+
 // A completion waiting for approval must not announce the task's name to admins
 // and managers who cannot see it, such as those outside a restricted project.
 func TestPendingApprovalRecipientsStayInsideTheAudience(t *testing.T) {
@@ -28,13 +37,19 @@ func TestPendingApprovalRecipientsStayInsideTheAudience(t *testing.T) {
 	project.SetMembers([]int{colleague, insideManager})
 	inProject := &chModel.Chore{ID: 1, CircleID: 1, CreatedBy: owner, ProjectID: &project.ID, Project: project, IsPrivate: true,
 		AssignedTo: intPtr(colleague), Assignees: []chModel.ChoreAssignees{{UserID: colleague}}}
-	require.Equal(t, []int{insideManager}, pendingApprovalRecipients(inProject, submitter, circleUsers))
+	require.Equal(t, []int{insideManager}, recipientIDs(pendingApprovalRecipients(inProject, submitter, circleUsers)))
 
 	project.SetMembers([]int{colleague})
 	require.Empty(t, pendingApprovalRecipients(inProject, submitter, circleUsers), "nobody outside the project hears about it")
 
+	// Project privacy cannot be evaluated without the project, so an unloaded one
+	// tells nobody rather than falling back to "any circle member can see it".
+	unloaded := &chModel.Chore{ID: 3, CircleID: 1, CreatedBy: owner, ProjectID: &project.ID,
+		AssignedTo: intPtr(colleague), Assignees: []chModel.ChoreAssignees{{UserID: colleague}}}
+	require.Empty(t, pendingApprovalRecipients(unloaded, submitter, circleUsers))
+
 	public := &chModel.Chore{ID: 2, CircleID: 1, CreatedBy: owner,
 		AssignedTo: intPtr(colleague), Assignees: []chModel.ChoreAssignees{{UserID: colleague}}}
-	require.ElementsMatch(t, []int{outsideAdmin, insideManager}, pendingApprovalRecipients(public, submitter, circleUsers),
+	require.ElementsMatch(t, []int{outsideAdmin, insideManager}, recipientIDs(pendingApprovalRecipients(public, submitter, circleUsers)),
 		"chores everybody can see keep the fallback to every admin and manager")
 }

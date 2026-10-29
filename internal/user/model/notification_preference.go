@@ -20,16 +20,20 @@ const (
 type NotificationEventType string
 
 const (
+	// NotificationEventOnAssignment notifies a user when they become the assigned user.
+	NotificationEventOnAssignment NotificationEventType = "on_assignment"
+	// NotificationEventOnPendingApproval tells an approver (admin/manager) that
+	// somebody's completion is waiting on them.
+	NotificationEventOnPendingApproval NotificationEventType = "on_pending_approval"
+	// NotificationEventOnRedemptionRequest tells an approver (admin/manager) that
+	// somebody asked to redeem a reward.
+	NotificationEventOnRedemptionRequest NotificationEventType = "on_redemption_request"
 	// NotificationEventPreDue reminds before a chore is due.
 	NotificationEventPreDue NotificationEventType = "pre_due"
 	// NotificationEventDue reminds at/around the moment a chore becomes due.
 	NotificationEventDue NotificationEventType = "due"
 	// NotificationEventOverdueFollowup reminds about an unresolved overdue chore.
 	NotificationEventOverdueFollowup NotificationEventType = "overdue_followup"
-	// NotificationEventEscalation is a priority-gated push nudge: it only fires
-	// for high/urgent priority chores (see chModel.PriorityHigh), independent
-	// of whether OverdueFollowup is also enabled.
-	NotificationEventEscalation NotificationEventType = "escalation"
 	// NotificationEventDailyDigest sends one message/day summarizing overdue + upcoming chores.
 	NotificationEventDailyDigest NotificationEventType = "daily_digest"
 	// NotificationEventWeeklyDigest sends one message/week previewing the week ahead.
@@ -48,44 +52,54 @@ type NotificationOverrides map[NotificationEventType]bool
 // once a user leaves the named profiles).
 var profileDefaults = map[NotificationProfile]NotificationOverrides{
 	NotificationProfileBalanced: {
-		NotificationEventPreDue:          true,
-		NotificationEventDue:             true,
-		NotificationEventOverdueFollowup: true,
-		NotificationEventEscalation:      false,
-		NotificationEventDailyDigest:     true,
-		NotificationEventWeeklyDigest:    false,
+		NotificationEventOnAssignment:        true,
+		NotificationEventOnPendingApproval:   true,
+		NotificationEventOnRedemptionRequest: true,
+		NotificationEventPreDue:              true,
+		NotificationEventDue:                 true,
+		NotificationEventOverdueFollowup:     true,
+		NotificationEventDailyDigest:         true,
+		NotificationEventWeeklyDigest:        false,
 	},
 	NotificationProfilePlanner: {
-		NotificationEventPreDue:          false,
-		NotificationEventDue:             true,
-		NotificationEventOverdueFollowup: false,
-		NotificationEventEscalation:      false,
-		NotificationEventDailyDigest:     true,
-		NotificationEventWeeklyDigest:    true,
+		NotificationEventOnAssignment:        true,
+		NotificationEventOnPendingApproval:   true,
+		NotificationEventOnRedemptionRequest: true,
+		NotificationEventPreDue:              false,
+		NotificationEventDue:                 true,
+		NotificationEventOverdueFollowup:     false,
+		NotificationEventDailyDigest:         true,
+		NotificationEventWeeklyDigest:        true,
 	},
 	NotificationProfileJustInTime: {
-		NotificationEventPreDue:          false,
-		NotificationEventDue:             true,
-		NotificationEventOverdueFollowup: false,
-		NotificationEventEscalation:      false,
-		NotificationEventDailyDigest:     false,
-		NotificationEventWeeklyDigest:    false,
+		NotificationEventOnAssignment:        true,
+		NotificationEventOnPendingApproval:   true,
+		NotificationEventOnRedemptionRequest: true,
+		NotificationEventPreDue:              false,
+		NotificationEventDue:                 true,
+		NotificationEventOverdueFollowup:     false,
+		NotificationEventDailyDigest:         false,
+		NotificationEventWeeklyDigest:        false,
 	},
 	NotificationProfilePersistent: {
-		NotificationEventPreDue:          false,
-		NotificationEventDue:             true,
-		NotificationEventOverdueFollowup: true,
-		NotificationEventEscalation:      true,
-		NotificationEventDailyDigest:     true,
-		NotificationEventWeeklyDigest:    false,
+		NotificationEventOnAssignment:        true,
+		NotificationEventOnPendingApproval:   true,
+		NotificationEventOnRedemptionRequest: true,
+		NotificationEventPreDue:              false,
+		NotificationEventDue:                 true,
+		NotificationEventOverdueFollowup:     true,
+		NotificationEventDailyDigest:         true,
+		NotificationEventWeeklyDigest:        false,
 	},
 	NotificationProfileQuiet: {
-		NotificationEventPreDue:          false,
-		NotificationEventDue:             false,
-		NotificationEventOverdueFollowup: false,
-		NotificationEventEscalation:      true,
-		NotificationEventDailyDigest:     false,
-		NotificationEventWeeklyDigest:    false,
+		NotificationEventOnAssignment:        false,
+		NotificationEventOnPendingApproval:   false,
+		NotificationEventOnRedemptionRequest: false,
+		NotificationEventPreDue:              false,
+		NotificationEventDue:                 false,
+		NotificationEventOverdueFollowup:     false,
+		NotificationEventDailyDigest:         false,
+		NotificationEventWeeklyDigest:        false,
 	},
 }
 

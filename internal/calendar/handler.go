@@ -473,16 +473,17 @@ func foldBoundary(s string, max int) int {
 	return cut
 }
 
-// mapPriority converts Donetick priority (0-4) to iCal priority (1-9).
+// mapPriority converts Donetick priority (0-4, where 1=urgent/P1 and 4=low/P4)
+// to iCal priority (1-9, where 1 is highest).
 func mapPriority(p int) int {
 	switch p {
-	case 4:
-		return 1 // urgent -> highest
-	case 3:
-		return 3 // high
-	case 2:
-		return 5 // medium
 	case 1:
+		return 1 // urgent -> highest
+	case 2:
+		return 3 // high
+	case 3:
+		return 5 // medium
+	case 4:
 		return 7 // low
 	default:
 		return 0 // undefined
@@ -492,13 +493,13 @@ func mapPriority(p int) int {
 // priorityName returns a human-readable priority name.
 func priorityName(p int) string {
 	switch p {
-	case 4:
-		return "Urgent"
-	case 3:
-		return "High"
-	case 2:
-		return "Medium"
 	case 1:
+		return "Urgent"
+	case 2:
+		return "High"
+	case 3:
+		return "Medium"
+	case 4:
 		return "Low"
 	default:
 		return ""

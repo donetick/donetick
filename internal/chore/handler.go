@@ -672,7 +672,7 @@ func (h *Handler) CreateChore(c *gin.Context) {
 	go func() {
 		ctx, cancel := context.WithTimeout(notificationContext, 30*time.Second)
 		defer cancel()
-		h.nPlanner.GenerateChoreNotifications(ctx, eventChore, nil)
+		h.nPlanner.GenerateChoreNotifications(ctx, eventChore, nil, currentUser.ID)
 	}()
 
 	h.eventProducer.ChoreCreated(c, currentUser.WebhookURL, eventChore, &currentUser.User)
@@ -1020,7 +1020,7 @@ func (h *Handler) EditChore(c *gin.Context) {
 	go func() {
 		ctx, cancel := context.WithTimeout(notificationContext, 30*time.Second)
 		defer cancel()
-		h.nPlanner.GenerateChoreNotifications(ctx, eventChore, oldChore.AssignedTo)
+		h.nPlanner.GenerateChoreNotifications(ctx, eventChore, oldChore.AssignedTo, currentUser.ID)
 	}()
 
 	// Broadcast real-time chore update event
@@ -1431,7 +1431,7 @@ func (h *Handler) UpdateAssignee(c *gin.Context) {
 		return
 	}
 
-	h.nPlanner.GenerateChoreNotifications(c, updatedChore, chore.AssignedTo)
+	h.nPlanner.GenerateChoreNotifications(c, updatedChore, chore.AssignedTo, currentUser.ID)
 
 	// Broadcast real-time assignee update event
 	if h.realTimeService != nil {
@@ -2562,7 +2562,7 @@ func (h *Handler) CompleteChore(c *gin.Context) {
 
 	// 	h.notifier.SendChoreCompletion(c, chore, effectiveUser)
 	// }()
-	h.nPlanner.GenerateChoreNotifications(c, updatedChore, chore.AssignedTo)
+	h.nPlanner.GenerateChoreNotifications(c, updatedChore, chore.AssignedTo, completedBy)
 	h.eventProducer.ChoreCompleted(c, effectiveUser.WebhookURL, chore, &effectiveUser.User)
 	if h.realTimeService != nil {
 		broadcaster := h.realTimeService.GetEventBroadcaster()
@@ -3762,7 +3762,7 @@ func (h *Handler) ApproveChore(c *gin.Context) {
 		h.stRepo.ResetSubtasksCompletion(c, updatedChore.ID)
 	}
 
-	h.nPlanner.GenerateChoreNotifications(c, updatedChore, chore.AssignedTo)
+	h.nPlanner.GenerateChoreNotifications(c, updatedChore, chore.AssignedTo, currentUser.ID)
 	h.eventProducer.ChoreCompleted(c, currentUser.WebhookURL, chore, &currentUser.User)
 
 	// Broadcast real-time chore approved event

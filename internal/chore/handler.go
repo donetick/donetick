@@ -1053,6 +1053,15 @@ func dueDatesDiffer(oldDueDate, newDueDate *time.Time) bool {
 	return !oldDueDate.Equal(*newDueDate)
 }
 
+// isBeforeCompletionWindow reports whether completedDate is earlier than the chore's
+// completion window allows. A chore without a due date has no window to be early for.
+func isBeforeCompletionWindow(chore *chModel.Chore, completedDate time.Time) bool {
+	if chore.CompletionWindow == nil || chore.NextDueDate == nil {
+		return false
+	}
+	return completedDate.UTC().Before(chore.NextDueDate.UTC().Add(-time.Hour * time.Duration(*chore.CompletionWindow)))
+}
+
 func (h *Handler) deleteChoreFiles(ctx *gin.Context, choreID int) {
 	files, err := h.storageRepo.GetAllFilesByOwnerType(ctx, storageModel.EntityTypeChoreDescription, choreID)
 	if err != nil || len(files) == 0 {
@@ -2297,13 +2306,11 @@ func (h *Handler) CompleteChore(c *gin.Context) {
 	}
 
 	// confirm that the chore in completion window:
-	if chore.CompletionWindow != nil {
-		if completedDate.UTC().Before(chore.NextDueDate.UTC().Add(-time.Hour * time.Duration(*chore.CompletionWindow))) {
-			c.JSON(400, gin.H{
-				"error": "Chore is out of completion window",
-			})
-			return
-		}
+	if isBeforeCompletionWindow(chore, completedDate) {
+		c.JSON(400, gin.H{
+			"error": "Chore is out of completion window",
+		})
+		return
 	}
 
 	if req.CompletedBy != nil {

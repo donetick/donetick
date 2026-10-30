@@ -34,8 +34,8 @@ func TestChorePlanningRejectsOutOfOrderAssignment(t *testing.T) {
 	require.NoError(t, db.First(&current, old.ID).Error)
 
 	// The newer request finishes planning before the older background job runs.
-	require.True(t, planner.GenerateChoreNotifications(ctx, &current, &first.ID))
-	require.True(t, planner.GenerateChoreNotifications(ctx, old, nil))
+	require.True(t, planner.GenerateChoreNotifications(ctx, &current, &first.ID, 0))
+	require.True(t, planner.GenerateChoreNotifications(ctx, old, nil, 0))
 	// Reminder-only callers must not delete the newer assignment either.
 	require.True(t, planner.GenerateNotifications(ctx, old))
 	var rows []nModel.Notification
@@ -61,7 +61,7 @@ func TestChorePlanningSerializesMutationDuringPlanning(t *testing.T) {
 		oldDone <- planner.planCurrentChore(ctx, old, func() bool {
 			close(entered)
 			<-release
-			return planner.generateAssignmentNotification(ctx, old, nil)
+			return planner.generateAssignmentNotification(ctx, old, nil, 0)
 		})
 	}()
 	<-entered
@@ -74,7 +74,7 @@ func TestChorePlanningSerializesMutationDuringPlanning(t *testing.T) {
 		err = db.First(&current, old.ID).Error
 	}
 	newDone := make(chan bool, 1)
-	go func() { newDone <- planner.GenerateChoreNotifications(ctx, &current, &user.ID) }()
+	go func() { newDone <- planner.GenerateChoreNotifications(ctx, &current, &user.ID, 0) }()
 	var finishedEarly bool
 	select {
 	case <-newDone:
@@ -108,14 +108,14 @@ func TestChorePlanningPreservesApprovalOnEditAndClearsOnResolution(t *testing.T)
 	}}))
 	require.NoError(t, db.Model(chore).Update("name", "Edited while awaiting approval").Error)
 	require.NoError(t, db.First(chore, chore.ID).Error)
-	require.True(t, planner.GenerateChoreNotifications(ctx, chore, nil))
+	require.True(t, planner.GenerateChoreNotifications(ctx, chore, nil, 0))
 	var count int64
 	require.NoError(t, db.Model(&nModel.Notification{}).Where("chore_id = ?", chore.ID).Count(&count).Error)
 	require.EqualValues(t, 1, count)
 
 	require.NoError(t, db.Model(chore).Update("status", chModel.ChoreStatusNoStatus).Error)
 	require.NoError(t, db.First(chore, chore.ID).Error)
-	require.True(t, planner.GenerateChoreNotifications(ctx, chore, nil))
+	require.True(t, planner.GenerateChoreNotifications(ctx, chore, nil, 0))
 	require.NoError(t, db.Model(&nModel.Notification{}).Where("chore_id = ?", chore.ID).Count(&count).Error)
 	require.Zero(t, count)
 }

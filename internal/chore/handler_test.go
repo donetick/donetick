@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
@@ -30,6 +31,7 @@ import (
 	"donetick.com/core/internal/storage"
 	storageRepo "donetick.com/core/internal/storage/repo"
 	stRepo "donetick.com/core/internal/subtask/repo"
+	tModel "donetick.com/core/internal/thing/model"
 	tRepo "donetick.com/core/internal/thing/repo"
 	uModel "donetick.com/core/internal/user/model"
 	urRepo "donetick.com/core/internal/user/repo"
@@ -84,6 +86,7 @@ func newCreateChoreTestRouter(t *testing.T) (*gin.Engine, *gorm.DB) {
 	h := &Handler{
 		choreRepo:     chRepo.NewChoreRepository(db, cfg),
 		circleRepo:    circleRepository,
+		tRepo:         tRepo.NewThingRepository(db, cfg),
 		nPlanner:      nps.NewNotificationPlanner(nRepo.NewNotificationRepository(db), circleRepository, urRepo.NewUserRepository(db, cfg), dRepo.NewDeviceRepository(db, cfg)),
 		eventProducer: eventProducer,
 	}
@@ -251,4 +254,150 @@ func TestEditChoreWithoutLabelsV2KeepsLabels(t *testing.T) {
 	recorder = edit(body)
 	require.Equal(t, http.StatusOK, recorder.Code, recorder.Body.String())
 	require.Zero(t, labelCount(), "an empty labelsV2 still removes the labels")
+}
+
+// Clients send Number Thing thresholds as JSON numbers, including 0.
+func TestCreateChoreAcceptsThingTriggerState(t *testing.T) {
+	tests := []struct {
+		name         string
+		triggerState string
+		condition    string
+		wantState    string
+	}{
+		{name: "numeric zero", triggerState: "0", condition: "eq", wantState: "0"},
+		{name: "nonzero threshold", triggerState: "12", condition: "gt", wantState: "12"},
+		{name: "legacy string threshold", triggerState: `"5"`, condition: "lte", wantState: "5"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			router, db := newCreateChoreTestRouter(t)
+			thing := &tModel.Thing{Name: "counter", UserID: 1, Type: string(tModel.ThingTypeNumber), State: "0"}
+			require.NoError(t, db.Create(thing).Error)
+			body := fmt.Sprintf(
+				`{"name":%q,"frequencyType":%q,"assignStrategy":%q,"thingTrigger":{"thingID":%d,"triggerState":%s,"condition":%q}}`,
+				test.name, chModel.FrequencyTypeTrigger, chModel.AssignmentStrategyRandom, thing.ID, test.triggerState, test.condition,
+			)
+			recorder := httptest.NewRecorder()
+			router.ServeHTTP(recorder, httptest.NewRequest(http.MethodPost, "/chores", bytes.NewReader([]byte(body))))
+			require.Equal(t, http.StatusOK, recorder.Code, recorder.Body.String())
+
+			var response struct {
+				Res int `json:"res"`
+			}
+			require.NoError(t, json.Unmarshal(recorder.Body.Bytes(), &response))
+			var got tModel.ThingChore
+			require.NoError(t, db.Where("chore_id = ?", response.Res).First(&got).Error)
+			require.Equal(t, thing.ID, got.ThingID)
+			require.Equal(t, test.wantState, got.TriggerState)
+			require.Equal(t, test.condition, got.Condition)
+		})
+	}
+}
+
+// A non-scalar triggerState is a bad request and must not create an association.
+func TestCreateChoreRejectsInvalidThingTrigger(t *testing.T) {
+	tests := []struct {
+		name         string
+		triggerState string
+	}{
+		{name: "boolean true", triggerState: "true"},
+		{name: "boolean false", triggerState: "false"},
+		{name: "object", triggerState: `{"value":1}`},
+		{name: "array", triggerState: "[1]"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			router, db := newCreateChoreTestRouter(t)
+			thing := &tModel.Thing{Name: "counter", UserID: 1, Type: string(tModel.ThingTypeNumber), State: "0"}
+			require.NoError(t, db.Create(thing).Error)
+			body := fmt.Sprintf(
+				`{"name":%q,"frequencyType":%q,"assignStrategy":%q,"thingTrigger":{"thingID":%d,"triggerState":%s,"condition":"eq"}}`,
+				test.name, chModel.FrequencyTypeTrigger, chModel.AssignmentStrategyRandom, thing.ID, test.triggerState,
+			)
+			recorder := httptest.NewRecorder()
+			router.ServeHTTP(recorder, httptest.NewRequest(http.MethodPost, "/chores", bytes.NewReader([]byte(body))))
+			require.Equal(t, http.StatusBadRequest, recorder.Code, recorder.Body.String())
+			require.Contains(t, recorder.Body.String(), "triggerState must be a string or number")
+			var count int64
+			require.NoError(t, db.Model(&tModel.ThingChore{}).Count(&count).Error)
+			require.Zero(t, count)
+		})
+	}
+}
+
+// Editing a chore accepts a numeric triggerState and replaces the stored association.
+func TestEditChoreUpdatesNumericThingTrigger(t *testing.T) {
+	router, db := newEditChoreTestRouter(t)
+	thing := &tModel.Thing{Name: "counter", UserID: 1, Type: string(tModel.ThingTypeNumber), State: "0"}
+	require.NoError(t, db.Create(thing).Error)
+	chore := chModel.Chore{Name: "water plants", FrequencyType: chModel.FrequencyTypeTrigger,
+		AssignStrategy: chModel.AssignmentStrategyRandom, CircleID: 1, CreatedBy: 1, IsActive: true}
+	require.NoError(t, db.Create(&chore).Error)
+	require.NoError(t, db.Create(&tModel.ThingChore{ThingID: thing.ID, ChoreID: chore.ID, TriggerState: "1", Condition: "eq"}).Error)
+
+	body, err := json.Marshal(map[string]any{
+		"id":             chore.ID,
+		"name":           "water plants",
+		"frequencyType":  chModel.FrequencyTypeTrigger,
+		"assignStrategy": chModel.AssignmentStrategyRandom,
+		"thingTrigger": map[string]any{
+			"thingID":      thing.ID,
+			"triggerState": 0,
+			"condition":    "gt",
+		},
+	})
+	require.NoError(t, err)
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, httptest.NewRequest(http.MethodPut, "/chores", bytes.NewReader(body)))
+	require.Equal(t, http.StatusOK, recorder.Code, recorder.Body.String())
+
+	var got tModel.ThingChore
+	require.NoError(t, db.Where("chore_id = ?", chore.ID).First(&got).Error)
+	require.Equal(t, thing.ID, got.ThingID)
+	require.Equal(t, "0", got.TriggerState)
+	require.Equal(t, "gt", got.Condition)
+}
+
+// Invalid trigger types fail before the saved association is changed.
+func TestEditChoreRejectsInvalidThingTrigger(t *testing.T) {
+	tests := []struct {
+		name         string
+		triggerState string
+	}{
+		{name: "boolean", triggerState: "true"},
+		{name: "object", triggerState: `{"value":1}`},
+		{name: "array", triggerState: "[0]"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			router, db := newEditChoreTestRouter(t)
+			thing := &tModel.Thing{Name: "counter", UserID: 1, Type: string(tModel.ThingTypeNumber), State: "0"}
+			require.NoError(t, db.Create(thing).Error)
+			chore := chModel.Chore{Name: "water plants", FrequencyType: chModel.FrequencyTypeTrigger,
+				AssignStrategy: chModel.AssignmentStrategyRandom, CircleID: 1, CreatedBy: 1, IsActive: true}
+			require.NoError(t, db.Create(&chore).Error)
+			require.NoError(t, db.Create(&tModel.ThingChore{ThingID: thing.ID, ChoreID: chore.ID, TriggerState: "1", Condition: "eq"}).Error)
+
+			body := fmt.Sprintf(
+				`{"id":%d,"name":"renamed","frequencyType":%q,"assignStrategy":%q,"thingTrigger":{"thingID":%d,"triggerState":%s,"condition":"lt"}}`,
+				chore.ID, chModel.FrequencyTypeTrigger, chModel.AssignmentStrategyRandom, thing.ID, test.triggerState,
+			)
+			recorder := httptest.NewRecorder()
+			router.ServeHTTP(recorder, httptest.NewRequest(http.MethodPut, "/chores", bytes.NewReader([]byte(body))))
+			require.Equal(t, http.StatusBadRequest, recorder.Code, recorder.Body.String())
+			require.Contains(t, recorder.Body.String(), "triggerState must be a string or number")
+
+			var got tModel.ThingChore
+			require.NoError(t, db.Where("chore_id = ?", chore.ID).First(&got).Error)
+			require.Equal(t, thing.ID, got.ThingID)
+			require.Equal(t, "1", got.TriggerState)
+			require.Equal(t, "eq", got.Condition)
+			var count int64
+			require.NoError(t, db.Model(&tModel.ThingChore{}).Count(&count).Error)
+			require.EqualValues(t, 1, count)
+			var updated chModel.Chore
+			require.NoError(t, db.First(&updated, chore.ID).Error)
+			require.Equal(t, "water plants", updated.Name)
+		})
+	}
 }

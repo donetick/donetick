@@ -205,6 +205,9 @@ type ChoreDetail struct {
 	StartTime           *time.Time                 `json:"startTime" gorm:"column:start_time"`
 	TimerUpdatedAt      *time.Time                 `json:"timerUpdatedAt" gorm:"column:timer_updated_at"` // When the chore was last started
 	ProjectID           *int                       `json:"projectId,omitempty" gorm:"column:project_id"`
+	CircleID            int                        `json:"circleId" gorm:"column:circle_id"`             // Needed client-side to resolve the viewer's circle role (approve/edit permissions)
+	IsPrivate           bool                       `json:"isPrivate" gorm:"column:is_private"`           //
+	AssignStrategy      AssignmentStrategy         `json:"assignStrategy" gorm:"column:assign_strategy"` //
 	IsActive            bool                       `json:"isActive" gorm:"column:is_active"`
 	SyncVersion         int64                      `json:"syncVersion" gorm:"column:sync_version"`
 	Attachments         []storageModel.StorageFile `json:"attachments,omitempty" gorm:"-"`

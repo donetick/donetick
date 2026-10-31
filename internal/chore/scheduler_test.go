@@ -124,6 +124,71 @@ func TestScheduleNextDueDateBasicTests(t *testing.T) {
 	executeTestTable(t, tests)
 }
 
+// A non-rolling chore that is overdue by more than one cycle must be
+// scheduled for the next occurrence after the completion, keeping its
+// original anchor, instead of a date that is already in the past.
+func TestScheduleNextDueDateOverdueMultipleCycles(t *testing.T) {
+	// Monday 2026-09-14 08:00 UTC
+	dueDate := time.Date(2026, 9, 14, 8, 0, 0, 0, time.UTC)
+	tests := []scheduleTest{
+		{
+			name: "Weekly - overdue by two cycles",
+			chore: chModel.Chore{
+				FrequencyType: chModel.FrequencyTypeWeekly,
+				NextDueDate:   timePtr(dueDate),
+			},
+			completedDate: time.Date(2026, 9, 30, 10, 0, 0, 0, time.UTC),
+			want:          timePtr(time.Date(2026, 10, 5, 8, 0, 0, 0, time.UTC)),
+		},
+		{
+			name: "Weekly - overdue by one cycle",
+			chore: chModel.Chore{
+				FrequencyType: chModel.FrequencyTypeWeekly,
+				NextDueDate:   timePtr(dueDate),
+			},
+			completedDate: time.Date(2026, 9, 16, 10, 0, 0, 0, time.UTC),
+			want:          timePtr(time.Date(2026, 9, 21, 8, 0, 0, 0, time.UTC)),
+		},
+		{
+			name: "Weekly - completed early",
+			chore: chModel.Chore{
+				FrequencyType: chModel.FrequencyTypeWeekly,
+				NextDueDate:   timePtr(dueDate),
+			},
+			completedDate: time.Date(2026, 9, 13, 10, 0, 0, 0, time.UTC),
+			want:          timePtr(time.Date(2026, 9, 21, 8, 0, 0, 0, time.UTC)),
+		},
+		{
+			name: "Daily - overdue by a month",
+			chore: chModel.Chore{
+				FrequencyType: chModel.FrequencyTypeDaily,
+				NextDueDate:   timePtr(dueDate),
+			},
+			completedDate: time.Date(2026, 10, 14, 10, 0, 0, 0, time.UTC),
+			want:          timePtr(time.Date(2026, 10, 15, 8, 0, 0, 0, time.UTC)),
+		},
+		{
+			name: "Monthly - overdue by three cycles keeps day of month",
+			chore: chModel.Chore{
+				FrequencyType: chModel.FrequencyTypeMonthly,
+				NextDueDate:   timePtr(time.Date(2026, 1, 10, 8, 0, 0, 0, time.UTC)),
+			},
+			completedDate: time.Date(2026, 4, 15, 10, 0, 0, 0, time.UTC),
+			want:          timePtr(time.Date(2026, 5, 10, 8, 0, 0, 0, time.UTC)),
+		},
+		{
+			name: "Yearly - overdue by two cycles",
+			chore: chModel.Chore{
+				FrequencyType: chModel.FrequencyTypeYearly,
+				NextDueDate:   timePtr(time.Date(2024, 3, 1, 8, 0, 0, 0, time.UTC)),
+			},
+			completedDate: time.Date(2026, 9, 30, 10, 0, 0, 0, time.UTC),
+			want:          timePtr(time.Date(2027, 3, 1, 8, 0, 0, 0, time.UTC)),
+		},
+	}
+	executeTestTable(t, tests)
+}
+
 func TestScheduleNextDueDateInterval(t *testing.T) {
 	// location, err := time.LoadLocation("America/New_York")
 	location, err := time.LoadLocation("UTC")

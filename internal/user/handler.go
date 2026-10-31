@@ -126,6 +126,11 @@ func (h *Handler) signUp(c *gin.Context) {
 		Password    string `json:"password" binding:"required,min=8,max=64"`
 		Email       string `json:"email" binding:"required,email"`
 		DisplayName string `json:"displayName"`
+		// Timezone is the client's IANA zone (e.g. "America/New_York"), sent at
+		// signup so time-of-day features -- digest notifications above all --
+		// work from the first day. Optional: older clients omit it and the user
+		// stays on the UTC fallback until they save a timezone in settings.
+		Timezone string `json:"timezone"`
 	}
 	var signupReq SignUpReq
 	if err := c.BindJSON(&signupReq); err != nil {
@@ -136,6 +141,14 @@ func (h *Handler) signUp(c *gin.Context) {
 	}
 	if signupReq.DisplayName == "" {
 		signupReq.DisplayName = signupReq.Username
+	}
+
+	// A bad timezone isn't worth failing a signup over -- drop it and let the
+	// user correct it in settings, same as a client that never sent one.
+	if signupReq.Timezone != "" && !utils.IsValidTimezone(signupReq.Timezone) {
+		logging.FromContext(c).Warn("signup: ignoring invalid timezone",
+			"timezone", signupReq.Timezone, "username", signupReq.Username)
+		signupReq.Timezone = ""
 	}
 
 	// Validate username format
@@ -162,6 +175,7 @@ func (h *Handler) signUp(c *gin.Context) {
 		Password:    password,
 		DisplayName: signupReq.DisplayName,
 		Email:       signupReq.Email,
+		Timezone:    signupReq.Timezone,
 		CreatedAt:   time.Now().UTC(),
 		UpdatedAt:   time.Now().UTC(),
 	}); err != nil {

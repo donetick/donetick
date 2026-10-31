@@ -117,6 +117,7 @@ func (s *DeletionService) deleteUserAccount(ctx context.Context, userID int, tra
 			{"subtasks", s.countUserSubtasks},
 			{"chores", s.countUserChores},
 			{"points_history", s.countPointsHistory},
+			{"xp_entries", s.countXPEntries},
 			{"storage_files", s.countStorageFiles},
 			{"storage_usage", s.countStorageUsage},
 			{"user_circles", s.countUserCircles},
@@ -196,6 +197,7 @@ func (s *DeletionService) deleteUserAccount(ctx context.Context, userID int, tra
 		{"subtasks", s.deleteUserSubtasks},
 		{"chores", s.deleteUserChores},
 		{"points_history", s.deletePointsHistory},
+		{"xp_entries", s.deleteXPEntries},
 		{"storage_files", s.deleteStorageFiles},
 		{"storage_usage", s.deleteStorageUsage},
 		{"user_circles", s.deleteUserCircles},
@@ -406,6 +408,14 @@ func (s *DeletionService) deleteUserChores(tx *gorm.DB, userID int) (int, error)
 
 func (s *DeletionService) deletePointsHistory(tx *gorm.DB, userID int) (int, error) {
 	return s.safeDelete(tx, "DELETE FROM points_histories WHERE user_id = ?", userID)
+}
+
+func (s *DeletionService) deleteXPEntries(tx *gorm.DB, userID int) (int, error) {
+	return s.safeDelete(tx, "DELETE FROM xp_entries WHERE user_id = ?", userID)
+}
+
+func (s *DeletionService) countXPEntries(tx *gorm.DB, userID int) (int, error) {
+	return s.safeCount(tx, "SELECT COUNT(*) FROM xp_entries WHERE user_id = ?", userID)
 }
 
 func (s *DeletionService) deleteStorageFiles(tx *gorm.DB, userID int) (int, error) {

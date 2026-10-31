@@ -3,8 +3,9 @@ package chore
 import (
 	"context"
 	"errors"
-	"path/filepath"
 	"testing"
+
+	"github.com/google/uuid"
 
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
@@ -24,11 +25,16 @@ const (
 func newTestChoreRepo(t *testing.T) (*ChoreRepository, *gorm.DB) {
 	t.Helper()
 
-	dbPath := filepath.Join(t.TempDir(), "test_chores.db")
+	dbPath := "file:chore-" + uuid.NewString() + "?mode=memory&cache=shared"
 	db, err := gorm.Open(sqlite.Open(dbPath), &gorm.Config{})
 	if err != nil {
 		t.Fatalf("failed to open sqlite: %v", err)
 	}
+	conn, err := db.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = conn.Close() })
 	if err := database.Migration(db); err != nil {
 		t.Fatalf("AutoMigrate failed: %v", err)
 	}

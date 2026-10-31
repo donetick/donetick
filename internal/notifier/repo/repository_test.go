@@ -130,4 +130,3 @@ func TestGetPendingNotificationSuppressesWebhookForDigests(t *testing.T) {
 		t.Errorf("expected the digest notification's webhook_url to be suppressed, got %v", *digest.WebhookURL)
 	}
 }
-

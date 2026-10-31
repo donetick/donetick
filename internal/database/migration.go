@@ -90,6 +90,8 @@ func Migration(db *gorm.DB) error {
 		filterModel.Filter{},
 		migrations.Migration{},
 		pModel.PointsHistory{},
+		pModel.XPCategory{},
+		pModel.XPEntry{},
 		stModel.SubTask{},
 		storageModel.StorageFile{},
 		storageModel.StorageUsage{},

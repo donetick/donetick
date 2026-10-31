@@ -55,7 +55,7 @@ type Request struct {
 	// through, so a new kind of notification is never silently dropped -- but it
 	// is also not something a user can turn off, so add a case there for it.
 	EventType nps.EventType
-	CircleID int
+	CircleID  int
 	// ChoreID links the notification to a chore, and is 0 for subjects that
 	// aren't one (a reward redemption, say).
 	ChoreID int

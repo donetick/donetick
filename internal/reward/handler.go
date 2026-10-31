@@ -5,16 +5,16 @@ import (
 	"fmt"
 	"io"
 	"strconv"
-	"time"
 
 	auth "donetick.com/core/internal/auth"
 	circle "donetick.com/core/internal/circle/model"
 	cRepo "donetick.com/core/internal/circle/repo"
-	nModel "donetick.com/core/internal/notifier/model"
-	nRepo "donetick.com/core/internal/notifier/repo"
+	"donetick.com/core/internal/notifier/dispatch"
+	nps "donetick.com/core/internal/notifier/service"
 	xpRepo "donetick.com/core/internal/points/repo"
 	rModel "donetick.com/core/internal/reward/model"
 	rRepo "donetick.com/core/internal/reward/repo"
+	uModel "donetick.com/core/internal/user/model"
 	"donetick.com/core/logging"
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
@@ -39,57 +39,68 @@ type ResolveReq struct {
 type Handler struct {
 	rRepo      *rRepo.RewardRepository
 	circleRepo *cRepo.CircleRepository
-	nRepo      *nRepo.NotificationRepository
+	dispatcher *dispatch.Dispatcher
 }
 
-func NewHandler(rRepo *rRepo.RewardRepository, circleRepo *cRepo.CircleRepository, nRepo *nRepo.NotificationRepository) *Handler {
+func NewHandler(rRepo *rRepo.RewardRepository, circleRepo *cRepo.CircleRepository, dispatcher *dispatch.Dispatcher) *Handler {
 	return &Handler{
 		rRepo:      rRepo,
 		circleRepo: circleRepo,
-		nRepo:      nRepo,
+		dispatcher: dispatcher,
 	}
 }
 
-// notifyAdminsOfRedemptionRequest fans out one Notification row per
-// admin/manager's registered delivery target, same shape as chore reminder
-// notifications (see notifier/service.notifiableMembers) — every member
-// without a configured platform/target is silently skipped since there's
-// nowhere to deliver it.
-func (h *Handler) notifyAdminsOfRedemptionRequest(c *gin.Context, circleID int, requesterName string, redemption *rModel.RewardRedemption) {
+// notifyAdminsOfRedemptionRequest tells the admins and managers who can resolve
+// a redemption that one is waiting on them. Delivery (devices + any legacy
+// channel, once each, gated by the recipient's notification profile) is the
+// dispatcher's job; who hears about it is decided here.
+func (h *Handler) notifyAdminsOfRedemptionRequest(c *gin.Context, circleID int, requester *uModel.UserDetails, requesterName string, redemption *rModel.RewardRedemption) {
 	circleUsers, err := h.circleRepo.GetCircleUsers(c, circleID)
 	if err != nil {
 		logging.FromContext(c).Error("Failed to fetch circle users for redemption notification", "error", err)
 		return
 	}
 
-	text := fmt.Sprintf("%s requested to redeem \"%s\" for %d points", requesterName, redemption.RewardName, redemption.PointsCost)
-	now := time.Now().UTC()
-
-	var notifications []*nModel.Notification
-	for _, member := range circleUsers {
-		if !(member.Role == circle.UserRoleAdmin || member.Role == circle.UserRoleManager) {
-			continue
-		}
-		if !member.IsActive || member.NotificationType == nModel.NotificationPlatformNone || member.TargetID == "" {
-			continue
-		}
-		notifications = append(notifications, &nModel.Notification{
-			CircleID:     circleID,
-			UserID:       member.UserID,
-			TargetID:     member.TargetID,
-			Text:         text,
-			TypeID:       member.NotificationType,
-			ScheduledFor: now,
-			CreatedAt:    now,
-		})
-	}
-
-	if len(notifications) == 0 {
+	approvers := redemptionApprovers(circleUsers, requester.ID)
+	if len(approvers) == 0 {
 		return
 	}
-	if err := h.nRepo.BatchInsertNotifications(notifications); err != nil {
-		logging.FromContext(c).Error("Failed to insert redemption request notifications", "error", err)
+
+	text := fmt.Sprintf("%s requested to redeem \"%s\" for %d points", requesterName, redemption.RewardName, redemption.PointsCost)
+	h.dispatcher.NotifyUsers(c, dispatch.Request{
+		EventType: nps.EventTypeOnRedemptionRequest,
+		CircleID:  circleID,
+		Subject:   redemption.RewardName,
+		PushTitle: "Redemption Requested",
+		PushBody:  text,
+		PushData: map[string]string{
+			"type":          "reward_redemption_request",
+			"redemption_id": strconv.Itoa(redemption.ID),
+			"reward_name":   redemption.RewardName,
+			"from_user_id":  strconv.Itoa(requester.ID),
+			"from_user":     requesterName,
+		},
+		Text:             text,
+		IdempotencyScope: "redemption",
+	}, approvers)
+}
+
+// redemptionApprovers picks who is told about a redemption waiting to be
+// resolved. Rewards are circle-wide, so every active admin and manager can act
+// on it -- except the requester, who does not need telling what they just did
+// (the same exclusion chore.pendingApprovalRecipients makes for a completion).
+func redemptionApprovers(circleUsers []*circle.UserCircleDetail, requesterID int) []*circle.UserCircleDetail {
+	approvers := make([]*circle.UserCircleDetail, 0, len(circleUsers))
+	for _, member := range circleUsers {
+		if member.UserID == requesterID || !member.IsActive {
+			continue
+		}
+		if member.Role != circle.UserRoleAdmin && member.Role != circle.UserRoleManager {
+			continue
+		}
+		approvers = append(approvers, member)
 	}
+	return approvers
 }
 
 func (h *Handler) isAdminOrManager(c *gin.Context, userID int, circleID int) (bool, error) {
@@ -280,7 +291,7 @@ func (h *Handler) redeemReward(c *gin.Context) {
 	if requesterName == "" {
 		requesterName = currentUser.Username
 	}
-	h.notifyAdminsOfRedemptionRequest(c, currentUser.CircleID, requesterName, redemption)
+	h.notifyAdminsOfRedemptionRequest(c, currentUser.CircleID, currentUser, requesterName, redemption)
 
 	c.JSON(200, gin.H{"res": redemption})
 }

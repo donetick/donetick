@@ -35,12 +35,14 @@ const (
 )
 
 // Priority levels for Chore.Priority (0-4, see handler.go PriorityReq binding).
+// Matches the frontend's P1-P4 convention: lower numbers are MORE urgent
+// (P1/PriorityUrgent is the most urgent, P4/PriorityLow is the least).
 const (
 	PriorityNone   = 0
-	PriorityLow    = 1
-	PriorityMedium = 2
-	PriorityHigh   = 3
-	PriorityUrgent = 4
+	PriorityUrgent = 1
+	PriorityHigh   = 2
+	PriorityMedium = 3
+	PriorityLow    = 4
 )
 
 type AssignmentStrategy string
@@ -208,6 +210,9 @@ type ChoreDetail struct {
 	StartTime           *time.Time                 `json:"startTime" gorm:"column:start_time"`
 	TimerUpdatedAt      *time.Time                 `json:"timerUpdatedAt" gorm:"column:timer_updated_at"` // When the chore was last started
 	ProjectID           *int                       `json:"projectId,omitempty" gorm:"column:project_id"`
+	CircleID            int                        `json:"circleId" gorm:"column:circle_id"`             // Needed client-side to resolve the viewer's circle role (approve/edit permissions)
+	IsPrivate           bool                       `json:"isPrivate" gorm:"column:is_private"`           //
+	AssignStrategy      AssignmentStrategy         `json:"assignStrategy" gorm:"column:assign_strategy"` //
 	IsActive            bool                       `json:"isActive" gorm:"column:is_active"`
 	SyncVersion         int64                      `json:"syncVersion" gorm:"column:sync_version"`
 	Attachments         []storageModel.StorageFile `json:"attachments,omitempty" gorm:"-"`

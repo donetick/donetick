@@ -45,7 +45,7 @@ func TestUpsertNotificationPreferenceRoundTrips(t *testing.T) {
 		UserID:  7,
 		Profile: uModel.NotificationProfileQuiet,
 		Overrides: uModel.NotificationOverrides{
-			uModel.NotificationEventEscalation: false,
+			uModel.NotificationEventOverdueFollowup: true,
 		},
 	})
 	require.NoError(t, err)
@@ -56,8 +56,8 @@ func TestUpsertNotificationPreferenceRoundTrips(t *testing.T) {
 	if pref.Profile != uModel.NotificationProfileQuiet {
 		t.Errorf("expected profile quiet, got %q", pref.Profile)
 	}
-	if pref.Enabled(uModel.NotificationEventEscalation) {
-		t.Error("expected the saved override (escalation=false) to persist through the round trip")
+	if !pref.Enabled(uModel.NotificationEventOverdueFollowup) {
+		t.Error("expected the saved override (overdue_followup=true) to persist through the round trip")
 	}
 
 	// Saving again for the same user must replace, not duplicate, the row.

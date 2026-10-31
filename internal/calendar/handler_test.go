@@ -496,10 +496,10 @@ func TestMapPriority(t *testing.T) {
 		expected int
 	}{
 		{0, 0},
-		{1, 7},
-		{2, 5},
-		{3, 3},
-		{4, 1},
+		{1, 1},
+		{2, 3},
+		{3, 5},
+		{4, 7},
 		{5, 0}, // unknown
 	}
 
@@ -519,10 +519,10 @@ func TestPriorityName(t *testing.T) {
 		expected string
 	}{
 		{0, ""},
-		{1, "Low"},
-		{2, "Medium"},
-		{3, "High"},
-		{4, "Urgent"},
+		{1, "Urgent"},
+		{2, "High"},
+		{3, "Medium"},
+		{4, "Low"},
 		{5, ""},
 	}
 
@@ -634,7 +634,7 @@ func TestBuildICalFeed_BasicChore(t *testing.T) {
 		{"UID", "UID:chore-42@donetick"},
 		{"DTSTART", "DTSTART:20250615T100000Z"},
 		{"SUMMARY", "SUMMARY:Kitchen Cleaning"},
-		{"PRIORITY", "PRIORITY:3"},
+		{"PRIORITY", "PRIORITY:5"},
 		{"STATUS", "STATUS:NEEDS-ACTION"},
 		{"LAST-MODIFIED", "LAST-MODIFIED:20250601T120000Z"},
 	}
@@ -829,7 +829,7 @@ func TestBuildChoreDescription_AllFields(t *testing.T) {
 	if !strings.Contains(result, "Points: 10") {
 		t.Error("missing points")
 	}
-	if !strings.Contains(result, "Priority: High") {
+	if !strings.Contains(result, "Priority: Medium") {
 		t.Error("missing priority")
 	}
 }

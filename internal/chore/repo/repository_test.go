@@ -263,6 +263,29 @@ func TestGetChoreDetailByIDIncludesAssignees(t *testing.T) {
 	}
 }
 
+// The chore view resolves the viewer's circle role from the details response to
+// decide whether they may approve or edit, so a missing circleId silently
+// demoted every admin and manager to "no permission" on that screen.
+func TestGetChoreDetailByIDIncludesCircleAndVisibility(t *testing.T) {
+	r, db := newTestChoreRepo(t)
+	project := createProject(t, db, testOwnerID, false)
+	chore := createChore(t, db, "private", testOwnerID, true, &project.ID, testOwnerID)
+
+	detail, err := r.GetChoreDetailByID(context.Background(), chore.ID, testCircleID, testOwnerID)
+	if err != nil {
+		t.Fatalf("GetChoreDetailByID failed: %v", err)
+	}
+	if detail.CircleID != testCircleID {
+		t.Errorf("circleID = %d, want %d", detail.CircleID, testCircleID)
+	}
+	if !detail.IsPrivate {
+		t.Error("isPrivate = false, want true")
+	}
+	if detail.ProjectID == nil || *detail.ProjectID != project.ID {
+		t.Errorf("projectID = %v, want %d", detail.ProjectID, project.ID)
+	}
+}
+
 // A section belongs to exactly one project's board: a chore must never be
 // created in a section another project owns, or in one that does not exist, or
 // it silently disappears from both boards.

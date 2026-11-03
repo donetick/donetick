@@ -4,9 +4,12 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"html"
 	"net/http"
+	"net/url"
+	"path"
 	"strings"
 	"time"
 
@@ -946,6 +949,45 @@ func (h *Handler) updateUserPassword(c *gin.Context) {
 
 }
 
+// validateUserImage constrains what a client may store in User.Image. The
+// field is later fed to storage.Delete by updateProfilePhoto, so an arbitrary
+// string here is a path-traversal primitive: a value like
+// "x/profiles/../users/<other id>/<uuid>.ext" is re-sliced at "profiles/" and
+// cleaned into another user's private upload key.
+//
+// Only two shapes are legitimate: an absolute http(s) URL (an OIDC picture
+// claim or a public-bucket URL), or the caller's own profiles/<id>/ storage
+// key. A signed key may round-trip back from GET /users with its signature
+// query attached, so that is stripped rather than rejected.
+func validateUserImage(image string, userID int) (string, error) {
+	if image == "" {
+		return "", nil
+	}
+	if strings.HasPrefix(image, "http://") || strings.HasPrefix(image, "https://") {
+		if _, err := url.ParseRequestURI(image); err != nil {
+			return "", errors.New("Invalid image URL")
+		}
+		return image, nil
+	}
+
+	key := image
+	if idx := strings.IndexAny(key, "?#"); idx >= 0 {
+		key = key[:idx]
+	}
+	key = path.Clean(key)
+	// Legacy rows stored the storage base directory in the path
+	// (e.g. "uploads/profiles/2/uuid.jpg"); normalize to the relative key so
+	// a client echoing one back is not rejected. Cleaning first is what makes
+	// this safe — a traversal segment can no longer survive the re-slice.
+	if idx := strings.Index(key, "profiles/"); idx > 0 {
+		key = key[idx:]
+	}
+	if !strings.HasPrefix(key, fmt.Sprintf("profiles/%d/", userID)) {
+		return "", errors.New("Invalid image: must be an http(s) URL or your own profile photo path")
+	}
+	return key, nil
+}
+
 func (h *Handler) UpdateUserDetails(c *gin.Context) {
 	type UpdateUserReq struct {
 		DisplayName *string `json:"displayName" binding:"omitempty"`
@@ -975,7 +1017,14 @@ func (h *Handler) UpdateUserDetails(c *gin.Context) {
 		user.ChatID = *req.ChatID
 	}
 	if req.Image != nil {
-		user.Image = *req.Image
+		img, err := validateUserImage(*req.Image, user.ID)
+		if err != nil {
+			c.JSON(400, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
+		user.Image = img
 	}
 	if req.Timezone != nil {
 		if !utils.IsValidTimezone(*req.Timezone) {
@@ -1442,8 +1491,17 @@ func (h *Handler) updateProfilePhoto(c *gin.Context) {
 		if idx := strings.Index(prev, "profiles/"); idx > 0 {
 			prev = prev[idx:]
 		}
-		if derr := h.storage.Delete(c, []string{prev}); derr != nil {
-			logging.FromContext(c).Warnw("Failed to delete previous profile photo", "path", prev, "error", derr)
+		// prev ultimately comes from the user-editable Image field (see the
+		// PUT /users handler), so a value like "profiles/../users/1/x.jpg"
+		// would resolve outside the profiles/ tree once storage.Delete
+		// cleans it, and "profiles/<other id>/x.jpg" would hit another user's
+		// photo. Only delete keys that are still under this user's own
+		// profiles/<id>/ prefix after cleaning.
+		ownPrefix := fmt.Sprintf("profiles/%d/", currentUser.ID)
+		if clean := path.Clean(prev); strings.HasPrefix(clean, ownPrefix) {
+			if derr := h.storage.Delete(c, []string{clean}); derr != nil {
+				logging.FromContext(c).Warnw("Failed to delete previous profile photo", "path", clean, "error", derr)
+			}
 		}
 	}
 

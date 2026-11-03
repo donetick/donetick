@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -69,6 +70,16 @@ func (h *Handler) AssetHandler(c *gin.Context) {
 	// The remainder is the storage key relative to BasePath — the same string
 	// that was signed, so signature validation and storage.Get agree.
 	filePath := strings.TrimPrefix(parsed.Path, "/")
+
+	// Clean before any decision is made on it: isPublicAsset and the
+	// signature check must see the same key that storage.Get will actually
+	// open, or a "profiles/../users/..." style path can look public here
+	// while resolving to a private file on disk.
+	filePath = path.Clean(filePath)
+	if filePath == "." || filePath == ".." || strings.HasPrefix(filePath, "../") {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid asset path"})
+		return
+	}
 
 	// Legacy profile rows stored the storage base directory in the URL
 	// (e.g. "uploads/profiles/1/uuid.jpg"); normalize to the relative key.

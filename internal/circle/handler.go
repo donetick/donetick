@@ -434,6 +434,33 @@ func (h *Handler) DeleteCircleMember(c *gin.Context) {
 		})
 		return
 	}
+	// Being an admin of circleID does not imply the target is a member of it.
+	// Without this check an admin of any circle could pass an arbitrary
+	// member_id and have handleUserLeavingCircle reassign that user's active
+	// circle back to their default one — kicking a user out of a circle the
+	// caller has no authority over.
+	members, err := h.circleRepo.GetCircleUsers(c, circleID)
+	if err != nil {
+		log.Error("Error getting circle members:", err)
+		c.JSON(500, gin.H{
+			"error": "Error getting circle members",
+		})
+		return
+	}
+	isMember := false
+	for _, member := range members {
+		if member.UserID == memberIDToDeleted {
+			isMember = true
+			break
+		}
+	}
+	if !isMember {
+		c.JSON(404, gin.H{
+			"error": "User is not a member of this circle",
+		})
+		return
+	}
+
 	orginalCircleID, err := h.circleRepo.GetUserOriginalCircle(c, memberIDToDeleted)
 	if handleUserLeavingCircle(h, c, &uModel.User{ID: memberIDToDeleted, CircleID: circleID}, orginalCircleID) != nil {
 		log.Error("Error handling user leaving circle:", err)

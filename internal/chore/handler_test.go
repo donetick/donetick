@@ -94,6 +94,7 @@ func newCreateChoreTestRouter(t *testing.T) (*gin.Engine, *gorm.DB) {
 		c.Next()
 	})
 	router.POST("/chores", h.CreateChore)
+	router.POST("/chores/bulk", h.BulkCreateChores)
 	return router, db
 }
 

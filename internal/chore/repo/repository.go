@@ -871,6 +871,27 @@ func (r *ChoreRepository) SetChorePendingApproval(c context.Context, chore *chMo
 	return err
 }
 
+// setNextScheduleUpdates decides how a chore continues after it has been
+// completed, approved or skipped: recurring chores move to the next assignee,
+// trigger chores are archived, always chores stay active and one-time chores
+// are archived.
+func setNextScheduleUpdates(choreUpdates map[string]interface{}, chore *chModel.Chore, dueDate *time.Time, nextAssignedTo *int) {
+	switch {
+	case dueDate != nil:
+		choreUpdates["assigned_to"] = nextAssignedTo
+	case chore.FrequencyType == "trigger":
+		// In case of trigger frequency type we need to still set the next assigned but need the task archived.
+		choreUpdates["assigned_to"] = nextAssignedTo
+		choreUpdates["is_active"] = false
+	case chore.FrequencyType == "always":
+		// Always chores have no due date but stay active and available immediately after completion.
+		choreUpdates["assigned_to"] = nextAssignedTo
+	default:
+		// one time task
+		choreUpdates["is_active"] = false
+	}
+}
+
 func (r *ChoreRepository) ApproveChore(c context.Context, chore *chModel.Chore, adminUserID int, dueDate *time.Time, nextAssignedTo *int, applyPoints bool) error {
 	nextVersion, err := r.nextSyncVersion(c, chore.CircleID)
 	if err != nil {
@@ -882,12 +903,7 @@ func (r *ChoreRepository) ApproveChore(c context.Context, chore *chModel.Chore, 
 		choreUpdates["status"] = chModel.ChoreStatusNoStatus
 		choreUpdates["sync_version"] = nextVersion
 
-		if dueDate != nil {
-			choreUpdates["assigned_to"] = nextAssignedTo
-		} else {
-			// one time task
-			choreUpdates["is_active"] = false
-		}
+		setNextScheduleUpdates(choreUpdates, chore, dueDate, nextAssignedTo)
 
 		// Get the latest history entry that's pending approval and update it to completed
 		var history chModel.ChoreHistory
@@ -973,20 +989,7 @@ func (r *ChoreRepository) CompleteChore(c context.Context, chore *chModel.Chore,
 		choreUpdates["status"] = chModel.ChoreStatusNoStatus
 		choreUpdates["sync_version"] = nextVersion
 
-		switch {
-		case dueDate != nil:
-			choreUpdates["assigned_to"] = nextAssignedTo
-		case chore.FrequencyType == "trigger":
-			// In case of trigger frequency type we need to still set the next assigned but need the task archived.
-			choreUpdates["assigned_to"] = nextAssignedTo
-			choreUpdates["is_active"] = false
-		case chore.FrequencyType == "always":
-			// Always chores have no due date but stay active and available immediately after completion.
-			choreUpdates["assigned_to"] = nextAssignedTo
-		default:
-			// one time task
-			choreUpdates["is_active"] = false
-		}
+		setNextScheduleUpdates(choreUpdates, chore, dueDate, nextAssignedTo)
 
 		// Look for existing chore history with start or pause status
 		var existingHistory chModel.ChoreHistory
@@ -1061,12 +1064,7 @@ func (r *ChoreRepository) SkipChore(c context.Context, chore *chModel.Chore, use
 		choreUpdates["status"] = chModel.ChoreStatusNoStatus
 		choreUpdates["sync_version"] = nextVersion
 
-		if dueDate != nil {
-			choreUpdates["assigned_to"] = nextAssignedTo
-		} else {
-			// one time task
-			choreUpdates["is_active"] = false
-		}
+		setNextScheduleUpdates(choreUpdates, chore, dueDate, nextAssignedTo)
 
 		// Look for existing chore history with start or pause status
 		var existingHistory chModel.ChoreHistory

@@ -331,7 +331,6 @@ func buildICalFeed(chores []*chModel.Chore, calendarName string, userTimezone st
 	b.WriteString("VERSION:2.0\r\n")
 	b.WriteString(foldLine(fmt.Sprintf("PRODID:%s", calendarProdID)))
 	b.WriteString(foldLine(fmt.Sprintf("X-WR-CALNAME:Donetick - %s", escapeICalText(calendarName))))
-	b.WriteString("METHOD:PUBLISH\r\n")
 	b.WriteString("CALSCALE:GREGORIAN\r\n")
 
 	if userTimezone != "" {
@@ -375,14 +374,9 @@ func buildICalFeed(chores []*chModel.Chore, calendarName string, userTimezone st
 			b.WriteString(fmt.Sprintf("PRIORITY:%d\r\n", icalPriority))
 		}
 
-		switch ch.Status {
-		case chModel.ChoreStatusInProgress:
-			b.WriteString("STATUS:IN-PROCESS\r\n")
-		default:
-			b.WriteString("STATUS:NEEDS-ACTION\r\n")
-		}
-
+		b.WriteString("STATUS:CONFIRMED\r\n")
 		b.WriteString(fmt.Sprintf("LAST-MODIFIED:%s\r\n", ch.UpdatedAt.UTC().Format("20060102T150405Z")))
+
 		b.WriteString("END:VEVENT\r\n")
 	}
 

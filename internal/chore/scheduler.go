@@ -448,15 +448,10 @@ func RemoveAssigneeAndReassign(chore *chModel.Chore, userID int) {
 	chore.UpdatedAt = time.Now().UTC()
 }
 
-// firstDueDateOnSelectedWeekday returns due if it falls on one of days in the
-// chore timezone, otherwise the first later selected day at the same wall-clock time.
-func firstDueDateOnSelectedWeekday(due time.Time, days []*string, tz string) time.Time {
-	loc := time.UTC
-	if tz != "" {
-		if l, err := time.LoadLocation(tz); err == nil {
-			loc = l
-		}
-	}
+// firstDueDateOnSelectedWeekday returns due if it falls on one of days in loc,
+// the chore's location, otherwise the first later selected day at the same
+// wall-clock time.
+func firstDueDateOnSelectedWeekday(due time.Time, days []*string, loc *time.Location) time.Time {
 	dueInTimezone := due.In(loc)
 	for i := 0; i < 7; i++ {
 		candidate := dueInTimezone.AddDate(0, 0, i)

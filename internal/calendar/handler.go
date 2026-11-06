@@ -346,7 +346,7 @@ func buildICalFeed(chores []*chModel.Chore, calendarName string, userTimezone st
 			continue
 		}
 
-		b.WriteString("BEGIN:VEVENT\r\n")
+		b.WriteString("BEGIN:VTODO\r\n")
 
 		uid := fmt.Sprintf("chore-%d@donetick", ch.ID)
 		b.WriteString(foldLine(fmt.Sprintf("UID:%s", uid)))
@@ -383,7 +383,7 @@ func buildICalFeed(chores []*chModel.Chore, calendarName string, userTimezone st
 		}
 
 		b.WriteString(fmt.Sprintf("LAST-MODIFIED:%s\r\n", ch.UpdatedAt.UTC().Format("20060102T150405Z")))
-		b.WriteString("END:VEVENT\r\n")
+		b.WriteString("END:VTODO\r\n")
 	}
 
 	b.WriteString("END:VCALENDAR\r\n")

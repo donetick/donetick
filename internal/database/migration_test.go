@@ -18,6 +18,11 @@ func TestMigrationScriptsSQLite(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to open sqlite: %v", err)
 	}
+	conn, err := db.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = conn.Close() })
 
 	if err := Migration(db); err != nil {
 		t.Fatalf("AutoMigrate failed: %v", err)

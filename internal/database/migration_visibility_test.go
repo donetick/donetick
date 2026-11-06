@@ -18,6 +18,11 @@ func TestUpgradeKeepsExistingProjectVisibility(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	conn, err := db.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = conn.Close() })
 	// Schema of the projects table as v0.1.80 created it.
 	if err := db.Exec(`CREATE TABLE projects (
 		id integer PRIMARY KEY AUTOINCREMENT, name text NOT NULL, description text, color text, icon text,

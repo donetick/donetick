@@ -26,15 +26,18 @@ const (
 // RewardRedemption is a member's request to spend points on a Reward, subject
 // to admin/manager approval — mirrors the chore ApproveChore/RejectChore flow.
 type RewardRedemption struct {
-	ID          int              `json:"id" gorm:"primary_key"`
-	RewardID    int              `json:"rewardId" gorm:"column:reward_id;index"`
-	CircleID    int              `json:"circleId" gorm:"column:circle_id;index"`
-	UserID      int              `json:"userId" gorm:"column:user_id;index"`
-	RewardName  string           `json:"rewardName" gorm:"column:reward_name"` // snapshot, survives reward edits/deletes
-	PointsCost  int              `json:"pointsCost" gorm:"column:points_cost"` // snapshot at request time
-	Status      RedemptionStatus `json:"status" gorm:"column:status"`
-	Note        *string          `json:"note" gorm:"column:note"`
-	RequestedAt time.Time        `json:"requestedAt" gorm:"column:requested_at"`
-	ResolvedAt  *time.Time       `json:"resolvedAt" gorm:"column:resolved_at"`
-	ResolvedBy  *int             `json:"resolvedBy" gorm:"column:resolved_by"`
+	XPMembershipID  int              `json:"-" gorm:"not null;default:0"`
+	XPModeAtRequest bool             `json:"-" gorm:"not null;default:false"`
+	XPCategoryID    *int             `json:"xpCategoryId" gorm:"column:xp_category_id"`
+	ID              int              `json:"id" gorm:"primary_key"`
+	RewardID        int              `json:"rewardId" gorm:"column:reward_id;index"`
+	CircleID        int              `json:"circleId" gorm:"column:circle_id;index"`
+	UserID          int              `json:"userId" gorm:"column:user_id;index"`
+	RewardName      string           `json:"rewardName" gorm:"column:reward_name"` // snapshot, survives reward edits/deletes
+	PointsCost      int              `json:"pointsCost" gorm:"column:points_cost"` // snapshot at request time
+	Status          RedemptionStatus `json:"status" gorm:"column:status"`
+	Note            *string          `json:"note" gorm:"column:note"`
+	RequestedAt     time.Time        `json:"requestedAt" gorm:"column:requested_at"`
+	ResolvedAt      *time.Time       `json:"resolvedAt" gorm:"column:resolved_at"`
+	ResolvedBy      *int             `json:"resolvedBy" gorm:"column:resolved_by"`
 }

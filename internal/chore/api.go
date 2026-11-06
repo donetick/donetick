@@ -395,6 +395,10 @@ func (h *API) CompleteChore(c *gin.Context) {
 	}
 
 	if err := h.choreRepo.CompleteChore(c, chore, nil, performer, nextDueDate, &completedDate, nextAssignedTo, true); err != nil {
+		if errors.Is(err, chRepo.ErrChoreChanged) {
+			c.JSON(409, gin.H{"error": err.Error()})
+			return
+		}
 		c.JSON(500, gin.H{
 			"error": "Error completing chore",
 		})

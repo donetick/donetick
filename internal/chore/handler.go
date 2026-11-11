@@ -586,7 +586,8 @@ func (h *Handler) createChore(c *gin.Context, currentUser *uModel.UserDetails, c
 		utcDate := choreReq.NextDueDate.UTC()
 		if fm := choreReq.FrequencyMetadata; choreReq.FrequencyType == chModel.FrequencyTypeDayOfTheWeek && fm != nil && len(fm.Days) > 0 &&
 			(fm.WeekPattern == nil || *fm.WeekPattern == "" || *fm.WeekPattern == chModel.WeekpatternEveryWeek) {
-			utcDate = firstDueDateOnSelectedWeekday(utcDate, fm.Days, fm.Timezone)
+			loc := choreLocation(c, &chModel.Chore{FrequencyMetadataV2: fm})
+			utcDate = firstDueDateOnSelectedWeekday(utcDate, fm.Days, loc)
 		}
 		dueDate = &utcDate
 	}

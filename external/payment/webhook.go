@@ -2,11 +2,14 @@ package payment
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
 	"strconv"
 	"time"
+
+	"gorm.io/gorm"
 
 	"donetick.com/core/internal/utils"
 	"donetick.com/core/logging"
@@ -376,7 +379,12 @@ func (h *Webhook) handleInitialPurchase(c *gin.Context, event RevenueCatEvent) e
 
 	user, err := h.userRepo.GetUserByID(c, userID)
 	if err != nil {
-		logger.Errorw("revenuecat.webhook.handleInitialPurchase failed to get user", "err", err)
+		logger.Errorw("revenuecat.webhook.handleInitialPurchase failed to get user", "user_id", userID, "err", err)
+		// An app_user_id that maps to no user will never resolve, so don't ask
+		// RevenueCat to retry it forever.
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil
+		}
 		return err
 	}
 
@@ -566,7 +574,10 @@ func (h *Webhook) handleTransfer(c *gin.Context, event RevenueCatEvent) error {
 
 	user, err := h.userRepo.GetUserByID(c, newUserID)
 	if err != nil {
-		logger.Errorw("revenuecat.webhook.handleTransfer failed to get user", "err", err)
+		logger.Errorw("revenuecat.webhook.handleTransfer failed to get user", "user_id", newUserID, "err", err)
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil
+		}
 		return err
 	}
 

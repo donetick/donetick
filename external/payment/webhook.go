@@ -1,11 +1,10 @@
 package payment
 
 import (
+	"crypto/subtle"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
-	"os"
 	"strconv"
 	"time"
 
@@ -65,6 +64,29 @@ func (h *Webhook) isIPWhitelisted(ip string) bool {
 	return ok
 }
 
+// stripeSubscriptionExpiry reads the paid-through date from Stripe. Webhook
+// payloads don't expand the subscription, and the plan interval isn't knowable
+// from the event, so the period end has to come from the API rather than being
+// derived by adding a fixed interval.
+func (h *Webhook) stripeSubscriptionExpiry(c *gin.Context, subscriptionID string) (time.Time, error) {
+	logger := logging.FromContext(c)
+
+	sub, err := h.stripe.GetSubscription(subscriptionID)
+	if err != nil {
+		logger.Errorw("payment.webhook.stripeSubscriptionExpiry failed to get subscription",
+			"subscription_id", subscriptionID, "err", err)
+		return time.Time{}, err
+	}
+
+	if sub.CurrentPeriodEnd == 0 {
+		logger.Errorw("payment.webhook.stripeSubscriptionExpiry subscription has no current period end",
+			"subscription_id", subscriptionID)
+		return time.Time{}, errors.New("stripe subscription has no current_period_end")
+	}
+
+	return time.Unix(sub.CurrentPeriodEnd, 0).UTC(), nil
+}
+
 func (h *Webhook) StripeWebhook(c *gin.Context) {
 
 	logger := logging.FromContext(c)
@@ -81,19 +103,6 @@ func (h *Webhook) StripeWebhook(c *gin.Context) {
 		logger.Errorw("payment.webhook.Webhook failed to bind json", "err", err)
 		return
 	}
-	// create a file and write the event to it:
-	timestamp := time.Now().UTC().Format("2006-01-02_15:04:05")
-	f, err := os.Create(fmt.Sprintf("w-%s-%s.json", timestamp, event.Type))
-	if err != nil {
-		logger.Errorw("payment.webhook.Webhook failed to create file", "err", err)
-		return
-	}
-	defer f.Close()
-	if err := json.NewEncoder(f).Encode(event); err != nil {
-		logger.Errorw("payment.webhook.Webhook failed to write to file", "err", err)
-		return
-	}
-
 	switch event.Type {
 	case "checkout.session.completed":
 		// get the subscription id from the event:
@@ -112,8 +121,14 @@ func (h *Webhook) StripeWebhook(c *gin.Context) {
 			return
 		}
 
-		if s.Subscription.ID == "" {
+		if s.Subscription == nil || s.Subscription.ID == "" {
 			logger.Errorw("payment.webhook.Webhook failed to get subscription id", "event", event.Type)
+			c.JSON(http.StatusOK, nil)
+			return
+		}
+
+		if s.Customer == nil || s.Customer.ID == "" {
+			logger.Errorw("payment.webhook.Webhook session has no customer", "event", event.Type)
 			c.JSON(http.StatusOK, nil)
 			return
 		}
@@ -125,7 +140,14 @@ func (h *Webhook) StripeWebhook(c *gin.Context) {
 			return
 		}
 
-		expiredAt := time.Now().UTC().AddDate(1, 0, 0)
+		expiredAt, err := h.stripeSubscriptionExpiry(c, s.Subscription.ID)
+		if err != nil {
+			// Returning an error lets Stripe retry rather than storing a guessed
+			// expiration.
+			c.JSON(http.StatusInternalServerError, "Internal Server Error")
+			return
+		}
+
 		// Save to legacy table for backward compatibility
 		h.stripeDB.SaveSubscription(c, &model.StripeSubscription{
 			SubscriptionID: s.Subscription.ID,
@@ -160,6 +182,19 @@ func (h *Webhook) StripeWebhook(c *gin.Context) {
 			c.JSON(http.StatusInternalServerError, "Internal Server Error")
 			return
 		}
+		// One-off invoices carry no subscription and don't affect entitlements.
+		if inv.Subscription == nil || inv.Subscription.ID == "" {
+			logger.Debugw("payment.webhook.Webhook ignoring non-subscription invoice", "invoice_id", inv.ID)
+			c.JSON(http.StatusOK, nil)
+			return
+		}
+
+		if inv.Customer == nil || inv.Customer.ID == "" {
+			logger.Errorw("payment.webhook.Webhook invoice has no customer", "invoice_id", inv.ID)
+			c.JSON(http.StatusOK, nil)
+			return
+		}
+
 		mInvoice := &model.StripeInvoice{
 			InvoiceID:      inv.ID,
 			CustomerID:     inv.Customer.ID,
@@ -169,15 +204,13 @@ func (h *Webhook) StripeWebhook(c *gin.Context) {
 			SubscriptionID: inv.Subscription.ID,
 			ReceivedAt:     time.Now().UTC(),
 		}
-		expiredAt := time.Unix(int64(inv.PeriodEnd), 0)
-
-		if inv.PeriodEnd == inv.PeriodStart {
-			// on initial payment, the period end and start are the same
-			// so we add a year to the period end
-			logger.Debugw("payment.webhook.Webhook ignoring payment_succeeded for session checkout", "event", event.Type)
-
+		// The invoice's own period is degenerate on the first payment (start ==
+		// end), so take the period end from the subscription itself.
+		expiredAt, err := h.stripeSubscriptionExpiry(c, inv.Subscription.ID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, "Internal Server Error")
+			return
 		}
-		expiredAt = mInvoice.PeriodEnd.AddDate(1, 0, 0)
 
 		h.stripeDB.SaveInvoice(c, mInvoice)
 		now := time.Now().UTC()
@@ -277,10 +310,17 @@ func (e RevenueCatEvent) expiresAt() *time.Time {
 func (h *Webhook) RevenueCatWebhook(c *gin.Context) {
 	logger := logging.FromContext(c)
 
-	// check authentication header to be equal to secret123:
+	// Without a configured secret every comparison below would succeed against
+	// an absent header, leaving the endpoint open, so fail closed instead.
+	if h.revenueCatConfig.AuthSecret == "" {
+		logger.Error("revenuecat.webhook.RevenueCatWebhook no auth secret configured, rejecting request")
+		c.JSON(http.StatusServiceUnavailable, "Webhook not configured")
+		return
+	}
+
 	authHeader := c.GetHeader("Authorization")
-	if authHeader != h.revenueCatConfig.AuthSecret {
-		logger.Errorw("revenuecat.webhook.RevenueCatWebhook failed to validate auth header", "auth_header", authHeader)
+	if subtle.ConstantTimeCompare([]byte(authHeader), []byte(h.revenueCatConfig.AuthSecret)) != 1 {
+		logger.Error("revenuecat.webhook.RevenueCatWebhook failed to validate auth header")
 		c.JSON(http.StatusForbidden, "Forbidden")
 		return
 	}

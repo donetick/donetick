@@ -349,6 +349,25 @@ type ChoreReq struct {
 	SectionID    *int                 `json:"sectionId" binding:"omitempty"`
 	ThingTrigger *tModel.ThingTrigger `json:"thingTrigger"`
 	DraftId      *string              `json:"draftId,omitempty"`
+
+	// nextDueDateSet is true when the request has a nextDueDate key, so an
+	// explicit null (remove the due date) can be told apart from an absent field.
+	nextDueDateSet bool
+}
+
+func (r *ChoreReq) UnmarshalJSON(data []byte) error {
+	type choreReqFields ChoreReq
+	if err := json.Unmarshal(data, (*choreReqFields)(r)); err != nil {
+		return err
+	}
+	var present struct {
+		NextDueDate json.RawMessage `json:"nextDueDate"`
+	}
+	if err := json.Unmarshal(data, &present); err != nil {
+		return err
+	}
+	r.nextDueDateSet = present.NextDueDate != nil
+	return nil
 }
 
 type ActionOptions struct {
@@ -934,6 +953,9 @@ func (h *Handler) EditChore(c *gin.Context) {
 	if choreReq.NextDueDate != nil {
 		utcDate := choreReq.NextDueDate.UTC()
 		dueDate = &utcDate
+	} else if choreReq.nextDueDateSet && !choreReq.IsRolling {
+		// An explicit null removes the due date; leaving the field out keeps it.
+		dueDate = nil
 	} else {
 		dueDate = oldChore.NextDueDate
 	}

@@ -260,26 +260,29 @@ type RevenueCatWebhookEvent struct {
 // RevenueCat sends every transaction field at the top level of `event`; there
 // is no nested transactions array.
 type RevenueCatEvent struct {
-	ID                    string                         `json:"id"`
-	Type                  string                         `json:"type"`
-	EventTimestampMs      int64                          `json:"event_timestamp_ms"`
-	AppUserID             string                         `json:"app_user_id"`
-	OriginalAppUserID     string                         `json:"original_app_user_id"`
-	ProductID             string                         `json:"product_id"`
-	EntitlementIDs        []string                       `json:"entitlement_ids"`
-	Store                 string                         `json:"store"`
-	TransactionID         string                         `json:"transaction_id"`
-	OriginalTransactionID string                         `json:"original_transaction_id"`
-	PeriodType            string                         `json:"period_type"`
-	PurchasedAtMs         *int64                         `json:"purchased_at_ms"`
-	ExpirationAtMs        *int64                         `json:"expiration_at_ms"`
-	Price                 *float64                       `json:"price"`
-	Currency              string                         `json:"currency"`
-	Entitlements          map[string]interface{}         `json:"entitlements"`
-	Subscriber            RevenueCatSubscriberAttributes `json:"subscriber_attributes"`
-	Environment           string                         `json:"environment"`
-	AppID                 string                         `json:"app_id"`
-	Aliases               []string                       `json:"aliases"`
+	ID                        string                         `json:"id"`
+	Type                      string                         `json:"type"`
+	EventTimestampMs          int64                          `json:"event_timestamp_ms"`
+	AppUserID                 string                         `json:"app_user_id"`
+	OriginalAppUserID         string                         `json:"original_app_user_id"`
+	ProductID                 string                         `json:"product_id"`
+	EntitlementIDs            []string                       `json:"entitlement_ids"`
+	Store                     string                         `json:"store"`
+	TransactionID             string                         `json:"transaction_id"`
+	OriginalTransactionID     string                         `json:"original_transaction_id"`
+	PeriodType                string                         `json:"period_type"`
+	PurchasedAtMs             *int64                         `json:"purchased_at_ms"`
+	ExpirationAtMs            *int64                         `json:"expiration_at_ms"`
+	Price                     *float64                       `json:"price"`
+	Currency                  string                         `json:"currency"`
+	Entitlements              map[string]interface{}         `json:"entitlements"`
+	Subscriber                RevenueCatSubscriberAttributes `json:"subscriber_attributes"`
+	Environment               string                         `json:"environment"`
+	AppID                     string                         `json:"app_id"`
+	Aliases                   []string                       `json:"aliases"`
+	TransferredFrom           []string                       `json:"transferred_from"`
+	TransferredTo             []string                       `json:"transferred_to"`
+	GracePeriodExpirationAtMs *int64                         `json:"grace_period_expiration_at_ms"`
 }
 
 type RevenueCatSubscriberAttributes struct {
@@ -545,7 +548,9 @@ func (h *Webhook) handleRenewal(c *gin.Context, event RevenueCatEvent) error {
 }
 
 func (h *Webhook) handleCancellation(c *gin.Context, event RevenueCatEvent) error {
-	return h.applyStatus(c, event, "handleCancellation", "cancelled")
+	// Cancelling auto-renew does not revoke the paid entitlement. EXPIRATION
+	// (including refunds/revocations) ends access; ExpiresAt also bounds it.
+	return nil
 }
 
 func (h *Webhook) handleExpiration(c *gin.Context, event RevenueCatEvent) error {
@@ -553,7 +558,21 @@ func (h *Webhook) handleExpiration(c *gin.Context, event RevenueCatEvent) error 
 }
 
 func (h *Webhook) handleBillingIssue(c *gin.Context, event RevenueCatEvent) error {
-	return h.applyStatus(c, event, "handleBillingIssue", "billing_issue")
+	// Billing failures do not revoke access during the store's grace period.
+	// Never reactivate an expired subscription on a delayed billing event.
+	if event.GracePeriodExpirationAtMs == nil {
+		return nil
+	}
+	sub, err := h.findSubscription(c, event)
+	if err != nil || sub == nil {
+		return err
+	}
+	graceEnd := time.UnixMilli(*event.GracePeriodExpirationAtMs).UTC()
+	if sub.Status != "active" || sub.ExpiresAt == nil || !graceEnd.After(*sub.ExpiresAt) {
+		return nil
+	}
+	sub.ExpiresAt = &graceEnd
+	return h.subscriptionDB.UpdateSubscription(c, sub)
 }
 
 func (h *Webhook) handleProductChange(c *gin.Context, event RevenueCatEvent) error {
@@ -593,42 +612,23 @@ func (h *Webhook) handleNonRenewingPurchase(c *gin.Context, event RevenueCatEven
 func (h *Webhook) handleTransfer(c *gin.Context, event RevenueCatEvent) error {
 	logger := logging.FromContext(c)
 
-	// Update user ID for transfer events
-	newUserID := h.extractUserIDFromEvent(event)
-	if newUserID == 0 {
-		logger.Errorw("revenuecat.webhook.handleTransfer failed to extract user ID", "app_user_id", event.AppUserID)
-		return nil
-	}
-
-	subscription, err := h.findSubscription(c, event)
-	if err != nil {
-		logger.Errorw("revenuecat.webhook.handleTransfer failed to get subscription", "err", err)
-		return err
-	}
-
-	if subscription == nil {
-		logger.Errorw("revenuecat.webhook.handleTransfer subscription not found",
-			"original_transaction_id", event.OriginalTransactionID, "app_user_id", event.AppUserID)
-		return nil
-	}
-
-	user, err := h.userRepo.GetUserByID(c, newUserID)
-	if err != nil {
-		logger.Errorw("revenuecat.webhook.handleTransfer failed to get user", "user_id", newUserID, "err", err)
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil
+	// TRANSFER has alias arrays, not app_user_id or transaction fields.
+	// Skip anonymous aliases and resolve a registered destination account.
+	for _, alias := range event.TransferredTo {
+		userID, err := strconv.Atoi(alias)
+		if err != nil || userID <= 0 {
+			continue
 		}
-		return err
+		user, err := h.userRepo.GetUserByID(c, userID)
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			continue
+		}
+		if err != nil {
+			return err
+		}
+		return h.subscriptionDB.TransferRevenueCatSubscriptions(c, event.TransferredFrom, alias, user.ID, user.CircleID)
 	}
-
-	subscription.UserID = newUserID
-	subscription.CircleID = user.CircleID
-	subscription.ExternalCustomerID = event.AppUserID
-
-	if err := h.subscriptionDB.UpdateSubscription(c, subscription); err != nil {
-		logger.Errorw("revenuecat.webhook.handleTransfer failed to update subscription", "err", err)
-		return err
-	}
+	logger.Warnw("revenuecat.webhook.handleTransfer no registered destination", "event_id", event.ID)
 	return nil
 }
 

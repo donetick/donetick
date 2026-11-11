@@ -1493,12 +1493,9 @@ func (h *Handler) updateProfilePhoto(c *gin.Context) {
 		return
 	}
 
-	// Clean up the previous profile photo when it is a locally-stored path.
-	// Full https:// URLs (OIDC picture claims or public-bucket URLs) are
-	// skipped — public-bucket objects accumulate until a future cleanup pass.
-	if prev := currentUser.Image; prev != "" &&
-		!strings.HasPrefix(prev, "http://") &&
-		!strings.HasPrefix(prev, "https://") {
+	// Resolve managed URLs back to storage keys, but never delete external
+	// images or keys outside this user's own profile directory.
+	if prev := h.previousProfilePhotoKey(c, currentUser.Image, currentUser.ID); prev != "" {
 		// Legacy rows stored the storage base directory in the path
 		// (e.g. "uploads/profiles/..."); storage.Delete expects a key
 		// relative to BasePath.
@@ -1530,6 +1527,38 @@ func (h *Handler) updateProfilePhoto(c *gin.Context) {
 	// SignIfLocal passes through https:// URLs unchanged, so the response is
 	// correct regardless of whether a public bucket host is configured.
 	c.JSON(http.StatusOK, gin.H{"sign": h.signer.SignIfLocal(photoURL)})
+}
+
+// previousProfilePhotoKey recognizes URLs produced by this storage backend.
+// Compare origin and path rather than query strings: S3 presigned signatures
+// expire and change, but the underlying object key remains stable. Ownership
+// must be checked separately because Image is user-editable.
+func (h *Handler) previousProfilePhotoKey(c *gin.Context, image string, userID int) string {
+	if !strings.HasPrefix(image, "http://") && !strings.HasPrefix(image, "https://") {
+		return image // Legacy/local paths are validated by the cleanup below.
+	}
+	previous, err := url.Parse(image)
+	if err != nil || previous.User != nil {
+		return ""
+	}
+	ownPrefix := fmt.Sprintf("profiles/%d/", userID)
+	idx := strings.LastIndex(previous.Path, "/"+ownPrefix)
+	if idx < 0 {
+		return ""
+	}
+	key := previous.Path[idx+1:]
+	if clean := path.Clean(key); clean != key || !strings.HasPrefix(clean, ownPrefix) {
+		return ""
+	}
+	expectedURL, err := h.storage.GetPublicURL(c, key)
+	if err != nil {
+		return ""
+	}
+	expected, err := url.Parse(expectedURL)
+	if err != nil || previous.Scheme != expected.Scheme || previous.Host != expected.Host || previous.Path != expected.Path {
+		return ""
+	}
+	return key
 }
 
 func (h *Handler) getStorageUsage(c *gin.Context) {

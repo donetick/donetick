@@ -9,12 +9,18 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
+	"sync"
 	"testing"
 
 	"donetick.com/core/config"
 	storage "donetick.com/core/internal/storage"
 	uModel "donetick.com/core/internal/user/model"
 	uRepo "donetick.com/core/internal/user/repo"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/gin-gonic/gin"
 	"github.com/glebarez/sqlite"
 	"github.com/stretchr/testify/require"
@@ -128,6 +134,84 @@ func TestUpdateProfilePhotoDeletesOwnPreviousPhoto(t *testing.T) {
 
 	if _, err := os.Stat(ownFull); !os.IsNotExist(err) {
 		t.Fatalf("own previous photo should have been deleted, stat err: %v", err)
+	}
+}
+
+// Exercise the real S3 URL builder and handler together: URLs persisted by an
+// upload must route cleanup to the same bucket, without trusting arbitrary URLs.
+func TestUpdateProfilePhotoCleansUpManagedS3URLs(t *testing.T) {
+	for _, backend := range []struct {
+		name, publicHost, publicBucket, wantBucket string
+	}{
+		{"CDN", "cdn.example.com", "public-bucket", "public-bucket"},
+		{"presigned public", "", "public-bucket", "public-bucket"},
+		{"presigned private fallback", "", "", "private-bucket"},
+	} {
+		t.Run(backend.name, func(t *testing.T) {
+			for _, tc := range []struct {
+				name, key  string
+				change     func(string) string
+				wantDelete bool
+			}{
+				{name: "own photo", key: "profiles/2/old.jpg", wantDelete: true},
+				{name: "expired signature", key: "profiles/2/old.jpg", change: func(u string) string {
+					return strings.SplitN(u, "?", 2)[0] + "?X-Amz-Date=20000101T000000Z&X-Amz-Signature=expired"
+				}, wantDelete: true},
+				{name: "other user", key: "profiles/1/old.jpg"},
+				{name: "private attachment", key: "users/2/secret.jpg"},
+				{name: "traversal", key: "profiles/2/../1/old.jpg"},
+				{name: "encoded traversal", key: "profiles/2/old.jpg", change: func(u string) string {
+					return strings.Replace(u, "/old.jpg", "/%2e%2e/1/old.jpg", 1)
+				}},
+				{name: "external origin", key: "profiles/2/old.jpg", change: func(u string) string {
+					return "https://external.example.com/" + strings.SplitN(u, "://", 2)[1]
+				}},
+				{name: "wrong base path", key: "profiles/2/old.jpg", change: func(u string) string {
+					return strings.Replace(u, "/assets/", "/elsewhere/", 1)
+				}},
+			} {
+				t.Run(tc.name, func(t *testing.T) {
+					h, db, _ := newProfilePhotoHandler(t)
+					var mu sync.Mutex
+					var deleted []string
+					srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						if r.Method == http.MethodDelete {
+							mu.Lock()
+							deleted = append(deleted, r.URL.Path)
+							mu.Unlock()
+							w.WriteHeader(http.StatusNoContent)
+						}
+					}))
+					t.Cleanup(srv.Close)
+					sess, err := session.NewSession(&aws.Config{
+						Region: aws.String("us-east-1"), Endpoint: aws.String(srv.URL),
+						Credentials:      credentials.NewStaticCredentials("key", "secret", ""),
+						S3ForcePathStyle: aws.Bool(true),
+					})
+					require.NoError(t, err)
+					h.storage = &storage.S3Storage{
+						Bucket: "private-bucket", PublicBucket: backend.publicBucket,
+						PublicHost: backend.publicHost, BasePath: "assets", Client: s3.New(sess),
+					}
+					image, err := h.storage.GetPublicURL(t.Context(), tc.key)
+					require.NoError(t, err)
+					if tc.change != nil {
+						image = tc.change(image)
+					}
+					u := uModel.User{ID: 2, Image: image}
+					require.NoError(t, db.Create(&u).Error)
+					rec := postProfilePhoto(t, h, &uModel.UserDetails{User: u})
+					require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+					mu.Lock()
+					defer mu.Unlock()
+					if tc.wantDelete {
+						require.Equal(t, []string{"/" + backend.wantBucket + "/assets/profiles/2/old.jpg"}, deleted)
+					} else {
+						require.Empty(t, deleted)
+					}
+				})
+			}
+		})
 	}
 }
 

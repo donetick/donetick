@@ -51,6 +51,7 @@ func NewS3Storage(config *config.Config) (*S3Storage, error) {
 		Client:       s3.New(sess),
 	}, nil
 }
+
 // key maps a storage path (as stored in storage_files rows and in the user
 // Image column) to the S3 object key. Every read, write and delete must build
 // keys through this, otherwise a delete silently targets a key that no save

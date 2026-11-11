@@ -38,6 +38,14 @@ func (s *StripeService) CreateCustomer(c context.Context, user *uModel.UserDetai
 	return customer, nil
 }
 
+// GetSubscription reads a subscription from Stripe. Webhook payloads don't
+// expand the subscription object, so this is the only reliable source for the
+// current period end.
+func (s *StripeService) GetSubscription(subscriptionID string) (*stripe.Subscription, error) {
+	stripe.Key = s.Key
+	return subscription.Get(subscriptionID, nil)
+}
+
 func (s *StripeService) CancelSubscription(subscriptionID string) (*stripe.Subscription, error) {
 	stripe.Key = s.Key
 	sub, err := subscription.Update(

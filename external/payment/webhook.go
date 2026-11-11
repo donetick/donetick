@@ -1,12 +1,14 @@
 package payment
 
 import (
+	"crypto/subtle"
 	"encoding/json"
-	"fmt"
+	"errors"
 	"net/http"
-	"os"
 	"strconv"
 	"time"
+
+	"gorm.io/gorm"
 
 	"donetick.com/core/internal/utils"
 	"donetick.com/core/logging"
@@ -62,6 +64,29 @@ func (h *Webhook) isIPWhitelisted(ip string) bool {
 	return ok
 }
 
+// stripeSubscriptionExpiry reads the paid-through date from Stripe. Webhook
+// payloads don't expand the subscription, and the plan interval isn't knowable
+// from the event, so the period end has to come from the API rather than being
+// derived by adding a fixed interval.
+func (h *Webhook) stripeSubscriptionExpiry(c *gin.Context, subscriptionID string) (time.Time, error) {
+	logger := logging.FromContext(c)
+
+	sub, err := h.stripe.GetSubscription(subscriptionID)
+	if err != nil {
+		logger.Errorw("payment.webhook.stripeSubscriptionExpiry failed to get subscription",
+			"subscription_id", subscriptionID, "err", err)
+		return time.Time{}, err
+	}
+
+	if sub.CurrentPeriodEnd == 0 {
+		logger.Errorw("payment.webhook.stripeSubscriptionExpiry subscription has no current period end",
+			"subscription_id", subscriptionID)
+		return time.Time{}, errors.New("stripe subscription has no current_period_end")
+	}
+
+	return time.Unix(sub.CurrentPeriodEnd, 0).UTC(), nil
+}
+
 func (h *Webhook) StripeWebhook(c *gin.Context) {
 
 	logger := logging.FromContext(c)
@@ -78,19 +103,6 @@ func (h *Webhook) StripeWebhook(c *gin.Context) {
 		logger.Errorw("payment.webhook.Webhook failed to bind json", "err", err)
 		return
 	}
-	// create a file and write the event to it:
-	timestamp := time.Now().UTC().Format("2006-01-02_15:04:05")
-	f, err := os.Create(fmt.Sprintf("w-%s-%s.json", timestamp, event.Type))
-	if err != nil {
-		logger.Errorw("payment.webhook.Webhook failed to create file", "err", err)
-		return
-	}
-	defer f.Close()
-	if err := json.NewEncoder(f).Encode(event); err != nil {
-		logger.Errorw("payment.webhook.Webhook failed to write to file", "err", err)
-		return
-	}
-
 	switch event.Type {
 	case "checkout.session.completed":
 		// get the subscription id from the event:
@@ -109,8 +121,14 @@ func (h *Webhook) StripeWebhook(c *gin.Context) {
 			return
 		}
 
-		if s.Subscription.ID == "" {
+		if s.Subscription == nil || s.Subscription.ID == "" {
 			logger.Errorw("payment.webhook.Webhook failed to get subscription id", "event", event.Type)
+			c.JSON(http.StatusOK, nil)
+			return
+		}
+
+		if s.Customer == nil || s.Customer.ID == "" {
+			logger.Errorw("payment.webhook.Webhook session has no customer", "event", event.Type)
 			c.JSON(http.StatusOK, nil)
 			return
 		}
@@ -122,7 +140,14 @@ func (h *Webhook) StripeWebhook(c *gin.Context) {
 			return
 		}
 
-		expiredAt := time.Now().UTC().AddDate(1, 0, 0)
+		expiredAt, err := h.stripeSubscriptionExpiry(c, s.Subscription.ID)
+		if err != nil {
+			// Returning an error lets Stripe retry rather than storing a guessed
+			// expiration.
+			c.JSON(http.StatusInternalServerError, "Internal Server Error")
+			return
+		}
+
 		// Save to legacy table for backward compatibility
 		h.stripeDB.SaveSubscription(c, &model.StripeSubscription{
 			SubscriptionID: s.Subscription.ID,
@@ -157,6 +182,19 @@ func (h *Webhook) StripeWebhook(c *gin.Context) {
 			c.JSON(http.StatusInternalServerError, "Internal Server Error")
 			return
 		}
+		// One-off invoices carry no subscription and don't affect entitlements.
+		if inv.Subscription == nil || inv.Subscription.ID == "" {
+			logger.Debugw("payment.webhook.Webhook ignoring non-subscription invoice", "invoice_id", inv.ID)
+			c.JSON(http.StatusOK, nil)
+			return
+		}
+
+		if inv.Customer == nil || inv.Customer.ID == "" {
+			logger.Errorw("payment.webhook.Webhook invoice has no customer", "invoice_id", inv.ID)
+			c.JSON(http.StatusOK, nil)
+			return
+		}
+
 		mInvoice := &model.StripeInvoice{
 			InvoiceID:      inv.ID,
 			CustomerID:     inv.Customer.ID,
@@ -166,15 +204,13 @@ func (h *Webhook) StripeWebhook(c *gin.Context) {
 			SubscriptionID: inv.Subscription.ID,
 			ReceivedAt:     time.Now().UTC(),
 		}
-		expiredAt := time.Unix(int64(inv.PeriodEnd), 0)
-
-		if inv.PeriodEnd == inv.PeriodStart {
-			// on initial payment, the period end and start are the same
-			// so we add a year to the period end
-			logger.Debugw("payment.webhook.Webhook ignoring payment_succeeded for session checkout", "event", event.Type)
-
+		// The invoice's own period is degenerate on the first payment (start ==
+		// end), so take the period end from the subscription itself.
+		expiredAt, err := h.stripeSubscriptionExpiry(c, inv.Subscription.ID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, "Internal Server Error")
+			return
 		}
-		expiredAt = mInvoice.PeriodEnd.AddDate(1, 0, 0)
 
 		h.stripeDB.SaveInvoice(c, mInvoice)
 		now := time.Now().UTC()
@@ -221,25 +257,32 @@ type RevenueCatWebhookEvent struct {
 	Event      RevenueCatEvent `json:"event"`
 }
 
+// RevenueCat sends every transaction field at the top level of `event`; there
+// is no nested transactions array.
 type RevenueCatEvent struct {
-	ID                string                         `json:"id"`
-	Type              string                         `json:"type"`
-	EventTimestampMs  int64                          `json:"event_timestamp_ms"`
-	AppUserID         string                         `json:"app_user_id"`
-	OriginalAppUserID string                         `json:"original_app_user_id"`
-	ProductID         string                         `json:"product_id"`
-	EntitlementIDs    []string                       `json:"entitlement_ids"`
-	Store             string                         `json:"store"`
-	PurchasedAtMs     *int64                         `json:"purchased_at_ms"`
-	ExpirationAtMs    *int64                         `json:"expiration_at_ms"`
-	Price             *float64                       `json:"price"`
-	Currency          string                         `json:"currency"`
-	Entitlements      map[string]interface{}         `json:"entitlements"`
-	Subscriber        RevenueCatSubscriberAttributes `json:"subscriber_attributes"`
-	Environment       string                         `json:"environment"`
-	AppID             string                         `json:"app_id"`
-	Aliases           []string                       `json:"aliases"`
-	Transactions      []RevenueCatTransaction        `json:"transactions"`
+	ID                        string                         `json:"id"`
+	Type                      string                         `json:"type"`
+	EventTimestampMs          int64                          `json:"event_timestamp_ms"`
+	AppUserID                 string                         `json:"app_user_id"`
+	OriginalAppUserID         string                         `json:"original_app_user_id"`
+	ProductID                 string                         `json:"product_id"`
+	EntitlementIDs            []string                       `json:"entitlement_ids"`
+	Store                     string                         `json:"store"`
+	TransactionID             string                         `json:"transaction_id"`
+	OriginalTransactionID     string                         `json:"original_transaction_id"`
+	PeriodType                string                         `json:"period_type"`
+	PurchasedAtMs             *int64                         `json:"purchased_at_ms"`
+	ExpirationAtMs            *int64                         `json:"expiration_at_ms"`
+	Price                     *float64                       `json:"price"`
+	Currency                  string                         `json:"currency"`
+	Entitlements              map[string]interface{}         `json:"entitlements"`
+	Subscriber                RevenueCatSubscriberAttributes `json:"subscriber_attributes"`
+	Environment               string                         `json:"environment"`
+	AppID                     string                         `json:"app_id"`
+	Aliases                   []string                       `json:"aliases"`
+	TransferredFrom           []string                       `json:"transferred_from"`
+	TransferredTo             []string                       `json:"transferred_to"`
+	GracePeriodExpirationAtMs *int64                         `json:"grace_period_expiration_at_ms"`
 }
 
 type RevenueCatSubscriberAttributes struct {
@@ -249,26 +292,38 @@ type RevenueCatSubscriberAttributes struct {
 	} `json:"$userId"`
 }
 
-type RevenueCatTransaction struct {
-	ID                    string `json:"id"`
-	OriginalTransactionID string `json:"original_transaction_id"`
-	ProductID             string `json:"product_id"`
-	PurchaseDateMs        int64  `json:"purchase_date_ms"`
-	ExpiresDateMs         *int64 `json:"expires_date_ms"`
-	IsTrialPeriod         bool   `json:"is_trial_period"`
-	AutoRenewStatus       *bool  `json:"auto_renew_status"`
-	PeriodType            string `json:"period_type"`
-	Store                 string `json:"store"`
-	Environment           string `json:"environment"`
+// subscriptionID is the canonical key for the unified subscription row. It
+// stays stable across the whole lifecycle of a store subscription, unlike
+// transaction_id which changes on every renewal.
+func (e RevenueCatEvent) subscriptionID() string {
+	if e.OriginalTransactionID != "" {
+		return e.OriginalTransactionID
+	}
+	return e.AppUserID
+}
+
+func (e RevenueCatEvent) expiresAt() *time.Time {
+	if e.ExpirationAtMs == nil {
+		return nil
+	}
+	expiresAt := time.UnixMilli(*e.ExpirationAtMs).UTC()
+	return &expiresAt
 }
 
 func (h *Webhook) RevenueCatWebhook(c *gin.Context) {
 	logger := logging.FromContext(c)
 
-	// check authentication header to be equal to secret123:
+	// Without a configured secret every comparison below would succeed against
+	// an absent header, leaving the endpoint open, so fail closed instead.
+	if h.revenueCatConfig.AuthSecret == "" {
+		logger.Error("revenuecat.webhook.RevenueCatWebhook no auth secret configured, rejecting request")
+		c.JSON(http.StatusServiceUnavailable, "Webhook not configured")
+		return
+	}
+
 	authHeader := c.GetHeader("Authorization")
-	if authHeader != h.revenueCatConfig.AuthSecret {
-		logger.Errorw("revenuecat.webhook.RevenueCatWebhook failed to validate auth header", "auth_header", authHeader)
+	if subtle.ConstantTimeCompare([]byte(authHeader), []byte(h.revenueCatConfig.AuthSecret)) != 1 {
+		logger.Error("revenuecat.webhook.RevenueCatWebhook failed to validate auth header")
 		c.JSON(http.StatusForbidden, "Forbidden")
 		return
 	}
@@ -294,30 +349,40 @@ func (h *Webhook) RevenueCatWebhook(c *gin.Context) {
 	}
 
 	// Process based on event type
+	var handlerErr error
 	switch webhookEvent.Event.Type {
 	case "INITIAL_PURCHASE":
-		h.handleInitialPurchase(c, webhookEvent.Event)
+		handlerErr = h.handleInitialPurchase(c, webhookEvent.Event)
 	case "RENEWAL":
-		h.handleRenewal(c, webhookEvent.Event)
+		handlerErr = h.handleRenewal(c, webhookEvent.Event)
 	case "CANCELLATION":
-		h.handleCancellation(c, webhookEvent.Event)
+		handlerErr = h.handleCancellation(c, webhookEvent.Event)
 
 	case "EXPIRATION":
-		h.handleExpiration(c, webhookEvent.Event)
+		handlerErr = h.handleExpiration(c, webhookEvent.Event)
 
 	case "BILLING_ISSUE":
-		h.handleBillingIssue(c, webhookEvent.Event)
+		handlerErr = h.handleBillingIssue(c, webhookEvent.Event)
 
 	case "PRODUCT_CHANGE":
-		h.handleProductChange(c, webhookEvent.Event)
+		handlerErr = h.handleProductChange(c, webhookEvent.Event)
 	case "NON_RENEWING_PURCHASE":
 		h.handleNonRenewingPurchase(c, webhookEvent.Event)
 	case "TRANSFER":
-		h.handleTransfer(c, webhookEvent.Event)
+		handlerErr = h.handleTransfer(c, webhookEvent.Event)
 	case "VIRTUAL_CURRENCY_TRANSACTION":
 		h.handleVirtualCurrencyTransaction(c, webhookEvent.Event)
 	default:
 		logger.Debugw("revenuecat.webhook.RevenueCatWebhook unhandled event type", "event_type", webhookEvent.Event.Type)
+	}
+
+	// Leave the event unrecorded so RevenueCat's retry gets another chance to
+	// apply it; the idempotency check above would otherwise skip it forever.
+	if handlerErr != nil {
+		logger.Errorw("revenuecat.webhook.RevenueCatWebhook failed to process event",
+			"event_id", webhookEvent.Event.ID, "event_type", webhookEvent.Event.Type, "err", handlerErr)
+		c.JSON(http.StatusInternalServerError, "Internal Server Error")
+		return
 	}
 
 	// Save event to prevent duplicate processing
@@ -339,29 +404,34 @@ func (h *Webhook) RevenueCatWebhook(c *gin.Context) {
 	c.JSON(http.StatusOK, "OK")
 }
 
-func (h *Webhook) handleInitialPurchase(c *gin.Context, event RevenueCatEvent) {
+func (h *Webhook) handleInitialPurchase(c *gin.Context, event RevenueCatEvent) error {
 	logger := logging.FromContext(c)
 
 	// Extract user ID from subscriber attributes or app_user_id (assume it's the user ID)
 	userID := h.extractUserIDFromEvent(event)
 	if userID == 0 {
 		logger.Errorw("revenuecat.webhook.handleInitialPurchase failed to extract user ID", "app_user_id", event.AppUserID)
-		return
+		return nil
 	}
 
-	now := time.Now().UTC()
-	subscriptionID := event.AppUserID // Use app_user_id as subscription ID
-
-	if len(event.Transactions) > 0 {
-		subscriptionID = event.Transactions[0].OriginalTransactionID
+	subscriptionID := event.subscriptionID()
+	if subscriptionID == "" {
+		logger.Errorw("revenuecat.webhook.handleInitialPurchase event has no subscription identifier", "event_id", event.ID)
+		return nil
 	}
 
 	user, err := h.userRepo.GetUserByID(c, userID)
 	if err != nil {
-		logger.Errorw("revenuecat.webhook.handleInitialPurchase failed to get user", "err", err)
-		return
+		logger.Errorw("revenuecat.webhook.handleInitialPurchase failed to get user", "user_id", userID, "err", err)
+		// An app_user_id that maps to no user will never resolve, so don't ask
+		// RevenueCat to retry it forever.
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil
+		}
+		return err
 	}
 
+	now := time.Now().UTC()
 	subscription := &model.Subscription{
 		ID:                     subscriptionID,
 		UserID:                 userID,
@@ -371,28 +441,64 @@ func (h *Webhook) handleInitialPurchase(c *gin.Context, event RevenueCatEvent) {
 		ExternalCustomerID:     event.AppUserID,
 		ProductID:              event.ProductID,
 		Status:                 "active",
+		ExpiresAt:              event.expiresAt(),
 		CreatedAt:              now,
 		UpdatedAt:              now,
 	}
 
-	// Use event-level expiration if available
-	if event.ExpirationAtMs != nil {
-		expiresDate := time.Unix(*event.ExpirationAtMs/1000, 0)
-		subscription.ExpiresAt = &expiresDate
-	}
-
-	// Fallback to transaction data if available
-	if len(event.Transactions) > 0 {
-		transaction := event.Transactions[0]
-		if subscription.ExpiresAt == nil && transaction.ExpiresDateMs != nil {
-			expiresDate := time.Unix(*transaction.ExpiresDateMs/1000, 0)
-			subscription.ExpiresAt = &expiresDate
-		}
-	}
-
 	if _, err := h.subscriptionDB.SaveSubscription(c, subscription); err != nil {
 		logger.Errorw("revenuecat.webhook.handleInitialPurchase failed to save subscription", "err", err)
+		return err
 	}
+	return nil
+}
+
+// findSubscription resolves the unified subscription row for an event. Rows are
+// keyed on original_transaction_id, but ones written before that was parsed are
+// keyed on app_user_id, so fall back to it rather than creating a duplicate.
+func (h *Webhook) findSubscription(c *gin.Context, event RevenueCatEvent) (*model.Subscription, error) {
+	seen := make(map[string]bool, 2)
+	for _, id := range []string{event.OriginalTransactionID, event.AppUserID} {
+		if id == "" || seen[id] {
+			continue
+		}
+		seen[id] = true
+
+		subscription, err := h.subscriptionDB.GetSubscriptionByID(c, id)
+		if err != nil {
+			return nil, err
+		}
+		if subscription != nil {
+			return subscription, nil
+		}
+	}
+	return nil, nil
+}
+
+// applyStatus is the shared path for events that only move the subscription
+// status: resolve the row, set the status, persist.
+func (h *Webhook) applyStatus(c *gin.Context, event RevenueCatEvent, handler, status string) error {
+	logger := logging.FromContext(c)
+
+	subscription, err := h.findSubscription(c, event)
+	if err != nil {
+		logger.Errorw("revenuecat.webhook."+handler+" failed to get subscription", "err", err)
+		return err
+	}
+
+	if subscription == nil {
+		logger.Errorw("revenuecat.webhook."+handler+" subscription not found",
+			"original_transaction_id", event.OriginalTransactionID, "app_user_id", event.AppUserID)
+		return nil
+	}
+
+	subscription.Status = status
+
+	if err := h.subscriptionDB.UpdateSubscription(c, subscription); err != nil {
+		logger.Errorw("revenuecat.webhook."+handler+" failed to update subscription", "err", err)
+		return err
+	}
+	return nil
 }
 
 // extractUserIDFromEvent tries to extract user ID from RevenueCat event
@@ -413,161 +519,88 @@ func (h *Webhook) extractUserIDFromEvent(event RevenueCatEvent) int {
 	return 0
 }
 
-func (h *Webhook) handleRenewal(c *gin.Context, event RevenueCatEvent) {
+func (h *Webhook) handleRenewal(c *gin.Context, event RevenueCatEvent) error {
 	logger := logging.FromContext(c)
 
-	if len(event.Transactions) == 0 {
-		logger.Errorw("revenuecat.webhook.handleRenewal no transactions found")
-		return
-	}
-
-	transaction := event.Transactions[0]
-	subscriptionID := transaction.OriginalTransactionID
-
-	// Check unified subscription table first
-	subscription, err := h.subscriptionDB.GetSubscriptionByID(c, subscriptionID)
+	subscription, err := h.findSubscription(c, event)
 	if err != nil {
 		logger.Errorw("revenuecat.webhook.handleRenewal failed to get subscription", "err", err)
-		return
+		return err
 	}
 
 	if subscription == nil {
 		// Create new subscription if not found
-		h.handleInitialPurchase(c, event)
-		return
+		return h.handleInitialPurchase(c, event)
 	}
 
 	// Update subscription
 	subscription.Status = "active"
-	if transaction.ExpiresDateMs != nil {
-		expiresDate := time.Unix(*transaction.ExpiresDateMs/1000, 0)
-		subscription.ExpiresAt = &expiresDate
+	subscription.ProductID = event.ProductID
+	if expiresAt := event.expiresAt(); expiresAt != nil {
+		subscription.ExpiresAt = expiresAt
 	}
 
 	if err := h.subscriptionDB.UpdateSubscription(c, subscription); err != nil {
 		logger.Errorw("revenuecat.webhook.handleRenewal failed to update subscription", "err", err)
+		return err
 	}
+	return nil
 }
 
-func (h *Webhook) handleCancellation(c *gin.Context, event RevenueCatEvent) {
-	logger := logging.FromContext(c)
-
-	if len(event.Transactions) == 0 {
-		logger.Errorw("revenuecat.webhook.handleCancellation no transactions found")
-		return
-	}
-
-	transaction := event.Transactions[0]
-	subscriptionID := transaction.OriginalTransactionID
-
-	subscription, err := h.subscriptionDB.GetSubscriptionByID(c, subscriptionID)
-	if err != nil {
-		logger.Errorw("revenuecat.webhook.handleCancellation failed to get subscription", "err", err)
-		return
-	}
-
-	if subscription == nil {
-		logger.Errorw("revenuecat.webhook.handleCancellation subscription not found", "transaction_id", transaction.OriginalTransactionID)
-		return
-	}
-
-	subscription.Status = "cancelled"
-
-	if err := h.subscriptionDB.UpdateSubscription(c, subscription); err != nil {
-		logger.Errorw("revenuecat.webhook.handleCancellation failed to update subscription", "err", err)
-	}
+func (h *Webhook) handleCancellation(c *gin.Context, event RevenueCatEvent) error {
+	// Cancelling auto-renew does not revoke the paid entitlement. EXPIRATION
+	// (including refunds/revocations) ends access; ExpiresAt also bounds it.
+	return nil
 }
 
-func (h *Webhook) handleExpiration(c *gin.Context, event RevenueCatEvent) {
-	logger := logging.FromContext(c)
-
-	if len(event.Transactions) == 0 {
-		logger.Errorw("revenuecat.webhook.handleExpiration no transactions found")
-		return
-	}
-
-	transaction := event.Transactions[0]
-	subscriptionID := transaction.OriginalTransactionID
-
-	subscription, err := h.subscriptionDB.GetSubscriptionByID(c, subscriptionID)
-	if err != nil {
-		logger.Errorw("revenuecat.webhook.handleExpiration failed to get subscription", "err", err)
-		return
-	}
-
-	if subscription == nil {
-		logger.Errorw("revenuecat.webhook.handleExpiration subscription not found", "transaction_id", transaction.OriginalTransactionID)
-		return
-	}
-
-	subscription.Status = "expired"
-
-	if err := h.subscriptionDB.UpdateSubscription(c, subscription); err != nil {
-		logger.Errorw("revenuecat.webhook.handleExpiration failed to update subscription", "err", err)
-	}
+func (h *Webhook) handleExpiration(c *gin.Context, event RevenueCatEvent) error {
+	return h.applyStatus(c, event, "handleExpiration", "expired")
 }
 
-func (h *Webhook) handleBillingIssue(c *gin.Context, event RevenueCatEvent) {
-	logger := logging.FromContext(c)
-
-	if len(event.Transactions) == 0 {
-		logger.Errorw("revenuecat.webhook.handleBillingIssue no transactions found")
-		return
+func (h *Webhook) handleBillingIssue(c *gin.Context, event RevenueCatEvent) error {
+	// Billing failures do not revoke access during the store's grace period.
+	// Never reactivate an expired subscription on a delayed billing event.
+	if event.GracePeriodExpirationAtMs == nil {
+		return nil
 	}
-
-	transaction := event.Transactions[0]
-	subscriptionID := transaction.OriginalTransactionID
-
-	subscription, err := h.subscriptionDB.GetSubscriptionByID(c, subscriptionID)
-	if err != nil {
-		logger.Errorw("revenuecat.webhook.handleBillingIssue failed to get subscription", "err", err)
-		return
+	sub, err := h.findSubscription(c, event)
+	if err != nil || sub == nil {
+		return err
 	}
-
-	if subscription == nil {
-		logger.Errorw("revenuecat.webhook.handleBillingIssue subscription not found", "transaction_id", transaction.OriginalTransactionID)
-		return
+	graceEnd := time.UnixMilli(*event.GracePeriodExpirationAtMs).UTC()
+	if sub.Status != "active" || sub.ExpiresAt == nil || !graceEnd.After(*sub.ExpiresAt) {
+		return nil
 	}
-
-	subscription.Status = "billing_issue"
-
-	if err := h.subscriptionDB.UpdateSubscription(c, subscription); err != nil {
-		logger.Errorw("revenuecat.webhook.handleBillingIssue failed to update subscription", "err", err)
-	}
+	sub.ExpiresAt = &graceEnd
+	return h.subscriptionDB.UpdateSubscription(c, sub)
 }
 
-func (h *Webhook) handleProductChange(c *gin.Context, event RevenueCatEvent) {
+func (h *Webhook) handleProductChange(c *gin.Context, event RevenueCatEvent) error {
 	logger := logging.FromContext(c)
 
-	if len(event.Transactions) == 0 {
-		logger.Errorw("revenuecat.webhook.handleProductChange no transactions found")
-		return
-	}
-
-	transaction := event.Transactions[0]
-	subscriptionID := transaction.OriginalTransactionID
-
-	subscription, err := h.subscriptionDB.GetSubscriptionByID(c, subscriptionID)
+	subscription, err := h.findSubscription(c, event)
 	if err != nil {
 		logger.Errorw("revenuecat.webhook.handleProductChange failed to get subscription", "err", err)
-		return
+		return err
 	}
 
 	if subscription == nil {
-		logger.Errorw("revenuecat.webhook.handleProductChange subscription not found", "transaction_id", transaction.OriginalTransactionID)
-		return
+		logger.Errorw("revenuecat.webhook.handleProductChange subscription not found",
+			"original_transaction_id", event.OriginalTransactionID, "app_user_id", event.AppUserID)
+		return nil
 	}
 
 	// Update product ID and other relevant fields
 	subscription.ProductID = event.ProductID
-	if transaction.ExpiresDateMs != nil {
-		expiresDate := time.Unix(*transaction.ExpiresDateMs/1000, 0)
-		subscription.ExpiresAt = &expiresDate
+	if expiresAt := event.expiresAt(); expiresAt != nil {
+		subscription.ExpiresAt = expiresAt
 	}
 
 	if err := h.subscriptionDB.UpdateSubscription(c, subscription); err != nil {
 		logger.Errorw("revenuecat.webhook.handleProductChange failed to update subscription", "err", err)
+		return err
 	}
+	return nil
 }
 
 func (h *Webhook) handleNonRenewingPurchase(c *gin.Context, event RevenueCatEvent) {
@@ -576,38 +609,27 @@ func (h *Webhook) handleNonRenewingPurchase(c *gin.Context, event RevenueCatEven
 	// Non-renewing purchases don't create subscriptions, just log the event
 }
 
-func (h *Webhook) handleTransfer(c *gin.Context, event RevenueCatEvent) {
+func (h *Webhook) handleTransfer(c *gin.Context, event RevenueCatEvent) error {
 	logger := logging.FromContext(c)
 
-	if len(event.Transactions) == 0 {
-		logger.Errorw("revenuecat.webhook.handleTransfer no transactions found")
-		return
+	// TRANSFER has alias arrays, not app_user_id or transaction fields.
+	// Skip anonymous aliases and resolve a registered destination account.
+	for _, alias := range event.TransferredTo {
+		userID, err := strconv.Atoi(alias)
+		if err != nil || userID <= 0 {
+			continue
+		}
+		user, err := h.userRepo.GetUserByID(c, userID)
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			continue
+		}
+		if err != nil {
+			return err
+		}
+		return h.subscriptionDB.TransferRevenueCatSubscriptions(c, event.TransferredFrom, alias, user.ID, user.CircleID)
 	}
-
-	transaction := event.Transactions[0]
-	subscriptionID := transaction.OriginalTransactionID
-
-	subscription, err := h.subscriptionDB.GetSubscriptionByID(c, subscriptionID)
-	if err != nil {
-		logger.Errorw("revenuecat.webhook.handleTransfer failed to get subscription", "err", err)
-		return
-	}
-
-	if subscription == nil {
-		logger.Errorw("revenuecat.webhook.handleTransfer subscription not found", "transaction_id", transaction.OriginalTransactionID)
-		return
-	}
-
-	// Update user ID for transfer events
-	newUserID := h.extractUserIDFromEvent(event)
-	if newUserID > 0 {
-		subscription.UserID = newUserID
-		subscription.ExternalCustomerID = event.AppUserID
-	}
-
-	if err := h.subscriptionDB.UpdateSubscription(c, subscription); err != nil {
-		logger.Errorw("revenuecat.webhook.handleTransfer failed to update subscription", "err", err)
-	}
+	logger.Warnw("revenuecat.webhook.handleTransfer no registered destination", "event_id", event.ID)
+	return nil
 }
 
 func (h *Webhook) handleVirtualCurrencyTransaction(c *gin.Context, event RevenueCatEvent) {

@@ -51,8 +51,16 @@ func NewS3Storage(config *config.Config) (*S3Storage, error) {
 		Client:       s3.New(sess),
 	}, nil
 }
+// key maps a storage path (as stored in storage_files rows and in the user
+// Image column) to the S3 object key. Every read, write and delete must build
+// keys through this, otherwise a delete silently targets a key that no save
+// ever wrote and S3 answers 204 as if it had worked.
+func (s *S3Storage) key(path string) string {
+	return fmt.Sprintf("%s/%s", s.BasePath, path)
+}
+
 func (s *S3Storage) Save(ctx context.Context, path string, file io.Reader) error {
-	key := fmt.Sprintf("%s/%s", s.BasePath, path)
+	key := s.key(path)
 
 	// Read the file into a buffer to create an io.ReadSeeker
 	buf, err := io.ReadAll(file)
@@ -73,12 +81,22 @@ func (s *S3Storage) Save(ctx context.Context, path string, file io.Reader) error
 	return nil
 }
 func (s *S3Storage) Delete(ctx context.Context, paths []string) error {
+	return s.deleteFrom(ctx, s.Bucket, paths)
+}
+
+// DeletePublic deletes objects written by SavePublic, which land in the public
+// bucket when one is configured. Deleting them through Delete would issue the
+// request against the private bucket and leave the public object readable.
+func (s *S3Storage) DeletePublic(ctx context.Context, paths []string) error {
+	return s.deleteFrom(ctx, s.publicBucket(), paths)
+}
+
+func (s *S3Storage) deleteFrom(ctx context.Context, bucket string, paths []string) error {
 	var err error
 	for _, path := range paths {
-		key := fmt.Sprintf("%s/%s", s.BasePath, path)
 		_, e := s.Client.DeleteObjectWithContext(ctx, &s3.DeleteObjectInput{
-			Bucket: aws.String(s.Bucket),
-			Key:    aws.String(key),
+			Bucket: aws.String(bucket),
+			Key:    aws.String(s.key(path)),
 		})
 		if e != nil {
 			err = e
@@ -88,7 +106,7 @@ func (s *S3Storage) Delete(ctx context.Context, paths []string) error {
 }
 
 func (s *S3Storage) GetURL(ctx context.Context, path string) (string, error) {
-	key := fmt.Sprintf("%s/%s", s.BasePath, path)
+	key := s.key(path)
 	req, _ := s.Client.GetObjectRequest(&s3.GetObjectInput{
 		Bucket: aws.String(s.Bucket),
 		Key:    aws.String(key),
@@ -113,7 +131,7 @@ func (s *S3Storage) publicBucket() string {
 }
 
 func (s *S3Storage) SavePublic(ctx context.Context, path string, file io.Reader) error {
-	key := fmt.Sprintf("%s/%s", s.BasePath, path)
+	key := s.key(path)
 	buf, err := io.ReadAll(file)
 	if err != nil {
 		return err
@@ -127,7 +145,7 @@ func (s *S3Storage) SavePublic(ctx context.Context, path string, file io.Reader)
 }
 
 func (s *S3Storage) GetPublicURL(ctx context.Context, path string) (string, error) {
-	key := fmt.Sprintf("%s/%s", s.BasePath, path)
+	key := s.key(path)
 	if s.PublicHost != "" {
 		return fmt.Sprintf("https://%s/%s", s.PublicHost, key), nil
 	}
@@ -146,6 +164,10 @@ func (s *S3Storage) GetPublicURL(ctx context.Context, path string) (string, erro
 // DeletePublicByURL deletes the S3 object identified by a URL previously
 // returned by GetPublicURL. Only URLs whose host matches PublicHost are
 // acted on; all other URLs (external OIDC picture URLs, etc.) are ignored.
+// This means it is a no-op when PublicHost is unset, including the
+// PublicBucket-without-CDN case where GetPublicURL returns a presigned URL —
+// those are not matched on purpose, since a presigned URL carries a query
+// signature and is not a stable identifier for the object.
 func (s *S3Storage) DeletePublicByURL(ctx context.Context, rawURL string) error {
 	if s.PublicHost == "" {
 		return nil
@@ -155,5 +177,7 @@ func (s *S3Storage) DeletePublicByURL(ctx context.Context, rawURL string) error 
 		return nil
 	}
 	path := strings.TrimPrefix(rawURL, prefix)
-	return s.Delete(ctx, []string{path})
+	// PublicHost serves the public bucket, so the object must be removed from
+	// there — Delete would target the private bucket.
+	return s.DeletePublic(ctx, []string{path})
 }

@@ -1513,7 +1513,10 @@ func (h *Handler) updateProfilePhoto(c *gin.Context) {
 		// profiles/<id>/ prefix after cleaning.
 		ownPrefix := fmt.Sprintf("profiles/%d/", currentUser.ID)
 		if clean := path.Clean(prev); strings.HasPrefix(clean, ownPrefix) {
-			if derr := h.storage.Delete(c, []string{clean}); derr != nil {
+			// DeletePublic, not Delete: the photo was written with SavePublic,
+			// so with a separate public bucket Delete would issue the request
+			// against the private bucket and leave this one readable.
+			if derr := h.storage.DeletePublic(c, []string{clean}); derr != nil {
 				logging.FromContext(c).Warnw("Failed to delete previous profile photo", "path", clean, "error", derr)
 			}
 		}

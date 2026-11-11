@@ -92,6 +92,12 @@ func (l *LocalStorage) SavePublic(ctx context.Context, path string, file io.Read
 	return l.Save(ctx, path, file)
 }
 
+// DeletePublic delegates to Delete — local storage has no separate public
+// bucket, so public objects live alongside private ones under BasePath.
+func (l *LocalStorage) DeletePublic(ctx context.Context, paths []string) error {
+	return l.Delete(ctx, paths)
+}
+
 // GetPublicURL returns the storage key relative to BasePath — local storage
 // has no CDN host, so the caller serves it via the /assets endpoint, which
 // resolves keys relative to BasePath. Never include BasePath here: the stored

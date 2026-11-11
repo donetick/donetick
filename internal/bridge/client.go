@@ -154,13 +154,7 @@ type registerDeviceResponse struct {
 // RegisterDevice implements POST /v1/devices.
 func (c *Client) RegisterDevice(ctx context.Context, in RegisterDeviceInput) (*RegisterDeviceResult, error) {
 	var resp registerDeviceResponse
-	err := c.doJSON(ctx, http.MethodPost, "/v1/devices", registerDeviceRequest{
-		LocalDeviceID: in.LocalDeviceID,
-		Token:         in.Token,
-		Platform:      in.Platform,
-		AppVersion:    in.AppVersion,
-		DeviceModel:   in.DeviceModel,
-	}, "", &resp)
+	err := c.doJSON(ctx, http.MethodPost, "/v1/devices", registerDeviceRequest(in), "", &resp)
 	if err != nil {
 		return nil, err
 	}
@@ -177,9 +171,7 @@ type updateDeviceRequest struct {
 // UpdateDevice implements PUT /v1/devices/{bridgeDeviceId}.
 func (c *Client) UpdateDevice(ctx context.Context, bridgeDeviceID string, in UpdateDeviceInput) error {
 	path := "/v1/devices/" + bridgeDeviceID
-	return c.doJSON(ctx, http.MethodPut, path, updateDeviceRequest{
-		Token: in.Token, AppVersion: in.AppVersion, DeviceModel: in.DeviceModel, Active: in.Active,
-	}, "", nil)
+	return c.doJSON(ctx, http.MethodPut, path, updateDeviceRequest(in), "", nil)
 }
 
 // DeactivateDevice implements DELETE /v1/devices/{bridgeDeviceId}.
@@ -238,15 +230,11 @@ func (c *Client) SendNotification(ctx context.Context, idempotencyKey string, ta
 		return nil, fmt.Errorf("%w: idempotency key required", ErrValidation)
 	}
 	req := sendNotificationRequest{
-		Notification: sendPayload{Title: payload.Title, Body: payload.Body, Data: payload.Data},
-		Options: sendOptions{
-			AndroidChannelID: opts.AndroidChannelID,
-			Sound:            opts.Sound,
-			Badge:            opts.Badge,
-		},
+		Notification: sendPayload(payload),
+		Options:      sendOptions(opts),
 	}
 	for _, t := range targets {
-		req.Targets = append(req.Targets, sendTarget{BridgeDeviceID: t.BridgeDeviceID, Token: t.Token})
+		req.Targets = append(req.Targets, sendTarget(t))
 	}
 
 	var resp sendNotificationResponse

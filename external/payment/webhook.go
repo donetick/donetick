@@ -548,7 +548,7 @@ func (h *Webhook) handleRenewal(c *gin.Context, event RevenueCatEvent) error {
 }
 
 func (h *Webhook) handleCancellation(c *gin.Context, event RevenueCatEvent) error {
-	// Cancelling auto-renew does not revoke the paid entitlement. EXPIRATION
+	// Canceling auto-renew does not revoke the paid entitlement. EXPIRATION
 	// (including refunds/revocations) ends access; ExpiresAt also bounds it.
 	return nil
 }

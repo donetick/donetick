@@ -755,7 +755,7 @@ func TestScheduleNextDueDateDSTSpringInterval(t *testing.T) {
 
 // TestScheduleNextDueDateRollingDayOfMonthKeepsLocalTime covers the rolling
 // branch of day_of_the_month, which replaces baseDate with the stored due
-// date. Reading that back in UTC and re-labelling its hour in the chore's
+// date. Reading that back in UTC and re-labeling its hour in the chore's
 // location shifts the chore by the UTC offset, independent of any DST
 // transition.
 func TestScheduleNextDueDateRollingDayOfMonthKeepsLocalTime(t *testing.T) {

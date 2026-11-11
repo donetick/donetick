@@ -338,6 +338,27 @@ func (s *SubscriptionDB) GetSubscriptionByID(ctx context.Context, id string) (*p
 	return &subscription, nil
 }
 
+// TransferRevenueCatSubscriptions moves every subscription belonging to the
+// source aliases in one atomic update. Keep subscription IDs stable so retries
+// and later transaction-based events continue to resolve the same rows.
+func (s *SubscriptionDB) TransferRevenueCatSubscriptions(ctx context.Context, from []string, customerID string, userID, circleID int) error {
+	aliases := make([]string, 0, len(from))
+	for _, alias := range from {
+		if alias != "" {
+			aliases = append(aliases, alias)
+		}
+	}
+	if len(aliases) == 0 {
+		return nil
+	}
+	return s.db.WithContext(ctx).Model(&pModel.Subscription{}).
+		Where("provider = ? AND external_customer_id IN ?", pModel.SubscriptionProviderRevenueCat, aliases).
+		Updates(map[string]interface{}{
+			"user_id": userID, "circle_id": circleID,
+			"external_customer_id": customerID, "updated_at": time.Now().UTC(),
+		}).Error
+}
+
 func (s *SubscriptionDB) UpdateSubscription(ctx context.Context, subscription *pModel.Subscription) error {
 	logger := logging.FromContext(ctx)
 

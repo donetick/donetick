@@ -70,11 +70,12 @@ func (n *Notifier) SendNotification(c context.Context, notification *nModel.Noti
 		// fall back to Core's own direct Firebase config, preserving
 		// existing behavior for Donetick Cloud / self-managed-FCM
 		// installs.
-		if n.Bridge != nil && n.Bridge.Enabled() {
+		switch {
+		case n.Bridge != nil && n.Bridge.Enabled():
 			err = n.Bridge.SendNotification(c, notification)
-		} else if n.FCM != nil {
+		case n.FCM != nil:
 			err = n.FCM.SendNotification(c, notification)
-		} else {
+		default:
 			log.Error("Neither Bridge nor FCM is initialized, Skipping sending message")
 			return nil
 		}

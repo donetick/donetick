@@ -4,9 +4,12 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"html"
 	"net/http"
+	"net/url"
+	"path"
 	"strings"
 	"time"
 
@@ -126,6 +129,11 @@ func (h *Handler) signUp(c *gin.Context) {
 		Password    string `json:"password" binding:"required,min=8,max=64"`
 		Email       string `json:"email" binding:"required,email"`
 		DisplayName string `json:"displayName"`
+		// Timezone is the client's IANA zone (e.g. "America/New_York"), sent at
+		// signup so time-of-day features -- digest notifications above all --
+		// work from the first day. Optional: older clients omit it and the user
+		// stays on the UTC fallback until they save a timezone in settings.
+		Timezone string `json:"timezone"`
 	}
 	var signupReq SignUpReq
 	if err := c.BindJSON(&signupReq); err != nil {
@@ -136,6 +144,14 @@ func (h *Handler) signUp(c *gin.Context) {
 	}
 	if signupReq.DisplayName == "" {
 		signupReq.DisplayName = signupReq.Username
+	}
+
+	// A bad timezone isn't worth failing a signup over -- drop it and let the
+	// user correct it in settings, same as a client that never sent one.
+	if signupReq.Timezone != "" && !utils.IsValidTimezone(signupReq.Timezone) {
+		logging.FromContext(c).Warn("signup: ignoring invalid timezone",
+			"timezone", signupReq.Timezone, "username", signupReq.Username)
+		signupReq.Timezone = ""
 	}
 
 	// Validate username format
@@ -162,6 +178,7 @@ func (h *Handler) signUp(c *gin.Context) {
 		Password:    password,
 		DisplayName: signupReq.DisplayName,
 		Email:       signupReq.Email,
+		Timezone:    signupReq.Timezone,
 		CreatedAt:   time.Now().UTC(),
 		UpdatedAt:   time.Now().UTC(),
 	}); err != nil {
@@ -946,6 +963,45 @@ func (h *Handler) updateUserPassword(c *gin.Context) {
 
 }
 
+// validateUserImage constrains what a client may store in User.Image. The
+// field is later fed to storage.Delete by updateProfilePhoto, so an arbitrary
+// string here is a path-traversal primitive: a value like
+// "x/profiles/../users/<other id>/<uuid>.ext" is re-sliced at "profiles/" and
+// cleaned into another user's private upload key.
+//
+// Only two shapes are legitimate: an absolute http(s) URL (an OIDC picture
+// claim or a public-bucket URL), or the caller's own profiles/<id>/ storage
+// key. A signed key may round-trip back from GET /users with its signature
+// query attached, so that is stripped rather than rejected.
+func validateUserImage(image string, userID int) (string, error) {
+	if image == "" {
+		return "", nil
+	}
+	if strings.HasPrefix(image, "http://") || strings.HasPrefix(image, "https://") {
+		if _, err := url.ParseRequestURI(image); err != nil {
+			return "", errors.New("Invalid image URL")
+		}
+		return image, nil
+	}
+
+	key := image
+	if idx := strings.IndexAny(key, "?#"); idx >= 0 {
+		key = key[:idx]
+	}
+	key = path.Clean(key)
+	// Legacy rows stored the storage base directory in the path
+	// (e.g. "uploads/profiles/2/uuid.jpg"); normalize to the relative key so
+	// a client echoing one back is not rejected. Cleaning first is what makes
+	// this safe — a traversal segment can no longer survive the re-slice.
+	if idx := strings.Index(key, "profiles/"); idx > 0 {
+		key = key[idx:]
+	}
+	if !strings.HasPrefix(key, fmt.Sprintf("profiles/%d/", userID)) {
+		return "", errors.New("Invalid image: must be an http(s) URL or your own profile photo path")
+	}
+	return key, nil
+}
+
 func (h *Handler) UpdateUserDetails(c *gin.Context) {
 	type UpdateUserReq struct {
 		DisplayName *string `json:"displayName" binding:"omitempty"`
@@ -975,7 +1031,14 @@ func (h *Handler) UpdateUserDetails(c *gin.Context) {
 		user.ChatID = *req.ChatID
 	}
 	if req.Image != nil {
-		user.Image = *req.Image
+		img, err := validateUserImage(*req.Image, user.ID)
+		if err != nil {
+			c.JSON(400, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
+		user.Image = img
 	}
 	if req.Timezone != nil {
 		if !utils.IsValidTimezone(*req.Timezone) {
@@ -1430,20 +1493,29 @@ func (h *Handler) updateProfilePhoto(c *gin.Context) {
 		return
 	}
 
-	// Clean up the previous profile photo when it is a locally-stored path.
-	// Full https:// URLs (OIDC picture claims or public-bucket URLs) are
-	// skipped — public-bucket objects accumulate until a future cleanup pass.
-	if prev := currentUser.Image; prev != "" &&
-		!strings.HasPrefix(prev, "http://") &&
-		!strings.HasPrefix(prev, "https://") {
+	// Resolve managed URLs back to storage keys, but never delete external
+	// images or keys outside this user's own profile directory.
+	if prev := h.previousProfilePhotoKey(c, currentUser.Image, currentUser.ID); prev != "" {
 		// Legacy rows stored the storage base directory in the path
 		// (e.g. "uploads/profiles/..."); storage.Delete expects a key
 		// relative to BasePath.
 		if idx := strings.Index(prev, "profiles/"); idx > 0 {
 			prev = prev[idx:]
 		}
-		if derr := h.storage.Delete(c, []string{prev}); derr != nil {
-			logging.FromContext(c).Warnw("Failed to delete previous profile photo", "path", prev, "error", derr)
+		// prev ultimately comes from the user-editable Image field (see the
+		// PUT /users handler), so a value like "profiles/../users/1/x.jpg"
+		// would resolve outside the profiles/ tree once storage.Delete
+		// cleans it, and "profiles/<other id>/x.jpg" would hit another user's
+		// photo. Only delete keys that are still under this user's own
+		// profiles/<id>/ prefix after cleaning.
+		ownPrefix := fmt.Sprintf("profiles/%d/", currentUser.ID)
+		if clean := path.Clean(prev); strings.HasPrefix(clean, ownPrefix) {
+			// DeletePublic, not Delete: the photo was written with SavePublic,
+			// so with a separate public bucket Delete would issue the request
+			// against the private bucket and leave this one readable.
+			if derr := h.storage.DeletePublic(c, []string{clean}); derr != nil {
+				logging.FromContext(c).Warnw("Failed to delete previous profile photo", "path", clean, "error", derr)
+			}
 		}
 	}
 
@@ -1455,6 +1527,38 @@ func (h *Handler) updateProfilePhoto(c *gin.Context) {
 	// SignIfLocal passes through https:// URLs unchanged, so the response is
 	// correct regardless of whether a public bucket host is configured.
 	c.JSON(http.StatusOK, gin.H{"sign": h.signer.SignIfLocal(photoURL)})
+}
+
+// previousProfilePhotoKey recognizes URLs produced by this storage backend.
+// Compare origin and path rather than query strings: S3 presigned signatures
+// expire and change, but the underlying object key remains stable. Ownership
+// must be checked separately because Image is user-editable.
+func (h *Handler) previousProfilePhotoKey(c *gin.Context, image string, userID int) string {
+	if !strings.HasPrefix(image, "http://") && !strings.HasPrefix(image, "https://") {
+		return image // Legacy/local paths are validated by the cleanup below.
+	}
+	previous, err := url.Parse(image)
+	if err != nil || previous.User != nil {
+		return ""
+	}
+	ownPrefix := fmt.Sprintf("profiles/%d/", userID)
+	idx := strings.LastIndex(previous.Path, "/"+ownPrefix)
+	if idx < 0 {
+		return ""
+	}
+	key := previous.Path[idx+1:]
+	if clean := path.Clean(key); clean != key || !strings.HasPrefix(clean, ownPrefix) {
+		return ""
+	}
+	expectedURL, err := h.storage.GetPublicURL(c, key)
+	if err != nil {
+		return ""
+	}
+	expected, err := url.Parse(expectedURL)
+	if err != nil || previous.Scheme != expected.Scheme || previous.Host != expected.Host || previous.Path != expected.Path {
+		return ""
+	}
+	return key
 }
 
 func (h *Handler) getStorageUsage(c *gin.Context) {

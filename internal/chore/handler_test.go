@@ -97,6 +97,7 @@ func newCreateChoreTestRouter(t *testing.T) (*gin.Engine, *gorm.DB) {
 		c.Next()
 	})
 	router.POST("/chores", h.CreateChore)
+	router.POST("/chores/bulk", h.BulkCreateChores)
 	return router, db
 }
 
@@ -398,6 +399,31 @@ func TestEditChoreRejectsInvalidThingTrigger(t *testing.T) {
 			var updated chModel.Chore
 			require.NoError(t, db.First(&updated, chore.ID).Error)
 			require.Equal(t, "water plants", updated.Name)
+		})
+	}
+}
+
+func TestIsBeforeCompletionWindow(t *testing.T) {
+	dueDate := time.Date(2026, time.July, 28, 12, 0, 0, 0, time.UTC)
+	window := 2
+
+	tests := []struct {
+		name          string
+		chore         chModel.Chore
+		completedDate time.Time
+		want          bool
+	}{
+		{"no completion window", chModel.Chore{NextDueDate: &dueDate}, dueDate.Add(-48 * time.Hour), false},
+		{"window but no due date", chModel.Chore{CompletionWindow: &window}, dueDate, false},
+		{"completed before the window opens", chModel.Chore{CompletionWindow: &window, NextDueDate: &dueDate}, dueDate.Add(-3 * time.Hour), true},
+		{"completed inside the window", chModel.Chore{CompletionWindow: &window, NextDueDate: &dueDate}, dueDate.Add(-time.Hour), false},
+		{"completed after the due date", chModel.Chore{CompletionWindow: &window, NextDueDate: &dueDate}, dueDate.Add(time.Hour), false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := isBeforeCompletionWindow(&tt.chore, tt.completedDate); got != tt.want {
+				t.Errorf("isBeforeCompletionWindow() = %v, want %v", got, tt.want)
+			}
 		})
 	}
 }

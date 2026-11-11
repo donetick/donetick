@@ -37,9 +37,11 @@ func NewNotificationPlanner(nr *nRepo.NotificationRepository, cr *cRepo.CircleRe
 // GenerateChoreNotifications plans reminders and assignment events as one ordered
 // operation. Never split these across jobs: an older job could otherwise delete
 // the newer assignment or insert a notification for a superseded assignee.
-func (n *NotificationPlanner) GenerateChoreNotifications(c context.Context, chore *chModel.Chore, previousAssignee *int) bool {
+// actorID is the user whose action triggered this planning; pass 0 when the
+// change has no acting user (scheduled jobs, system changes).
+func (n *NotificationPlanner) GenerateChoreNotifications(c context.Context, chore *chModel.Chore, previousAssignee *int, actorID int) bool {
 	return n.planCurrentChore(c, chore, func() bool {
-		return n.generateNotifications(c, chore) && n.generateAssignmentNotification(c, chore, previousAssignee)
+		return n.generateNotifications(c, chore) && n.generateAssignmentNotification(c, chore, previousAssignee, actorID)
 	})
 }
 
@@ -145,11 +147,17 @@ func (n *NotificationPlanner) generateNotifications(c context.Context, chore *ch
 // Production callers use GenerateChoreNotifications to serialize it with reminder cleanup.
 // Only the current assignee is notified, and ordinary edits / unchanged rotations
 // do not produce another event. A nil previous assignee represents task creation.
-func (n *NotificationPlanner) generateAssignmentNotification(c context.Context, chore *chModel.Chore, previousAssignee *int) bool {
+// Self-assignment is never announced: the actor already knows they took the task,
+// whether on creation or on an edit, so actorID == assignee is skipped too.
+func (n *NotificationPlanner) generateAssignmentNotification(c context.Context, chore *chModel.Chore, previousAssignee *int, actorID int) bool {
 	log := logging.FromContext(c)
 	if chore.AssignedTo == nil || *chore.AssignedTo <= 0 || !chore.IsActive ||
 		(previousAssignee != nil && *previousAssignee == *chore.AssignedTo) {
 		log.Debugw("Skipping assignment notification: no new active assignment", "chore_id", chore.ID)
+		return true
+	}
+	if actorID > 0 && actorID == *chore.AssignedTo {
+		log.Debugw("Skipping assignment notification: self-assignment", "chore_id", chore.ID, "user_id", actorID)
 		return true
 	}
 	members, err := n.cRepo.GetCircleUsers(c, chore.CircleID)

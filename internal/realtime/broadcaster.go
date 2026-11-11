@@ -1,26 +1,31 @@
 package realtime
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"time"
 
 	"donetick.com/core/config"
 	chModel "donetick.com/core/internal/chore/model"
+	chRepo "donetick.com/core/internal/chore/repo"
 	uModel "donetick.com/core/internal/user/model"
+	"donetick.com/core/logging"
 )
 
 // EventBroadcaster handles broadcasting events to appropriate connections
 type EventBroadcaster struct {
-	service *RealTimeService
-	config  *config.Config
+	service   *RealTimeService
+	config    *config.Config
+	choreRepo *chRepo.ChoreRepository
 }
 
 // NewEventBroadcaster creates a new event broadcaster
-func NewEventBroadcaster(service *RealTimeService, config *config.Config) *EventBroadcaster {
+func NewEventBroadcaster(service *RealTimeService, config *config.Config, choreRepo *chRepo.ChoreRepository) *EventBroadcaster {
 	return &EventBroadcaster{
-		service: service,
-		config:  config,
+		service:   service,
+		config:    config,
+		choreRepo: choreRepo,
 	}
 }
 
@@ -29,6 +34,26 @@ func NewEventBroadcaster(service *RealTimeService, config *config.Config) *Event
 // project) are its sole recipients; standalone private chores go only to their
 // creator and assignees. Public chores remain circle-wide.
 func (b *EventBroadcaster) broadcastChoreEvent(chore *chModel.Chore, event *Event) {
+	// API callers have already filtered labels for the acting user. Reload only
+	// the event copy so every recipient can receive their own private labels.
+	switch data := event.Data.(type) {
+	case *ChoreCreatedData:
+		visible, ok := b.choreForBroadcast(chore)
+		if !ok {
+			return
+		}
+		copyData := *data
+		copyData.Chore = visible
+		event.Data = &copyData
+	case *ChoreEventData:
+		visible, ok := b.choreForBroadcast(chore)
+		if !ok {
+			return
+		}
+		copyData := *data
+		copyData.Chore = visible
+		event.Data = &copyData
+	}
 	// A caller that did not load the project cannot safely determine recipients.
 	// Fail closed rather than treating an unknown private project as a public one.
 	if chore.ProjectID != nil && chore.Project == nil {
@@ -53,6 +78,22 @@ func (b *EventBroadcaster) broadcastChoreEvent(chore *chModel.Chore, event *Even
 		return
 	}
 	b.service.BroadcastToCircle(chore.CircleID, event)
+}
+
+func (b *EventBroadcaster) choreForBroadcast(chore *chModel.Chore) (*chModel.Chore, bool) {
+	if b.choreRepo == nil {
+		return nil, false
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	labels, err := b.choreRepo.GetChoreLabelsForSystem(ctx, chore.ID, chore.CircleID)
+	if err != nil {
+		logging.FromContext(ctx).Errorw("Failed to load labels for chore broadcast", "choreID", chore.ID, "error", err)
+		return nil, false
+	}
+	copyChore := *chore
+	copyChore.LabelsV2 = &labels
+	return &copyChore, true
 }
 
 // BroadcastChoreAccessRevoked tells users who just lost sight of a chore to drop it,

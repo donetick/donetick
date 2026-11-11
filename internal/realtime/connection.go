@@ -103,7 +103,7 @@ func (c *Connection) SendEvent(event *Event) bool {
 	}
 
 	select {
-	case c.Send <- event:
+	case c.Send <- event.forUser(c.UserID):
 		return true
 	default:
 		// Channel is full, log warning and mark connection for closure.

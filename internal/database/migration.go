@@ -31,7 +31,35 @@ import (
 //go:embed migrations/*.sql
 var embeddedMigrations embed.FS
 
+// migrateItemSharing preserves visibility once when introducing opt-in sharing.
+// Old schemas without privacy shared every item; intermediate schemas used the
+// inverse is_private flag. New tables use the model's false default.
+func migrateItemSharing(db *gorm.DB) error {
+	return db.Transaction(func(tx *gorm.DB) error {
+		for _, model := range []interface{}{&lModel.Label{}, &filterModel.Filter{}} {
+			if !tx.Migrator().HasTable(model) || tx.Migrator().HasColumn(model, "is_shared") {
+				continue
+			}
+			hadPrivacy := tx.Migrator().HasColumn(model, "is_private")
+			if err := tx.Migrator().AddColumn(model, "IsShared"); err != nil {
+				return err
+			}
+			value := interface{}(true)
+			if hadPrivacy {
+				value = gorm.Expr("NOT COALESCE(is_private, false)")
+			}
+			if err := tx.Model(model).Where("1 = 1").UpdateColumn("is_shared", value).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
 func Migration(db *gorm.DB) error {
+	if err := migrateItemSharing(db); err != nil {
+		return err
+	}
 	if err := db.AutoMigrate(uModel.User{}, chModel.Chore{},
 		chModel.ChoreHistory{},
 		cModel.Circle{},

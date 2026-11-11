@@ -193,7 +193,7 @@ func (s *Scheduler) loadAndSendNotificationJob(c context.Context) (time.Duration
 
 	for _, notification := range getAllPendingNotifications {
 		eventType, _ := notification.RawEvent["type"].(string)
-		if prefs != nil && !nps.AllowedByPreference(prefs[notification.UserID], eventType, notification.ChorePriority) {
+		if prefs != nil && !nps.AllowedByPreference(prefs[notification.UserID], eventType) {
 			log.Debug("Skipping notification muted by user preference", "user_id", notification.UserID, "type", eventType)
 			notification.IsSent = true
 			continue

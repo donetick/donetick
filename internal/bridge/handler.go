@@ -129,7 +129,7 @@ func (h *Handler) Connect(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request payload"})
 		return
 	}
-	st, err := h.svc.Connect(c, ConnectInput{BaseURL: req.BaseURL, InstanceID: req.InstanceID, InstanceToken: req.InstanceToken})
+	st, err := h.svc.Connect(c, ConnectInput(req))
 	if err != nil {
 		code, errCode := errorStatusCode(err)
 		logging.FromContext(c).Warn("bridge_connect_failed", "category", string(Classify(err)))

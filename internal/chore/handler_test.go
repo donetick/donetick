@@ -21,6 +21,7 @@ import (
 	cModel "donetick.com/core/internal/circle/model"
 	cRepo "donetick.com/core/internal/circle/repo"
 	"donetick.com/core/internal/database"
+	dRepo "donetick.com/core/internal/device/repo"
 	"donetick.com/core/internal/events"
 	lModel "donetick.com/core/internal/label/model"
 	lRepo "donetick.com/core/internal/label/repo"
@@ -83,7 +84,7 @@ func newCreateChoreTestRouter(t *testing.T) (*gin.Engine, *gorm.DB) {
 	h := &Handler{
 		choreRepo:     chRepo.NewChoreRepository(db, cfg),
 		circleRepo:    circleRepository,
-		nPlanner:      nps.NewNotificationPlanner(nRepo.NewNotificationRepository(db), circleRepository, urRepo.NewUserRepository(db, cfg)),
+		nPlanner:      nps.NewNotificationPlanner(nRepo.NewNotificationRepository(db), circleRepository, urRepo.NewUserRepository(db, cfg), dRepo.NewDeviceRepository(db, cfg)),
 		eventProducer: eventProducer,
 	}
 
@@ -93,6 +94,7 @@ func newCreateChoreTestRouter(t *testing.T) (*gin.Engine, *gorm.DB) {
 		c.Next()
 	})
 	router.POST("/chores", h.CreateChore)
+	router.POST("/chores/bulk", h.BulkCreateChores)
 	return router, db
 }
 
@@ -193,7 +195,7 @@ func newEditChoreTestRouter(t *testing.T) (*gin.Engine, *gorm.DB) {
 		tRepo:         tRepo.NewThingRepository(db, cfg),
 		storage:       storage.NewLocalStorage(cfg),
 		storageRepo:   storageRepo.NewStorageRepository(db, cfg),
-		nPlanner:      nps.NewNotificationPlanner(nRepo.NewNotificationRepository(db), circleRepository, urRepo.NewUserRepository(db, cfg)),
+		nPlanner:      nps.NewNotificationPlanner(nRepo.NewNotificationRepository(db), circleRepository, urRepo.NewUserRepository(db, cfg), dRepo.NewDeviceRepository(db, cfg)),
 		eventProducer: eventProducer,
 	}
 
@@ -302,4 +304,29 @@ func TestEditChoreNextDueDateNullClearsAbsentKeeps(t *testing.T) {
 	updated = edit(rolling, map[string]any{"nextDueDate": nil})
 	require.NotNil(t, updated.NextDueDate, "a rolling chore keeps its due date")
 	require.True(t, due.Equal(*updated.NextDueDate))
+}
+
+func TestIsBeforeCompletionWindow(t *testing.T) {
+	dueDate := time.Date(2026, time.July, 28, 12, 0, 0, 0, time.UTC)
+	window := 2
+
+	tests := []struct {
+		name          string
+		chore         chModel.Chore
+		completedDate time.Time
+		want          bool
+	}{
+		{"no completion window", chModel.Chore{NextDueDate: &dueDate}, dueDate.Add(-48 * time.Hour), false},
+		{"window but no due date", chModel.Chore{CompletionWindow: &window}, dueDate, false},
+		{"completed before the window opens", chModel.Chore{CompletionWindow: &window, NextDueDate: &dueDate}, dueDate.Add(-3 * time.Hour), true},
+		{"completed inside the window", chModel.Chore{CompletionWindow: &window, NextDueDate: &dueDate}, dueDate.Add(-time.Hour), false},
+		{"completed after the due date", chModel.Chore{CompletionWindow: &window, NextDueDate: &dueDate}, dueDate.Add(time.Hour), false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := isBeforeCompletionWindow(&tt.chore, tt.completedDate); got != tt.want {
+				t.Errorf("isBeforeCompletionWindow() = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }

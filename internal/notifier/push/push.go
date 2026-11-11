@@ -96,7 +96,7 @@ func (s *Sender) SendToDeviceTokens(c context.Context, idempotencyScope string, 
 	}
 
 	if response.FailureCount == 0 {
-		return nil
+		return response.SuccessCount, nil
 	}
 
 	// SendEachForMulticast guarantees Responses[i] corresponds to tokens[i].

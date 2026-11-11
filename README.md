@@ -93,7 +93,7 @@ Donetick is an open-source, user-friendly app designed to help you organize task
      -p 2021:2021 \
      -e DT_ENV=selfhosted \
      -e DT_SQLITE_PATH=/donetick-data/donetick.db \
-     -e TZ=Etc/UTC \  
+     -e TZ=Etc/UTC \
      --health-cmd "wget --no-verbose --tries=1 --spider http://localhost:2021/api/v1/health || exit 1" \
      --health-start-period 1m \
      --health-timeout 5s \

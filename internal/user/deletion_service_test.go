@@ -33,7 +33,8 @@ func setupTestDeletionDB(t *testing.T) *gorm.DB {
 }
 
 type mockStorage struct {
-	deletedPaths []string
+	deletedPaths       []string
+	deletedPublicPaths []string
 }
 
 var _ storage.Storage = (*mockStorage)(nil) // Compile-time interface check
@@ -44,6 +45,11 @@ func (m *mockStorage) Save(ctx context.Context, path string, file io.Reader) err
 
 func (m *mockStorage) Delete(ctx context.Context, paths []string) error {
 	m.deletedPaths = append(m.deletedPaths, paths...)
+	return nil
+}
+
+func (m *mockStorage) DeletePublic(ctx context.Context, paths []string) error {
+	m.deletedPublicPaths = append(m.deletedPublicPaths, paths...)
 	return nil
 }
 

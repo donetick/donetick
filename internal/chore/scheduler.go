@@ -22,7 +22,7 @@ func scheduleNextDueDate(ctx context.Context, chore *chModel.Chore, completedDat
 	// local time of a chore shifts by an hour on daylight saving transitions
 	// and stays wrong afterwards.
 	// choreLocation falls back to time.UTC when no timezone is configured,
-	// which keeps the behaviour unchanged for chores created before
+	// which keeps the behavior unchanged for chores created before
 	// timezones were stored.
 	loc := choreLocation(ctx, chore)
 
@@ -54,7 +54,7 @@ func scheduleNextDueDate(ctx context.Context, chore *chModel.Chore, completedDat
 		}
 		t = t.In(loc)
 		// Note: for the one hour that a DST transition skips or repeats,
-		// time.Date normalises to a neighbouring instant. Go does not
+		// time.Date normalises to a neighboring instant. Go does not
 		// guarantee which one, but it does not error either, so a chore
 		// scheduled inside that hour still gets a valid due date.
 		baseDate = time.Date(baseDate.Year(), baseDate.Month(), baseDate.Day(), t.Hour(), t.Minute(), t.Second(), 0, loc)
@@ -198,7 +198,7 @@ func scheduleNextDueDate(ctx context.Context, chore *chModel.Chore, completedDat
 // choreLocation returns the time.Location a chore's schedule should be
 // evaluated in. It falls back to UTC when no timezone is configured or when
 // the configured timezone cannot be loaded, which preserves the previous
-// behaviour for chores created before timezones were stored.
+// behavior for chores created before timezones were stored.
 func choreLocation(ctx context.Context, chore *chModel.Chore) *time.Location {
 	if chore.FrequencyMetadataV2 == nil || chore.FrequencyMetadataV2.Timezone == "" {
 		return time.UTC

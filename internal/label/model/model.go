@@ -1,6 +1,7 @@
 package model
 
 type Label struct {
+	IsShared  bool   `json:"isShared" gorm:"column:is_shared;not null;default:false"`
 	ID        int    `json:"id" gorm:"primary_key"`
 	Name      string `json:"name" gorm:"column:name"`
 	Color     string `json:"color" gorm:"column:color"`

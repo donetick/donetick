@@ -10,6 +10,7 @@ import (
 	config "donetick.com/core/config"
 	chModel "donetick.com/core/internal/chore/model"
 	cModel "donetick.com/core/internal/circle/model"
+	lModel "donetick.com/core/internal/label/model"
 	nModel "donetick.com/core/internal/notifier/model"
 	"donetick.com/core/internal/project/access"
 	pModel "donetick.com/core/internal/project/model"
@@ -619,7 +620,7 @@ func (r *ChoreRepository) GetChore(c context.Context, choreID int, userID int, c
 		Preload("Assignees").
 		Preload("Project").
 		Preload("ThingChore").
-		Preload("LabelsV2").
+		Preload("LabelsV2", "is_shared = ? OR created_by = ?", true, userID).
 		Where("chores.id = ? AND chores.circle_id = ?", choreID, circleID).
 		Where(privacyPredicate(userID))
 
@@ -647,6 +648,18 @@ func (r *ChoreRepository) GetChoreForSystem(c context.Context, choreID int) (*ch
 	return &chore, nil
 }
 
+// GetChoreLabelsForSystem is only for internal broadcasts, which redact labels
+// separately for each recipient. Never return its result directly from an API.
+func (r *ChoreRepository) GetChoreLabelsForSystem(ctx context.Context, choreID, circleID int) ([]lModel.Label, error) {
+	var labels []lModel.Label
+	err := r.db.WithContext(ctx).Model(&lModel.Label{}).
+		Joins("JOIN chore_labels ON chore_labels.label_id = labels.id").
+		Joins("JOIN chores ON chores.id = chore_labels.chore_id").
+		Where("chores.id = ? AND chores.circle_id = ?", choreID, circleID).
+		Distinct("labels.*").Find(&labels).Error
+	return labels, err
+}
+
 // GetChores retrieves chores for a user in a circle, respecting privacy and optionally filtered by sync version.
 // If syncOptions is nil or syncOptions.SyncVersion is nil, returns all visible chores ordered by next_due_date.
 // If syncOptions.SyncVersion is set, returns only chores with sync_version > *SyncVersion, ordered by sync_version.
@@ -655,7 +668,7 @@ func (r *ChoreRepository) GetChores(c context.Context, circleID int, userID int,
 
 	query := privacyJoins(r.db.WithContext(c).Model(&chModel.Chore{}), userID).
 		Preload("Assignees").
-		Preload("LabelsV2").
+		Preload("LabelsV2", "is_shared = ? OR created_by = ?", true, userID).
 		Where("chores.circle_id = ?", circleID).
 		Where(privacyPredicate(userID)).
 		Group("chores.id")
@@ -713,7 +726,7 @@ func (r *ChoreRepository) GetArchivedChores(c context.Context, circleID int, use
 	var chores []*chModel.Chore
 	if err := privacyJoins(r.db.WithContext(c).Model(&chModel.Chore{}), userID).
 		Preload("Assignees").
-		Preload("LabelsV2").
+		Preload("LabelsV2", "is_shared = ? OR created_by = ?", true, userID).
 		Where("chores.circle_id = ?", circleID).
 		Where(privacyPredicate(userID)).
 		Where("is_active = ?", false).
@@ -858,6 +871,27 @@ func (r *ChoreRepository) SetChorePendingApproval(c context.Context, chore *chMo
 	return err
 }
 
+// setNextScheduleUpdates decides how a chore continues after it has been
+// completed, approved or skipped: recurring chores move to the next assignee,
+// trigger chores are archived, always chores stay active and one-time chores
+// are archived.
+func setNextScheduleUpdates(choreUpdates map[string]interface{}, chore *chModel.Chore, dueDate *time.Time, nextAssignedTo *int) {
+	switch {
+	case dueDate != nil:
+		choreUpdates["assigned_to"] = nextAssignedTo
+	case chore.FrequencyType == "trigger":
+		// In case of trigger frequency type we need to still set the next assigned but need the task archived.
+		choreUpdates["assigned_to"] = nextAssignedTo
+		choreUpdates["is_active"] = false
+	case chore.FrequencyType == "always":
+		// Always chores have no due date but stay active and available immediately after completion.
+		choreUpdates["assigned_to"] = nextAssignedTo
+	default:
+		// one time task
+		choreUpdates["is_active"] = false
+	}
+}
+
 func (r *ChoreRepository) ApproveChore(c context.Context, chore *chModel.Chore, adminUserID int, dueDate *time.Time, nextAssignedTo *int, applyPoints bool) error {
 	nextVersion, err := r.nextSyncVersion(c, chore.CircleID)
 	if err != nil {
@@ -869,12 +903,7 @@ func (r *ChoreRepository) ApproveChore(c context.Context, chore *chModel.Chore, 
 		choreUpdates["status"] = chModel.ChoreStatusNoStatus
 		choreUpdates["sync_version"] = nextVersion
 
-		if dueDate != nil {
-			choreUpdates["assigned_to"] = nextAssignedTo
-		} else {
-			// one time task
-			choreUpdates["is_active"] = false
-		}
+		setNextScheduleUpdates(choreUpdates, chore, dueDate, nextAssignedTo)
 
 		// Get the latest history entry that's pending approval and update it to completed
 		var history chModel.ChoreHistory
@@ -960,20 +989,7 @@ func (r *ChoreRepository) CompleteChore(c context.Context, chore *chModel.Chore,
 		choreUpdates["status"] = chModel.ChoreStatusNoStatus
 		choreUpdates["sync_version"] = nextVersion
 
-		switch {
-		case dueDate != nil:
-			choreUpdates["assigned_to"] = nextAssignedTo
-		case chore.FrequencyType == "trigger":
-			// In case of trigger frequency type we need to still set the next assigned but need the task archived.
-			choreUpdates["assigned_to"] = nextAssignedTo
-			choreUpdates["is_active"] = false
-		case chore.FrequencyType == "always":
-			// Always chores have no due date but stay active and available immediately after completion.
-			choreUpdates["assigned_to"] = nextAssignedTo
-		default:
-			// one time task
-			choreUpdates["is_active"] = false
-		}
+		setNextScheduleUpdates(choreUpdates, chore, dueDate, nextAssignedTo)
 
 		// Look for existing chore history with start or pause status
 		var existingHistory chModel.ChoreHistory
@@ -1048,12 +1064,7 @@ func (r *ChoreRepository) SkipChore(c context.Context, chore *chModel.Chore, use
 		choreUpdates["status"] = chModel.ChoreStatusNoStatus
 		choreUpdates["sync_version"] = nextVersion
 
-		if dueDate != nil {
-			choreUpdates["assigned_to"] = nextAssignedTo
-		} else {
-			// one time task
-			choreUpdates["is_active"] = false
-		}
+		setNextScheduleUpdates(choreUpdates, chore, dueDate, nextAssignedTo)
 
 		// Look for existing chore history with start or pause status
 		var existingHistory chModel.ChoreHistory
@@ -1361,6 +1372,10 @@ func (r *ChoreRepository) GetChoreDetailByID(c context.Context, choreID int, cir
 		chores.completion_window,
 		chores.status,
 		chores.is_active,
+		chores.circle_id,
+		chores.is_private,
+		chores.assign_strategy,
+		chores.project_id,
 		chores.sync_version,
 		CAST(MAX(time_sessions.duration) AS INTEGER) as duration,
 		time_sessions.start_time as start_time,

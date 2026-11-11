@@ -24,6 +24,61 @@ func newNotificationTestRepo(t *testing.T) (*NotificationRepository, *gorm.DB) {
 	return NewNotificationRepository(db), db
 }
 
+func TestDeleteChoreRemindersPreservesOnlyCurrentPendingAssignment(t *testing.T) {
+	repo, db := newNotificationTestRepo(t)
+	ctx := context.Background()
+	userID := 2
+	rows := []*nModel.Notification{
+		{ChoreID: 1, UserID: userID, RawEvent: nModel.JSONB{"type": "on_assignment"}},
+		{ChoreID: 1, UserID: 3, RawEvent: nModel.JSONB{"type": "on_assignment"}},
+		{ChoreID: 1, UserID: userID, IsSent: true, RawEvent: nModel.JSONB{"type": "on_assignment"}},
+		{ChoreID: 1, UserID: userID, RawEvent: nModel.JSONB{"type": "due"}},
+		{ChoreID: 2, UserID: 3, RawEvent: nModel.JSONB{"type": "due"}},
+	}
+	require.NoError(t, repo.BatchInsertNotifications(rows))
+	require.NoError(t, repo.DeleteChoreReminders(ctx, 1, &userID, nil))
+	var remaining []nModel.Notification
+	require.NoError(t, db.Order("id").Find(&remaining).Error)
+	require.Len(t, remaining, 2)
+	require.Equal(t, rows[0].ID, remaining[0].ID)
+	require.Equal(t, rows[4].ID, remaining[1].ID)
+	require.NoError(t, repo.DeleteChoreReminders(ctx, 1, nil, nil))
+	remaining = nil
+	require.NoError(t, db.Find(&remaining).Error)
+	require.Len(t, remaining, 1)
+	require.Equal(t, 2, remaining[0].ChoreID)
+}
+
+func TestDeleteChoreRemindersPreservesPendingApprovalUntilResolved(t *testing.T) {
+	for _, pending := range []bool{true, false} {
+		t.Run(map[bool]string{true: "pending", false: "resolved"}[pending], func(t *testing.T) {
+			repo, db := newNotificationTestRepo(t)
+			rows := []*nModel.Notification{
+				{ChoreID: 1, UserID: 2, RawEvent: nModel.JSONB{"type": "on_pending_approval"}},
+				{ChoreID: 1, UserID: 3, RawEvent: nModel.JSONB{"type": "on_pending_approval"}},
+				{ChoreID: 1, UserID: 4, IsSent: true, RawEvent: nModel.JSONB{"type": "on_pending_approval"}},
+				{ChoreID: 1, UserID: 2, RawEvent: nModel.JSONB{"type": "due"}},
+				{ChoreID: 1, UserID: 5, RawEvent: nModel.JSONB{"type": "on_pending_approval"}}, // lost access
+			}
+			require.NoError(t, repo.BatchInsertNotifications(rows))
+			var approvers []int
+			if pending {
+				approvers = []int{2, 3}
+			}
+			require.NoError(t, repo.DeleteChoreReminders(context.Background(), 1, nil, approvers))
+			var remaining []nModel.Notification
+			require.NoError(t, db.Order("id").Find(&remaining).Error)
+			if pending {
+				require.Len(t, remaining, 2)
+				require.Equal(t, rows[0].ID, remaining[0].ID)
+				require.Equal(t, rows[1].ID, remaining[1].ID)
+			} else {
+				require.Empty(t, remaining)
+			}
+		})
+	}
+}
+
 // TestGetPendingNotificationSuppressesWebhookForDigests checks that a digest
 // notification (negative, sentinel chore_id -- it isn't about one real chore)
 // never gets a webhook_url, even when its circle has one configured, while an
@@ -73,49 +128,5 @@ func TestGetPendingNotificationSuppressesWebhookForDigests(t *testing.T) {
 	}
 	if digest.WebhookURL != nil {
 		t.Errorf("expected the digest notification's webhook_url to be suppressed, got %v", *digest.WebhookURL)
-	}
-}
-
-// The scheduler re-checks notification preferences at send time, and the
-// escalation rule is priority-gated, so pending rows have to carry the
-// priority of the chore they're about. Digests aren't about one chore and get
-// 0 rather than a NULL that would fail the scan.
-func TestGetPendingNotificationIncludesChorePriority(t *testing.T) {
-	repo, db := newNotificationTestRepo(t)
-	c := context.Background()
-
-	circle := &cModel.Circle{Name: "Test Circle"}
-	require.NoError(t, db.Create(circle).Error)
-
-	userID := 1
-	chore := &chModel.Chore{
-		Name: "Urgent chore", CircleID: circle.ID, AssignedTo: &userID,
-		IsActive: true, Priority: chModel.PriorityUrgent,
-	}
-	require.NoError(t, db.Create(chore).Error)
-
-	now := time.Now().UTC()
-	require.NoError(t, db.Create(&nModel.Notification{
-		ChoreID: chore.ID, CircleID: circle.ID, UserID: userID,
-		IsSent: false, ScheduledFor: now, CreatedAt: now, Text: "chore reminder",
-	}).Error)
-	require.NoError(t, db.Create(&nModel.Notification{
-		ChoreID: -1, CircleID: circle.ID, UserID: userID,
-		IsSent: false, ScheduledFor: now, CreatedAt: now, Text: "daily digest",
-	}).Error)
-
-	pending, err := repo.GetPendingNotification(c, time.Hour)
-	require.NoError(t, err)
-
-	byChoreID := map[int]*nModel.NotificationDetails{}
-	for _, n := range pending {
-		byChoreID[n.ChoreID] = n
-	}
-
-	if got := byChoreID[chore.ID]; got == nil || got.ChorePriority != chModel.PriorityUrgent {
-		t.Errorf("expected the reminder to carry priority %d, got %v", chModel.PriorityUrgent, got)
-	}
-	if got := byChoreID[-1]; got == nil || got.ChorePriority != 0 {
-		t.Errorf("expected the digest to carry priority 0, got %v", got)
 	}
 }

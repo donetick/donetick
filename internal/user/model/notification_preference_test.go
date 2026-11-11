@@ -25,14 +25,12 @@ func TestDefaultsForProfileMatchesDesignedBehavior(t *testing.T) {
 		{NotificationProfileJustInTime, NotificationEventDailyDigest, false},
 		{NotificationProfileJustInTime, NotificationEventWeeklyDigest, false},
 
-		// Persistent: follow up and escalate on unresolved overdue work.
+		// Persistent: follow up on unresolved overdue work.
 		{NotificationProfilePersistent, NotificationEventOverdueFollowup, true},
-		{NotificationProfilePersistent, NotificationEventEscalation, true},
 
-		// Quiet: only urgent/high-priority overdue nudges, nothing else.
+		// Quiet: minimal noise, overdue follow-up included.
 		{NotificationProfileQuiet, NotificationEventDue, false},
 		{NotificationProfileQuiet, NotificationEventOverdueFollowup, false},
-		{NotificationProfileQuiet, NotificationEventEscalation, true},
 		{NotificationProfileQuiet, NotificationEventDailyDigest, false},
 	}
 
@@ -99,7 +97,6 @@ func TestSparseOverridesDropsEntriesMatchingTheProfile(t *testing.T) {
 		NotificationEventPreDue:          true,
 		NotificationEventDue:             true,
 		NotificationEventOverdueFollowup: true,
-		NotificationEventEscalation:      false,
 		NotificationEventDailyDigest:     true,
 		NotificationEventWeeklyDigest:    true, // the only one Balanced disables
 	}

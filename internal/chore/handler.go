@@ -24,7 +24,7 @@ import (
 	lModel "donetick.com/core/internal/label/model"
 	lRepo "donetick.com/core/internal/label/repo"
 	"donetick.com/core/internal/notifier"
-	nModel "donetick.com/core/internal/notifier/model"
+	"donetick.com/core/internal/notifier/dispatch"
 	"donetick.com/core/internal/notifier/push"
 	nRepo "donetick.com/core/internal/notifier/repo"
 	nps "donetick.com/core/internal/notifier/service"
@@ -44,6 +44,7 @@ import (
 	"donetick.com/core/internal/utils"
 	"donetick.com/core/logging"
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
 	"gorm.io/gorm"
 )
 
@@ -58,6 +59,7 @@ type Handler struct {
 	uRepo           *uRepo.UserRepository
 	deviceRepo      *dRepo.DeviceRepository
 	pushSender      *push.Sender
+	dispatcher      *dispatch.Dispatcher
 	eventProducer   *events.EventsProducer
 	stRepo          *stRepo.SubTasksRepository
 	storageRepo     *storageRepo.StorageRepository
@@ -77,6 +79,7 @@ func NewHandler(cr *chRepo.ChoreRepository, circleRepo *cRepo.CircleRepository, 
 	stoRepo *storageRepo.StorageRepository,
 	signer storage.URLSigner,
 	rts *realtime.RealTimeService,
+	dispatcher *dispatch.Dispatcher,
 	projectRepo *pjRepo.ProjectRepository) *Handler {
 	return &Handler{
 		choreRepo:       cr,
@@ -84,6 +87,7 @@ func NewHandler(cr *chRepo.ChoreRepository, circleRepo *cRepo.CircleRepository, 
 		uRepo:           ur,
 		deviceRepo:      dr,
 		pushSender:      ps,
+		dispatcher:      dispatcher,
 		circleRepo:      circleRepo,
 		notifier:        nt,
 		nPlanner:        np,
@@ -493,11 +497,69 @@ func (h *Handler) CreateChore(c *gin.Context) {
 		return
 	}
 
+	status, response := h.createChore(c, currentUser, choreReq)
+	c.JSON(status, response)
+}
+
+// BulkCreateChoresReq decodes items separately so an invalid chore does not
+// prevent valid chores in the same batch from being created.
+type BulkCreateChoresReq struct {
+	Chores []json.RawMessage `json:"chores" binding:"required,min=1,max=100"`
+}
+
+// BulkCreateChores godoc
+//
+//	@Summary Create multiple chores
+//	@Description Creates up to 100 chores in request order. Each item uses the single-create request format and is validated independently; failures do not stop subsequent items. Results contain the zero-based index, HTTP status, and single-create response fields. Creation is not atomic; a failure after persistence also includes the created ID in res.
+//	@Tags chores
+//	@Accept json
+//	@Produce json
+//	@Security JWTKeyAuth
+//	@Security APIKeyAuth
+//	@Param chores body BulkCreateChoresReq true "Chores to create"
+//	@Success 200 {object} map[string]interface{} "res: ordered per-item results"
+//	@Failure 400 {object} map[string]string "Invalid request format"
+//	@Failure 401 {object} map[string]string "Authentication failed"
+//	@Router /chores/bulk [post]
+func (h *Handler) BulkCreateChores(c *gin.Context) {
+	currentUser, ok := auth.CurrentUser(c)
+	if !ok {
+		c.JSON(401, gin.H{"error": "Authentication failed"})
+		return
+	}
+
+	var req BulkCreateChoresReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"error": "Invalid request format", "details": err.Error()})
+		return
+	}
+
+	results := make([]gin.H, 0, len(req.Chores))
+	for index, raw := range req.Chores {
+		var choreReq ChoreReq
+		if err := binding.JSON.BindBody(raw, &choreReq); err != nil {
+			results = append(results, gin.H{
+				"index":   index,
+				"status":  http.StatusBadRequest,
+				"error":   "Invalid request format",
+				"details": err.Error(),
+			})
+			continue
+		}
+		status, response := h.createChore(c, currentUser, choreReq)
+		response["index"] = index
+		response["status"] = status
+		results = append(results, response)
+	}
+	c.JSON(200, gin.H{"res": results})
+}
+
+func (h *Handler) createChore(c *gin.Context, currentUser *uModel.UserDetails, choreReq ChoreReq) (int, gin.H) {
+	logger := logging.FromContext(c)
 	circleUsers, err := h.circleRepo.GetCircleUsers(c, currentUser.CircleID)
 	if err != nil {
 		logger.Error("Failed to retrieve circle users", "error", err, "circleID", currentUser.CircleID, "userID", currentUser.ID)
-		c.JSON(500, gin.H{"error": "Failed to retrieve circle users"})
-		return
+		return 500, gin.H{"error": "Failed to retrieve circle users"}
 	}
 
 	assignees := choreReq.Assignees
@@ -518,10 +580,7 @@ func (h *Handler) CreateChore(c *gin.Context) {
 			}
 		}
 		if !userFound {
-			c.JSON(400, gin.H{
-				"error": "Assignee not found in circle",
-			})
-			return
+			return 400, gin.H{"error": "Assignee not found in circle"}
 		}
 
 	}
@@ -536,10 +595,7 @@ func (h *Handler) CreateChore(c *gin.Context) {
 			}
 		}
 		if !assigneeFound {
-			c.JSON(400, gin.H{
-				"error": "Assigned to not found in assignees",
-			})
-			return
+			return 400, gin.H{"error": "Assigned to not found in assignees"}
 		}
 	}
 	// Remove the auto-assignment logic - if no assignee then keep no assignee
@@ -557,15 +613,11 @@ func (h *Handler) CreateChore(c *gin.Context) {
 	// Before the defaults, so a chore inheriting privacy from its project isn't warned
 	// about defaulting to public.
 	if err := h.inheritProjectPrivacy(c, &choreReq, currentUser.ID, currentUser.CircleID); err != nil {
-		c.JSON(400, gin.H{
-			"error": err.Error(),
-		})
-		return
+		return 400, gin.H{"error": err.Error()}
 	}
 
 	if err := h.validateCompletionActions(c, choreReq.CompletionActions, currentUser.ID); err != nil {
-		c.JSON(400, gin.H{"error": err.Error()})
-		return
+		return 400, gin.H{"error": err.Error()}
 	}
 	warnings := setCreateChoreDefaults(&choreReq)
 	if !choreReq.Notification && choreReq.NotificationMetadata != nil {
@@ -620,27 +672,19 @@ func (h *Handler) CreateChore(c *gin.Context) {
 	createdChore.ID = id
 
 	if errors.Is(err, chRepo.ErrAssigneeOutsideProject) {
-		c.JSON(400, gin.H{"error": err.Error()})
-		return
+		return 400, gin.H{"error": err.Error()}
 	}
 	if err != nil {
 		logger.Error("Failed to create chore", "error", err, "userID", currentUser.ID, "circleID", currentUser.CircleID)
 		if errors.Is(err, chRepo.ErrSectionOutsideProject) {
-			c.JSON(400, gin.H{"error": err.Error()})
-			return
+			return 400, gin.H{"error": err.Error()}
 		}
-		c.JSON(500, gin.H{
-			"error": "Failed to create chore",
-		})
-		return
+		return 500, gin.H{"error": "Failed to create chore"}
 	}
 
 	if choreReq.SubTasks != nil {
 		if h.stRepo.UpdateSubtask(c, createdChore.ID, nil, *choreReq.SubTasks) != nil {
-			c.JSON(500, gin.H{
-				"error": "Error adding subtasks",
-			})
-			return
+			return 500, gin.H{"error": "Error adding subtasks", "res": id}
 		}
 	}
 
@@ -650,28 +694,21 @@ func (h *Handler) CreateChore(c *gin.Context) {
 			labelsV2[i] = int(label.LabelID)
 		}
 		if err := h.lRepo.AssignLabelsToChore(c, createdChore.ID, currentUser.ID, currentUser.CircleID, labelsV2, []int{}); err != nil {
-			c.JSON(500, gin.H{
-				"error": "Error adding labels",
-			})
-			return
+			return 500, gin.H{"error": "Error adding labels", "res": id}
 		}
 	}
 
 	if choreReq.Description != nil {
 		description := *choreReq.Description
 		if err := h.cleanUpUnreferencedFiles(c, currentUser.ID, storageModel.EntityTypeChoreDescription, createdChore.ID, description); err != nil {
-			c.JSON(500, gin.H{
-				"error": "Error processing description",
-			})
-			return
+			return 500, gin.H{"error": "Error processing description", "res": id}
 		}
 	}
 
 	if choreReq.DraftId != nil && *choreReq.DraftId != "" {
 		if err := h.storageRepo.ReassignDraftAttachments(c, *choreReq.DraftId, currentUser.ID, createdChore.ID); err != nil {
 			logger.Error("Failed to reassign draft attachments", "error", err, "draftID", *choreReq.DraftId)
-			c.JSON(500, gin.H{"error": "Error processing attachments"})
-			return
+			return 500, gin.H{"error": "Error processing attachments", "res": id}
 		}
 	}
 
@@ -680,11 +717,15 @@ func (h *Handler) CreateChore(c *gin.Context) {
 	eventChore, err := h.choreRepo.GetChore(c, createdChore.ID, currentUser.ID, currentUser.CircleID)
 	if err != nil {
 		logger.Error("Failed to reload created chore", "error", err)
-		c.JSON(500, gin.H{"error": "Failed to reload created chore"})
-		return
+		return 500, gin.H{"error": "Failed to reload created chore", "res": id}
 	}
+	// Copy Gin's pooled context before leaving the handler and detach request
+	// cancellation so notification planning can finish after the response.
+	notificationContext := context.WithoutCancel(c.Copy())
 	go func() {
-		h.nPlanner.GenerateNotifications(c, eventChore)
+		ctx, cancel := context.WithTimeout(notificationContext, 30*time.Second)
+		defer cancel()
+		h.nPlanner.GenerateChoreNotifications(ctx, eventChore, nil, currentUser.ID)
 	}()
 
 	h.eventProducer.ChoreCreated(c, currentUser.WebhookURL, eventChore, &currentUser.User)
@@ -695,16 +736,16 @@ func (h *Handler) CreateChore(c *gin.Context) {
 		broadcaster.BroadcastChoreCreated(eventChore, &currentUser.User)
 	}
 
-	shouldReturn := handleThingAssociation(choreReq, createdChore, h, c, &currentUser.User)
-	if shouldReturn {
-		return
+	if status, response := associateThing(choreReq, createdChore, h, c, &currentUser.User); response != nil {
+		response["res"] = id
+		return status, response
 	}
 	response := gin.H{"res": id}
 	if len(warnings) > 0 {
 		response["warnings"] = warnings
 	}
 
-	c.JSON(200, response)
+	return 200, response
 }
 
 func setCreateChoreDefaults(choreReq *ChoreReq) []string {
@@ -1031,8 +1072,11 @@ func (h *Handler) EditChore(c *gin.Context) {
 		c.JSON(500, gin.H{"error": "Failed to reload updated chore"})
 		return
 	}
+	notificationContext := context.WithoutCancel(c.Copy())
 	go func() {
-		h.nPlanner.GenerateNotifications(c, eventChore)
+		ctx, cancel := context.WithTimeout(notificationContext, 30*time.Second)
+		defer cancel()
+		h.nPlanner.GenerateChoreNotifications(ctx, eventChore, oldChore.AssignedTo, currentUser.ID)
 	}()
 
 	// Broadcast real-time chore update event
@@ -1149,6 +1193,15 @@ func dueDatesDiffer(oldDueDate, newDueDate *time.Time) bool {
 	return !oldDueDate.Equal(*newDueDate)
 }
 
+// isBeforeCompletionWindow reports whether completedDate is earlier than the chore's
+// completion window allows. A chore without a due date has no window to be early for.
+func isBeforeCompletionWindow(chore *chModel.Chore, completedDate time.Time) bool {
+	if chore.CompletionWindow == nil || chore.NextDueDate == nil {
+		return false
+	}
+	return completedDate.UTC().Before(chore.NextDueDate.UTC().Add(-time.Hour * time.Duration(*chore.CompletionWindow)))
+}
+
 func (h *Handler) deleteChoreFiles(ctx *gin.Context, choreID int) {
 	files, err := h.storageRepo.GetAllFilesByOwnerType(ctx, storageModel.EntityTypeChoreDescription, choreID)
 	if err != nil || len(files) == 0 {
@@ -1198,29 +1251,28 @@ func (h *Handler) cleanUpUnreferencedFiles(ctx *gin.Context, userID int, entityT
 }
 
 func handleThingAssociation(choreReq ChoreReq, savedChore *chModel.Chore, h *Handler, c *gin.Context, currentUser *uModel.User) bool {
+	status, response := associateThing(choreReq, savedChore, h, c, currentUser)
+	if response != nil {
+		c.JSON(status, response)
+		return true
+	}
+	return false
+}
+
+func associateThing(choreReq ChoreReq, savedChore *chModel.Chore, h *Handler, c *gin.Context, currentUser *uModel.User) (int, gin.H) {
 	if choreReq.ThingTrigger != nil {
 		thing, err := h.tRepo.GetThingByID(c, choreReq.ThingTrigger.ID)
 		if err != nil {
-			c.JSON(500, gin.H{
-				"error": "Error getting thing",
-			})
-			return true
+			return 500, gin.H{"error": "Error getting thing"}
 		}
 		if thing.UserID != currentUser.ID {
-			c.JSON(403, gin.H{
-				"error": "You are not allowed to trigger this thing",
-			})
-			return true
+			return 403, gin.H{"error": "You are not allowed to trigger this thing"}
 		}
 		if err := h.tRepo.AssociateThingWithChore(c, choreReq.ThingTrigger.ID, savedChore.ID, choreReq.ThingTrigger.TriggerState, choreReq.ThingTrigger.Condition); err != nil {
-			c.JSON(500, gin.H{
-				"error": "Error associating thing with chore",
-			})
-			return true
+			return 500, gin.H{"error": "Error associating thing with chore"}
 		}
-
 	}
-	return false
+	return 200, nil
 }
 
 // DeleteChore godoc
@@ -1442,6 +1494,8 @@ func (h *Handler) UpdateAssignee(c *gin.Context) {
 		})
 		return
 	}
+
+	h.nPlanner.GenerateChoreNotifications(c, updatedChore, chore.AssignedTo, currentUser.ID)
 
 	// Broadcast real-time assignee update event
 	if h.realTimeService != nil {
@@ -2429,13 +2483,11 @@ func (h *Handler) CompleteChore(c *gin.Context) {
 	}
 
 	// confirm that the chore in completion window:
-	if chore.CompletionWindow != nil {
-		if completedDate.UTC().Before(chore.NextDueDate.UTC().Add(-time.Hour * time.Duration(*chore.CompletionWindow))) {
-			c.JSON(400, gin.H{
-				"error": "Chore is out of completion window",
-			})
-			return
-		}
+	if isBeforeCompletionWindow(chore, completedDate) {
+		c.JSON(400, gin.H{
+			"error": "Chore is out of completion window",
+		})
+		return
 	}
 
 	if req.CompletedBy != nil {
@@ -2530,13 +2582,9 @@ func (h *Handler) CompleteChore(c *gin.Context) {
 			broadcaster.BroadcastChoreUpdated(updatedChore, &effectiveUser.User, changes, note)
 		}
 
-		h.notifyApproversOfPendingApproval(c, chore, &effectiveUser.User, circleUsers)
-
-		completerName := effectiveUser.DisplayName
-		if completerName == "" {
-			completerName = effectiveUser.Username
-		}
-		h.notifyAdminsOfPendingApproval(c, actualUser.CircleID, completerName, updatedChore)
+		// updatedChore, not chore: the reloaded row carries the status and
+		// relations the recipients are decided from.
+		h.notifyApproversOfPendingApproval(c, updatedChore, &effectiveUser.User, circleUsers)
 
 		c.JSON(200, gin.H{
 			"res":     updatedChore,
@@ -2576,7 +2624,7 @@ func (h *Handler) CompleteChore(c *gin.Context) {
 
 	// 	h.notifier.SendChoreCompletion(c, chore, effectiveUser)
 	// }()
-	h.nPlanner.GenerateNotifications(c, updatedChore)
+	h.nPlanner.GenerateChoreNotifications(c, updatedChore, chore.AssignedTo, completedBy)
 	h.eventProducer.ChoreCompleted(c, effectiveUser.WebhookURL, chore, &effectiveUser.User)
 	if h.realTimeService != nil {
 		broadcaster := h.realTimeService.GetEventBroadcaster()
@@ -3600,49 +3648,6 @@ func (h *Handler) DeleteTimeSession(c *gin.Context) {
 	}
 }
 
-// notifyAdminsOfPendingApproval fans out one Notification row per admin/manager's
-// registered delivery target when a completion is submitted for approval —
-// same shape used by reward.notifyAdminsOfRedemptionRequest for redemption
-// requests, and the same notifiableMembers filtering chore reminders already
-// apply (active member, has a configured platform + target). See issue #456.
-func (h *Handler) notifyAdminsOfPendingApproval(c *gin.Context, circleID int, completerName string, chore *chModel.Chore) {
-	circleUsers, err := h.circleRepo.GetCircleUsers(c, circleID)
-	if err != nil {
-		logging.FromContext(c).Error("Failed to fetch circle users for approval notification", "error", err)
-		return
-	}
-
-	text := fmt.Sprintf("%s marked \"%s\" done — needs your approval", completerName, chore.Name)
-	now := time.Now().UTC()
-
-	var notifications []*nModel.Notification
-	for _, member := range circleUsers {
-		if !(member.Role == circle.UserRoleAdmin || member.Role == circle.UserRoleManager) {
-			continue
-		}
-		if !member.IsActive || member.NotificationType == nModel.NotificationPlatformNone || member.TargetID == "" {
-			continue
-		}
-		notifications = append(notifications, &nModel.Notification{
-			ChoreID:      chore.ID,
-			CircleID:     circleID,
-			UserID:       member.UserID,
-			TargetID:     member.TargetID,
-			Text:         text,
-			TypeID:       member.NotificationType,
-			ScheduledFor: now,
-			CreatedAt:    now,
-		})
-	}
-
-	if len(notifications) == 0 {
-		return
-	}
-	if err := h.nRepo.BatchInsertNotifications(notifications); err != nil {
-		logging.FromContext(c).Error("Failed to insert approval-pending notifications", "error", err)
-	}
-}
-
 // ApproveChore godoc
 //
 //	@Summary		Approve a chore completion
@@ -3819,7 +3824,7 @@ func (h *Handler) ApproveChore(c *gin.Context) {
 		h.stRepo.ResetSubtasksCompletion(c, updatedChore.ID)
 	}
 
-	h.nPlanner.GenerateNotifications(c, updatedChore)
+	h.nPlanner.GenerateChoreNotifications(c, updatedChore, chore.AssignedTo, currentUser.ID)
 	h.eventProducer.ChoreCompleted(c, currentUser.WebhookURL, chore, &currentUser.User)
 
 	// Broadcast real-time chore approved event
@@ -4524,17 +4529,20 @@ func (h *Handler) SendNudgeNotification(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-// notifyApproversOfPendingApproval pushes a notification to the admins and
-// managers who can act on a completion that is waiting for approval. Approvers
-// tied to the task (its creator or an assignee) are preferred; if none of them
-// can approve, every admin and manager in the circle is notified so the request
-// is not left stranded. Failures are logged only: the submission already
-// succeeded.
+// notifyApproversOfPendingApproval tells the admins and managers who can act on
+// a completion that it is waiting for approval. Approvers tied to the task (its
+// creator or an assignee) are preferred; if none of them can approve, every
+// admin and manager in the circle is notified so the request is not left
+// stranded. Failures are logged only: the submission already succeeded.
+//
+// This is the only pending-approval notification path, so each approver hears
+// about it exactly once: registered devices get an immediate push, and a
+// configured legacy target (Telegram/Discord/Pushover, or FCM when the user has
+// no devices) gets a queued row -- the same no-double-push split
+// NotificationPlanner's assignment delivery uses.
 func (h *Handler) notifyApproversOfPendingApproval(c context.Context, chore *chModel.Chore, submittedBy *uModel.User, circleUsers []*circle.UserCircleDetail) {
-	log := logging.FromContext(c)
-
-	approverIDs := pendingApprovalRecipients(chore, submittedBy, circleUsers)
-	if len(approverIDs) == 0 {
+	approvers := pendingApprovalRecipients(chore, submittedBy, circleUsers)
+	if len(approvers) == 0 {
 		return
 	}
 
@@ -4543,23 +4551,23 @@ func (h *Handler) notifyApproversOfPendingApproval(c context.Context, chore *chM
 		submitterName = submittedBy.Username
 	}
 
-	payload := fcmService.FCMNotificationPayload{
-		Title: "Approval Needed",
-		Body:  fmt.Sprintf("%s completed '%s' and is waiting for your approval", submitterName, chore.Name),
-		Data: map[string]string{
+	h.dispatcher.NotifyUsers(c, dispatch.Request{
+		EventType: nps.EventTypeOnPendingApproval,
+		CircleID:  chore.CircleID,
+		ChoreID:   chore.ID,
+		Subject:   chore.Name,
+		PushTitle: "Approval Needed",
+		PushBody:  fmt.Sprintf("%s completed '%s' and is waiting for your approval", submitterName, chore.Name),
+		PushData: map[string]string{
 			"type":         "chore_pending_approval",
 			"chore_id":     fmt.Sprintf("%d", chore.ID),
 			"chore_name":   chore.Name,
 			"from_user_id": fmt.Sprintf("%d", submittedBy.ID),
 			"from_user":    submitterName,
 		},
-	}
-
-	devices := h.pushSender.SendToUsers(c, approverIDs, payload)
-	log.Debugw("Pending approval notification sent",
-		"chore_id", chore.ID,
-		"approvers", len(approverIDs),
-		"devices", devices)
+		Text:             fmt.Sprintf("%s marked \"%s\" done — needs your approval", submitterName, chore.Name),
+		IdempotencyScope: "approval",
+	}, approvers)
 }
 
 // pendingApprovalRecipients picks who is told about a completion waiting for
@@ -4567,8 +4575,9 @@ func (h *Handler) notifyApproversOfPendingApproval(c context.Context, chore *chM
 // assignee), or every active admin and manager when none of those can approve.
 // Only people who can see the chore count, so its name never reaches anyone
 // outside a private chore or a restricted project, who could not approve it
-// anyway.
-func pendingApprovalRecipients(chore *chModel.Chore, submittedBy *uModel.User, circleUsers []*circle.UserCircleDetail) []int {
+// anyway -- using the same visibility rule as the notification planner, which
+// also fails closed when the chore's project was not loaded.
+func pendingApprovalRecipients(chore *chModel.Chore, submittedBy *uModel.User, circleUsers []*circle.UserCircleDetail) []*circle.UserCircleDetail {
 	relatedToChore := map[int]bool{chore.CreatedBy: true}
 	if chore.AssignedTo != nil {
 		relatedToChore[*chore.AssignedTo] = true
@@ -4577,20 +4586,20 @@ func pendingApprovalRecipients(chore *chModel.Chore, submittedBy *uModel.User, c
 		relatedToChore[assignee.UserID] = true
 	}
 
-	related := make([]int, 0, len(circleUsers))
-	fallback := make([]int, 0, len(circleUsers))
+	related := make([]*circle.UserCircleDetail, 0, len(circleUsers))
+	fallback := make([]*circle.UserCircleDetail, 0, len(circleUsers))
 	seen := make(map[int]bool, len(circleUsers))
 	for _, user := range circleUsers {
 		if user.UserID == submittedBy.ID || !user.IsActive || !user.IsManagerOrAdmin() || seen[user.UserID] {
 			continue
 		}
-		if !chore.CanView(user.UserID, circleUsers) {
+		if !nps.CanReceiveChore(chore, user.UserID, circleUsers) {
 			continue
 		}
 		seen[user.UserID] = true
-		fallback = append(fallback, user.UserID)
+		fallback = append(fallback, user)
 		if relatedToChore[user.UserID] {
-			related = append(related, user.UserID)
+			related = append(related, user)
 		}
 	}
 
@@ -4829,6 +4838,7 @@ func Routes(router *gin.Engine, h *Handler, multiAuthMiddleware *auth.MultiAuthM
 		choresRoutes.PUT("/", h.EditChore)
 		choresRoutes.PUT("/:id/priority", h.UpdatePriority)
 		choresRoutes.POST("/", h.CreateChore)
+		choresRoutes.POST("/bulk", h.BulkCreateChores)
 		choresRoutes.GET("/:id", h.GetChore)
 		choresRoutes.PUT("/:id/subtask", h.UpdateSubtaskCompletedAt)
 		choresRoutes.GET("/:id/details", h.GetChoreDetail)

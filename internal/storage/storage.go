@@ -11,6 +11,11 @@ type Storage interface {
 	// if no public bucket is configured).
 	SavePublic(ctx context.Context, path string, file io.Reader) error
 	Delete(ctx context.Context, paths []string) error
+	// DeletePublic deletes objects written by SavePublic. It must be used
+	// instead of Delete for those objects: when a separate public bucket is
+	// configured, Delete only ever touches the private bucket and would leave
+	// the public object behind.
+	DeletePublic(ctx context.Context, paths []string) error
 	GetURL(ctx context.Context, path string) (string, error)
 	// GetPublicURL returns a bare, unsigned URL for objects saved via SavePublic.
 	// Falls back to a presigned URL when no public CDN host is configured.

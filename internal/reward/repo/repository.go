@@ -3,16 +3,18 @@ package repo
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	config "donetick.com/core/config"
 	cModel "donetick.com/core/internal/circle/model"
 	pModel "donetick.com/core/internal/points"
+	xpRepo "donetick.com/core/internal/points/repo"
 	rModel "donetick.com/core/internal/reward/model"
 	"gorm.io/gorm"
 )
 
-var ErrInsufficientPoints = errors.New("insufficient points balance")
+var ErrInsufficientPoints = xpRepo.ErrInsufficientXP
 var ErrRedemptionNotPending = errors.New("redemption is not pending")
 
 type RewardRepository struct {
@@ -62,7 +64,11 @@ func (r *RewardRepository) DeleteReward(ctx context.Context, id int, circleID in
 // available balance (points - points_redeemed), then inserts a pending redemption
 // request. Balance is re-checked at approval time too (see ApproveRedemption) since
 // balance can change between request and approval.
-func (r *RewardRepository) RequestRedemption(ctx context.Context, rewardID int, userID int, circleID int, note *string) (*rModel.RewardRedemption, error) {
+func (r *RewardRepository) RequestRedemption(ctx context.Context, rewardID int, userID int, circleID int, note *string, categoryIDs ...*int) (*rModel.RewardRedemption, error) {
+	var categoryID *int
+	if len(categoryIDs) > 0 {
+		categoryID = categoryIDs[0]
+	}
 	var redemption *rModel.RewardRedemption
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var reward rModel.Reward
@@ -80,14 +86,24 @@ func (r *RewardRepository) RequestRedemption(ctx context.Context, rewardID int, 
 		}
 
 		redemption = &rModel.RewardRedemption{
-			RewardID:    reward.ID,
-			CircleID:    circleID,
-			UserID:      userID,
-			RewardName:  reward.Name,
-			PointsCost:  reward.PointsCost,
-			Status:      rModel.RedemptionStatusPending,
-			Note:        note,
-			RequestedAt: time.Now().UTC(),
+			XPMembershipID: member.ID,
+			XPCategoryID:   categoryID,
+			RewardID:       reward.ID,
+			CircleID:       circleID,
+			UserID:         userID,
+			RewardName:     reward.Name,
+			PointsCost:     reward.PointsCost,
+			Status:         rModel.RedemptionStatusPending,
+			Note:           note,
+			RequestedAt:    time.Now().UTC(),
+		}
+		var requestCircle cModel.Circle
+		if err := tx.First(&requestCircle, circleID).Error; err != nil {
+			return err
+		}
+		redemption.XPModeAtRequest = requestCircle.XPMode
+		if err := xpRepo.CheckSpend(tx, circleID, userID, reward.PointsCost, categoryID); err != nil {
+			return err
 		}
 		return tx.Create(redemption).Error
 	})
@@ -113,36 +129,43 @@ func (r *RewardRepository) ApproveRedemption(ctx context.Context, redemptionID i
 		}
 
 		var member cModel.UserCircle
-		if err := tx.Where("user_id = ? AND circle_id = ?", redemption.UserID, circleID).First(&member).Error; err != nil {
+		if err := tx.Where("circle_id = ? AND user_id = ? AND is_active = ?", circleID, redemption.UserID, true).First(&member).Error; err != nil {
 			return err
 		}
-		available := member.Points - member.PointsRedeemed
-		if available < redemption.PointsCost {
-			return ErrInsufficientPoints
+		if (redemption.XPMembershipID != 0 && redemption.XPMembershipID != member.ID) || (redemption.XPMembershipID == 0 && member.CreatedAt.After(redemption.RequestedAt)) {
+			return xpRepo.ErrMembershipChanged
 		}
-
-		if err := tx.Model(&cModel.UserCircle{}).
-			Where("user_id = ? AND circle_id = ?", redemption.UserID, circleID).
-			Update("points_redeemed", gorm.Expr("points_redeemed + ?", redemption.PointsCost)).Error; err != nil {
+		if err := xpRepo.LockMember(tx, circleID, redemption.UserID, member.ID); err != nil {
+			return err
+		}
+		if err := xpRepo.SpendWithPolicy(tx, circleID, redemption.UserID, redemption.PointsCost, redemption.XPCategoryID, fmt.Sprintf("reward:%d", redemption.ID), redemption.XPModeAtRequest); err != nil {
 			return err
 		}
 		if err := tx.Create(&pModel.PointsHistory{
-			Action:    pModel.PointsHistoryActionRedeem,
-			CircleID:  circleID,
-			UserID:    redemption.UserID,
-			Points:    redemption.PointsCost,
-			CreatedAt: time.Now().UTC(),
-			CreatedBy: adminUserID,
+			Action:       pModel.PointsHistoryActionRedeem,
+			XPCategoryID: redemption.XPCategoryID,
+			CircleID:     circleID,
+			UserID:       redemption.UserID,
+			Points:       redemption.PointsCost,
+			CreatedAt:    time.Now().UTC(),
+			CreatedBy:    adminUserID,
 		}).Error; err != nil {
 			return err
 		}
 
 		now := time.Now().UTC()
-		return tx.Model(&rModel.RewardRedemption{}).Where("id = ?", redemption.ID).Updates(map[string]interface{}{
+		result := tx.Model(&rModel.RewardRedemption{}).Where("id = ? AND status = ?", redemption.ID, rModel.RedemptionStatusPending).Updates(map[string]interface{}{
 			"status":      rModel.RedemptionStatusApproved,
 			"resolved_at": now,
 			"resolved_by": adminUserID,
-		}).Error
+		})
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected != 1 {
+			return ErrRedemptionNotPending
+		}
+		return nil
 	})
 }
 
@@ -165,7 +188,14 @@ func (r *RewardRepository) RejectRedemption(ctx context.Context, redemptionID in
 		if note != nil {
 			updates["note"] = *note
 		}
-		return tx.Model(&rModel.RewardRedemption{}).Where("id = ?", redemption.ID).Updates(updates).Error
+		result := tx.Model(&rModel.RewardRedemption{}).Where("id = ? AND status = ?", redemption.ID, rModel.RedemptionStatusPending).Updates(updates)
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected != 1 {
+			return ErrRedemptionNotPending
+		}
+		return nil
 	})
 }
 

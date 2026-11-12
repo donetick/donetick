@@ -7,6 +7,7 @@ import (
 )
 
 type Circle struct {
+	XPMode             bool       `json:"xpMode" gorm:"not null;default:false"`
 	ID                 int        `json:"id" gorm:"primary_key"`                 // Unique identifier
 	Name               string     `json:"name" gorm:"column:name"`               // Full name
 	CreatedBy          int        `json:"created_by" gorm:"column:created_by"`   // Created by

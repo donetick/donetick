@@ -183,6 +183,48 @@ func (r *CircleRepository) RedeemPoints(c context.Context, circleID int, userID 
 	return nil
 }
 
+// AdjustPoints adds points to a member's earned balance or removes points from
+// their available balance. Every adjustment is recorded in points history.
+func (r *CircleRepository) AdjustPoints(c context.Context, circleID int, userID int, points int, add bool, createdBy int) (bool, error) {
+	if points <= 0 {
+		return false, nil
+	}
+	var action pModel.PointsHistoryAction
+	column := "points_redeemed"
+	if add {
+		action = pModel.PointsHistoryActionAdd
+		column = "points"
+	} else {
+		action = pModel.PointsHistoryActionRemove
+	}
+
+	updated := false
+	err := r.db.WithContext(c).Transaction(func(tx *gorm.DB) error {
+		query := tx.Model(&cModel.UserCircle{}).Where("user_id = ? AND circle_id = ?", userID, circleID)
+		if add {
+			query = query.Update(column, gorm.Expr("points + ?", points))
+		} else {
+			query = query.Where("points - points_redeemed >= ?", points).Update(column, gorm.Expr("points_redeemed + ?", points))
+		}
+		if query.Error != nil {
+			return query.Error
+		}
+		if query.RowsAffected == 0 {
+			return nil
+		}
+		updated = true
+		return tx.Create(&pModel.PointsHistory{
+			Action:    action,
+			CircleID:  circleID,
+			UserID:    userID,
+			Points:    points,
+			CreatedAt: time.Now().UTC(),
+			CreatedBy: createdBy,
+		}).Error
+	})
+	return updated, err
+}
+
 func (r *CircleRepository) SetWebhookURL(c context.Context, circleID int, webhookURL *string) error {
 	return r.db.WithContext(c).Model(&cModel.Circle{}).Where("id = ?", circleID).Update("webhook_url", webhookURL).Error
 }

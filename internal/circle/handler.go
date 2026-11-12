@@ -700,6 +700,78 @@ func (h *Handler) RedeemPoints(c *gin.Context) {
 	})
 }
 
+// AdjustMemberPoints godoc
+//
+//	@Summary		Adjust a circle member's points
+//	@Description	Adds or removes points from a circle member (admin only). Removing points cannot make the available balance negative.
+//	@Tags			circles
+//	@Accept			json
+//	@Produce		json
+//	@Security		JWTKeyAuth
+//	@Security		APIKeyAuth
+//	@Param			id		path	int	true	"Circle ID"
+//	@Param			adjustment	body	object{action=string,points=int,userId=int}	true	"Point adjustment"
+//	@Success		200		{object}	map[string]string	"res: Points adjusted successfully"
+//	@Failure		400		{object}	map[string]string	"error: Invalid request / User does not have enough points / User is not a member of this circle"
+//	@Failure		403		{object}	map[string]string	"error: You are not an admin of this circle"
+//	@Router			/circles/{id}/members/points/adjust [post]
+func (h *Handler) AdjustMemberPoints(c *gin.Context) {
+	log := logging.FromContext(c)
+	currentUser, ok := auth.CurrentUser(c)
+	if !ok {
+		c.JSON(500, gin.H{"error": "Error getting current user"})
+		return
+	}
+	var req struct {
+		Action string `json:"action"`
+		Points int    `json:"points"`
+		UserID int    `json:"userId"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil || req.Points <= 0 || req.UserID <= 0 || (req.Action != "add" && req.Action != "remove") {
+		c.JSON(400, gin.H{"error": "Invalid request"})
+		return
+	}
+	circleID, err := strconv.Atoi(c.Param("id"))
+	if err != nil || circleID != currentUser.CircleID {
+		c.JSON(400, gin.H{"error": "Invalid request: invalid circle id"})
+		return
+	}
+	members, err := h.circleRepo.GetCircleUsers(c, currentUser.CircleID)
+	if err != nil {
+		log.Error("Error getting circle members:", err)
+		c.JSON(500, gin.H{"error": "Error getting circle members"})
+		return
+	}
+	isAdmin, isMember := false, false
+	for _, member := range members {
+		if member.UserID == currentUser.ID && member.Role == "admin" {
+			isAdmin = true
+		}
+		if member.UserID == req.UserID {
+			isMember = true
+		}
+	}
+	if !isAdmin {
+		c.JSON(403, gin.H{"error": "You are not an admin of this circle"})
+		return
+	}
+	if !isMember {
+		c.JSON(400, gin.H{"error": "User is not a member of this circle"})
+		return
+	}
+	updated, err := h.circleRepo.AdjustPoints(c, circleID, req.UserID, req.Points, req.Action == "add", currentUser.ID)
+	if err != nil {
+		log.Error("Error adjusting member points:", err)
+		c.JSON(500, gin.H{"error": "Error adjusting points"})
+		return
+	}
+	if !updated {
+		c.JSON(400, gin.H{"error": "User does not have enough points"})
+		return
+	}
+	c.JSON(200, gin.H{"res": "Points adjusted successfully"})
+}
+
 // ChangeMemberRole godoc
 //
 //	@Summary		Change member role
@@ -807,6 +879,7 @@ func Routes(router *gin.Engine, h *Handler, multiAuthMiddleware *auth.MultiAuthM
 		circleRoutes.PUT("/members/role", h.ChangeMemberRole)
 		circleRoutes.GET("/", h.GetUserCircles)
 		circleRoutes.POST("/:id/members/points/redeem", h.RedeemPoints)
+		circleRoutes.POST("/:id/members/points/adjust", h.AdjustMemberPoints)
 
 		if !h.singleCircleInstance {
 			circleRoutes.PUT("/members/requests/accept", h.AcceptJoinRequest)

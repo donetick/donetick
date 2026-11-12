@@ -788,6 +788,68 @@ func TestScheduleNextDueDateRollingDayOfMonthKeepsLocalTime(t *testing.T) {
 	assertLocalTime(t, got, berlin, 2026, 2, 15, 6, 45)
 }
 
+// TestScheduleNextDueDateDayOfMonthAdvancesWhenUTCMonthDiffers covers a stored
+// due date whose month in UTC differs from its month in the chore's timezone.
+// The next occurrence must still land in the following month instead of
+// repeating the same due date.
+func TestScheduleNextDueDateDayOfMonthAdvancesWhenUTCMonthDiffers(t *testing.T) {
+	allMonths := []*string{
+		jsonPtr("January"), jsonPtr("February"), jsonPtr("March"), jsonPtr("April"),
+		jsonPtr("May"), jsonPtr("June"), jsonPtr("July"), jsonPtr("August"),
+		jsonPtr("September"), jsonPtr("October"), jsonPtr("November"), jsonPtr("December"),
+	}
+
+	tests := []struct {
+		name     string
+		timezone string
+		day      int
+		due      [5]int
+		want     [5]int
+	}{
+		{
+			name:     "east of UTC, early on the 1st",
+			timezone: "Europe/Berlin",
+			day:      1,
+			due:      [5]int{2026, 1, 1, 0, 30},
+			want:     [5]int{2026, 2, 1, 0, 30},
+		},
+		{
+			name:     "west of UTC, late on the last day",
+			timezone: "America/New_York",
+			day:      31,
+			due:      [5]int{2026, 1, 31, 23, 0},
+			want:     [5]int{2026, 2, 28, 23, 0},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			loc, err := time.LoadLocation(tt.timezone)
+			if err != nil {
+				t.Fatalf("loading %s failed despite embedded tzdata: %v", tt.timezone, err)
+			}
+			due := time.Date(tt.due[0], time.Month(tt.due[1]), tt.due[2], tt.due[3], tt.due[4], 0, 0, loc)
+
+			chore := chModel.Chore{
+				FrequencyType: chModel.FrequencyTypeDayOfTheMonth,
+				Frequency:     tt.day,
+				NextDueDate:   timePtr(due.UTC()),
+				FrequencyMetadataV2: &chModel.FrequencyMetadata{
+					Months:   allMonths,
+					Time:     due.Format(time.RFC3339),
+					Timezone: tt.timezone,
+				},
+			}
+
+			got, err := scheduleNextDueDate(context.Background(), &chore, due)
+			if err != nil {
+				t.Fatalf("scheduleNextDueDate() error = %v", err)
+			}
+			assertLocalTime(t, got, loc, tt.want[0], time.Month(tt.want[1]), tt.want[2], tt.want[3], tt.want[4])
+		})
+	}
+}
+
 // TestScheduleNextDueDateWithoutTimezoneUnchanged guards the backwards
 // compatible path: without a configured timezone the scheduler must behave
 // exactly as before, i.e. purely in UTC.

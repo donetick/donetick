@@ -46,6 +46,7 @@ type Config struct {
 	DonetickCloudConfig    DonetickCloudConfig `mapstructure:"donetick_cloud" yaml:"donetick_cloud"`
 	FCM                    FCMConfig           `mapstructure:"fcm" yaml:"fcm"`
 	Bridge                 BridgeConfig        `mapstructure:"bridge" yaml:"bridge"`
+	MCP                    MCPConfig           `mapstructure:"mcp" yaml:"mcp"`
 	FeatureLimits          FeatureLimitsConfig `mapstructure:"feature_limits" yaml:"feature_limits"`
 	Storage                StorageConfig       `mapstructure:"storage" yaml:"storage"`
 	SingleCircleInstance   bool                `mapstructure:"single_circle_instance" yaml:"single_circle_instance"`
@@ -207,6 +208,13 @@ type BridgeConfig struct {
 	InstanceID     string `json:"instance_id" mapstructure:"instance_id" yaml:"instance_id"`
 	InstanceToken  string `json:"-" mapstructure:"instance_token" yaml:"instance_token"`
 	TimeoutSeconds int    `json:"timeout_seconds" mapstructure:"timeout_seconds" yaml:"timeout_seconds" default:"15"`
+}
+
+// MCPConfig controls the built-in Model Context Protocol server, which lets AI
+// assistants work with chores and things through the /mcp endpoint using a
+// Donetick API token. It is off unless enabled.
+type MCPConfig struct {
+	Enabled bool `mapstructure:"enabled" yaml:"enabled"`
 }
 
 type EmailConfig struct {

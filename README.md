@@ -72,6 +72,8 @@ Donetick is an open-source, user-friendly app designed to help you organize task
 
 **Webhook System**: Connect Donetick to external systems using flexible webhook support good for custom notification flows or automations.
 
+**MCP Server**: Let AI assistants manage your tasks through a built-in [Model Context Protocol](https://modelcontextprotocol.io) server. It offers the same operations as the eAPI and uses the same access tokens. See [MCP Server](#mcp-server).
+
 ---
 
 ## Quick Start
@@ -245,6 +247,48 @@ Group matching is **exact-string and case-sensitive**.
      - DT_OAUTH2_MANAGER_GROUPS=donetick-managers
      - DT_DISABLE_PASSWORD_AUTH=true
    ```
+
+---
+
+## MCP Server
+
+Donetick includes a [Model Context Protocol](https://modelcontextprotocol.io) (MCP) server, so AI assistants and other MCP clients can read and manage your tasks. Donetick serves it itself at `/mcp`; there is nothing extra to run.
+
+It is off by default. Turn it on with the `DT_MCP_ENABLED=true` environment variable, or in the config file:
+
+```yaml
+mcp:
+  enabled: true
+```
+
+Then give your MCP client the URL `https://<your-donetick-host>/mcp` (Streamable HTTP transport) and a Donetick API token, the same long-lived access token the eAPI uses, as a bearer token. For example, with Claude Code:
+
+```bash
+claude mcp add --transport http donetick https://<your-donetick-host>/mcp --header "Authorization: Bearer <api token>"
+```
+
+The token can also be sent in the `secretkey` header, as with the rest of the API.
+
+### Tools
+
+| Tool | What it does |
+|---|---|
+| `list_chores` | List the active tasks in your circle |
+| `create_chore` | Create a one-time task |
+| `update_chore` | Change a task's name, description or due date |
+| `complete_chore` | Mark a task as done |
+| `delete_chore` | Delete a task |
+| `list_circle_members` | List the members of your circle |
+| `list_things` | List your Things |
+| `get_thing` | Get one Thing and its current state |
+| `set_thing_state` | Set the state of a Thing |
+| `increment_thing` | Add to (or subtract from) a number Thing |
+
+### Good to know
+
+- Each tool calls the matching eAPI route as the owner of the token, so the same permissions, plan limits and rate limits apply, and webhooks and notifications fire as usual.
+- Requests that carry an `Origin` header (browser-based clients) are only accepted from origins listed in `server.cors_allow_origins`.
+- Both the stateless MCP revision (`2026-07-28`) and the earlier handshake-based revisions (`2025-03-26` to `2025-11-25`) are supported. The server keeps no session state.
 
 ---
 

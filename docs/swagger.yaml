@@ -2692,6 +2692,66 @@ paths:
       summary: Redeem member points
       tags:
       - circles
+  /circles/{id}/members/points/adjust:
+    post:
+      consumes:
+      - application/json
+      description: Adds or removes points from a circle member (admin only). Removing points cannot make the available balance negative.
+      parameters:
+      - description: Circle ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Point adjustment request
+        in: body
+        name: adjustment
+        required: true
+        schema:
+          properties:
+            action:
+              enum:
+              - add
+              - remove
+              type: string
+            points:
+              type: integer
+            userId:
+              type: integer
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'res: Points adjusted successfully'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 'error: Invalid request / User does not have enough points / User is not a member of this circle'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 'error: You are not an admin of this circle'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Error adjusting points'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      - APIKeyAuth: []
+      summary: Adjust member points
+      tags:
+      - circles
   /circles/join:
     post:
       consumes:

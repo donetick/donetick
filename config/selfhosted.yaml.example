@@ -97,3 +97,8 @@ bridge:
   instance_id: ""
   instance_token: ""
   timeout_seconds: 15
+# Built-in MCP (Model Context Protocol) server. When enabled, AI assistants can
+# manage chores, labels, projects, filters and things at /mcp using a Donetick
+# API token.
+mcp:
+  enabled: false

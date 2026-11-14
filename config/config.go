@@ -211,8 +211,8 @@ type BridgeConfig struct {
 }
 
 // MCPConfig controls the built-in Model Context Protocol server, which lets AI
-// assistants work with chores and things through the /mcp endpoint using a
-// Donetick API token. It is off unless enabled.
+// assistants work with chores, labels, projects, filters and things through
+// the /mcp endpoint using a Donetick API token. It is off unless enabled.
 type MCPConfig struct {
 	Enabled bool `mapstructure:"enabled" yaml:"enabled"`
 }

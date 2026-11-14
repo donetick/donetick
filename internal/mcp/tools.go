@@ -5,15 +5,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
+	"maps"
 	"net/url"
 	"reflect"
-	"strconv"
+	"slices"
 	"strings"
 )
 
-// tool describes one MCP tool and how a call to it translates into a request
-// to the external API.
+// tool describes one MCP tool and how a call to it is carried out through
+// Donetick's HTTP API.
 type tool struct {
 	Name        string          `json:"name"`
 	Title       string          `json:"title"`
@@ -21,9 +21,25 @@ type tool struct {
 	InputSchema schema          `json:"inputSchema"`
 	Annotations toolAnnotations `json:"annotations"`
 
-	// build turns the arguments of a call into an API request. An error it
-	// returns is shown to the model, so it should say how to fix the call.
-	build func(arguments json.RawMessage) (apiCall, error)
+	// run carries out a call and returns the API response to show the model.
+	// A plain error means the arguments were wrong; its text is shown to the
+	// model too, so it should say how to fix the call.
+	run runner
+}
+
+type runner func(s *session, arguments json.RawMessage) (apiResponse, error)
+
+// tools is the list served by tools/list, in a fixed order so clients can
+// cache it.
+var tools = slices.Concat(choreTools, labelTools, projectTools, filterTools, thingTools)
+
+func findTool(name string) (tool, bool) {
+	for _, t := range tools {
+		if t.Name == name {
+			return t, true
+		}
+	}
+	return tool{}, false
 }
 
 // toolAnnotations are hints clients use to decide, for example, whether a call
@@ -40,7 +56,15 @@ var (
 	readOnly    = toolAnnotations{ReadOnlyHint: true, IdempotentHint: true}
 	additive    = toolAnnotations{}
 	overwriting = toolAnnotations{DestructiveHint: true, IdempotentHint: true}
+	oneWay      = toolAnnotations{DestructiveHint: true}
 )
+
+// session is what a tool has to work with while it runs: the owner of the API
+// token, and a way to send requests to the API as that user.
+type session struct {
+	userID int
+	call   func(apiCall) (apiResponse, error)
+}
 
 // apiCall is a request to one of Donetick's HTTP API routes.
 type apiCall struct {
@@ -50,9 +74,249 @@ type apiCall struct {
 	body   any // sent as JSON when not nil
 }
 
+type apiResponse struct {
+	status int
+	body   []byte
+}
+
+func (r apiResponse) ok() bool {
+	return r.status >= 200 && r.status < 300
+}
+
+// refusal ends a tool call with an error response from the API, for tools
+// that need more than one request and are turned down part-way.
+type refusal struct {
+	response apiResponse
+}
+
+func (r *refusal) Error() string {
+	return fmt.Sprintf("the API answered with HTTP %d", r.response.status)
+}
+
+// notFound says that a record a tool was asked to change is not among the
+// ones the caller can see.
+type notFound struct {
+	kind string
+	id   int
+}
+
+func (e *notFound) Error() string {
+	return fmt.Sprintf("there is no %s with id %d", e.kind, e.id)
+}
+
+// internalError marks a failure that is the server's fault, not the caller's.
+// It is logged and reported without details.
+type internalError struct {
+	err error
+}
+
+func (e *internalError) Error() string { return e.err.Error() }
+func (e *internalError) Unwrap() error { return e.err }
+
+// object is a JSON object whose members are kept exactly as they were
+// received, so it can be sent back without losing the ones this package does
+// not know about.
+type object = map[string]json.RawMessage
+
+func raw(value any) json.RawMessage {
+	encoded, err := json.Marshal(value)
+	if err != nil {
+		panic(err) // only called with values that always encode
+	}
+	return encoded
+}
+
+// request makes a tool out of a single API request.
+func request(build func(arguments json.RawMessage) (apiCall, error)) runner {
+	return func(s *session, arguments json.RawMessage) (apiResponse, error) {
+		call, err := build(arguments)
+		if err != nil {
+			return apiResponse{}, err
+		}
+		return s.call(call)
+	}
+}
+
+// fixed makes a tool that takes no arguments and always sends the same request.
+func fixed(method, path string) runner {
+	return request(func(arguments json.RawMessage) (apiCall, error) {
+		_, err := decodeArguments(arguments, &struct{}{})
+		return apiCall{method: method, path: path}, err
+	})
+}
+
+// byID makes a tool whose only argument is the id in the route.
+func byID(method, pathFormat string) runner {
+	return request(func(arguments json.RawMessage) (apiCall, error) {
+		var args struct {
+			ID *int `json:"id"`
+		}
+		if _, err := decodeArguments(arguments, &args); err != nil {
+			return apiCall{}, err
+		}
+		if args.ID == nil {
+			return apiCall{}, errors.New("id is required")
+		}
+		return apiCall{method: method, path: fmt.Sprintf(pathFormat, *args.ID)}, nil
+	})
+}
+
+// fetch gets the object a route returns, unwrapping the "res" envelope most
+// routes use. Updates start from it: the API replaces records whole, so a
+// tool that changes one field has to send the others back as they are.
+func (s *session) fetch(path string) (object, error) {
+	found, err := s.call(apiCall{method: "GET", path: path})
+	if err != nil {
+		return nil, err
+	}
+	if !found.ok() {
+		return nil, &refusal{found}
+	}
+	var record object
+	if err := json.Unmarshal(unwrap(found.body), &record); err != nil || record == nil {
+		return nil, &internalError{fmt.Errorf("GET %s did not return an object", path)}
+	}
+	return record, nil
+}
+
+// find gets one record out of a route that only lists them.
+func (s *session) find(path, kind string, id int) (object, error) {
+	found, err := s.call(apiCall{method: "GET", path: path})
+	if err != nil {
+		return nil, err
+	}
+	if !found.ok() {
+		return nil, &refusal{found}
+	}
+	var records []object
+	if err := json.Unmarshal(unwrap(found.body), &records); err != nil {
+		return nil, &internalError{fmt.Errorf("GET %s did not return a list", path)}
+	}
+	for _, record := range records {
+		var recordID int
+		if json.Unmarshal(record["id"], &recordID) == nil && recordID == id {
+			return record, nil
+		}
+	}
+	return nil, &notFound{kind, id}
+}
+
+// unwrap returns the value of "res" when body is an object that has one, and
+// body itself otherwise.
+func unwrap(body []byte) []byte {
+	var envelope struct {
+		Res json.RawMessage `json:"res"`
+	}
+	if json.Unmarshal(body, &envelope) == nil && envelope.Res != nil {
+		return envelope.Res
+	}
+	return body
+}
+
+// pick copies the named members of a record that are present.
+func pick(record object, names ...string) object {
+	picked := object{}
+	for _, name := range names {
+		if value, ok := record[name]; ok {
+			picked[name] = value
+		}
+	}
+	return picked
+}
+
+// overlay writes the arguments the caller sent over a record, leaving the
+// rest of it alone. A null argument is written too: that is how a field is
+// cleared.
+func overlay(record, given object, names ...string) {
+	for _, name := range names {
+		if value, ok := given[name]; ok {
+			record[name] = value
+		}
+	}
+}
+
+// decodeArguments reads tool arguments strictly: a misspelled or made-up
+// argument is reported back instead of being silently ignored. It also
+// returns the arguments as they were sent, which tells an argument that was
+// left out from one that was set to null.
+func decodeArguments(arguments json.RawMessage, into any) (object, error) {
+	if len(arguments) == 0 || string(arguments) == "null" {
+		arguments = json.RawMessage("{}")
+	}
+	decoder := json.NewDecoder(bytes.NewReader(arguments))
+	decoder.DisallowUnknownFields()
+	decoder.UseNumber()
+	err := decoder.Decode(into)
+	var wrongType *json.UnmarshalTypeError
+	switch {
+	case err == nil:
+		given := object{}
+		_ = json.Unmarshal(arguments, &given)
+		return given, checkNames(arguments, reflect.TypeOf(into))
+	case !errors.As(err, &wrongType):
+		return nil, errors.New(strings.TrimPrefix(err.Error(), "json: "))
+	case wrongType.Field == "":
+		return nil, errors.New("arguments must be an object")
+	}
+	return nil, fmt.Errorf("%s must be %s, not a %s", wrongType.Field, describeKind(wrongType.Type), wrongType.Value)
+}
+
+// checkNames turns down members whose name matches an argument in everything
+// but case. encoding/json lets "Name" stand for "name", but the tools copy
+// arguments by their exact name, so such a member would be accepted and then
+// quietly left out.
+func checkNames(value json.RawMessage, t reflect.Type) error {
+	for t.Kind() == reflect.Pointer {
+		t = t.Elem()
+	}
+	switch t.Kind() {
+	case reflect.Slice:
+		var elements []json.RawMessage
+		_ = json.Unmarshal(value, &elements)
+		for _, element := range elements {
+			if err := checkNames(element, t.Elem()); err != nil {
+				return err
+			}
+		}
+	case reflect.Struct:
+		var members object
+		_ = json.Unmarshal(value, &members)
+		fields := map[string]reflect.Type{}
+		for i := range t.NumField() {
+			name, _, _ := strings.Cut(t.Field(i).Tag.Get("json"), ",")
+			fields[name] = t.Field(i).Type
+		}
+		for _, name := range slices.Sorted(maps.Keys(members)) {
+			field, known := fields[name]
+			if !known {
+				return fmt.Errorf("unknown field %q", name)
+			}
+			if err := checkNames(members[name], field); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func describeKind(t reflect.Type) string {
+	switch t.Kind() {
+	case reflect.Int:
+		return "a whole number"
+	case reflect.Bool:
+		return "true or false"
+	case reflect.Slice:
+		return "a list"
+	case reflect.Struct, reflect.Map:
+		return "an object"
+	}
+	return "a " + t.Kind().String()
+}
+
+// schema is a JSON Schema, written as the map it serializes to.
 type schema map[string]any
 
-func object(properties schema, required ...string) schema {
+func inputs(properties schema, required ...string) schema {
 	s := schema{"type": "object", "additionalProperties": false}
 	if len(properties) > 0 {
 		s["properties"] = properties
@@ -67,314 +331,28 @@ func property(kind, description string) schema {
 	return schema{"type": kind, "description": description}
 }
 
-const (
-	choreIDHelp = "Numeric id of the chore, as returned by list_chores."
-	thingIDHelp = "Numeric id of the thing, as returned by list_things."
-	dueDateHelp = "Due date as an RFC 3339 timestamp (2026-01-31T18:00:00Z) or a plain date (2026-01-31)."
-)
-
-// tools is the list served by tools/list, in a fixed order so clients can
-// cache it. Every tool maps to exactly one external API (eAPI) route.
-var tools = []tool{
-	{
-		Name:        "list_chores",
-		Title:       "List chores",
-		Description: "List the active chores (tasks) in the user's circle, with their due dates, assignees, recurrence and labels.",
-		InputSchema: object(schema{
-			"includeSubtasks": property("boolean", "Also return each chore's subtasks. Defaults to false."),
-		}),
-		Annotations: readOnly,
-		build: func(arguments json.RawMessage) (apiCall, error) {
-			var args struct {
-				IncludeSubtasks bool `json:"includeSubtasks"`
-			}
-			if err := decodeArguments(arguments, &args); err != nil {
-				return apiCall{}, err
-			}
-			call := apiCall{method: http.MethodGet, path: "/eapi/v1/chore"}
-			if args.IncludeSubtasks {
-				call.query = url.Values{"includeSubtasks": {"true"}}
-			}
-			return call, nil
-		},
-	},
-	{
-		Name:        "create_chore",
-		Title:       "Create chore",
-		Description: "Create a one-time chore assigned to its creator. Returns the created chore.",
-		InputSchema: object(schema{
-			"name":        property("string", "Short name of the chore."),
-			"description": property("string", "Longer description or notes."),
-			"dueDate":     property("string", dueDateHelp),
-			"createdBy":   property("integer", "User id of the circle member to create the chore for, as returned by list_circle_members. Defaults to the token's owner."),
-			"projectId":   property("integer", "Id of the project to add the chore to."),
-		}, "name"),
-		Annotations: additive,
-		build: func(arguments json.RawMessage) (apiCall, error) {
-			var args struct {
-				Name        string  `json:"name"`
-				Description *string `json:"description,omitempty"`
-				DueDate     string  `json:"dueDate,omitempty"`
-				CreatedBy   *int    `json:"createdBy,omitempty"`
-				ProjectID   *int    `json:"projectId,omitempty"`
-			}
-			if err := decodeArguments(arguments, &args); err != nil {
-				return apiCall{}, err
-			}
-			if strings.TrimSpace(args.Name) == "" {
-				return apiCall{}, errors.New("name is required")
-			}
-			return apiCall{method: http.MethodPost, path: "/eapi/v1/chore", body: args}, nil
-		},
-	},
-	{
-		Name:        "update_chore",
-		Title:       "Update chore",
-		Description: "Change the name, description or due date of a chore. Fields that are left out keep their current value. Only the chore's creator or a circle admin or manager may update it.",
-		InputSchema: object(schema{
-			"id":             property("integer", choreIDHelp),
-			"name":           property("string", "New name."),
-			"description":    property("string", "New description."),
-			"dueDate":        property("string", dueDateHelp),
-			"forceUnarchive": property("boolean", "Make an archived chore active again."),
-		}, "id"),
-		Annotations: overwriting,
-		build: func(arguments json.RawMessage) (apiCall, error) {
-			var args struct {
-				ID             *int    `json:"id,omitempty"`
-				Name           string  `json:"name,omitempty"`
-				Description    *string `json:"description,omitempty"`
-				DueDate        string  `json:"dueDate,omitempty"`
-				ForceUnarchive bool    `json:"forceUnarchive,omitempty"`
-			}
-			if err := decodeArguments(arguments, &args); err != nil {
-				return apiCall{}, err
-			}
-			if args.ID == nil {
-				return apiCall{}, errors.New("id is required")
-			}
-			if args.Name == "" && args.Description == nil && args.DueDate == "" && !args.ForceUnarchive {
-				return apiCall{}, errors.New("nothing to update: give at least one of name, description, dueDate or forceUnarchive")
-			}
-			path := fmt.Sprintf("/eapi/v1/chore/%d", *args.ID)
-			args.ID = nil
-			return apiCall{method: http.MethodPut, path: path, body: args}, nil
-		},
-	},
-	{
-		Name:        "complete_chore",
-		Title:       "Complete chore",
-		Description: "Mark a chore as done. A recurring chore is rescheduled to its next due date and handed to its next assignee. Returns the updated chore.",
-		InputSchema: object(schema{
-			"id":          property("integer", choreIDHelp),
-			"completedBy": property("integer", "User id of the circle member who did the chore, as returned by list_circle_members. Defaults to the token's owner."),
-		}, "id"),
-		Annotations: toolAnnotations{DestructiveHint: true},
-		build: func(arguments json.RawMessage) (apiCall, error) {
-			var args struct {
-				ID          *int `json:"id"`
-				CompletedBy *int `json:"completedBy"`
-			}
-			if err := decodeArguments(arguments, &args); err != nil {
-				return apiCall{}, err
-			}
-			if args.ID == nil {
-				return apiCall{}, errors.New("id is required")
-			}
-			call := apiCall{method: http.MethodPost, path: fmt.Sprintf("/eapi/v1/chore/%d/complete", *args.ID)}
-			if args.CompletedBy != nil {
-				call.query = url.Values{"completedBy": {strconv.Itoa(*args.CompletedBy)}}
-			}
-			return call, nil
-		},
-	},
-	{
-		Name:        "delete_chore",
-		Title:       "Delete chore",
-		Description: "Permanently delete a chore. Only the chore's creator or a circle admin or manager may delete it.",
-		InputSchema: object(schema{"id": property("integer", choreIDHelp)}, "id"),
-		Annotations: overwriting,
-		build: func(arguments json.RawMessage) (apiCall, error) {
-			id, err := decodeID(arguments)
-			if err != nil {
-				return apiCall{}, err
-			}
-			return apiCall{method: http.MethodDelete, path: fmt.Sprintf("/eapi/v1/chore/%d", id)}, nil
-		},
-	},
-	{
-		Name:        "list_circle_members",
-		Title:       "List circle members",
-		Description: "List the members of the user's circle (household or team) with their user ids, names, roles and points.",
-		InputSchema: object(nil),
-		Annotations: readOnly,
-		build: func(arguments json.RawMessage) (apiCall, error) {
-			if err := decodeArguments(arguments, &struct{}{}); err != nil {
-				return apiCall{}, err
-			}
-			return apiCall{method: http.MethodGet, path: "/eapi/v1/circle/members"}, nil
-		},
-	},
-	{
-		Name:        "list_things",
-		Title:       "List things",
-		Description: "List the user's things. A thing is a named value (a number, a boolean or text) that can complete or reschedule chores when it changes.",
-		InputSchema: object(nil),
-		Annotations: readOnly,
-		build: func(arguments json.RawMessage) (apiCall, error) {
-			if err := decodeArguments(arguments, &struct{}{}); err != nil {
-				return apiCall{}, err
-			}
-			return apiCall{method: http.MethodGet, path: "/eapi/v1/things/"}, nil
-		},
-	},
-	{
-		Name:        "get_thing",
-		Title:       "Get thing",
-		Description: "Get one thing, including its current state and the chores linked to it.",
-		InputSchema: object(schema{"id": property("integer", thingIDHelp)}, "id"),
-		Annotations: readOnly,
-		build: func(arguments json.RawMessage) (apiCall, error) {
-			id, err := decodeID(arguments)
-			if err != nil {
-				return apiCall{}, err
-			}
-			return apiCall{method: http.MethodGet, path: fmt.Sprintf("/eapi/v1/things/%d", id)}, nil
-		},
-	},
-	{
-		Name:        "set_thing_state",
-		Title:       "Set thing state",
-		Description: "Set the state of a thing. Chores linked to the thing are completed or rescheduled if the new state matches their trigger.",
-		InputSchema: object(schema{
-			"id": property("integer", thingIDHelp),
-			"state": schema{
-				"type":        []string{"string", "number", "boolean"},
-				"description": "New state: a whole number for a number thing, true or false for a boolean thing, any text for a text thing.",
-			},
-		}, "id", "state"),
-		Annotations: overwriting,
-		build: func(arguments json.RawMessage) (apiCall, error) {
-			var args struct {
-				ID    *int `json:"id"`
-				State any  `json:"state"`
-			}
-			if err := decodeArguments(arguments, &args); err != nil {
-				return apiCall{}, err
-			}
-			if args.ID == nil {
-				return apiCall{}, errors.New("id is required")
-			}
-			state, err := scalarString(args.State)
-			if err != nil {
-				return apiCall{}, fmt.Errorf("state %w", err)
-			}
-			return apiCall{
-				method: http.MethodGet,
-				path:   fmt.Sprintf("/eapi/v1/things/%d/state", *args.ID),
-				query:  url.Values{"state": {state}},
-			}, nil
-		},
-	},
-	{
-		Name:        "increment_thing",
-		Title:       "Increment thing",
-		Description: "Add an amount to a number thing and return its new state. Chores linked to the thing are completed or rescheduled if the new state matches their trigger.",
-		InputSchema: object(schema{
-			"id":     property("integer", thingIDHelp),
-			"amount": property("integer", "Amount to add; negative to subtract. Defaults to 1."),
-		}, "id"),
-		Annotations: toolAnnotations{DestructiveHint: true},
-		build: func(arguments json.RawMessage) (apiCall, error) {
-			var args struct {
-				ID     *int `json:"id"`
-				Amount *int `json:"amount"`
-			}
-			if err := decodeArguments(arguments, &args); err != nil {
-				return apiCall{}, err
-			}
-			if args.ID == nil {
-				return apiCall{}, errors.New("id is required")
-			}
-			amount := 1
-			if args.Amount != nil {
-				amount = *args.Amount
-			}
-			return apiCall{
-				method: http.MethodGet,
-				path:   fmt.Sprintf("/eapi/v1/things/%d/state/change", *args.ID),
-				query:  url.Values{"op": {strconv.Itoa(amount)}},
-			}, nil
-		},
-	},
+// nullable is a property that can also be set to null to clear it.
+func nullable(kind, description string) schema {
+	return schema{"type": []string{kind, "null"}, "description": description}
 }
 
-func findTool(name string) (tool, bool) {
-	for _, t := range tools {
-		if t.Name == name {
-			return t, true
-		}
-	}
-	return tool{}, false
+func oneOf(description string, values ...string) schema {
+	return schema{"type": "string", "enum": values, "description": description}
 }
 
-// decodeArguments reads tool arguments strictly: a misspelled or made-up
-// argument is reported back instead of being silently ignored.
-func decodeArguments(arguments json.RawMessage, into any) error {
-	if len(arguments) == 0 || string(arguments) == "null" {
-		arguments = json.RawMessage("{}")
-	}
-	decoder := json.NewDecoder(bytes.NewReader(arguments))
-	decoder.DisallowUnknownFields()
-	decoder.UseNumber()
-	err := decoder.Decode(into)
-	var wrongType *json.UnmarshalTypeError
-	switch {
-	case err == nil:
-		return nil
-	case !errors.As(err, &wrongType):
-		return errors.New(strings.TrimPrefix(err.Error(), "json: "))
-	case wrongType.Field == "":
-		return errors.New("arguments must be an object")
-	}
-	want := "a " + wrongType.Type.Kind().String()
-	switch wrongType.Type.Kind() {
-	case reflect.Int:
-		want = "a whole number"
-	case reflect.Bool:
-		want = "true or false"
-	}
-	return fmt.Errorf("%s must be %s, not a %s", wrongType.Field, want, wrongType.Value)
+func listOf(kind, description string) schema {
+	return schema{"type": "array", "items": schema{"type": kind}, "description": description}
 }
 
-func decodeID(arguments json.RawMessage) (int, error) {
-	var args struct {
-		ID *int `json:"id"`
+// with returns a copy of properties with more added, so tools can share a set
+// of properties without sharing the map.
+func (s schema) with(more schema) schema {
+	merged := schema{}
+	for name, value := range s {
+		merged[name] = value
 	}
-	if err := decodeArguments(arguments, &args); err != nil {
-		return 0, err
+	for name, value := range more {
+		merged[name] = value
 	}
-	if args.ID == nil {
-		return 0, errors.New("id is required")
-	}
-	return *args.ID, nil
-}
-
-// scalarString renders a JSON string, number or boolean the way the things
-// API expects to receive a state.
-func scalarString(value any) (string, error) {
-	switch v := value.(type) {
-	case string:
-		if v == "" {
-			return "", errors.New("must not be empty")
-		}
-		return v, nil
-	case json.Number:
-		return v.String(), nil
-	case bool:
-		return strconv.FormatBool(v), nil
-	case nil:
-		return "", errors.New("is required")
-	}
-	return "", errors.New("must be a string, a number or a boolean")
+	return merged
 }

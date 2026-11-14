@@ -72,7 +72,7 @@ Donetick is an open-source, user-friendly app designed to help you organize task
 
 **Webhook System**: Connect Donetick to external systems using flexible webhook support good for custom notification flows or automations.
 
-**MCP Server**: Let AI assistants manage your tasks through a built-in [Model Context Protocol](https://modelcontextprotocol.io) server. It offers the same operations as the eAPI and uses the same access tokens. See [MCP Server](#mcp-server).
+**MCP Server**: Let AI assistants manage your tasks through a built-in [Model Context Protocol](https://modelcontextprotocol.io) server. It works through the REST API, with the same access tokens and permissions. See [MCP Server](#mcp-server).
 
 ---
 
@@ -261,7 +261,7 @@ mcp:
   enabled: true
 ```
 
-Then give your MCP client the URL `https://<your-donetick-host>/mcp` (Streamable HTTP transport) and a Donetick API token, the same long-lived access token the eAPI uses, as a bearer token. For example, with Claude Code:
+Then give your MCP client the URL `https://<your-donetick-host>/mcp` (Streamable HTTP transport) and a Donetick API token (a long-lived access token) as a bearer token. For example, with Claude Code:
 
 ```bash
 claude mcp add --transport http donetick https://<your-donetick-host>/mcp --header "Authorization: Bearer <api token>"
@@ -271,23 +271,22 @@ The token can also be sent in the `secretkey` header, as with the rest of the AP
 
 ### Tools
 
-| Tool | What it does |
+| Area | Tools |
 |---|---|
-| `list_chores` | List the active tasks in your circle |
-| `create_chore` | Create a one-time task |
-| `update_chore` | Change a task's name, description or due date |
-| `complete_chore` | Mark a task as done |
-| `delete_chore` | Delete a task |
-| `list_circle_members` | List the members of your circle |
-| `list_things` | List your Things |
-| `get_thing` | Get one Thing and its current state |
-| `set_thing_state` | Set the state of a Thing |
-| `increment_thing` | Add to (or subtract from) a number Thing |
+| Tasks | `list_chores`, `get_chore`, `create_chore`, `update_chore`, `complete_chore`, `skip_chore`, `archive_chore`, `unarchive_chore`, `delete_chore`, `get_chore_history`, `list_recent_activity` |
+| Labels | `list_labels`, `create_label`, `update_label`, `delete_label` |
+| Projects | `list_projects`, `create_project`, `update_project`, `delete_project` |
+| Filters | `list_filters`, `create_filter`, `update_filter`, `delete_filter` |
+| Things | `list_things`, `create_thing`, `update_thing`, `set_thing_state`, `delete_thing` |
 
 ### Good to know
 
-- Each tool calls the matching eAPI route as the owner of the token, so the same permissions, plan limits and rate limits apply, and webhooks and notifications fire as usual.
-- Requests that carry an `Origin` header (browser-based clients) are only accepted from origins listed in `server.cors_allow_origins`.
+- Every tool goes through the REST API (`/api/v1`) as the owner of the token. The API's own permission checks and validation apply, and webhooks and notifications fire as usual.
+- Nothing that manages users, circles or API tokens is available through MCP.
+- The `update_*` tools change only the fields they are given; everything else keeps its current value.
+- A task triggered by a Thing can only be updated by the owner of that Thing.
+- People appear as numeric user ids, the same ids the API uses.
+- Requests sent by web pages (those with an `Origin` header) are refused unless the origin is the Donetick host itself or is listed in `server.cors_allow_origins`.
 - Both the stateless MCP revision (`2026-07-28`) and the earlier handshake-based revisions (`2025-03-26` to `2025-11-25`) are supported. The server keeps no session state.
 
 ---

@@ -99,6 +99,9 @@ func decodeMessage(body []byte) (*message, *failure) {
 	if !json.Valid(body) {
 		return nil, badRequest(codeParseError, "Parse error: the request body is not valid JSON")
 	}
+	// Batches are turned down. Only revision 2025-03-26 had them, the next
+	// revision took them out again, and one request standing for many would
+	// multiply what a client gets out of the rate limit.
 	var members map[string]json.RawMessage
 	if err := json.Unmarshal(body, &members); err != nil || members == nil {
 		return nil, badRequest(codeInvalidRequest, "Invalid request: expected a single JSON-RPC message object (batches are not supported)")
@@ -176,21 +179,27 @@ func negotiate(header http.Header, msg *message) (modern bool, fail *failure) {
 	if _, ok := msg.meta[metaClientCapabilities]; !ok {
 		return false, badRequest(codeInvalidParams, "Invalid params: _meta."+metaClientCapabilities+" is required")
 	}
-	if fail := checkMirroredHeader(header, headerMethod, msg.method); fail != nil {
+	if fail := checkMirroredHeader(header, headerMethod, msg.method, false); fail != nil {
 		return false, fail
 	}
 	if msg.method == "tools/call" {
 		var name string
 		_ = json.Unmarshal(msg.params["name"], &name)
-		if fail := checkMirroredHeader(header, headerName, name); fail != nil {
+		if fail := checkMirroredHeader(header, headerName, name, true); fail != nil {
 			return false, fail
 		}
 	}
 	return true, nil
 }
 
-func checkMirroredHeader(header http.Header, name, bodyValue string) *failure {
-	value, ok := decodeHeaderValue(header.Get(name))
+// checkMirroredHeader compares a header with the part of the body it mirrors.
+// Names of tools may arrive Base64-wrapped; methods may not, so that a proxy
+// reading the header sees the method as it is.
+func checkMirroredHeader(header http.Header, name, bodyValue string, mayBeEncoded bool) *failure {
+	value, ok := header.Get(name), true
+	if mayBeEncoded {
+		value, ok = decodeHeaderValue(value)
+	}
 	switch {
 	case header.Get(name) == "":
 		return badRequest(codeHeaderMismatch, "Header mismatch: the "+name+" header is required")

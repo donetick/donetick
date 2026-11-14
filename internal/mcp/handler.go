@@ -1,11 +1,13 @@
 // Package mcp serves Donetick's built-in Model Context Protocol endpoint.
 //
 // AI assistants connect to /mcp with a Donetick API token and get a set of
-// tools for working with chores and things. Each tool is a thin wrapper over
-// one external API (eAPI) route: a call is replayed against that route inside
-// the process, so permissions, plan limits, rate limits, webhooks and
-// notifications behave exactly as they do for any other API client, and there
-// is no second copy of that logic to keep in sync.
+// tools for working with chores, labels, projects, filters and things. Each
+// tool is a thin wrapper over the HTTP API (/api/v1): a call is replayed
+// against the API inside the process, as the owner of the token. Access
+// checks, validation, webhooks and notifications are therefore the API's own,
+// and there is no second copy of that logic to keep in sync.
+//
+// Nothing that manages users, circles or API tokens is exposed.
 package mcp
 
 import (
@@ -31,6 +33,7 @@ import (
 const (
 	apiTokenHeader = "secretkey"
 	tokenKey       = "mcp_api_token"
+	userIDKey      = "mcp_user_id"
 
 	// maxRequestBytes bounds a JSON-RPC message. Tool calls carry a handful of
 	// short fields, so this is generous.
@@ -41,8 +44,8 @@ const (
 	cacheTTLMs = 5 * 60 * 1000
 
 	instructions = "Donetick is a task and chore manager shared by a household or team, called a circle. " +
-		"Chores and things are addressed by numeric id: call list_chores or list_things first to find the id you need. " +
-		"Due dates are RFC 3339 timestamps (2026-01-31T18:00:00Z) or plain dates (2026-01-31)."
+		"Everything is addressed by numeric id: call the matching list tool first to find the id you need. " +
+		"Dates and times are RFC 3339 timestamps, for example 2026-01-31T18:00:00Z."
 )
 
 type tokenLookup interface {
@@ -101,6 +104,7 @@ func (h *Handler) authenticate(c *gin.Context) {
 		return
 	}
 	c.Set(tokenKey, token)
+	c.Set(userIDKey, user.ID)
 	c.Next()
 }
 
@@ -247,25 +251,31 @@ func (h *Handler) callTool(c *gin.Context, msg *message) (map[string]any, *failu
 		return nil, &failure{status: http.StatusOK, code: codeInvalidParams, message: "Unknown tool: " + name}
 	}
 
-	call, err := t.build(msg.params["arguments"])
-	if err != nil {
-		return textResult(fmt.Sprintf("Invalid arguments for %s: %s", name, err), true), nil
-	}
-	status, body, err := h.callAPI(c, call)
-	if err != nil {
+	response, err := t.run(&session{
+		userID: c.GetInt(userIDKey),
+		call:   func(call apiCall) (apiResponse, error) { return h.callAPI(c, call) },
+	}, msg.params["arguments"])
+	var refused *refusal
+	var internal *internalError
+	switch {
+	case errors.As(err, &internal):
 		logging.FromContext(c).Errorw("mcp: tool call failed", "tool", name, "error", err)
 		return nil, &failure{status: http.StatusOK, code: codeInternalError, message: "Internal error"}
+	case errors.As(err, &refused):
+		response = refused.response
+	case err != nil:
+		return textResult(fmt.Sprintf("Invalid arguments for %s: %s", name, err), true), nil
 	}
-	logging.FromContext(c).Debugw("mcp: tool called", "tool", name, "status", status)
+	logging.FromContext(c).Debugw("mcp: tool called", "tool", name, "status", response.status)
 
-	text := strings.TrimSpace(string(unescapeHTML(body)))
-	if status >= 200 && status < 300 {
-		if text == "" || text == "{}" {
-			text = "Done."
-		}
-		return textResult(text, false), nil
+	if !response.ok() {
+		return textResult(apiErrorText(response), true), nil
 	}
-	return textResult(apiErrorText(status, body), true), nil
+	text := strings.TrimSpace(string(unescapeHTML(response.body)))
+	if text == "" || text == "{}" {
+		text = "Done."
+	}
+	return textResult(text, false), nil
 }
 
 func textResult(text string, isError bool) map[string]any {
@@ -307,31 +317,36 @@ var htmlEscapes = map[string]byte{"0026": '&', "003c": '<', "003e": '>'}
 
 // apiErrorText turns an error response of the API into a sentence for the
 // model, keeping the API's own explanation when it gave one.
-func apiErrorText(status int, body []byte) string {
+func apiErrorText(response apiResponse) string {
 	var payload struct {
 		Error   string `json:"error"`
 		Message string `json:"message"`
+		Details string `json:"details"`
 	}
-	_ = json.Unmarshal(body, &payload)
+	_ = json.Unmarshal(response.body, &payload)
 	reason := payload.Error
 	if reason == "" {
 		reason = payload.Message
 	}
 	if reason == "" {
-		reason = http.StatusText(status)
+		reason = http.StatusText(response.status)
 	}
-	return fmt.Sprintf("Donetick refused the request (HTTP %d): %s", status, reason)
+	if payload.Details != "" {
+		reason += " (" + payload.Details + ")"
+	}
+	return fmt.Sprintf("Donetick refused the request (HTTP %d): %s", response.status, reason)
 }
 
 // callAPI replays a tool call against the HTTP API without leaving the
-// process. The request carries the caller's own token and network address, so
-// the API authorizes and rate limits it as if the client had called directly.
-func (h *Handler) callAPI(c *gin.Context, call apiCall) (status int, body []byte, err error) {
+// process. The request carries the caller's own token and network address,
+// and nothing else of the original request: the API authorizes it exactly as
+// if the client had called the route directly.
+func (h *Handler) callAPI(c *gin.Context, call apiCall) (response apiResponse, err error) {
 	var payload io.Reader
 	if call.body != nil {
 		encoded, err := json.Marshal(call.body)
 		if err != nil {
-			return 0, nil, err
+			return apiResponse{}, &internalError{err}
 		}
 		payload = bytes.NewReader(encoded)
 	}
@@ -341,13 +356,14 @@ func (h *Handler) callAPI(c *gin.Context, call apiCall) (status int, body []byte
 	}
 	request, err := http.NewRequestWithContext(c.Request.Context(), call.method, target, payload)
 	if err != nil {
-		return 0, nil, err
+		return apiResponse{}, &internalError{err}
 	}
 	request.Header.Set(apiTokenHeader, c.GetString(tokenKey))
 	if payload != nil {
 		request.Header.Set("Content-Type", "application/json")
 	}
-	// Rate limits are keyed by client IP, which gin derives from these.
+	// Whatever in the API looks at the client's address, such as a rate
+	// limit, should see the real client and not a shared, empty one.
 	request.RemoteAddr = c.Request.RemoteAddr
 	for _, name := range append([]string{h.api.TrustedPlatform}, h.api.RemoteIPHeaders...) {
 		if name == "" {
@@ -361,11 +377,11 @@ func (h *Handler) callAPI(c *gin.Context, call apiCall) (status int, body []byte
 	recorder := &responseRecorder{header: http.Header{}, status: http.StatusOK}
 	defer func() {
 		if recovered := recover(); recovered != nil {
-			err = fmt.Errorf("panic in %s %s: %v", call.method, call.path, recovered)
+			err = &internalError{fmt.Errorf("panic in %s %s: %v", call.method, call.path, recovered)}
 		}
 	}()
 	h.api.ServeHTTP(recorder, request)
-	return recorder.status, recorder.body.Bytes(), nil
+	return apiResponse{status: recorder.status, body: recorder.body.Bytes()}, nil
 }
 
 // responseRecorder collects the response of an in-process API request.

@@ -1265,15 +1265,28 @@ func (h *Handler) UpdateNotificationPreference(c *gin.Context) {
 		overrides = nil
 	}
 
+	profile := req.Profile
+	sparse := uModel.SparseOverrides(profile, overrides)
+
+	// A request still asking for a plus-only type (an older client that doesn't
+	// know about the gate) is saved as the nearest free posture instead of
+	// being refused. The response then describes what was actually saved, so an
+	// unaware client re-renders the real state.
+	if !current.IsPlus {
+		profile, sparse = uModel.DowngradeToFree(profile, sparse)
+	}
+
 	pref := &uModel.UserNotificationPreference{
 		UserID:     currentUser.ID,
-		Profile:    req.Profile,
-		Overrides:  uModel.SparseOverrides(req.Profile, overrides),
+		Profile:    profile,
+		Overrides:  sparse,
 		DigestHour: current.DigestHour,
+		IsPlus:     current.IsPlus,
 	}
 	if req.DigestHour != nil {
 		pref.DigestHour = *req.DigestHour
 	}
+
 	if err := h.userRepo.UpsertNotificationPreference(c, pref); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update notification preference"})
 		return
@@ -1290,16 +1303,7 @@ func (h *Handler) UpdateNotificationPreference(c *gin.Context) {
 // resolvedNotificationPreference returns the on/off value for every known
 // event type after applying overrides on top of the profile default.
 func resolvedNotificationPreference(pref *uModel.UserNotificationPreference) map[uModel.NotificationEventType]bool {
-	eventTypes := []uModel.NotificationEventType{
-		uModel.NotificationEventOnAssignment,
-		uModel.NotificationEventOnPendingApproval,
-		uModel.NotificationEventOnRedemptionRequest,
-		uModel.NotificationEventPreDue,
-		uModel.NotificationEventDue,
-		uModel.NotificationEventOverdueFollowup,
-		uModel.NotificationEventDailyDigest,
-		uModel.NotificationEventWeeklyDigest,
-	}
+	eventTypes := uModel.AllEventTypes()
 	resolved := make(map[uModel.NotificationEventType]bool, len(eventTypes))
 	for _, t := range eventTypes {
 		resolved[t] = pref.Enabled(t)

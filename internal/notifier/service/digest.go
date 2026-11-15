@@ -227,12 +227,15 @@ func formatDailyDigestPayload(overdue, upcoming []*chModel.Chore) (title, body s
 	total := len(overdue) + len(upcoming)
 	title = fmt.Sprintf("🗓️ %d %s today", total, pluralize("task", total))
 
+	// Today's tasks lead: they're the actionable part of the day and the only
+	// part guaranteed to survive lock-screen truncation. Overdue follows as
+	// context.
 	var parts []string
-	if len(overdue) > 0 {
-		parts = append(parts, fmt.Sprintf("Overdue: %s", summarizeTaskNames(overdue)))
-	}
 	if len(upcoming) > 0 {
 		parts = append(parts, fmt.Sprintf("Due today: %s", summarizeTaskNames(upcoming)))
+	}
+	if len(overdue) > 0 {
+		parts = append(parts, fmt.Sprintf("Overdue: %s", summarizeTaskNames(overdue)))
 	}
 	body = strings.Join(parts, " · ")
 	return title, body

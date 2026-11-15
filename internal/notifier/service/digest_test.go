@@ -180,7 +180,7 @@ func TestFormatDailyDigestPayloadLeadsTitleWithCount(t *testing.T) {
 	if title != "🗓️ 3 tasks today" {
 		t.Errorf("unexpected title: %q", title)
 	}
-	if body != "Overdue: Trash, Dishes · Due today: Vacuum" {
+	if body != "Due today: Vacuum · Overdue: Trash, Dishes" {
 		t.Errorf("unexpected body: %q", body)
 	}
 }

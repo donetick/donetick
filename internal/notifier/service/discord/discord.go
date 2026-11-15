@@ -1,7 +1,6 @@
 package discord
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -13,10 +12,19 @@ import (
 	chModel "donetick.com/core/internal/chore/model"
 	nModel "donetick.com/core/internal/notifier/model"
 	uModel "donetick.com/core/internal/user/model"
+	"donetick.com/core/internal/webhook"
 	"donetick.com/core/logging"
 )
 
-var httpClient = &http.Client{Timeout: 30 * time.Second}
+// discordPolicy is deliberately strict: Discord is on the public internet, so
+// a target that resolves anywhere private is either a mistake or an attempt
+// to use the notifier as a proxy.
+var discordPolicy = webhook.Policy{
+	BlockPrivateNetworks: true,
+	RequireHTTPS:         true,
+}
+
+var discordClient = webhook.NewClient(discordPolicy, 30*time.Second, 0)
 
 type DiscordNotifier struct {
 }
@@ -59,6 +67,13 @@ func (dn *DiscordNotifier) sendMessage(c context.Context, webhookURL string, mes
 		return errors.New("unable to send notification, webhook URL is empty")
 	}
 
+	// Targets stored before this check existed, or edited straight in the
+	// database, are checked here as well as on the way in.
+	if err := webhook.ValidateDiscordWebhookURL(webhookURL); err != nil {
+		log.Errorw("Refusing to send Discord message, target is not a Discord webhook", "error", err)
+		return err
+	}
+
 	payload := map[string]string{"content": message}
 	jsonData, err := json.Marshal(payload)
 	if err != nil {
@@ -66,12 +81,11 @@ func (dn *DiscordNotifier) sendMessage(c context.Context, webhookURL string, mes
 		return err
 	}
 
-	resp, err := httpClient.Post(webhookURL, "application/json", bytes.NewBuffer(jsonData))
+	resp, err := discordClient.PostJSON(c, webhookURL, jsonData, nil)
 	if err != nil {
 		log.Error("Error sending message to Discord:", err)
 		return err
 	}
-	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusOK {
 		log.Error("Discord webhook returned unexpected status:", resp.Status)

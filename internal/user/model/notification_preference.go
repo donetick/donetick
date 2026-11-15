@@ -13,7 +13,10 @@ const (
 	NotificationProfilePersistent NotificationProfile = "persistent"
 	NotificationProfileQuiet      NotificationProfile = "quiet"
 	NotificationProfileCustom     NotificationProfile = "custom"
-	NotificationProfileDefault                        = NotificationProfileBalanced
+	// Defaults by tier -- use DefaultProfileFor rather than either directly.
+	// JustInTime is the richest posture a non-plus member can wear whole.
+	NotificationProfileDefault     = NotificationProfileBalanced
+	NotificationProfileFreeDefault = NotificationProfileJustInTime
 )
 
 // NotificationEventType is one independently toggleable kind of notification.
@@ -103,6 +106,101 @@ var profileDefaults = map[NotificationProfile]NotificationOverrides{
 	},
 }
 
+// plusOnlyEvents require an active plus subscription: the ones that cost real
+// delivery volume rather than reacting to something the user just did.
+var plusOnlyEvents = map[NotificationEventType]bool{
+	NotificationEventPreDue:          true,
+	NotificationEventOverdueFollowup: true,
+	NotificationEventDailyDigest:     true,
+	NotificationEventWeeklyDigest:    true,
+}
+
+// RequiresPlus reports whether eventType is only available to plus members.
+func RequiresPlus(eventType NotificationEventType) bool {
+	return plusOnlyEvents[eventType]
+}
+
+// PlusOnlyEvents lists the plus-gated event types in the canonical order used
+// by API responses.
+func PlusOnlyEvents() []NotificationEventType {
+	return []NotificationEventType{
+		NotificationEventPreDue,
+		NotificationEventOverdueFollowup,
+		NotificationEventDailyDigest,
+		NotificationEventWeeklyDigest,
+	}
+}
+
+// DefaultProfileFor returns the profile a user who never configured
+// notifications lands on.
+func DefaultProfileFor(isPlus bool) NotificationProfile {
+	if isPlus {
+		return NotificationProfileDefault
+	}
+	return NotificationProfileFreeDefault
+}
+
+// AllEventTypes lists every toggleable event type in the canonical order used
+// by API responses.
+func AllEventTypes() []NotificationEventType {
+	return []NotificationEventType{
+		NotificationEventOnAssignment,
+		NotificationEventOnPendingApproval,
+		NotificationEventOnRedemptionRequest,
+		NotificationEventPreDue,
+		NotificationEventDue,
+		NotificationEventOverdueFollowup,
+		NotificationEventDailyDigest,
+		NotificationEventWeeklyDigest,
+	}
+}
+
+// PlusOnlyEventsEnabledBy returns the plus-gated event types that profile ⊕
+// overrides would turn on. Empty means the combination needs no subscription.
+func PlusOnlyEventsEnabledBy(profile NotificationProfile, overrides NotificationOverrides) []NotificationEventType {
+	var blocked []NotificationEventType
+	for _, eventType := range PlusOnlyEvents() {
+		if notificationEnabled(profile, overrides, eventType, true) {
+			blocked = append(blocked, eventType)
+		}
+	}
+	return blocked
+}
+
+// DowngradeToFree rewrites a posture into the closest one a non-plus member
+// can wear: every plus-only type off, falling back to the free default if the
+// profile itself enables one. Ungated choices are preserved.
+//
+// Enabled already gates these at read time, so this is only about what gets
+// persisted: the saved row should match what will really fire. It's the
+// backstop for clients that don't lock the gated toggles themselves.
+//
+// The free default must stay a profile every released client already renders:
+// one they can't post back reads as a profile switch on the next save, which
+// drops the user's overrides. Label it as the free tier client-side instead.
+func DowngradeToFree(profile NotificationProfile, overrides NotificationOverrides) (NotificationProfile, NotificationOverrides) {
+	if len(PlusOnlyEventsEnabledBy(profile, overrides)) == 0 {
+		return profile, overrides
+	}
+
+	// Resolve the free types under the posted profile before replacing it, then
+	// re-sparsify against the one actually saved. Skipping the gated types here
+	// is what clears their overrides.
+	resolved := NotificationOverrides{}
+	for _, eventType := range AllEventTypes() {
+		if RequiresPlus(eventType) {
+			continue
+		}
+		resolved[eventType] = notificationEnabled(profile, overrides, eventType, false)
+	}
+
+	downgraded := profile
+	if len(PlusOnlyEventsEnabledBy(profile, nil)) > 0 {
+		downgraded = NotificationProfileFreeDefault
+	}
+	return downgraded, SparseOverrides(downgraded, resolved)
+}
+
 // DefaultsForProfile returns the named profile's defaults. Unknown or Custom
 // profiles return an empty map (nothing enabled) -- see profileDefaults.
 func DefaultsForProfile(p NotificationProfile) NotificationOverrides {
@@ -157,6 +255,10 @@ type UserNotificationPreference struct {
 	// an explicit hour; readers fill in DefaultDigestHour when there's no row.
 	DigestHour int       `json:"digestHour" gorm:"column:digest_hour"`
 	UpdatedAt  time.Time `json:"updatedAt" gorm:"column:updated_at"`
+	// IsPlus is the owner's subscription state at load time, not a stored
+	// column: the repository fills it in so a lapsed subscription stops
+	// delivering gated notifications without rewriting the row.
+	IsPlus bool `json:"isPlus" gorm:"-"`
 }
 
 func (UserNotificationPreference) TableName() string { return "user_notification_preferences" }
@@ -165,15 +267,19 @@ func (UserNotificationPreference) TableName() string { return "user_notification
 const DefaultDigestHour = 8
 
 // Enabled resolves whether eventType should fire for this user: an explicit
-// override always wins, otherwise it falls back to the profile default.
+// override always wins, otherwise it falls back to the profile default. A
+// plus-only type is always false for a non-plus member, whatever the row says.
 func (p *UserNotificationPreference) Enabled(eventType NotificationEventType) bool {
 	if p == nil {
-		return notificationEnabled(NotificationProfileDefault, nil, eventType)
+		return notificationEnabled(DefaultProfileFor(false), nil, eventType, false)
 	}
-	return notificationEnabled(p.Profile, p.Overrides, eventType)
+	return notificationEnabled(p.Profile, p.Overrides, eventType, p.IsPlus)
 }
 
-func notificationEnabled(profile NotificationProfile, overrides NotificationOverrides, eventType NotificationEventType) bool {
+func notificationEnabled(profile NotificationProfile, overrides NotificationOverrides, eventType NotificationEventType, isPlus bool) bool {
+	if !isPlus && RequiresPlus(eventType) {
+		return false
+	}
 	if enabled, ok := overrides[eventType]; ok {
 		return enabled
 	}
@@ -190,16 +296,19 @@ type UserDigestSettings struct {
 	DigestHour int                   `gorm:"column:digest_hour"`
 }
 
+// Enabled resolves eventType for this user. Plus is taken as given: the only
+// query that produces these (GetAllUserDigestSettings) filters to plus members.
 func (s UserDigestSettings) Enabled(eventType NotificationEventType) bool {
-	return notificationEnabled(s.Profile, s.Overrides, eventType)
+	return notificationEnabled(s.Profile, s.Overrides, eventType, true)
 }
 
 // DefaultNotificationPreference is what a user who never configured
-// notifications gets: the Balanced profile, no overrides.
-func DefaultNotificationPreference(userID int) *UserNotificationPreference {
+// notifications gets: their tier's default profile, no overrides.
+func DefaultNotificationPreference(userID int, isPlus bool) *UserNotificationPreference {
 	return &UserNotificationPreference{
 		UserID:     userID,
-		Profile:    NotificationProfileDefault,
+		Profile:    DefaultProfileFor(isPlus),
 		DigestHour: DefaultDigestHour,
+		IsPlus:     isPlus,
 	}
 }

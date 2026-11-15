@@ -72,8 +72,14 @@ func (r *UserRepository) GetAllUsers(c context.Context, circleID int) ([]*uModel
 // GetAllUserDigestSettings returns the narrow user/preference projection used
 // during digest generation. Users without a saved preference receive the same
 // defaults as DefaultNotificationPreference.
+//
+// Both digest types are plus-only, so non-plus members are filtered out in the
+// WHERE rather than returned for the caller to skip -- which also covers a
+// subscription that lapsed after the profile was saved. Every row therefore
+// belongs to a plus member, hence the plain NotificationProfileDefault below.
 func (r *UserRepository) GetAllUserDigestSettings(c context.Context) ([]uModel.UserDigestSettings, error) {
 	var users []uModel.UserDigestSettings
+	plusExpr, plusArgs := r.plusMemberSQL("u")
 	err := r.db.WithContext(c).
 		Table("users AS u").
 		Select(
@@ -85,11 +91,72 @@ func (r *UserRepository) GetAllUserDigestSettings(c context.Context) ([]uModel.U
 			uModel.DefaultDigestHour,
 		).
 		Joins("LEFT JOIN user_notification_preferences AS p ON p.user_id = u.id").
+		Where(plusExpr, plusArgs...).
 		Scan(&users).Error
 	if err != nil {
 		return nil, err
 	}
 	return users, nil
+}
+
+// plusMemberSQL returns a SQL predicate (and bind args) matching rows of the
+// users table aliased as alias whose owner holds an active plus subscription.
+//
+// Self-hosted is unconditionally plus: the subscription columns are never
+// populated there, and GetUserByUsername synthesizes one in Go instead. Child
+// accounts are false, matching uModel.User.IsPlusMember -- this gate must not
+// be looser than the one the HTTP handlers apply.
+func (r *UserRepository) plusMemberSQL(alias string) (string, []interface{}) {
+	if !r.isDonetickDotCom {
+		return "TRUE", nil
+	}
+	expr := fmt.Sprintf(
+		"(%[1]s.expiration > ? AND (%[1]s.user_type <> ? OR %[1]s.parent_user_id IS NULL))",
+		alias,
+	)
+	return expr, []interface{}{time.Now().UTC(), uModel.UserTypeChild}
+}
+
+// IsPlusMember reports whether userID holds an active plus subscription,
+// resolved from the database so callers that only have an ID (notification
+// planning, digests) can gate on it. A missing user is not plus.
+func (r *UserRepository) IsPlusMember(c context.Context, userID int) (bool, error) {
+	plus, err := r.PlusMembers(c, []int{userID})
+	if err != nil {
+		return false, err
+	}
+	return plus[userID], nil
+}
+
+// PlusMembers resolves plus status for several users at once, returning an
+// entry for every requested ID.
+func (r *UserRepository) PlusMembers(c context.Context, userIDs []int) (map[int]bool, error) {
+	out := make(map[int]bool, len(userIDs))
+	if len(userIDs) == 0 {
+		return out, nil
+	}
+	// Self-hosted: everyone is plus, so skip the lookup entirely rather than
+	// let a user row we can't see downgrade them.
+	for _, id := range userIDs {
+		out[id] = !r.isDonetickDotCom
+	}
+	if !r.isDonetickDotCom {
+		return out, nil
+	}
+
+	plusExpr, plusArgs := r.plusMemberSQL("users")
+	var plusIDs []int
+	if err := r.db.WithContext(c).
+		Table("users").
+		Where("id IN ?", userIDs).
+		Where(plusExpr, plusArgs...).
+		Pluck("id", &plusIDs).Error; err != nil {
+		return nil, err
+	}
+	for _, id := range plusIDs {
+		out[id] = true
+	}
+	return out, nil
 }
 
 func (r *UserRepository) CreateUser(c context.Context, user *uModel.User) (*uModel.User, error) {
@@ -327,37 +394,49 @@ func (r *UserRepository) UpdateNotificationTargetForAllNotifications(c context.C
 }
 
 // GetNotificationPreference returns userID's saved preference, or the
-// Balanced default (not persisted) when the user never configured one.
+// tier-appropriate default (not persisted) when the user never configured one.
+// IsPlus is always populated, since it gates the plus-only event types.
 func (r *UserRepository) GetNotificationPreference(c context.Context, userID int) (*uModel.UserNotificationPreference, error) {
+	isPlus, err := r.IsPlusMember(c, userID)
+	if err != nil {
+		return nil, err
+	}
+
 	var pref uModel.UserNotificationPreference
-	err := r.db.WithContext(c).Where("user_id = ?", userID).First(&pref).Error
+	err = r.db.WithContext(c).Where("user_id = ?", userID).First(&pref).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return uModel.DefaultNotificationPreference(userID), nil
+		return uModel.DefaultNotificationPreference(userID, isPlus), nil
 	}
 	if err != nil {
 		return nil, err
 	}
+	pref.IsPlus = isPlus
 	return &pref, nil
 }
 
 // GetNotificationPreferences batch-loads preferences for userIDs, filling in
-// the Balanced default for any user with no saved row so callers always get
-// one entry per requested ID.
+// the tier-appropriate default for any user with no saved row so callers
+// always get one entry per requested ID.
 func (r *UserRepository) GetNotificationPreferences(c context.Context, userIDs []int) (map[int]*uModel.UserNotificationPreference, error) {
 	out := make(map[int]*uModel.UserNotificationPreference, len(userIDs))
 	if len(userIDs) == 0 {
 		return out, nil
+	}
+	plus, err := r.PlusMembers(c, userIDs)
+	if err != nil {
+		return nil, err
 	}
 	var prefs []*uModel.UserNotificationPreference
 	if err := r.db.WithContext(c).Where("user_id IN ?", userIDs).Find(&prefs).Error; err != nil {
 		return nil, err
 	}
 	for _, p := range prefs {
+		p.IsPlus = plus[p.UserID]
 		out[p.UserID] = p
 	}
 	for _, id := range userIDs {
 		if _, ok := out[id]; !ok {
-			out[id] = uModel.DefaultNotificationPreference(id)
+			out[id] = uModel.DefaultNotificationPreference(id, plus[id])
 		}
 	}
 	return out, nil
@@ -370,7 +449,7 @@ func (r *UserRepository) GetNotificationPreferences(c context.Context, userIDs [
 func (r *UserRepository) UpsertNotificationPreference(c context.Context, pref *uModel.UserNotificationPreference) error {
 	pref.UpdatedAt = time.Now().UTC()
 	if pref.Profile == "" {
-		pref.Profile = uModel.NotificationProfileDefault
+		pref.Profile = uModel.DefaultProfileFor(pref.IsPlus)
 	}
 	return r.db.WithContext(c).Save(pref).Error
 }

@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"donetick.com/core/config"
 	uModel "donetick.com/core/internal/user/model"
@@ -27,6 +28,36 @@ func newNotificationPreferenceHandler(t *testing.T) (*Handler, *gorm.DB) {
 	cfg := &config.Config{}
 	cfg.Database.Type = "sqlite"
 	return &Handler{userRepo: uRepo.NewUserRepository(db, cfg)}, db
+}
+
+// newHostedNotificationPreferenceHandler builds a handler for a donetick.com
+// instance, where the plus gate actually bites: self-hosted instances treat
+// every user as plus.
+func newHostedNotificationPreferenceHandler(t *testing.T) (*Handler, *gorm.DB) {
+	t.Helper()
+	db, err := gorm.Open(sqlite.Open(fmt.Sprintf("file:%s?mode=memory&cache=shared", t.Name())), &gorm.Config{})
+	require.NoError(t, err)
+	require.NoError(t, db.AutoMigrate(&uModel.User{}, &uModel.UserNotificationPreference{}))
+
+	cfg := &config.Config{IsDoneTickDotCom: true}
+	cfg.Database.Type = "sqlite"
+	return &Handler{userRepo: uRepo.NewUserRepository(db, cfg)}, db
+}
+
+// createHostedUser inserts a user whose subscription has or hasn't lapsed.
+// Expiration is a read-only gorm column (it's owned by the billing webhook),
+// so it has to be written with raw SQL.
+func createHostedUser(t *testing.T, db *gorm.DB, userID int, isPlus bool) {
+	t.Helper()
+	require.NoError(t, db.Create(&uModel.User{
+		ID: userID, Username: fmt.Sprintf("u%d", userID), DisplayName: "U", Timezone: "UTC",
+	}).Error)
+
+	expiration := time.Now().UTC().Add(-24 * time.Hour)
+	if isPlus {
+		expiration = time.Now().UTC().Add(30 * 24 * time.Hour)
+	}
+	require.NoError(t, db.Exec("UPDATE users SET expiration = ? WHERE id = ?", expiration, userID).Error)
 }
 
 // putNotificationPreference drives the handler the way the route does, with an
@@ -143,6 +174,200 @@ func TestUpdateNotificationPreferenceCustomKeepsOverrides(t *testing.T) {
 	if saved.Enabled(uModel.NotificationEventDailyDigest) {
 		t.Error("expected anything unset under custom to default to off")
 	}
+}
+
+// A free user who asks for a plus-only type gets saved without it rather than
+// refused: the request succeeds, and the response/row describe the posture
+// that will actually fire.
+func TestUpdateNotificationPreferenceDropsPlusOnlyOverridesWithoutSubscription(t *testing.T) {
+	for _, eventType := range uModel.PlusOnlyEvents() {
+		t.Run(string(eventType), func(t *testing.T) {
+			h, db := newHostedNotificationPreferenceHandler(t)
+			createHostedUser(t, db, 20, false)
+
+			body, err := json.Marshal(map[string]interface{}{
+				"profile":   "custom",
+				"overrides": map[string]bool{string(eventType): true},
+			})
+			require.NoError(t, err)
+
+			w := putNotificationPreference(t, h, 20, string(body))
+			require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+
+			var resp struct {
+				Profile   string          `json:"profile"`
+				Overrides map[string]bool `json:"overrides"`
+				Effective map[string]bool `json:"effective"`
+			}
+			require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+			// Custom enables nothing by default, so it survives the downgrade
+			// -- only the gated override is dropped.
+			require.Equal(t, string(uModel.NotificationProfileCustom), resp.Profile)
+			require.NotContains(t, resp.Overrides, string(eventType))
+			require.False(t, resp.Effective[string(eventType)])
+
+			saved, err := h.userRepo.GetNotificationPreference(t.Context(), 20)
+			require.NoError(t, err)
+			require.Equal(t, uModel.NotificationProfileCustom, saved.Profile)
+			require.NotContains(t, saved.Overrides, eventType)
+		})
+	}
+}
+
+// Picking a profile is the other way to turn a gated type on, so the downgrade
+// has to catch it too -- otherwise "planner" is a free back door to both
+// digests.
+func TestUpdateNotificationPreferenceDowngradesPlusOnlyProfilesWithoutSubscription(t *testing.T) {
+	for _, profile := range []uModel.NotificationProfile{
+		uModel.NotificationProfileBalanced,
+		uModel.NotificationProfilePlanner,
+		uModel.NotificationProfilePersistent,
+	} {
+		t.Run(string(profile), func(t *testing.T) {
+			h, db := newHostedNotificationPreferenceHandler(t)
+			createHostedUser(t, db, 21, false)
+
+			w := putNotificationPreference(t, h, 21, fmt.Sprintf(`{"profile": %q}`, profile))
+			require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+
+			var resp struct {
+				Profile   string          `json:"profile"`
+				Effective map[string]bool `json:"effective"`
+			}
+			require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+			require.Equal(t, string(uModel.NotificationProfileFreeDefault), resp.Profile,
+				"a gated profile is saved as the free default, so the client re-renders what actually applies")
+			for _, eventType := range uModel.PlusOnlyEvents() {
+				require.False(t, resp.Effective[string(eventType)])
+			}
+
+			saved, err := h.userRepo.GetNotificationPreference(t.Context(), 21)
+			require.NoError(t, err)
+			require.Equal(t, uModel.NotificationProfileFreeDefault, saved.Profile)
+		})
+	}
+}
+
+// The downgrade only strips the gated types: what the user chose for the
+// ungated ones is carried onto the free default rather than reset to its
+// defaults.
+func TestUpdateNotificationPreferenceDowngradeKeepsUngatedChoices(t *testing.T) {
+	h, db := newHostedNotificationPreferenceHandler(t)
+	createHostedUser(t, db, 26, true)
+
+	// Saved while subscribed: Balanced with assignment notifications off.
+	w := putNotificationPreference(t, h, 26,
+		`{"profile": "balanced", "overrides": {"on_assignment": false}}`)
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+
+	require.NoError(t, db.Exec("UPDATE users SET expiration = ? WHERE id = ?",
+		time.Now().UTC().Add(-time.Hour), 26).Error)
+
+	// Re-saving the same posture after the subscription lapsed.
+	w = putNotificationPreference(t, h, 26,
+		`{"profile": "balanced", "overrides": {"on_assignment": false, "daily_digest": true}}`)
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+
+	var resp struct {
+		Profile   string          `json:"profile"`
+		Effective map[string]bool `json:"effective"`
+	}
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	require.Equal(t, string(uModel.NotificationProfileFreeDefault), resp.Profile)
+	require.False(t, resp.Effective["on_assignment"], "the user's own choice must survive the downgrade")
+	require.False(t, resp.Effective["daily_digest"])
+	require.True(t, resp.Effective["due"], "the free default's ungated defaults still apply")
+}
+
+// The profiles that enable nothing gated stay available for free, including the
+// one a non-plus member starts on.
+func TestUpdateNotificationPreferenceAllowsFreeProfilesWithoutSubscription(t *testing.T) {
+	for _, profile := range []uModel.NotificationProfile{
+		uModel.NotificationProfileJustInTime,
+		uModel.NotificationProfileQuiet,
+		uModel.NotificationProfileCustom,
+	} {
+		t.Run(string(profile), func(t *testing.T) {
+			h, db := newHostedNotificationPreferenceHandler(t)
+			createHostedUser(t, db, 22, false)
+
+			w := putNotificationPreference(t, h, 22, fmt.Sprintf(`{"profile": %q}`, profile))
+			require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+
+			saved, err := h.userRepo.GetNotificationPreference(t.Context(), 22)
+			require.NoError(t, err)
+			require.Equal(t, profile, saved.Profile)
+		})
+	}
+}
+
+func TestUpdateNotificationPreferenceAllowsPlusOnlyEventsForPlusMembers(t *testing.T) {
+	h, db := newHostedNotificationPreferenceHandler(t)
+	createHostedUser(t, db, 23, true)
+
+	w := putNotificationPreference(t, h, 23, `{"profile": "planner"}`)
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+
+	var resp struct {
+		Profile   string          `json:"profile"`
+		Effective map[string]bool `json:"effective"`
+	}
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	require.Equal(t, string(uModel.NotificationProfilePlanner), resp.Profile)
+	require.True(t, resp.Effective["daily_digest"])
+	require.True(t, resp.Effective["weekly_digest"])
+}
+
+// A non-plus member who never configured notifications lands on the free
+// default, and every plus-only type reads as off.
+func TestGetNotificationPreferenceDefaultsNonPlusMembersToFreeDefault(t *testing.T) {
+	h, db := newHostedNotificationPreferenceHandler(t)
+	createHostedUser(t, db, 24, false)
+
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+	r.GET("/api/v1/users/notifications/preferences", func(c *gin.Context) {
+		c.Set("id", &uModel.UserDetails{User: uModel.User{ID: 24}})
+		h.GetNotificationPreference(c)
+	})
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/api/v1/users/notifications/preferences", nil))
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+
+	var resp struct {
+		Profile   string          `json:"profile"`
+		Effective map[string]bool `json:"effective"`
+	}
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	require.Equal(t, string(uModel.NotificationProfileFreeDefault), resp.Profile)
+	for _, eventType := range uModel.PlusOnlyEvents() {
+		require.False(t, resp.Effective[string(eventType)], "%s must read as off without a subscription", eventType)
+	}
+	// The free types are still on under the free default.
+	require.True(t, resp.Effective["on_assignment"])
+	require.True(t, resp.Effective["due"])
+}
+
+// A member who enabled the digests while subscribed and then lapsed keeps the
+// saved profile, but nothing gated resolves to on any more.
+func TestNotificationPreferenceStopsPlusOnlyEventsAfterSubscriptionLapses(t *testing.T) {
+	h, db := newHostedNotificationPreferenceHandler(t)
+	createHostedUser(t, db, 25, true)
+
+	w := putNotificationPreference(t, h, 25, `{"profile": "planner"}`)
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+
+	require.NoError(t, db.Exec("UPDATE users SET expiration = ? WHERE id = ?",
+		time.Now().UTC().Add(-time.Hour), 25).Error)
+
+	saved, err := h.userRepo.GetNotificationPreference(t.Context(), 25)
+	require.NoError(t, err)
+	require.Equal(t, uModel.NotificationProfilePlanner, saved.Profile, "the saved profile is kept, so resubscribing restores it")
+	require.False(t, saved.IsPlus)
+	for _, eventType := range uModel.PlusOnlyEvents() {
+		require.False(t, saved.Enabled(eventType), "%s must stop firing once the subscription lapses", eventType)
+	}
+	require.True(t, saved.Enabled(uModel.NotificationEventDue))
 }
 
 // The response has to describe what was saved, not what was posted, or the

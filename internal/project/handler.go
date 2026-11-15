@@ -63,6 +63,7 @@ func statusFor(err error) int {
 //	@Failure		500	{object}	map[string]string	"error: Error getting projects"
 //	@Router			/projects [get]
 func (h *Handler) getProjects(c *gin.Context) {
+
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
 		c.JSON(401, gin.H{

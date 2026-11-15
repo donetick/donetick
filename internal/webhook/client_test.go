@@ -83,6 +83,28 @@ func TestClientDoesNotFollowRedirects(t *testing.T) {
 	}
 }
 
+func TestClientFailsWhenTheResponseStalls(t *testing.T) {
+	release := make(chan struct{})
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Flush a 200 and then go quiet: the status says success, but
+		// the delivery never completes.
+		w.WriteHeader(http.StatusOK)
+		w.(http.Flusher).Flush()
+		<-release
+	}))
+	defer srv.Close()
+	defer close(release)
+
+	c := NewClient(Policy{AllowLoopback: true}, 300*time.Millisecond, 0)
+	resp, err := c.PostJSON(context.Background(), srv.URL, []byte(`{}`), nil)
+	if err == nil {
+		t.Fatalf("expected a stalled body to fail the delivery, got status %d", resp.StatusCode)
+	}
+	if resp != nil {
+		t.Fatal("expected no response to be returned on a drain failure")
+	}
+}
+
 func TestClientBoundsResponseRead(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)

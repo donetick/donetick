@@ -27,6 +27,8 @@ func TestPolicyParseURLRejectsBadURLs(t *testing.T) {
 		{"loopback v6", "http://[::1]:8080/hook"},
 		{"metadata", "http://169.254.169.254/latest/meta-data/"},
 		{"metadata decimal", "http://2852039166/"},
+		{"octal", "http://0177.0.0.1/hook"},
+		{"hex", "http://0x7f.0x1/hook"},
 		{"unspecified", "http://0.0.0.0/hook"},
 		{"ipv4 mapped loopback", "http://[::ffff:127.0.0.1]/hook"},
 		{"too long", "https://example.com/" + string(make([]byte, maxURLLength))},
@@ -50,6 +52,12 @@ func TestPolicyParseURLAcceptsNormalWebhooks(t *testing.T) {
 		"https://example.com:8443/hooks/abc",
 		"https://hooks.example.com/services/T000/B000/xyz?token=1",
 		"http://192.168.1.50:8123/api/webhook/donetick", // LAN receiver, allowed by default
+		// Hostnames that end in a digit are ordinary names, not IP
+		// addresses wearing a disguise.
+		"http://homeassistant.lan2/api/webhook/donetick",
+		"http://host01.example.com/hook",
+		"https://s3.us-east-2.example.com/hook",
+		"http://0xdeadbeef.example.com/hook",
 	} {
 		if err := p.ValidateURLSyntax(raw); err != nil {
 			t.Fatalf("expected %q to be accepted, got %v", raw, err)

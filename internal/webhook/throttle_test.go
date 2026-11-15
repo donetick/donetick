@@ -40,6 +40,55 @@ func TestThrottleRateLimitsPerHost(t *testing.T) {
 	}
 }
 
+func TestThrottleNormalizesTheHostKey(t *testing.T) {
+	now := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
+	th := newTestThrottle(2, 0, time.Minute, &now)
+
+	// All four spellings reach the same server, so they share one budget.
+	for _, raw := range []string{
+		"https://example.com/a",
+		"https://EXAMPLE.COM/b",
+	} {
+		if ok, _ := th.Allow(raw); !ok {
+			t.Fatalf("%q should have been allowed", raw)
+		}
+	}
+	for _, raw := range []string{
+		"https://example.com./c",
+		"https://example.com:443/d",
+	} {
+		if ok, _ := th.Allow(raw); ok {
+			t.Fatalf("%q should have shared the exhausted budget", raw)
+		}
+	}
+
+	// A non-default port is a different listener and keeps its own budget.
+	if ok, _ := th.Allow("https://example.com:8443/e"); !ok {
+		t.Fatal("a non-default port should have its own budget")
+	}
+}
+
+func TestThrottleFailuresAreScopedToTheEndpoint(t *testing.T) {
+	now := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
+	th := newTestThrottle(0, 2, 10*time.Minute, &now)
+
+	const dead = "https://hooks.example.com/services/circle-a/dead"
+	const live = "https://hooks.example.com/services/circle-b/live"
+
+	th.RecordFailure(dead)
+	if parked := th.RecordFailure(dead); !parked {
+		t.Fatal("expected the failing endpoint to be parked")
+	}
+	if ok, _ := th.Allow(dead); ok {
+		t.Fatal("expected the failing endpoint to be in cooldown")
+	}
+
+	// Another circle's integration on the same host is unaffected.
+	if ok, _ := th.Allow(live); !ok {
+		t.Fatal("a different endpoint on the same host should still be delivered to")
+	}
+}
+
 func TestThrottleParksFailingDestination(t *testing.T) {
 	now := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
 	th := newTestThrottle(0, 3, 10*time.Minute, &now)
@@ -102,7 +151,7 @@ func TestThrottlePrunesIdleDestinations(t *testing.T) {
 
 	th.mu.Lock()
 	defer th.mu.Unlock()
-	if _, ok := th.state["old.example.com"]; ok {
+	if _, ok := th.hosts["old.example.com"]; ok {
 		t.Fatal("expected the idle destination to be pruned")
 	}
 }

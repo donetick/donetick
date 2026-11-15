@@ -263,19 +263,52 @@ func (p Policy) ValidateIP(ip net.IP) error {
 	return nil
 }
 
-// isNumericHost reports whether a host is made only of digits, dots and an
-// optional hex prefix: the shapes an IP address takes when it is written to
-// look like a name. A real hostname always ends in a letter.
+// isNumericHost reports whether a host is an IPv4 address written in a
+// notation net.ParseIP does not accept: decimal ("2852039166"), octal
+// ("0177.0.0.1") or hex ("0x7f.0x1"). Resolvers and some HTTP stacks still
+// read these as addresses, so they are a way to name 169.254.169.254 without
+// looking like an IP.
+//
+// The test is that every label is numeric. A hostname only has to avoid
+// ending in an all-digit label, so names like "homeassistant.lan2" or
+// "host01.example.com" pass.
 func isNumericHost(host string) bool {
 	host = strings.ToLower(strings.TrimSuffix(host, "."))
 	if host == "" {
 		return false
 	}
-	if strings.HasPrefix(host, "0x") {
+	for _, label := range strings.Split(host, ".") {
+		if !isNumericLabel(label) {
+			return false
+		}
+	}
+	return true
+}
+
+// isNumericLabel reports whether a label is a plain decimal/octal run of
+// digits or a 0x-prefixed hex run.
+func isNumericLabel(label string) bool {
+	if rest, ok := strings.CutPrefix(label, "0x"); ok {
+		if rest == "" {
+			return false
+		}
+		for _, r := range rest {
+			if !(r >= '0' && r <= '9' || r >= 'a' && r <= 'f') {
+				return false
+			}
+		}
 		return true
 	}
-	last := host[len(host)-1]
-	return last >= '0' && last <= '9'
+
+	if label == "" {
+		return false
+	}
+	for _, r := range label {
+		if r < '0' || r > '9' {
+			return false
+		}
+	}
+	return true
 }
 
 // isCGNAT reports whether the address is in 100.64.0.0/10, which net.IP does

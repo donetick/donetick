@@ -1,7 +1,9 @@
 package webhook
 
 import (
+	"net"
 	"net/url"
+	"strings"
 	"sync"
 	"time"
 )
@@ -12,11 +14,16 @@ const idleTTL = time.Hour
 
 // Throttle bounds what a single destination can be made to receive.
 //
-// It exists for two reasons. A webhook URL is attacker-chosen, so without a
-// limit the instance can be pointed at a third party and used to amplify
-// traffic at them. And a receiver that is down or gone would otherwise soak
-// up a worker on every event forever; after enough consecutive failures the
-// destination is parked for a cooldown.
+// It exists for two reasons, and they want different granularity:
+//
+// A webhook URL is attacker-chosen, so without a limit the instance can be
+// pointed at a third party and used to amplify traffic at them. That budget
+// is per host, because varying the path would otherwise buy a fresh one.
+//
+// A receiver that is down or gone would soak up a worker on every event
+// forever, so after enough consecutive failures it is parked for a cooldown.
+// That state is per endpoint: one circle's dead webhook path must not pause
+// another circle's working integration on the same host.
 type Throttle struct {
 	perMinute        int
 	failureThreshold int
@@ -25,13 +32,18 @@ type Throttle struct {
 	// now is a seam for tests.
 	now func() time.Time
 
-	mu    sync.Mutex
-	state map[string]*destState
+	mu        sync.Mutex
+	hosts     map[string]*hostState
+	endpoints map[string]*endpointState
 }
 
-type destState struct {
-	windowStart  time.Time
-	count        int
+type hostState struct {
+	windowStart time.Time
+	count       int
+	lastSeen    time.Time
+}
+
+type endpointState struct {
 	failures     int
 	blockedUntil time.Time
 	lastSeen     time.Time
@@ -48,7 +60,8 @@ func NewThrottle(perMinute, failureThreshold int, cooldown time.Duration) *Throt
 		failureThreshold: failureThreshold,
 		cooldown:         cooldown,
 		now:              time.Now,
-		state:            make(map[string]*destState),
+		hosts:            make(map[string]*hostState),
+		endpoints:        make(map[string]*endpointState),
 	}
 }
 
@@ -59,7 +72,7 @@ func (t *Throttle) Allow(rawURL string) (bool, string) {
 		return true, ""
 	}
 
-	key := destinationKey(rawURL)
+	hostKey, endpointKey := throttleKeys(rawURL)
 	now := t.now()
 
 	t.mu.Lock()
@@ -67,95 +80,121 @@ func (t *Throttle) Allow(rawURL string) (bool, string) {
 
 	t.pruneLocked(now)
 
-	s := t.state[key]
-	if s == nil {
-		s = &destState{windowStart: now}
-		t.state[key] = s
-	}
-	s.lastSeen = now
-
-	if !s.blockedUntil.IsZero() {
-		if now.Before(s.blockedUntil) {
-			return false, "destination is in failure cooldown"
+	if e := t.endpoints[endpointKey]; e != nil {
+		e.lastSeen = now
+		if !e.blockedUntil.IsZero() {
+			if now.Before(e.blockedUntil) {
+				return false, "destination is in failure cooldown"
+			}
+			// Cooldown is over: give the endpoint a clean slate so
+			// one more failure does not immediately park it again.
+			e.blockedUntil = time.Time{}
+			e.failures = 0
 		}
-		// Cooldown is over: give the destination a clean slate so one
-		// more failure does not immediately park it again.
-		s.blockedUntil = time.Time{}
-		s.failures = 0
 	}
 
 	if t.perMinute > 0 {
-		if now.Sub(s.windowStart) >= time.Minute {
-			s.windowStart = now
-			s.count = 0
+		h := t.hosts[hostKey]
+		if h == nil {
+			h = &hostState{windowStart: now}
+			t.hosts[hostKey] = h
 		}
-		if s.count >= t.perMinute {
+		h.lastSeen = now
+
+		if now.Sub(h.windowStart) >= time.Minute {
+			h.windowStart = now
+			h.count = 0
+		}
+		if h.count >= t.perMinute {
 			return false, "destination rate limit reached"
 		}
-		s.count++
+		h.count++
 	}
 
 	return true, ""
 }
 
-// RecordSuccess clears the failure count for a destination.
+// RecordSuccess clears the failure count for an endpoint.
 func (t *Throttle) RecordSuccess(rawURL string) {
 	if t == nil {
 		return
 	}
-	key := destinationKey(rawURL)
+	_, endpointKey := throttleKeys(rawURL)
 
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
-	if s := t.state[key]; s != nil {
-		s.failures = 0
-		s.blockedUntil = time.Time{}
-	}
+	delete(t.endpoints, endpointKey)
 }
 
-// RecordFailure counts a failed delivery and parks the destination once it
-// has failed failureThreshold times in a row. It reports whether this call
-// was the one that parked it, so the caller can log that once.
+// RecordFailure counts a failed delivery and parks the endpoint once it has
+// failed failureThreshold times in a row. It reports whether this call was
+// the one that parked it, so the caller can log that once.
 func (t *Throttle) RecordFailure(rawURL string) bool {
 	if t == nil || t.failureThreshold <= 0 {
 		return false
 	}
-	key := destinationKey(rawURL)
+	_, endpointKey := throttleKeys(rawURL)
 	now := t.now()
 
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
-	s := t.state[key]
-	if s == nil {
-		s = &destState{windowStart: now}
-		t.state[key] = s
+	e := t.endpoints[endpointKey]
+	if e == nil {
+		e = &endpointState{}
+		t.endpoints[endpointKey] = e
 	}
-	s.lastSeen = now
-	s.failures++
+	e.lastSeen = now
+	e.failures++
 
-	if s.failures >= t.failureThreshold && s.blockedUntil.IsZero() {
-		s.blockedUntil = now.Add(t.cooldown)
+	if e.failures >= t.failureThreshold && e.blockedUntil.IsZero() {
+		e.blockedUntil = now.Add(t.cooldown)
 		return true
 	}
 	return false
 }
 
 func (t *Throttle) pruneLocked(now time.Time) {
-	for k, s := range t.state {
-		if now.Sub(s.lastSeen) > idleTTL && now.After(s.blockedUntil) {
-			delete(t.state, k)
+	for k, h := range t.hosts {
+		if now.Sub(h.lastSeen) > idleTTL {
+			delete(t.hosts, k)
+		}
+	}
+	for k, e := range t.endpoints {
+		if now.Sub(e.lastSeen) > idleTTL && now.After(e.blockedUntil) {
+			delete(t.endpoints, k)
 		}
 	}
 }
 
-// destinationKey groups limits by host, not by full URL: a sender aimed at a
-// third party would otherwise just vary the path to get a fresh budget.
-func destinationKey(rawURL string) string {
+// throttleKeys returns the host the rate limit is counted against and the
+// endpoint the failure state belongs to.
+//
+// Both are normalized: "example.com", "EXAMPLE.COM", "example.com." and
+// "example.com:443" all reach the same server, so they have to share one
+// budget rather than each getting their own.
+func throttleKeys(rawURL string) (host, endpoint string) {
 	u, err := url.Parse(rawURL)
 	if err != nil || u.Host == "" {
-		return rawURL
+		return rawURL, rawURL
 	}
-	return u.Host
+
+	scheme := strings.ToLower(u.Scheme)
+	host = strings.ToLower(strings.TrimSuffix(u.Hostname(), "."))
+	if port := u.Port(); port != "" && !isDefaultPort(scheme, port) {
+		host = net.JoinHostPort(host, port)
+	}
+
+	// The path and query identify the individual integration: a Discord
+	// webhook, one circle's receiver path, a Slack-style token URL.
+	endpoint = scheme + "://" + host + u.EscapedPath()
+	if u.RawQuery != "" {
+		endpoint += "?" + u.RawQuery
+	}
+	return host, endpoint
+}
+
+func isDefaultPort(scheme, port string) bool {
+	return (scheme == "http" && port == "80") || (scheme == "https" && port == "443")
 }

@@ -82,13 +82,24 @@ func NewClient(policy Policy, timeout time.Duration, maxResponseBytes int64) *Cl
 // Do sends the request and drains a bounded part of the response, so a
 // receiver cannot hold a worker open by streaming an endless body. The
 // response body is already closed when Do returns.
+//
+// A failure while draining is a failed delivery, not a successful one: a
+// receiver can flush its status line and then stall until the timeout, and
+// treating that as success would both hide it from the circuit breaker and
+// let it tie up the sender on every event.
 func (c *Client) Do(req *http.Request) (*http.Response, error) {
 	resp, err := c.http.Do(req)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
-	_, _ = io.CopyN(io.Discard, resp.Body, c.maxResponseBytes)
+
+	// io.EOF means the body ended before the cap, and a nil error means it
+	// hit the cap. Both are fine; anything else is a timeout, a reset or a
+	// cancelled context.
+	if _, err := io.CopyN(io.Discard, resp.Body, c.maxResponseBytes); err != nil && !errors.Is(err, io.EOF) {
+		return nil, fmt.Errorf("reading webhook response: %w", err)
+	}
 	return resp, nil
 }
 

@@ -146,6 +146,9 @@ type FrequencyMetadata struct {
 	WeekPattern *Weekpattern `json:"weekPattern" binding:"omitempty,oneof=every_week week_of_month week_of_quarter"`
 	WeekNumbers []int        `json:"weekNumbers,omitempty"` // DEPRECATED: use Occurrences instead
 	Occurrences []*int       `json:"occurrences,omitempty"` // e.g. ["1","3","last"] for 1st, 3rd, and last occurrence of the day
+	// ScheduleBounds optionally narrows when the recurrence is live and when it
+	// stops. See bounds.go.
+	ScheduleBounds *ScheduleBounds `json:"scheduleBounds,omitempty"`
 }
 
 type Weekpattern string

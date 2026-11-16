@@ -14,6 +14,9 @@ func ChoreReqStructLevelValidation(sl validator.StructLevel) {
 	if req.FrequencyMetadata != nil || req.Frequency != nil {
 		validateFrequencyLogic(sl, req) // 1. Validate Frequency Logic
 	}
+	if req.FrequencyMetadata != nil && req.FrequencyMetadata.ScheduleBounds != nil {
+		validateRecurrenceBounds(sl, req) // 1b. Validate Recurrence Bounds
+	}
 	if req.AssignStrategy != "" || req.AssignedTo != nil || len(req.Assignees) > 0 {
 		validateAssignments(sl, req) // 2. Validate Assignments
 	}
@@ -62,6 +65,95 @@ func validateFrequencyLogic(sl validator.StructLevel, req ChoreReq) {
 		if req.Frequency == nil || *req.Frequency > 31 {
 			sl.ReportError(req.Frequency, "Frequency", "frequency", "valid_day_of_month", "")
 		}
+	}
+}
+
+// validateRecurrenceBounds mirrors the client-side rules: each axis carries
+// only the fields its type owns, dates are well-formed civil dates (MM-DD for
+// seasonal endpoints), and a stop date never precedes an absolute start. An
+// incomplete selection — a "completions" stop with no limit, or a "date" stop
+// with no date — is allowed, since the editor permits it while typing, and is
+// enforced as no stop condition.
+func validateRecurrenceBounds(sl validator.StructLevel, req ChoreReq) {
+	bounds := req.FrequencyMetadata.ScheduleBounds
+	report := func(field, tag string) {
+		sl.ReportError(bounds, field, field, tag, "")
+	}
+
+	if !chModel.SupportsRecurrenceBounds(req.FrequencyType) {
+		report("scheduleBounds", "forbidden_with_frequency_type")
+		return
+	}
+
+	period := bounds.ActivePeriod
+	if period == nil {
+		period = &chModel.ActivePeriod{Type: chModel.PeriodAlways}
+	}
+	stop := bounds.StopRepeating
+	if stop == nil {
+		stop = &chModel.StopRepeating{Type: chModel.StopNever}
+	}
+
+	switch period.Type {
+	case chModel.PeriodAlways:
+		if period.Start != "" || period.End != "" {
+			report("activePeriod", "forbidden_with_period_type")
+		}
+	case chModel.PeriodStarts:
+		if period.End != "" {
+			report("activePeriod", "forbidden_with_period_type")
+		}
+		if period.Start != "" {
+			if _, ok := chModel.ParseCivilDate(period.Start); !ok {
+				report("activePeriod", "invalid_date")
+			}
+		}
+	case chModel.PeriodSeasonal:
+		for _, endpoint := range []string{period.Start, period.End} {
+			if endpoint == "" {
+				continue
+			}
+			if _, ok := chModel.ParseMonthDay(endpoint); !ok {
+				report("activePeriod", "invalid_date")
+			}
+		}
+	default:
+		report("activePeriod", "invalid_period_type")
+		return
+	}
+
+	switch stop.Type {
+	case chModel.StopNever:
+		if stop.CompletionLimit != nil || stop.Date != "" {
+			report("stopRepeating", "forbidden_with_stop_type")
+		}
+	case chModel.StopCompletions:
+		if stop.Date != "" {
+			report("stopRepeating", "forbidden_with_stop_type")
+		}
+		if stop.CompletionLimit != nil && *stop.CompletionLimit < 1 {
+			report("stopRepeating", "invalid_completion_limit")
+		}
+	case chModel.StopDate:
+		if stop.CompletionLimit != nil {
+			report("stopRepeating", "forbidden_with_stop_type")
+		}
+		if stop.Date == "" {
+			return
+		}
+		stopDay, ok := chModel.ParseCivilDate(stop.Date)
+		if !ok {
+			report("stopRepeating", "invalid_date")
+			return
+		}
+		// Seasonal windows recur, so only an absolute start can be contradicted.
+		if period.Type == chModel.PeriodStarts && period.Start != "" {
+			if startDay, ok := chModel.ParseCivilDate(period.Start); ok && stopDay < startDay {
+				report("stopRepeating", "stop_before_start")
+			}
+		}
+	default:
+		report("stopRepeating", "invalid_stop_type")
 	}
 }
 

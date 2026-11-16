@@ -601,6 +601,17 @@ func (h *Handler) createChore(c *gin.Context, currentUser *uModel.UserDetails, c
 		return 400, gin.H{"error": err.Error()}
 	}
 	warnings := setCreateChoreDefaults(&choreReq)
+
+	// The client sends the first due date directly, so it is the one occurrence
+	// the scheduler never derives: it has to be moved into the active period here.
+	if dueDate != nil {
+		bounded, err := applyScheduleBounds(c, choreFromReq(&choreReq, dueDate), *dueDate)
+		if err != nil {
+			return 400, gin.H{"error": "Error applying recurrence bounds"}
+		}
+		dueDate = bounded
+	}
+
 	if !choreReq.Notification && choreReq.NotificationMetadata != nil {
 		warnings = append(warnings, "notificationMetadata provided while notification is false; ignoring metadata")
 		choreReq.NotificationMetadata = nil
@@ -727,6 +738,18 @@ func (h *Handler) createChore(c *gin.Context, currentUser *uModel.UserDetails, c
 	}
 
 	return 200, response
+}
+
+// choreFromReq builds the minimum chore the scheduler needs to walk a
+// recurrence sequence, for use before the chore itself exists.
+func choreFromReq(choreReq *ChoreReq, dueDate *time.Time) *chModel.Chore {
+	return &chModel.Chore{
+		ID:                  choreReq.ID,
+		FrequencyType:       choreReq.FrequencyType,
+		Frequency:           *choreReq.Frequency,
+		FrequencyMetadataV2: choreReq.FrequencyMetadata,
+		NextDueDate:         dueDate,
+	}
 }
 
 func setCreateChoreDefaults(choreReq *ChoreReq) []string {
@@ -939,6 +962,17 @@ func (h *Handler) EditChore(c *gin.Context) {
 	}
 
 	setEditChoreDefaults(&choreReq, oldChore)
+
+	// Editing bounds has to move the current due date too, otherwise a newly
+	// narrowed chore keeps firing until its next completion.
+	if dueDate != nil {
+		bounded, err := applyScheduleBounds(c, choreFromReq(&choreReq, dueDate), *dueDate)
+		if err != nil {
+			c.JSON(400, gin.H{"error": "Error applying recurrence bounds"})
+			return
+		}
+		dueDate = bounded
+	}
 
 	updatedChore := &chModel.Chore{ // TODO: Assignees are missing
 		CompletionActions:      *choreReq.CompletionActions,
@@ -2495,7 +2529,7 @@ func (h *Handler) CompleteChore(c *gin.Context) {
 			})
 			return
 		}
-		nextDueDate, err = scheduleAdaptiveNextDueDate(chore, completedDate, history)
+		nextDueDate, err = scheduleAdaptiveNextDueDate(c, chore, completedDate, history)
 		if err != nil {
 			logging.FromContext(c).Error("Failed to schedule next due date", "error", err)
 			c.JSON(500, gin.H{
@@ -3756,7 +3790,7 @@ func (h *Handler) ApproveChore(c *gin.Context) {
 			})
 			return
 		}
-		nextDueDate, err = scheduleAdaptiveNextDueDate(chore, completedDate, allHistory)
+		nextDueDate, err = scheduleAdaptiveNextDueDate(c, chore, completedDate, allHistory)
 		if err != nil {
 			c.JSON(500, gin.H{
 				"error": "Error scheduling next due date",

@@ -222,10 +222,37 @@ func TestAllowedByPreferenceQuietSuppressesOverdue(t *testing.T) {
 }
 
 func TestAllowedByPreferencePersistentFollowsUpOnOverdue(t *testing.T) {
-	persistent := &uModel.UserNotificationPreference{Profile: uModel.NotificationProfilePersistent}
+	persistent := &uModel.UserNotificationPreference{Profile: uModel.NotificationProfilePersistent, IsPlus: true}
 
 	if !AllowedByPreference(persistent, string(EventTypeOverdue)) {
 		t.Error("Persistent's overdue follow-up should fire")
+	}
+}
+
+// Every plus-only event type stays suppressed at send time for a non-plus
+// member, even when their saved profile asks for it -- a subscription that
+// lapses after the preference was saved has to stop the delivery without the
+// row being rewritten.
+func TestAllowedByPreferenceSuppressesPlusOnlyEventsWithoutSubscription(t *testing.T) {
+	free := &uModel.UserNotificationPreference{Profile: uModel.NotificationProfilePersistent, IsPlus: false}
+
+	for _, eventType := range []string{
+		string(EventTypePreDue),
+		string(EventTypeOverdue),
+		string(uModel.NotificationEventDailyDigest),
+		string(uModel.NotificationEventWeeklyDigest),
+	} {
+		if AllowedByPreference(free, eventType) {
+			t.Errorf("%s is plus-only and should be suppressed without a subscription", eventType)
+		}
+	}
+
+	// The ungated types still get through.
+	if !AllowedByPreference(free, string(EventTypeDue)) {
+		t.Error("plain due reminders are not plus-only and should still fire")
+	}
+	if !AllowedByPreference(free, string(EventTypeOnAssignment)) {
+		t.Error("assignment notifications are not plus-only and should still fire")
 	}
 }
 
@@ -245,7 +272,7 @@ func TestAllowedByPreferenceJustInTimeDropsPreDue(t *testing.T) {
 // has to understand the digest event types too.
 func TestAllowedByPreferenceGatesDigests(t *testing.T) {
 	quiet := &uModel.UserNotificationPreference{Profile: uModel.NotificationProfileQuiet}
-	planner := &uModel.UserNotificationPreference{Profile: uModel.NotificationProfilePlanner}
+	planner := &uModel.UserNotificationPreference{Profile: uModel.NotificationProfilePlanner, IsPlus: true}
 
 	if AllowedByPreference(quiet, string(uModel.NotificationEventDailyDigest)) {
 		t.Error("Quiet profile should suppress a daily digest queued under a chattier profile")

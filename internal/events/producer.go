@@ -1,25 +1,23 @@
 package events
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"log"
-	"net/http"
+	"strconv"
 	"time"
 
 	"donetick.com/core/config"
 	chModel "donetick.com/core/internal/chore/model"
 	uModel "donetick.com/core/internal/user/model"
+	"donetick.com/core/internal/webhook"
 	"donetick.com/core/logging"
 	"go.uber.org/zap"
 )
 
-const (
-	METHOD_POST       = "POST"
-	HEAD_CONTENT_TYPE = "Content-Type"
-	CONTENT_TYPE_JSON = "application/json"
-)
+// maxWebhookSendTimeout bounds a single delivery even if the configured
+// client timeout is generous, so one slow receiver cannot stall the queue.
+const maxWebhookSendTimeout = 30 * time.Second
 
 type EventType string
 
@@ -50,9 +48,12 @@ type ChoreData struct {
 }
 
 type EventsProducer struct {
-	client *http.Client
-	queue  chan Event
-	logger *zap.SugaredLogger
+	client        *webhook.Client
+	policy        webhook.Policy
+	throttle      *webhook.Throttle
+	signingSecret string
+	queue         chan Event
+	logger        *zap.SugaredLogger
 }
 
 func (p *EventsProducer) Start(ctx context.Context) {
@@ -67,11 +68,13 @@ func (p *EventsProducer) Start(ctx context.Context) {
 }
 
 func NewEventsProducer(cfg *config.Config) *EventsProducer {
+	policy := webhook.PolicyFromConfig(cfg)
 	return &EventsProducer{
-		client: &http.Client{
-			Timeout: cfg.WebhookConfig.Timeout,
-		},
-		queue: make(chan Event, cfg.WebhookConfig.QueueSize),
+		client:        webhook.NewClient(policy, cfg.WebhookConfig.Timeout, cfg.WebhookConfig.MaxResponseBytes),
+		policy:        policy,
+		throttle:      webhook.NewThrottle(cfg.WebhookConfig.RateLimitPerMinute, cfg.WebhookConfig.FailureThreshold, cfg.WebhookConfig.FailureCooldown),
+		signingSecret: cfg.WebhookConfig.SigningSecret,
+		queue:         make(chan Event, cfg.WebhookConfig.QueueSize),
 	}
 }
 
@@ -87,33 +90,60 @@ func (p *EventsProducer) publishEvent(event Event) {
 func (p *EventsProducer) processEvent(event Event) {
 	p.logger.Debugw("Sending webhook event", "type", event.Type, "url", event.URL)
 
+	// A URL is checked before it is stored, but it may predate that check
+	// or have been loosened since, and the host behind it can change. The
+	// syntax check is cheap; the address behind the name is re-checked by
+	// the client when it connects.
+	if err := p.policy.ValidateURLSyntax(event.URL); err != nil {
+		p.logger.Warnw("Skipping webhook event, destination is not allowed",
+			"type", event.Type, "url", event.URL, "error", err)
+		return
+	}
+
+	if allowed, reason := p.throttle.Allow(event.URL); !allowed {
+		p.logger.Warnw("Dropping webhook event", "type", event.Type, "url", event.URL, "reason", reason)
+		return
+	}
+
 	eventJSON, err := json.Marshal(event)
 	if err != nil {
 		p.logger.Errorw("Failed to marshal webhook event", "error", err)
 		return
 	}
 
-	// Pring the event and the url:
-	p.logger.Debug("Sending event to webhook", "url", event.URL, "event", event)
-	p.logger.Debug("Event: ", event)
+	headers := map[string]string{
+		webhook.HeaderEvent:    string(event.Type),
+		webhook.HeaderDelivery: webhook.NewDeliveryID(),
+	}
+	if p.signingSecret != "" {
+		now := time.Now().UTC()
+		headers[webhook.HeaderTimestamp] = strconv.FormatInt(now.Unix(), 10)
+		headers[webhook.HeaderSignature] = webhook.Sign(p.signingSecret, now, eventJSON)
+	}
 
-	req, err := http.NewRequest(METHOD_POST, event.URL, bytes.NewBuffer(eventJSON))
+	ctx, cancel := context.WithTimeout(context.Background(), maxWebhookSendTimeout)
+	defer cancel()
+
+	resp, err := p.client.PostJSON(ctx, event.URL, eventJSON, headers)
 	if err != nil {
-		p.logger.Errorw("Failed to create webhook request", "error", err)
+		p.recordFailure(event, "error", err)
 		return
 	}
-	req.Header.Set(HEAD_CONTENT_TYPE, CONTENT_TYPE_JSON)
-
-	resp, err := p.client.Do(req)
-	if err != nil {
-		p.logger.Debugw("Failed to send webhook event", "error", err)
-		return
-	}
-	defer resp.Body.Close()
 
 	if resp.StatusCode >= 400 {
-		p.logger.Errorw("Webhook request failed", "status", resp.StatusCode)
+		p.recordFailure(event, "status", resp.StatusCode)
 		return
+	}
+
+	p.throttle.RecordSuccess(event.URL)
+}
+
+// recordFailure logs a failed delivery and parks the destination once it has
+// failed often enough in a row.
+func (p *EventsProducer) recordFailure(event Event, detailKey string, detail interface{}) {
+	p.logger.Debugw("Failed to send webhook event", "type", event.Type, "url", event.URL, detailKey, detail)
+	if p.throttle.RecordFailure(event.URL) {
+		p.logger.Warnw("Pausing webhook deliveries after repeated failures", "url", event.URL)
 	}
 }
 

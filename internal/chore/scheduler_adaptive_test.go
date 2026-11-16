@@ -1,6 +1,7 @@
 package chore
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -88,7 +89,7 @@ func TestScheduleAdaptiveNextDueDate_WithNilPerformedAt(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := scheduleAdaptiveNextDueDate(tt.chore, tt.completedDate, tt.history)
+			got, err := scheduleAdaptiveNextDueDate(context.Background(), tt.chore, tt.completedDate, tt.history)
 
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -120,7 +121,7 @@ func TestScheduleAdaptiveNextDueDate_NormalCase(t *testing.T) {
 		{PerformedAt: timePtr(now.Add(-72 * time.Hour))},
 	}
 
-	got, err := scheduleAdaptiveNextDueDate(chore, now, history)
+	got, err := scheduleAdaptiveNextDueDate(context.Background(), chore, now, history)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, got)

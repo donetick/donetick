@@ -355,7 +355,7 @@ func (h *API) CompleteChore(c *gin.Context) {
 			})
 			return
 		}
-		nextDueDate, err = scheduleAdaptiveNextDueDate(chore, completedDate, history)
+		nextDueDate, err = scheduleAdaptiveNextDueDate(c, chore, completedDate, history)
 		if err != nil {
 			log.Debugw("chore.api.CompleteChore failed to schedule adaptive next due date", "error", err)
 

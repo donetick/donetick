@@ -892,19 +892,31 @@ func setNextScheduleUpdates(choreUpdates map[string]interface{}, chore *chModel.
 	}
 }
 
+// completionLimitReached reports whether a chore has met its lifetime
+// completion limit. The count is derived from history and must be read inside
+// the completing transaction, after the new history row is written: reading it
+// earlier lets two concurrent completions both see one slot left and both
+// schedule a next occurrence.
+func completionLimitReached(tx *gorm.DB, chore *chModel.Chore) (bool, error) {
+	limit := chore.FrequencyMetadataV2.CompletionLimit()
+	if limit == nil {
+		return false, nil
+	}
+	var count int64
+	if err := tx.Model(&chModel.ChoreHistory{}).
+		Where("chore_id = ? AND status = ?", chore.ID, chModel.ChoreHistoryStatusCompleted).
+		Count(&count).Error; err != nil {
+		return false, err
+	}
+	return count >= int64(*limit), nil
+}
+
 func (r *ChoreRepository) ApproveChore(c context.Context, chore *chModel.Chore, adminUserID int, dueDate *time.Time, nextAssignedTo *int, applyPoints bool) error {
 	nextVersion, err := r.nextSyncVersion(c, chore.CircleID)
 	if err != nil {
 		return err
 	}
 	err = r.db.WithContext(c).Transaction(func(tx *gorm.DB) error {
-		choreUpdates := map[string]interface{}{}
-		choreUpdates["next_due_date"] = dueDate
-		choreUpdates["status"] = chModel.ChoreStatusNoStatus
-		choreUpdates["sync_version"] = nextVersion
-
-		setNextScheduleUpdates(choreUpdates, chore, dueDate, nextAssignedTo)
-
 		// Get the latest history entry that's pending approval and update it to completed
 		var history chModel.ChoreHistory
 		err := tx.Where("chore_id = ? AND status = ?", chore.ID, chModel.ChoreHistoryStatusPendingApproval).
@@ -930,6 +942,23 @@ func (r *ChoreRepository) ApproveChore(c context.Context, chore *chModel.Chore, 
 		if err := tx.Save(&history).Error; err != nil {
 			return err
 		}
+
+		// Decided here, not in the handler: the count has to include the
+		// history row just marked completed.
+		reached, err := completionLimitReached(tx, chore)
+		if err != nil {
+			return err
+		}
+		if reached {
+			dueDate = nil
+		}
+
+		choreUpdates := map[string]interface{}{}
+		choreUpdates["next_due_date"] = dueDate
+		choreUpdates["status"] = chModel.ChoreStatusNoStatus
+		choreUpdates["sync_version"] = nextVersion
+
+		setNextScheduleUpdates(choreUpdates, chore, dueDate, nextAssignedTo)
 
 		// Perform the update operation once, using the prepared updates map.
 		if err := tx.Model(&chModel.Chore{}).Where("id = ?", chore.ID).Updates(choreUpdates).Error; err != nil {
@@ -983,14 +1012,6 @@ func (r *ChoreRepository) CompleteChore(c context.Context, chore *chModel.Chore,
 		return err
 	}
 	err = r.db.WithContext(c).Transaction(func(tx *gorm.DB) error {
-
-		choreUpdates := map[string]interface{}{}
-		choreUpdates["next_due_date"] = dueDate
-		choreUpdates["status"] = chModel.ChoreStatusNoStatus
-		choreUpdates["sync_version"] = nextVersion
-
-		setNextScheduleUpdates(choreUpdates, chore, dueDate, nextAssignedTo)
-
 		// Look for existing chore history with start or pause status
 		var existingHistory chModel.ChoreHistory
 		err := tx.Where("chore_id = ? AND status = ? ",
@@ -1028,14 +1049,32 @@ func (r *ChoreRepository) CompleteChore(c context.Context, chore *chModel.Chore,
 			}
 		}
 		ch.SyncVersion = nextVersion
+		if err := tx.Save(ch).Error; err != nil {
+			return err
+		}
+
+		// Decided here, not in the handler: the count has to include the
+		// history row written just above.
+		reached, err := completionLimitReached(tx, chore)
+		if err != nil {
+			return err
+		}
+		if reached {
+			dueDate = nil
+		}
+
+		choreUpdates := map[string]interface{}{}
+		choreUpdates["next_due_date"] = dueDate
+		choreUpdates["status"] = chModel.ChoreStatusNoStatus
+		choreUpdates["sync_version"] = nextVersion
+
+		setNextScheduleUpdates(choreUpdates, chore, dueDate, nextAssignedTo)
+
 		// Perform the update operation once, using the prepared updates map.
 		if err := tx.Model(&chModel.Chore{}).Where("id = ?", chore.ID).Updates(choreUpdates).Error; err != nil {
 			return err
 		}
 
-		if err := tx.Save(ch).Error; err != nil {
-			return err
-		}
 		// if there is any time session associated with the chore, mark them as finished:
 		var timeSessions []*chModel.TimeSession
 		tx.Model(&chModel.TimeSession{}).Where("chore_id = ? AND status < ?", chore.ID, chModel.TimeSessionStatusCompleted).Find(&timeSessions)

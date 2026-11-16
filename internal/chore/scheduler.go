@@ -12,7 +12,72 @@ import (
 	"donetick.com/core/logging"
 )
 
+// scheduleNextDueDate returns the next occurrence of a chore's recurrence,
+// narrowed by its schedule bounds. A nil date means there is no next
+// occurrence, which the repository turns into an archived chore.
 func scheduleNextDueDate(ctx context.Context, chore *chModel.Chore, completedDate time.Time) (*time.Time, error) {
+	next, err := rawNextDueDate(ctx, chore, completedDate)
+	if err != nil || next == nil {
+		return next, err
+	}
+	return applyScheduleBounds(ctx, chore, *next)
+}
+
+// applyScheduleBounds returns nil once the stop date has passed, and otherwise
+// keeps advancing through the real recurrence sequence until a candidate falls
+// inside the active period. Advancing through the sequence — rather than
+// snapping to the window boundary — keeps intervals from restarting and
+// monthly/weekday anchors from moving.
+func applyScheduleBounds(ctx context.Context, chore *chModel.Chore, next time.Time) (*time.Time, error) {
+	bounds := chore.FrequencyMetadataV2.Bounds()
+	if bounds == nil || !chModel.SupportsRecurrenceBounds(chore.FrequencyType) {
+		utc := next.UTC()
+		return &utc, nil
+	}
+
+	loc := choreLocation(ctx, chore)
+	stopDay, hasStopDay := bounds.StopDay()
+	// Adaptive has no fixed sequence to walk, and adaptive plus seasonal is
+	// meaningless, so only the stop condition applies to it.
+	clampPeriod := chore.FrequencyType != chModel.FrequencyTypeAdaptive
+
+	candidate := next
+	horizon := next.AddDate(10, 0, 0)
+	for {
+		if hasStopDay && chModel.CivilDay(candidate.In(loc)) > stopDay {
+			return nil, nil
+		}
+		if !clampPeriod || bounds.InActivePeriod(candidate.In(loc)) {
+			utc := candidate.UTC()
+			return &utc, nil
+		}
+
+		advanced, err := rawNextDueDate(ctx, sequenceStep(chore, candidate), candidate)
+		if err != nil {
+			return nil, err
+		}
+		if advanced == nil || !advanced.After(candidate) || advanced.After(horizon) {
+			// Fail open: a chore whose window we cannot reach keeps its
+			// unclamped date rather than being archived.
+			logging.FromContext(ctx).Error("no in-window occurrence found for chore",
+				"chore_id", chore.ID, "next_due_date", next)
+			utc := next.UTC()
+			return &utc, nil
+		}
+		candidate = *advanced
+	}
+}
+
+// sequenceStep anchors a copy of chore at candidate so the next raw occurrence
+// continues the same sequence instead of restarting it from a completion.
+func sequenceStep(chore *chModel.Chore, candidate time.Time) *chModel.Chore {
+	step := *chore
+	step.NextDueDate = &candidate
+	step.IsRolling = false
+	return &step
+}
+
+func rawNextDueDate(ctx context.Context, chore *chModel.Chore, completedDate time.Time) (*time.Time, error) {
 	if chore.FrequencyType == "once" || chore.FrequencyType == "no_repeat" || chore.FrequencyType == "trigger" || chore.FrequencyType == "always" {
 		return nil, nil
 	}
@@ -379,7 +444,15 @@ func isLastOccurrenceInQuarter(date time.Time, weekday time.Weekday) bool {
 
 	return false
 }
-func scheduleAdaptiveNextDueDate(chore *chModel.Chore, completedDate time.Time, history []*chModel.ChoreHistory) (*time.Time, error) {
+func scheduleAdaptiveNextDueDate(ctx context.Context, chore *chModel.Chore, completedDate time.Time, history []*chModel.ChoreHistory) (*time.Time, error) {
+	next, err := rawAdaptiveNextDueDate(chore, completedDate, history)
+	if err != nil || next == nil {
+		return next, err
+	}
+	return applyScheduleBounds(ctx, chore, *next)
+}
+
+func rawAdaptiveNextDueDate(chore *chModel.Chore, completedDate time.Time, history []*chModel.ChoreHistory) (*time.Time, error) {
 
 	history = append([]*chModel.ChoreHistory{
 		{

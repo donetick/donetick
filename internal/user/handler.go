@@ -26,6 +26,7 @@ import (
 	uModel "donetick.com/core/internal/user/model"
 	uRepo "donetick.com/core/internal/user/repo"
 	"donetick.com/core/internal/utils"
+	"donetick.com/core/internal/webhook"
 	"donetick.com/core/logging"
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
@@ -56,6 +57,7 @@ type Handler struct {
 	plusMaxSubaccounts     int
 	oauth2Config           config.OAuth2Config
 	singleCircleInstance   bool
+	webhookPolicy          webhook.Policy
 }
 
 func NewHandler(ur *uRepo.UserRepository, cr *cRepo.CircleRepository,
@@ -85,6 +87,7 @@ func NewHandler(ur *uRepo.UserRepository, cr *cRepo.CircleRepository,
 		plusMaxSubaccounts:     config.FeatureLimits.PlusMaxSubaccounts,
 		oauth2Config:           config.OAuth2Config,
 		singleCircleInstance:   config.SingleCircleInstance,
+		webhookPolicy:          webhook.PolicyFromConfig(config),
 	}
 }
 
@@ -1311,6 +1314,26 @@ func resolvedNotificationPreference(pref *uModel.UserNotificationPreference) map
 	return resolved
 }
 
+// maxNotificationTargetLength bounds a target id. Chat ids and user keys are
+// short; a Discord webhook URL is the longest thing that belongs here.
+const maxNotificationTargetLength = 2048
+
+// validateNotificationTarget checks a notification target before it is
+// stored. The Discord target is a webhook URL the server posts to, so it gets
+// the full check; the others are opaque ids belonging to their provider.
+func validateNotificationTarget(platform nModel.NotificationPlatform, target string) error {
+	if strings.TrimSpace(target) == "" {
+		return errors.New("notification target is required")
+	}
+	if len(target) > maxNotificationTargetLength {
+		return fmt.Errorf("notification target is longer than %d characters", maxNotificationTargetLength)
+	}
+	if platform == nModel.NotificationPlatformDiscord {
+		return webhook.ValidateDiscordWebhookURL(target)
+	}
+	return nil
+}
+
 func (h *Handler) UpdateNotificationTarget(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
@@ -1335,6 +1358,11 @@ func (h *Handler) UpdateNotificationTarget(c *gin.Context) {
 			return
 		}
 		c.JSON(http.StatusOK, gin.H{})
+		return
+	}
+
+	if err := validateNotificationTarget(req.Type, req.Target); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -1437,6 +1465,17 @@ func (h *Handler) setWebhook(c *gin.Context) {
 	if !isAdmin {
 		c.JSON(http.StatusForbidden, gin.H{"error": "You are not an admin"})
 		return
+	}
+
+	// A blank URL clears the webhook; anything else has to be a destination
+	// this instance is willing to call.
+	if req.URL != nil {
+		if strings.TrimSpace(*req.URL) == "" {
+			req.URL = nil
+		} else if err := h.webhookPolicy.ValidateURL(c.Request.Context(), *req.URL); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
 	}
 
 	err = h.circleRepo.SetWebhookURL(c, currentUser.CircleID, req.URL)

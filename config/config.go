@@ -245,6 +245,37 @@ type OAuth2Config struct {
 type WebhookConfig struct {
 	Timeout   time.Duration `mapstructure:"timeout" yaml:"timeout" default:"5s"`
 	QueueSize int           `mapstructure:"queue_size" yaml:"queue_size" default:"100"`
+
+	// Security settings for outbound calls to user-supplied URLs. The
+	// defaults suit a self-hosted instance: a webhook to a receiver on the
+	// LAN keeps working, while loopback, cloud metadata and unroutable
+	// addresses are refused.
+	//
+	// Every flag here defaults to false on purpose: defaults.SetDefaults
+	// runs after the config file is unmarshalled and only fills zero
+	// values, so a `default:"true"` boolean could not be turned off from
+	// YAML.
+
+	// BlockPrivateNetworks refuses RFC1918, unique-local and CGNAT
+	// destinations. Turn this on for any instance serving users who are
+	// not the operator.
+	BlockPrivateNetworks bool `mapstructure:"block_private_networks" yaml:"block_private_networks"`
+	// AllowLoopback permits webhooks to 127.0.0.1/::1, for receivers
+	// running alongside the server.
+	AllowLoopback bool `mapstructure:"allow_loopback" yaml:"allow_loopback"`
+	// RequireHTTPS refuses plain http:// webhook URLs.
+	RequireHTTPS bool `mapstructure:"require_https" yaml:"require_https"`
+	// SigningSecret, when set, signs every delivery with HMAC-SHA256 so a
+	// receiver can tell a real delivery from anyone who learned the URL.
+	SigningSecret string `mapstructure:"signing_secret" yaml:"signing_secret"`
+	// MaxResponseBytes caps how much of a receiver's response is read.
+	MaxResponseBytes int64 `mapstructure:"max_response_bytes" yaml:"max_response_bytes" default:"65536"`
+	// RateLimitPerMinute caps deliveries to a single destination host.
+	RateLimitPerMinute int `mapstructure:"rate_limit_per_minute" yaml:"rate_limit_per_minute" default:"60"`
+	// FailureThreshold is how many consecutive failures park a destination
+	// for FailureCooldown.
+	FailureThreshold int           `mapstructure:"failure_threshold" yaml:"failure_threshold" default:"10"`
+	FailureCooldown  time.Duration `mapstructure:"failure_cooldown" yaml:"failure_cooldown" default:"15m"`
 }
 
 type RealTimeConfig struct {

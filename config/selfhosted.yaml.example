@@ -34,6 +34,7 @@ server:
   serve_frontend: true
   serve_swagger: true
   public_host: "" # example: https://yourpublicdomain.com
+  # insecure_cookies: false # set to true only when serving donetick over plain HTTP on a trusted network
 logging:
   level: "info"
   encoding: "json"

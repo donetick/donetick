@@ -72,6 +72,22 @@ Donetick is an open-source, user-friendly app designed to help you organize task
 
 **Webhook System**: Connect Donetick to external systems using flexible webhook support good for custom notification flows or automations.
 
+When a reward redemption is approved, the circle webhook receives a `reward.redeem_approved` event after the approval and points debit are committed:
+
+```json
+{
+  "type": "reward.redeem_approved",
+  "timestamp": "2026-11-18T12:00:00Z",
+  "data": {
+    "redemption_id": 7,
+    "reward_id": 42,
+    "recipient_user_id": 2
+  }
+}
+```
+
+`recipient_user_id` identifies the member receiving the reward, rather than the approver. Consumers can use `redemption_id` to avoid fulfilling the same redemption twice. Failed or repeated approvals do not emit an event. Delivery uses the existing circle webhook configuration and delivery policy. Delivery is best effort: a delivery failure does not undo approval, and queued events are not durable across restarts.
+
 ---
 
 ## Quick Start

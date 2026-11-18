@@ -182,6 +182,17 @@ func (r *ProjectRepository) DeleteProject(ctx context.Context, projectID int, us
 			}
 			return errors.New("user does not have permission to delete this project")
 		}
+		if project.IsPrivate {
+			var foreignChoreCount int64
+			if err := tx.WithContext(ctx).Model(&chModel.Chore{}).
+				Where("project_id = ? AND circle_id = ? AND created_by <> ?", projectID, circleID, project.CreatedBy).
+				Count(&foreignChoreCount).Error; err != nil {
+				return err
+			}
+			if foreignChoreCount > 0 {
+				return errors.New("cannot delete private project containing chores created by other users")
+			}
+		}
 
 		choreIDs, err := r.choreIDsInProject(ctx, tx, projectID, circleID)
 		if err != nil {

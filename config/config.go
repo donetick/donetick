@@ -188,6 +188,7 @@ type FCMConfig struct {
 	CredentialsPath string `json:"credentials_path" mapstructure:"credentials_path"`
 	ProjectID       string `json:"project_id" mapstructure:"project_id"`
 }
+
 type EmailConfig struct {
 	Email     string `mapstructure:"email"`
 	User      string `mapstructure:"user"`

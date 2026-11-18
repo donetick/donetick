@@ -190,11 +190,11 @@ type FCMConfig struct {
 }
 
 type EmailConfig struct {
-	Email     string `mapstructure:"email"`
-	User      string `mapstructure:"user"`
-	Key       string `mapstructure:"key"`
-	Host      string `mapstructure:"host"`
-	Port      int    `mapstructure:"port"`
+	Email string `mapstructure:"email"`
+	User  string `mapstructure:"user"`
+	Key   string `mapstructure:"key"`
+	Host  string `mapstructure:"host"`
+	Port  int    `mapstructure:"port"`
 	// Renamed from "appHost" to match this struct's snake_case convention;
 	// see the legacy fallback in LoadConfig.
 	AppHost   string `mapstructure:"app_host" yaml:"app_host"`

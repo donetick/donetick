@@ -3,11 +3,13 @@ package service
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	chModel "donetick.com/core/internal/chore/model"
 	cModel "donetick.com/core/internal/circle/model"
 	cRepo "donetick.com/core/internal/circle/repo"
+	dRepo "donetick.com/core/internal/device/repo"
 	nModel "donetick.com/core/internal/notifier/model"
 	nRepo "donetick.com/core/internal/notifier/repo"
 	"donetick.com/core/logging"
@@ -40,9 +42,9 @@ func (n *NotificationPlanner) GenerateNotifications(c context.Context, chore *ch
 		}
 	}
 
-	n.nRepo.DeleteAllChoreNotifications(chore.ID)
+	n.nRepo.DeleteChoreReminders(chore.ID)
 	notifications := make([]*nModel.Notification, 0)
-	if !chore.Notification || chore.FrequencyType == "trigger" {
+	if !chore.Notification || chore.NotificationMetadataV2 == nil || chore.FrequencyType == "trigger" {
 
 		return true
 	}
@@ -71,6 +73,76 @@ func (n *NotificationPlanner) GenerateNotifications(c context.Context, chore *ch
 	log.Debug("Generated notifications", "count", len(notifications))
 	n.nRepo.BatchInsertNotifications(notifications)
 	return true
+}
+
+// OverdueNaggingDestinations resolves the current delivery targets, including
+// mobile devices that receive push instead of scheduling an offline repeat.
+func (n *NotificationPlanner) OverdueNaggingDestinations(c context.Context, chore *chModel.Chore, devices *dRepo.DeviceRepository, pushEnabled bool) ([]nModel.Notification, error) {
+	members, err := n.cRepo.GetCircleUsers(c, chore.CircleID)
+	if err != nil {
+		return nil, err
+	}
+	type destination struct {
+		platform nModel.NotificationPlatform
+		target   string
+	}
+	seen := make(map[destination]bool)
+	var notifications []nModel.Notification
+	add := func(platform nModel.NotificationPlatform, target string, userID int) {
+		key := destination{platform, target}
+		if seen[key] {
+			return
+		}
+		seen[key] = true
+		notifications = append(notifications, nModel.Notification{
+			ChoreID: chore.ID, CircleID: chore.CircleID, UserID: userID, TypeID: platform, TargetID: target,
+		})
+	}
+	checkedDevices := make(map[int]bool)
+	for _, member := range members {
+		if !member.IsActive || (chore.AssignedTo != nil && *chore.AssignedTo != 0 && *chore.AssignedTo != member.UserID) || !canReceiveChore(chore, member.UserID, members) {
+			continue
+		}
+		if member.TargetID != "" && member.NotificationType != nModel.NotificationPlatformNone && member.NotificationType != nModel.NotificationPlatformWebhook {
+			add(member.NotificationType, member.TargetID, member.UserID)
+		}
+		if pushEnabled && !checkedDevices[member.UserID] {
+			checkedDevices[member.UserID] = true
+			tokens, err := devices.GetActiveDeviceTokens(c, member.UserID)
+			if err != nil {
+				return nil, err
+			}
+			for _, token := range tokens {
+				if token.Token != "" {
+					add(nModel.NotificationPlatformFCM, token.Token, member.UserID)
+				}
+			}
+		}
+	}
+	if !chore.IsPrivate && (chore.ProjectID == nil || (chore.Project != nil && !chore.Project.IsPrivate)) {
+		circle, err := n.cRepo.GetCircleByID(c, chore.CircleID)
+		if err != nil {
+			return nil, err
+		}
+		if circle.WebhookURL != nil && *circle.WebhookURL != "" {
+			add(nModel.NotificationPlatformWebhook, *circle.WebhookURL, 0)
+		}
+	}
+	return notifications, nil
+}
+
+func PopulateOverdueNaggingDelivery(notification *nModel.Notification, chore *chModel.Chore) {
+	notification.Text = fmt.Sprintf("%s is overdue.", chore.Name)
+	notification.RawEvent = nModel.JSONB{
+		"id": chore.ID, "type": EventTypeOverdueNagging, "name": chore.Name,
+		"due_date": chore.NextDueDate, "scheduled_for": notification.ScheduledFor,
+	}
+	if notification.TypeID == nModel.NotificationPlatformFCM {
+		notification.RawEvent["payload"] = map[string]any{
+			"title": "Overdue task", "body": notification.Text,
+			"data": map[string]string{"type": string(EventTypeOverdueNagging), "chore_id": strconv.Itoa(chore.ID)},
+		}
+	}
 }
 
 // notifiableMembers returns the circle members that can actually receive a notification.
@@ -221,8 +293,9 @@ func generateNotificationsFromTemplate(chore *chModel.Chore, recipient *cModel.U
 type EventType string
 
 const (
-	EventTypeUnknown EventType = "unknown"
-	EventTypeDue     EventType = "due"
-	EventTypePreDue  EventType = "pre_due"
-	EventTypeOverdue EventType = "overdue"
+	EventTypeUnknown        EventType = "unknown"
+	EventTypeDue            EventType = "due"
+	EventTypePreDue         EventType = "pre_due"
+	EventTypeOverdue        EventType = "overdue"
+	EventTypeOverdueNagging EventType = "overdue_nagging"
 )

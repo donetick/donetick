@@ -518,6 +518,10 @@ func (h *Handler) CreateChore(c *gin.Context) {
 		utcDate := choreReq.NextDueDate.UTC()
 		dueDate = &utcDate
 	}
+	if err := validateOverdueNagging(choreReq.NotificationMetadata, choreReq.FrequencyType, dueDate); err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
 
 	// Before the defaults, so a chore inheriting privacy from its project isn't warned
 	// about defaulting to public.
@@ -530,8 +534,12 @@ func (h *Handler) CreateChore(c *gin.Context) {
 
 	warnings := setCreateChoreDefaults(&choreReq)
 	if !choreReq.Notification && choreReq.NotificationMetadata != nil {
-		warnings = append(warnings, "notificationMetadata provided while notification is false; ignoring metadata")
-		choreReq.NotificationMetadata = nil
+		if nagging := choreReq.NotificationMetadata.OverdueNagging; nagging != nil {
+			choreReq.NotificationMetadata = &chModel.NotificationMetadata{OverdueNagging: nagging}
+		} else {
+			warnings = append(warnings, "notificationMetadata provided while notification is false; ignoring metadata")
+			choreReq.NotificationMetadata = nil
+		}
 	}
 
 	createdChore := &chModel.Chore{
@@ -795,6 +803,32 @@ func (h *Handler) EditChore(c *gin.Context) {
 		return
 	}
 
+	dueDate := oldChore.NextDueDate
+	if choreReq.NextDueDate != nil {
+		utcDate := choreReq.NextDueDate.UTC()
+		dueDate = &utcDate
+	}
+	setEditChoreDefaults(&choreReq, oldChore)
+	var oldNagging *chModel.OverdueNagging
+	if oldChore.NotificationMetadataV2 != nil {
+		oldNagging = oldChore.NotificationMetadataV2.OverdueNagging
+	}
+	if choreReq.NotificationMetadata.HasOverdueNaggingUpdate() {
+		nagging := choreReq.NotificationMetadata.OverdueNagging
+		// Full-object editors can echo a setting stored on a task without a due date.
+		if nagging != nil && (oldNagging == nil || *oldNagging != *nagging) {
+			if err := validateOverdueNagging(choreReq.NotificationMetadata, choreReq.FrequencyType, dueDate); err != nil {
+				c.JSON(400, gin.H{"error": err.Error()})
+				return
+			}
+		}
+	} else if oldNagging != nil {
+		if choreReq.NotificationMetadata == nil {
+			choreReq.NotificationMetadata = &chModel.NotificationMetadata{}
+		}
+		choreReq.NotificationMetadata.OverdueNagging = oldNagging
+	}
+
 	// Create a map to store the existing labels for quick lookup
 	oldLabelsMap := make(map[int]struct{})
 	for _, oldLabel := range *oldChore.LabelsV2 {
@@ -835,15 +869,6 @@ func (h *Handler) EditChore(c *gin.Context) {
 		})
 		return
 	}
-	var dueDate *time.Time
-	if choreReq.NextDueDate != nil {
-		utcDate := choreReq.NextDueDate.UTC()
-		dueDate = &utcDate
-	} else {
-		dueDate = oldChore.NextDueDate
-	}
-
-	setEditChoreDefaults(&choreReq, oldChore)
 
 	updatedChore := &chModel.Chore{ // TODO: Assignees are missing
 		ID:                     choreReq.ID,

@@ -24,9 +24,10 @@ const (
 type EventType string
 
 const (
-	EventTypeUnknown      EventType = ""
-	EventTypeTaskCreated  EventType = "task.created"
-	EventTypeTaskReminder EventType = "task.reminder"
+	EventTypeUnknown            EventType = ""
+	EventTypeTaskCreated        EventType = "task.created"
+	EventTypeTaskReminder       EventType = "task.reminder"
+	EventTypeTaskOverdueNagging EventType = "task.overdue_nagging"
 	// EventTypeTaskUpdated    EventType = "task.updated"
 	EventTypeTaskCompleted    EventType = "task.completed"
 	EventTypeSubTaskCompleted EventType = "subtask.completed"
@@ -182,6 +183,10 @@ func (p *EventsProducer) NotificationEvent(ctx context.Context, url string, even
 		Timestamp: time.Now().UTC(),
 		Data:      event,
 	})
+}
+
+func (p *EventsProducer) OverdueNaggingEvent(url string, data interface{}) {
+	p.publishEvent(Event{URL: url, Type: EventTypeTaskOverdueNagging, Timestamp: time.Now().UTC(), Data: data})
 }
 
 func (p *EventsProducer) ThingsUpdated(ctx context.Context, url *string, data interface{}) {

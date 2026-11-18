@@ -1,11 +1,29 @@
 package chore
 
 import (
+	"fmt"
 	"time"
 
 	chModel "donetick.com/core/internal/chore/model"
 	"github.com/go-playground/validator/v10"
 )
+
+func validateOverdueNagging(metadata *chModel.NotificationMetadata, frequency chModel.FrequencyType, dueDate *time.Time) error {
+	if metadata == nil || metadata.OverdueNagging == nil {
+		return nil
+	}
+	followUps := metadata.OverdueNagging
+	if followUps.IntervalMinutes < 1 || followUps.IntervalMinutes > chModel.MaxOverdueNaggingMinutes {
+		return fmt.Errorf("overdue follow-up interval must be between 1 and %d minutes", chModel.MaxOverdueNaggingMinutes)
+	}
+	if !followUps.ContinueUntilComplete && (followUps.MaxFollowUps < 1 || followUps.MaxFollowUps > chModel.MaxOverdueFollowUpLimit) {
+		return fmt.Errorf("maximum overdue follow-ups must be between 1 and %d", chModel.MaxOverdueFollowUpLimit)
+	}
+	if dueDate == nil || frequency == chModel.FrequencyTypeTrigger || frequency == chModel.FrequencyTypeAlways {
+		return fmt.Errorf("overdue follow-ups require a scheduled due date")
+	}
+	return nil
+}
 
 // ChoreReqStructLevelValidation registers the custom cross-field validation rules
 func ChoreReqStructLevelValidation(sl validator.StructLevel) {
@@ -103,6 +121,9 @@ func validateNotifications(sl validator.StructLevel, req ChoreReq) {
 		// Metadata is required if notifications are enabled
 		if !hasNotificationMetadata {
 			sl.ReportError(req.NotificationMetadata, "NotificationMetadata", "notificationMetadata", "required_when_notifications_enabled", "")
+		}
+		if req.NextDueDate == nil {
+			sl.ReportError(req.NextDueDate, "NextDueDate", "nextDueDate", "required_with_notifications", "")
 		}
 	} else if hasNotificationMetadata {
 		// TODO(v0.1.78+): Re-enable strict validation once all clients stop sending notificationMetadata when notification is false.

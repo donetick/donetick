@@ -74,5 +74,5 @@ func (n *Notifier) SendNotification(c context.Context, notification *nModel.Noti
 		log.Error("Failed to send notification", "err", err)
 	}
 
-	return nil
+	return err
 }

@@ -35,6 +35,7 @@ func Migration(db *gorm.DB) error {
 		cModel.UserCircle{},
 		chModel.ChoreAssignees{},
 		nModel.Notification{},
+		nModel.OverdueNagSlot{},
 		uModel.UserPasswordReset{},
 		sModel.StripeCustomer{},
 		sModel.StripeSubscription{},

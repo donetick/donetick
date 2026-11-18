@@ -2,13 +2,18 @@ package notifier
 
 import (
 	"context"
+	"errors"
 	"log"
+	"sync"
 	"time"
 
 	"donetick.com/core/config"
 	chRepo "donetick.com/core/internal/chore/repo"
+	dRepo "donetick.com/core/internal/device/repo"
 	"donetick.com/core/internal/events"
+	nModel "donetick.com/core/internal/notifier/model"
 	nRepo "donetick.com/core/internal/notifier/repo"
+	nService "donetick.com/core/internal/notifier/service"
 	uRepo "donetick.com/core/internal/user/repo"
 	"donetick.com/core/logging"
 )
@@ -22,21 +27,26 @@ const (
 type Scheduler struct {
 	choreRepo        *chRepo.ChoreRepository
 	userRepo         *uRepo.UserRepository
-	stopChan         chan bool
+	stopChan         chan struct{}
+	stopOnce         sync.Once
 	notifier         *Notifier
 	eventsProducer   *events.EventsProducer
 	notificationRepo *nRepo.NotificationRepository
+	planner          *nService.NotificationPlanner
+	deviceRepo       *dRepo.DeviceRepository
 	SchedulerJobs    config.SchedulerConfig
 }
 
-func NewScheduler(cfg *config.Config, ur *uRepo.UserRepository, cr *chRepo.ChoreRepository, n *Notifier, nr *nRepo.NotificationRepository, ep *events.EventsProducer) *Scheduler {
+func NewScheduler(cfg *config.Config, ur *uRepo.UserRepository, cr *chRepo.ChoreRepository, n *Notifier, nr *nRepo.NotificationRepository, ep *events.EventsProducer, planner *nService.NotificationPlanner, devices *dRepo.DeviceRepository) *Scheduler {
 	return &Scheduler{
 		choreRepo:        cr,
 		userRepo:         ur,
-		stopChan:         make(chan bool),
+		stopChan:         make(chan struct{}),
 		notifier:         n,
 		notificationRepo: nr,
 		eventsProducer:   ep,
+		planner:          planner,
+		deviceRepo:       devices,
 		SchedulerJobs:    cfg.SchedulerJobs,
 	}
 }
@@ -45,12 +55,13 @@ func (s *Scheduler) Start(c context.Context) {
 	log := logging.FromContext(c)
 	log.Debug("Scheduler started")
 	go s.runScheduler(c, " NOTIFICATION_SCHEDULER ", s.loadAndSendNotificationJob, 3*time.Minute)
+	go s.runScheduler(c, " OVERDUE_NAGGING ", s.overdueNaggingJob, time.Minute)
 	go s.runScheduler(c, " NOTIFICATION_CLEANUP ", s.cleanupSentNotifications, 24*time.Hour*30)
 }
 func (s *Scheduler) cleanupSentNotifications(c context.Context) (time.Duration, error) {
 	log := logging.FromContext(c)
 	deleteBefore := time.Now().UTC().Add(-time.Hour * 24 * 30)
-	err := s.notificationRepo.DeleteSentNotifications(c, deleteBefore)
+	err := errors.Join(s.notificationRepo.DeleteSentNotifications(c, deleteBefore), s.notificationRepo.DeleteOrphanedNagSlots(c))
 	if err != nil {
 		log.Error("Error deleting sent notifications", err)
 		return time.Duration(0), err
@@ -69,6 +80,7 @@ func (s *Scheduler) loadAndSendNotificationJob(c context.Context) (time.Duration
 		return time.Since(startTime), err
 	}
 
+	var sent []*nModel.NotificationDetails
 	for _, notification := range getAllPendingNotifications {
 		err := s.notifier.SendNotification(c, notification)
 		if err != nil {
@@ -80,11 +92,10 @@ func (s *Scheduler) loadAndSendNotificationJob(c context.Context) (time.Duration
 			s.eventsProducer.NotificationEvent(c, *notification.WebhookURL, notification.RawEvent)
 		}
 
-		notification.IsSent = true
+		sent = append(sent, notification)
 	}
 
-	s.notificationRepo.MarkNotificationsAsSent(getAllPendingNotifications)
-	return time.Since(startTime), nil
+	return time.Since(startTime), s.notificationRepo.MarkNotificationsAsSent(sent)
 }
 func (s *Scheduler) runScheduler(c context.Context, jobName string, job func(c context.Context) (time.Duration, error), interval time.Duration) {
 
@@ -107,5 +118,5 @@ func (s *Scheduler) runScheduler(c context.Context, jobName string, job func(c c
 }
 
 func (s *Scheduler) Stop() {
-	s.stopChan <- true
+	s.stopOnce.Do(func() { close(s.stopChan) })
 }

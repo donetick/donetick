@@ -143,13 +143,59 @@ const (
 )
 
 type NotificationMetadata struct {
-	DueDate       bool                    `json:"dueDate,omitempty"`
-	Completion    bool                    `json:"completion,omitempty"`
-	Nagging       bool                    `json:"nagging,omitempty"`
-	PreDue        bool                    `json:"predue,omitempty"`
-	CircleGroup   bool                    `json:"circleGroup,omitempty"`
-	CircleGroupID *int64                  `json:"circleGroupID" binding:"required_with=CircleGroup,omitempty,gt=0"`
-	Templates     []*NotificationTemplate `json:"templates,omitempty" validate:"max=5"` // Template for notification
+	OverdueNagging    *OverdueNagging `json:"overdueNagging,omitempty"`
+	overdueNaggingSet bool
+	DueDate           bool                    `json:"dueDate,omitempty"`
+	Completion        bool                    `json:"completion,omitempty"`
+	Nagging           bool                    `json:"nagging,omitempty"`
+	PreDue            bool                    `json:"predue,omitempty"`
+	CircleGroup       bool                    `json:"circleGroup,omitempty"`
+	CircleGroupID     *int64                  `json:"circleGroupID" binding:"required_with=CircleGroup,omitempty,gt=0"`
+	Templates         []*NotificationTemplate `json:"templates,omitempty" validate:"max=5"` // Template for notification
+}
+
+const (
+	DefaultOverdueNaggingMinutes = 60
+	MaxOverdueNaggingMinutes     = 7 * 24 * 60
+	DefaultOverdueFollowUpLimit  = 3
+	MaxOverdueFollowUpLimit      = 100
+)
+
+type OverdueNagging struct {
+	IntervalMinutes       int  `json:"intervalMinutes"`
+	MaxFollowUps          int  `json:"maxFollowUps"`
+	ContinueUntilComplete bool `json:"continueUntilComplete,omitempty"`
+}
+
+func (n *NotificationMetadata) UnmarshalJSON(data []byte) error {
+	type metadata NotificationMetadata
+	var decoded struct {
+		metadata
+		Nagging json.RawMessage `json:"overdueNagging"`
+	}
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		return err
+	}
+	*n = NotificationMetadata(decoded.metadata)
+	n.overdueNaggingSet = decoded.Nagging != nil
+	if !n.overdueNaggingSet || string(decoded.Nagging) == "null" {
+		return nil
+	}
+	n.OverdueNagging = &OverdueNagging{
+		IntervalMinutes: DefaultOverdueNaggingMinutes,
+		MaxFollowUps:    DefaultOverdueFollowUpLimit,
+	}
+	return json.Unmarshal(decoded.Nagging, n.OverdueNagging)
+}
+
+// Preserve the separate setting on edits from clients that omit it.
+func (n *NotificationMetadata) HasOverdueNaggingUpdate() bool {
+	return n != nil && (n.overdueNaggingSet || n.OverdueNagging != nil)
+}
+
+func (n *OverdueNagging) Valid() bool {
+	return n != nil && n.IntervalMinutes >= 1 && n.IntervalMinutes <= MaxOverdueNaggingMinutes &&
+		(n.ContinueUntilComplete || n.MaxFollowUps >= 1 && n.MaxFollowUps <= MaxOverdueFollowUpLimit)
 }
 
 type NotificationTemplate struct {

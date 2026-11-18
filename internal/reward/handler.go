@@ -13,7 +13,6 @@ import (
 	rRepo "donetick.com/core/internal/reward/repo"
 	uModel "donetick.com/core/internal/user/model"
 	"donetick.com/core/logging"
-	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
 )
 
@@ -408,9 +407,9 @@ func (h *Handler) rejectRedemption(c *gin.Context) {
 	c.JSON(200, gin.H{"message": "Redemption rejected"})
 }
 
-func Routes(r *gin.Engine, h *Handler, auth *jwt.GinJWTMiddleware) {
+func Routes(r *gin.Engine, h *Handler, multiAuthMiddleware *auth.MultiAuthMiddleware) {
 	rewardRoutes := r.Group("api/v1/rewards")
-	rewardRoutes.Use(auth.MiddlewareFunc())
+	rewardRoutes.Use(multiAuthMiddleware.MiddlewareFunc())
 	{
 		rewardRoutes.GET("", h.getRewards)
 		rewardRoutes.POST("", h.createReward)

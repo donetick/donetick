@@ -70,6 +70,8 @@ Donetick is an open-source, user-friendly app designed to help you organize task
 ### Developer & API Features
 **REST API**: Full access to Donetick’s features through a REST API, great for custom automations and integrations. (For external use, we recommend using the eAPI, which offers limited access intended for long-lived access tokens.)
 
+Reward and redemption endpoints under `/api/v1/rewards` accept either a JWT or an API token in the `secretkey` header. API tokens act as their owner: members can request rewards for themselves and view their own redemption history; admins and managers can also manage rewards and approve or reject redemptions within their circle.
+
 **Webhook System**: Connect Donetick to external systems using flexible webhook support good for custom notification flows or automations.
 
 ---

@@ -20,6 +20,15 @@ func setupTestDB(t *testing.T) *gorm.DB {
 	if err != nil {
 		t.Fatalf("failed to open sqlite: %v", err)
 	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		t.Fatalf("failed to get database connection: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := sqlDB.Close(); err != nil {
+			t.Errorf("failed to close database connection: %v", err)
+		}
+	})
 	if err := database.Migration(db); err != nil {
 		t.Fatalf("AutoMigrate failed: %v", err)
 	}

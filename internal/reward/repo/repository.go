@@ -43,15 +43,19 @@ func (r *RewardRepository) CreateReward(ctx context.Context, reward *rModel.Rewa
 	return r.db.WithContext(ctx).Create(reward).Error
 }
 
-func (r *RewardRepository) UpdateReward(ctx context.Context, reward *rModel.Reward) error {
+func (r *RewardRepository) UpdateReward(ctx context.Context, reward *rModel.Reward, autoApprove *bool) error {
+	updates := map[string]interface{}{
+		"name":        reward.Name,
+		"description": reward.Description,
+		"points_cost": reward.PointsCost,
+		"is_active":   reward.IsActive,
+	}
+	if autoApprove != nil {
+		updates["auto_approve"] = *autoApprove
+	}
 	return r.db.WithContext(ctx).Model(&rModel.Reward{}).
 		Where("id = ? AND circle_id = ?", reward.ID, reward.CircleID).
-		Updates(map[string]interface{}{
-			"name":        reward.Name,
-			"description": reward.Description,
-			"points_cost": reward.PointsCost,
-			"is_active":   reward.IsActive,
-		}).Error
+		Updates(updates).Error
 }
 
 func (r *RewardRepository) DeleteReward(ctx context.Context, id int, circleID int) error {
@@ -59,9 +63,10 @@ func (r *RewardRepository) DeleteReward(ctx context.Context, id int, circleID in
 }
 
 // RequestRedemption validates the reward exists/is active and the user has enough
-// available balance (points - points_redeemed), then inserts a pending redemption
-// request. Balance is re-checked at approval time too (see ApproveRedemption) since
-// balance can change between request and approval.
+// available balance (points - points_redeemed). It creates a pending request by
+// default, or immediately approves and debits the points for rewards configured
+// for auto-approval. Pending requests are checked again at approval time because
+// the balance can change between request and approval.
 func (r *RewardRepository) RequestRedemption(ctx context.Context, rewardID int, userID int, circleID int, note *string) (*rModel.RewardRedemption, error) {
 	var redemption *rModel.RewardRedemption
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
@@ -79,17 +84,52 @@ func (r *RewardRepository) RequestRedemption(ctx context.Context, rewardID int, 
 			return ErrInsufficientPoints
 		}
 
+		now := time.Now().UTC()
+		status := rModel.RedemptionStatusPending
+		var resolvedAt *time.Time
+		if reward.AutoApprove {
+			status = rModel.RedemptionStatusApproved
+			resolvedAt = &now
+		}
 		redemption = &rModel.RewardRedemption{
 			RewardID:    reward.ID,
 			CircleID:    circleID,
 			UserID:      userID,
 			RewardName:  reward.Name,
 			PointsCost:  reward.PointsCost,
-			Status:      rModel.RedemptionStatusPending,
+			Status:      status,
 			Note:        note,
-			RequestedAt: time.Now().UTC(),
+			RequestedAt: now,
+			ResolvedAt:  resolvedAt,
 		}
-		return tx.Create(redemption).Error
+		if err := tx.Create(redemption).Error; err != nil {
+			return err
+		}
+		if !reward.AutoApprove {
+			return nil
+		}
+
+		// The balance may change between the initial read and this write, or
+		// another redemption may be approved concurrently. Only debit if the
+		// available balance still covers this reward; the transaction rolls back
+		// the redemption if it does not.
+		debited := tx.Model(&cModel.UserCircle{}).
+			Where("user_id = ? AND circle_id = ? AND points - points_redeemed >= ?", userID, circleID, reward.PointsCost).
+			Update("points_redeemed", gorm.Expr("points_redeemed + ?", reward.PointsCost))
+		if debited.Error != nil {
+			return debited.Error
+		}
+		if debited.RowsAffected != 1 {
+			return ErrInsufficientPoints
+		}
+		return tx.Create(&pModel.PointsHistory{
+			Action:    pModel.PointsHistoryActionRedeem,
+			CircleID:  circleID,
+			UserID:    userID,
+			Points:    reward.PointsCost,
+			CreatedAt: time.Now().UTC(),
+			CreatedBy: userID,
+		}).Error
 	})
 	if err != nil {
 		return nil, err

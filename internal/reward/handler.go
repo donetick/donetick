@@ -24,6 +24,7 @@ type RewardReq struct {
 	Description string `json:"description"`
 	PointsCost  int    `json:"pointsCost" binding:"required,gt=0"`
 	IsActive    *bool  `json:"isActive"`
+	AutoApprove *bool  `json:"autoApprove"`
 }
 
 type RedeemReq struct {
@@ -162,6 +163,10 @@ func (h *Handler) createReward(c *gin.Context) {
 	if req.IsActive != nil {
 		isActive = *req.IsActive
 	}
+	autoApprove := false
+	if req.AutoApprove != nil {
+		autoApprove = *req.AutoApprove
+	}
 
 	reward := &rModel.Reward{
 		CircleID:    currentUser.CircleID,
@@ -169,6 +174,7 @@ func (h *Handler) createReward(c *gin.Context) {
 		Description: req.Description,
 		PointsCost:  req.PointsCost,
 		IsActive:    isActive,
+		AutoApprove: autoApprove,
 		CreatedBy:   currentUser.ID,
 	}
 	if err := h.rRepo.CreateReward(c, reward); err != nil {
@@ -220,11 +226,16 @@ func (h *Handler) updateReward(c *gin.Context) {
 		PointsCost:  req.PointsCost,
 		IsActive:    isActive,
 	}
-	if err := h.rRepo.UpdateReward(c, reward); err != nil {
+	if err := h.rRepo.UpdateReward(c, reward, req.AutoApprove); err != nil {
 		c.JSON(500, gin.H{"error": "Error updating reward"})
 		return
 	}
-	c.JSON(200, gin.H{"res": reward})
+	updatedReward, err := h.rRepo.GetReward(c, id, currentUser.CircleID)
+	if err != nil {
+		c.JSON(500, gin.H{"error": "Error retrieving updated reward"})
+		return
+	}
+	c.JSON(200, gin.H{"res": updatedReward})
 }
 
 func (h *Handler) deleteReward(c *gin.Context) {
@@ -289,7 +300,17 @@ func (h *Handler) redeemReward(c *gin.Context) {
 	if requesterName == "" {
 		requesterName = currentUser.Username
 	}
-	h.notifyAdminsOfRedemptionRequest(c, currentUser.CircleID, currentUser, requesterName, redemption)
+	if redemption.Status == rModel.RedemptionStatusApproved {
+		if h.eventProducer != nil {
+			h.eventProducer.RewardRedeemApproved(c, currentUser.WebhookURL, events.RewardRedemptionData{
+				RedemptionID:    redemption.ID,
+				RewardID:        redemption.RewardID,
+				RecipientUserID: redemption.UserID,
+			})
+		}
+	} else {
+		h.notifyAdminsOfRedemptionRequest(c, currentUser.CircleID, currentUser, requesterName, redemption)
+	}
 
 	c.JSON(200, gin.H{"res": redemption})
 }

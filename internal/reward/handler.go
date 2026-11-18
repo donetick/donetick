@@ -28,7 +28,8 @@ type RewardReq struct {
 }
 
 type RedeemReq struct {
-	Note *string `json:"note"`
+	Note   *string `json:"note"`
+	UserID *int    `json:"userId"`
 }
 
 type ResolveReq struct {
@@ -284,8 +285,44 @@ func (h *Handler) redeemReward(c *gin.Context) {
 	var req RedeemReq
 	// body is optional (note is optional), so ignore binding errors on an empty body
 	_ = c.ShouldBindJSON(&req)
+	claimant := currentUser
+	if req.UserID != nil && *req.UserID != currentUser.ID {
+		isAdmin, roleErr := h.isAdminOrManager(c, currentUser.ID, currentUser.CircleID)
+		if roleErr != nil {
+			c.JSON(500, gin.H{"error": "Error checking permissions"})
+			return
+		}
+		if !isAdmin {
+			c.JSON(403, gin.H{"error": "Only admins or managers can request a reward for another member"})
+			return
+		}
+		members, membersErr := h.circleRepo.GetCircleUsers(c, currentUser.CircleID)
+		if membersErr != nil {
+			c.JSON(500, gin.H{"error": "Error validating circle member"})
+			return
+		}
+		found := false
+		for _, member := range members {
+			if member.UserID == *req.UserID && member.IsActive {
+				found = true
+				break
+			}
+		}
+		if !found {
+			c.JSON(400, gin.H{"error": "Selected user is not an active member of this circle"})
+			return
+		}
+		claimant = &uModel.UserDetails{User: uModel.User{ID: *req.UserID, CircleID: currentUser.CircleID}}
+		for _, member := range members {
+			if member.UserID == *req.UserID {
+				claimant.Username = member.Username
+				claimant.DisplayName = member.DisplayName
+				break
+			}
+		}
+	}
 
-	redemption, err := h.rRepo.RequestRedemption(c, id, currentUser.ID, currentUser.CircleID, req.Note)
+	redemption, err := h.rRepo.RequestRedemption(c, id, claimant.ID, currentUser.CircleID, req.Note)
 	if err != nil {
 		if err == rRepo.ErrInsufficientPoints {
 			c.JSON(400, gin.H{"error": "Not enough points to redeem this reward"})
@@ -296,9 +333,9 @@ func (h *Handler) redeemReward(c *gin.Context) {
 		return
 	}
 
-	requesterName := currentUser.DisplayName
+	requesterName := claimant.DisplayName
 	if requesterName == "" {
-		requesterName = currentUser.Username
+		requesterName = claimant.Username
 	}
 	if redemption.Status == rModel.RedemptionStatusApproved {
 		if h.eventProducer != nil {
@@ -309,7 +346,7 @@ func (h *Handler) redeemReward(c *gin.Context) {
 			})
 		}
 	} else {
-		h.notifyAdminsOfRedemptionRequest(c, currentUser.CircleID, currentUser, requesterName, redemption)
+		h.notifyAdminsOfRedemptionRequest(c, currentUser.CircleID, claimant, requesterName, redemption)
 	}
 
 	c.JSON(200, gin.H{"res": redemption})

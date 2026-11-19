@@ -843,6 +843,34 @@ func TestScheduleNextDueDateInvalidTimezoneFallsBackToUTC(t *testing.T) {
 	}
 }
 
+// TestFirstDueDateOnSelectedWeekdayUsesLocation checks that the selected
+// weekday is matched in the location the caller resolved for the chore.
+func TestFirstDueDateOnSelectedWeekdayUsesLocation(t *testing.T) {
+	tokyo, err := time.LoadLocation("Asia/Tokyo")
+	if err != nil {
+		t.Fatalf("loading Asia/Tokyo failed despite embedded tzdata: %v", err)
+	}
+	due := time.Date(2026, 9, 18, 15, 0, 0, 0, time.UTC) // Fri in UTC, Sat 00:00 in Tokyo
+	days := []*string{jsonPtr("saturday")}
+
+	tests := []struct {
+		name string
+		loc  *time.Location
+		want time.Time
+	}{
+		{name: "already saturday in tokyo", loc: tokyo, want: due},
+		{name: "friday in utc moves to saturday", loc: time.UTC, want: due.AddDate(0, 0, 1)},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got := firstDueDateOnSelectedWeekday(due, days, test.loc)
+			if !got.Equal(test.want) || got.Location() != time.UTC {
+				t.Errorf("firstDueDateOnSelectedWeekday() = %v, want %v", got, test.want)
+			}
+		})
+	}
+}
+
 func mustLoadBerlin(t *testing.T) *time.Location {
 	t.Helper()
 	loc, err := time.LoadLocation("Europe/Berlin")

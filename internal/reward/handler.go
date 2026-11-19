@@ -1,7 +1,6 @@
 package reward
 
 import (
-	"context"
 	"fmt"
 	"strconv"
 
@@ -38,11 +37,7 @@ type Handler struct {
 	rRepo         *rRepo.RewardRepository
 	circleRepo    *cRepo.CircleRepository
 	dispatcher    *dispatch.Dispatcher
-	eventProducer rewardEvents
-}
-
-type rewardEvents interface {
-	RewardRedeemApproved(context.Context, *string, events.RewardRedemptionData)
+	eventProducer *events.EventsProducer
 }
 
 func NewHandler(rRepo *rRepo.RewardRepository, circleRepo *cRepo.CircleRepository, dispatcher *dispatch.Dispatcher, eventProducer *events.EventsProducer) *Handler {

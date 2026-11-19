@@ -112,7 +112,7 @@ func TestApproveRedemption_DebitsPoints(t *testing.T) {
 		t.Fatalf("request failed: %v", err)
 	}
 
-	if err := r.ApproveRedemption(ctx, redemption.ID, 1, 999); err != nil {
+	if _, err := r.ApproveRedemption(ctx, redemption.ID, 1, 999); err != nil {
 		t.Fatalf("approve failed: %v", err)
 	}
 
@@ -148,10 +148,10 @@ func TestApproveRedemption_NotPending(t *testing.T) {
 	reward := seedReward(t, db, 1, 50)
 	redemption, _ := r.RequestRedemption(ctx, reward.ID, 1, 1, nil)
 
-	if err := r.ApproveRedemption(ctx, redemption.ID, 1, 999); err != nil {
+	if _, err := r.ApproveRedemption(ctx, redemption.ID, 1, 999); err != nil {
 		t.Fatalf("first approve failed: %v", err)
 	}
-	if err := r.ApproveRedemption(ctx, redemption.ID, 1, 999); err != ErrRedemptionNotPending {
+	if _, err := r.ApproveRedemption(ctx, redemption.ID, 1, 999); err != ErrRedemptionNotPending {
 		t.Fatalf("expected ErrRedemptionNotPending on second approve, got %v", err)
 	}
 }

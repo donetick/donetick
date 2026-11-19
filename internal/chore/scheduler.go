@@ -222,7 +222,7 @@ func rawNextDueDate(ctx context.Context, chore *chModel.Chore, completedDate tim
 		currentMonth := int(baseDate.Month())
 
 		var startFrom int
-		if chore.NextDueDate != nil && baseDate.Month() == chore.NextDueDate.Month() {
+		if chore.NextDueDate != nil && baseDate.Month() == chore.NextDueDate.In(loc).Month() {
 			startFrom = 1
 		}
 

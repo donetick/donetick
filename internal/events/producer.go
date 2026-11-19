@@ -29,8 +29,9 @@ const (
 	EventTypeTaskCompleted    EventType = "task.completed"
 	EventTypeSubTaskCompleted EventType = "subtask.completed"
 	// EventTypeTaskReassigned EventType = "task.reassigned"
-	EventTypeTaskSkipped  EventType = "task.skipped"
-	EventTypeThingChanged EventType = "thing.changed"
+	EventTypeTaskSkipped          EventType = "task.skipped"
+	EventTypeThingChanged         EventType = "thing.changed"
+	EventTypeRewardRedeemApproved EventType = "reward.redeem_approved"
 )
 
 type Event struct {
@@ -45,6 +46,24 @@ type ChoreData struct {
 	Username    string         `json:"username"`
 	DisplayName string         `json:"display_name"`
 	Note        string         `json:"note"`
+}
+
+type RewardRedemptionData struct {
+	RedemptionID    int `json:"redemption_id"`
+	RewardID        int `json:"reward_id"`
+	RecipientUserID int `json:"recipient_user_id"`
+}
+
+func (p *EventsProducer) RewardRedeemApproved(ctx context.Context, url *string, data RewardRedemptionData) {
+	if url == nil || *url == "" {
+		return
+	}
+	p.publishEvent(Event{
+		URL:       *url,
+		Type:      EventTypeRewardRedeemApproved,
+		Timestamp: time.Now().UTC(),
+		Data:      data,
+	})
 }
 
 type EventsProducer struct {

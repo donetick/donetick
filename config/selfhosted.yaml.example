@@ -34,6 +34,11 @@ server:
   serve_frontend: true
   serve_swagger: true
   public_host: "" # example: https://yourpublicdomain.com
+  # Serve the web UI under a path prefix (a reverse proxy must strip it), e.g. "/donetick".
+  base_path: ""
+  # Take the prefix from this request header sent by a reverse proxy instead.
+  # (e.g. Home Assistant's ingress "X-Ingress-Path" or  "X-Forwarded-Prefix".)
+  base_path_header: ""
 logging:
   level: "info"
   encoding: "json"

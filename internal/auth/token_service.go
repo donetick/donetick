@@ -21,6 +21,7 @@ type TokenService struct {
 	jwtAuth            *jwt.GinJWTMiddleware
 	sessionTime        time.Duration
 	refreshTokenExpiry time.Duration
+	insecureCookies    bool
 }
 
 // TokenResponse represents the response containing both access and refresh tokens
@@ -48,6 +49,7 @@ func NewTokenService(userRepo *uRepo.UserRepository, jwtAuth *jwt.GinJWTMiddlewa
 		jwtAuth:            jwtAuth,
 		sessionTime:        cfg.Jwt.SessionTime,
 		refreshTokenExpiry: cfg.Jwt.MaxRefresh,
+		insecureCookies:    cfg.Server.InsecureCookies,
 	}
 }
 

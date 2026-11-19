@@ -28,6 +28,7 @@ import (
 	"donetick.com/core/internal/events"
 	label "donetick.com/core/internal/label"
 	lRepo "donetick.com/core/internal/label/repo"
+	"donetick.com/core/internal/mcp"
 	"donetick.com/core/internal/mfa"
 	"donetick.com/core/internal/project"
 	pjRepo "donetick.com/core/internal/project/repo"
@@ -223,6 +224,7 @@ func main() {
 		fx.Provide(realtime.NewPollingHandler),
 
 		// MCP server
+		fx.Provide(mcp.NewHandler),
 
 		// fx.Invoke(RunApp),
 		fx.Invoke(
@@ -239,6 +241,7 @@ func main() {
 			reward.Routes,
 			project.Routes,
 			filter.Routes,
+			mcp.Routes,
 
 			storage.Routes,
 			frontend.Routes,

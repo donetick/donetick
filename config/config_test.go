@@ -38,4 +38,7 @@ func TestGenerateDefaultConfigFile(t *testing.T) {
 	if !cfg.Server.ServeFrontend {
 		t.Error("expected serve_frontend to be true")
 	}
+	if cfg.MCP.Enabled {
+		t.Error("expected the MCP server to be off by default")
+	}
 }

@@ -309,6 +309,9 @@ func newServer(lc fx.Lifecycle, cfg *config.Config, db *gorm.DB, notifier *notif
 		"Referer",
 		"X-Impersonate-User-ID",
 		"refresh_token",
+		"MCP-Protocol-Version",
+		"Mcp-Method",
+		"Mcp-Name",
 	)
 	// Expose headers that the frontend might need
 	corsConfig.AddExposeHeaders("Content-Type")

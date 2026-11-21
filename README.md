@@ -74,21 +74,7 @@ Reward and redemption endpoints under `/api/v1/rewards` accept either a JWT or a
 
 **Webhook System**: Connect Donetick to external systems using flexible webhook support good for custom notification flows or automations.
 
-When a reward redemption is approved, the circle webhook receives a `reward.redeem_approved` event after the approval and points debit are committed:
-
-```json
-{
-  "type": "reward.redeem_approved",
-  "timestamp": "2026-11-18T12:00:00Z",
-  "data": {
-    "redemption_id": 7,
-    "reward_id": 42,
-    "recipient_user_id": 2
-  }
-}
-```
-
-`recipient_user_id` identifies the member receiving the reward, rather than the approver. Consumers can use `redemption_id` to avoid fulfilling the same redemption twice. Failed or repeated approvals do not emit an event. Delivery uses the existing circle webhook configuration and delivery policy. Delivery is best effort: a delivery failure does not undo approval, and queued events are not durable across restarts.
+**MCP Server**: Let AI assistants manage your tasks through a built-in [Model Context Protocol](https://modelcontextprotocol.io) server. It works through the REST API, with the same access tokens and permissions. See [MCP Server](#mcp-server).
 
 ---
 
@@ -263,6 +249,47 @@ Group matching is **exact-string and case-sensitive**.
      - DT_OAUTH2_MANAGER_GROUPS=donetick-managers
      - DT_DISABLE_PASSWORD_AUTH=true
    ```
+
+---
+
+## MCP Server
+
+Donetick includes a [Model Context Protocol](https://modelcontextprotocol.io) (MCP) server, so AI assistants and other MCP clients can read and manage your tasks. Donetick serves it itself at `/mcp`; there is nothing extra to run.
+
+It is off by default. Turn it on with the `DT_MCP_ENABLED=true` environment variable, or in the config file:
+
+```yaml
+mcp:
+  enabled: true
+```
+
+Then give your MCP client the URL `https://<your-donetick-host>/mcp` (Streamable HTTP transport) and a Donetick API token (a long-lived access token) as a bearer token. For example, with Claude Code:
+
+```bash
+claude mcp add --transport http donetick https://<your-donetick-host>/mcp --header "Authorization: Bearer <api token>"
+```
+
+The token can also be sent in the `secretkey` header, as with the rest of the API.
+
+### Tools
+
+| Area | Tools |
+|---|---|
+| Tasks | `list_chores`, `get_chore`, `create_chore`, `update_chore`, `complete_chore`, `skip_chore`, `archive_chore`, `unarchive_chore`, `delete_chore`, `get_chore_history`, `list_recent_activity` |
+| Labels | `list_labels`, `create_label`, `update_label`, `delete_label` |
+| Projects | `list_projects`, `create_project`, `update_project`, `delete_project` |
+| Filters | `list_filters`, `create_filter`, `update_filter`, `delete_filter` |
+| Things | `list_things`, `create_thing`, `update_thing`, `set_thing_state`, `delete_thing` |
+
+### Good to know
+
+- Every tool goes through the REST API (`/api/v1`) as the owner of the token. The API's own permission checks and validation apply, and webhooks and notifications fire as usual.
+- Nothing that manages users, circles or API tokens is available through MCP.
+- The `update_*` tools change only the fields they are given; everything else keeps its current value.
+- A task triggered by a Thing can only be updated by the owner of that Thing.
+- People appear as numeric user ids, the same ids the API uses.
+- Requests sent by web pages (those with an `Origin` header) are refused unless the origin is the Donetick host itself or is listed in `server.cors_allow_origins`.
+- Both the stateless MCP revision (`2026-07-28`) and the earlier handshake-based revisions (`2025-03-26` to `2025-11-25`) are supported. The server keeps no session state.
 
 ---
 

@@ -22,10 +22,12 @@ type RewardReq struct {
 	Description string `json:"description"`
 	PointsCost  int    `json:"pointsCost" binding:"required,gt=0"`
 	IsActive    *bool  `json:"isActive"`
+	AutoApprove *bool  `json:"autoApprove"`
 }
 
 type RedeemReq struct {
-	Note *string `json:"note"`
+	Note   *string `json:"note"`
+	UserID *int    `json:"userId"`
 }
 
 type ResolveReq struct {
@@ -156,6 +158,10 @@ func (h *Handler) createReward(c *gin.Context) {
 	if req.IsActive != nil {
 		isActive = *req.IsActive
 	}
+	autoApprove := false
+	if req.AutoApprove != nil {
+		autoApprove = *req.AutoApprove
+	}
 
 	reward := &rModel.Reward{
 		CircleID:    currentUser.CircleID,
@@ -163,6 +169,7 @@ func (h *Handler) createReward(c *gin.Context) {
 		Description: req.Description,
 		PointsCost:  req.PointsCost,
 		IsActive:    isActive,
+		AutoApprove: autoApprove,
 		CreatedBy:   currentUser.ID,
 	}
 	if err := h.rRepo.CreateReward(c, reward); err != nil {
@@ -214,11 +221,16 @@ func (h *Handler) updateReward(c *gin.Context) {
 		PointsCost:  req.PointsCost,
 		IsActive:    isActive,
 	}
-	if err := h.rRepo.UpdateReward(c, reward); err != nil {
+	if err := h.rRepo.UpdateReward(c, reward, req.AutoApprove); err != nil {
 		c.JSON(500, gin.H{"error": "Error updating reward"})
 		return
 	}
-	c.JSON(200, gin.H{"res": reward})
+	updatedReward, err := h.rRepo.GetReward(c, id, currentUser.CircleID)
+	if err != nil {
+		c.JSON(500, gin.H{"error": "Error retrieving updated reward"})
+		return
+	}
+	c.JSON(200, gin.H{"res": updatedReward})
 }
 
 func (h *Handler) deleteReward(c *gin.Context) {
@@ -267,8 +279,44 @@ func (h *Handler) redeemReward(c *gin.Context) {
 	var req RedeemReq
 	// body is optional (note is optional), so ignore binding errors on an empty body
 	_ = c.ShouldBindJSON(&req)
+	claimant := currentUser
+	if req.UserID != nil && *req.UserID != currentUser.ID {
+		isAdmin, roleErr := h.isAdminOrManager(c, currentUser.ID, currentUser.CircleID)
+		if roleErr != nil {
+			c.JSON(500, gin.H{"error": "Error checking permissions"})
+			return
+		}
+		if !isAdmin {
+			c.JSON(403, gin.H{"error": "Only admins or managers can request a reward for another member"})
+			return
+		}
+		members, membersErr := h.circleRepo.GetCircleUsers(c, currentUser.CircleID)
+		if membersErr != nil {
+			c.JSON(500, gin.H{"error": "Error validating circle member"})
+			return
+		}
+		found := false
+		for _, member := range members {
+			if member.UserID == *req.UserID && member.IsActive {
+				found = true
+				break
+			}
+		}
+		if !found {
+			c.JSON(400, gin.H{"error": "Selected user is not an active member of this circle"})
+			return
+		}
+		claimant = &uModel.UserDetails{User: uModel.User{ID: *req.UserID, CircleID: currentUser.CircleID}}
+		for _, member := range members {
+			if member.UserID == *req.UserID {
+				claimant.Username = member.Username
+				claimant.DisplayName = member.DisplayName
+				break
+			}
+		}
+	}
 
-	redemption, err := h.rRepo.RequestRedemption(c, id, currentUser.ID, currentUser.CircleID, req.Note)
+	redemption, err := h.rRepo.RequestRedemption(c, id, claimant.ID, currentUser.CircleID, req.Note)
 	if err != nil {
 		if err == rRepo.ErrInsufficientPoints {
 			c.JSON(400, gin.H{"error": "Not enough points to redeem this reward"})
@@ -279,11 +327,21 @@ func (h *Handler) redeemReward(c *gin.Context) {
 		return
 	}
 
-	requesterName := currentUser.DisplayName
+	requesterName := claimant.DisplayName
 	if requesterName == "" {
-		requesterName = currentUser.Username
+		requesterName = claimant.Username
 	}
-	h.notifyAdminsOfRedemptionRequest(c, currentUser.CircleID, currentUser, requesterName, redemption)
+	if redemption.Status == rModel.RedemptionStatusApproved {
+		if h.eventProducer != nil {
+			h.eventProducer.RewardRedeemApproved(c, currentUser.WebhookURL, events.RewardRedemptionData{
+				RedemptionID:    redemption.ID,
+				RewardID:        redemption.RewardID,
+				RecipientUserID: redemption.UserID,
+			})
+		}
+	} else {
+		h.notifyAdminsOfRedemptionRequest(c, currentUser.CircleID, claimant, requesterName, redemption)
+	}
 
 	c.JSON(200, gin.H{"res": redemption})
 }

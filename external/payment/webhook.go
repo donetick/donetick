@@ -30,6 +30,7 @@ type Webhook struct {
 	whitelistIPs     map[string]bool
 	stripe           *stripeService.StripeService
 	prices           []config.StripePrices
+	stripeProducts   map[string]bool
 	revenueCatConfig config.RevenueCatConfig
 	userRepo         *uRepo.UserRepository
 }
@@ -46,6 +47,11 @@ func NewWebhook(stripeDB pDB.StripeDB,
 		whitelistIPs[ip] = true
 	}
 
+	stripeProducts := make(map[string]bool)
+	for _, productID := range config.StripeConfig.ProductIDs {
+		stripeProducts[productID] = true
+	}
+
 	return &Webhook{
 		stripeDB:         stripeDB,
 		revenueCatDB:     revenueCatDB,
@@ -54,6 +60,7 @@ func NewWebhook(stripeDB pDB.StripeDB,
 		stripe:           stripeService,
 		userRepo:         uRepo,
 		prices:           config.StripeConfig.Prices,
+		stripeProducts:   stripeProducts,
 		revenueCatConfig: config.RevenueCatConfig,
 	}
 }
@@ -64,26 +71,51 @@ func (h *Webhook) isIPWhitelisted(ip string) bool {
 	return ok
 }
 
-// stripeSubscriptionExpiry reads the paid-through date from Stripe. Webhook
-// payloads don't expand the subscription, and the plan interval isn't knowable
-// from the event, so the period end has to come from the API rather than being
-// derived by adding a fixed interval.
-func (h *Webhook) stripeSubscriptionExpiry(c *gin.Context, subscriptionID string) (time.Time, error) {
+// stripeSubscription reads the subscription behind an event from Stripe.
+// Webhook payloads don't expand the subscription, so it is the only source for
+// both the product the plan belongs to and the paid-through date.
+func (h *Webhook) stripeSubscription(c *gin.Context, subscriptionID string) (*stripe.Subscription, error) {
 	logger := logging.FromContext(c)
 
 	sub, err := h.stripe.GetSubscription(subscriptionID)
 	if err != nil {
-		logger.Errorw("payment.webhook.stripeSubscriptionExpiry failed to get subscription",
+		logger.Errorw("payment.webhook.stripeSubscription failed to get subscription",
 			"subscription_id", subscriptionID, "err", err)
-		return time.Time{}, err
+		return nil, err
 	}
+	return sub, nil
+}
 
+// ownsSubscription reports whether a subscription belongs to this app. The
+// Stripe account is shared with another service and events carry no app
+// identifier, so ownership is decided by the product behind the subscription's
+// items. An empty allowlist accepts everything: dropping every event is a
+// worse failure than the unfiltered behavior it would replace.
+func (h *Webhook) ownsSubscription(sub *stripe.Subscription) bool {
+	if len(h.stripeProducts) == 0 {
+		return true
+	}
+	if sub == nil || sub.Items == nil {
+		return false
+	}
+	for _, item := range sub.Items.Data {
+		if item.Price == nil || item.Price.Product == nil {
+			continue
+		}
+		if h.stripeProducts[item.Price.Product.ID] {
+			return true
+		}
+	}
+	return false
+}
+
+// subscriptionExpiry is the paid-through date. The plan interval isn't knowable
+// from the event, so it has to come from the subscription rather than being
+// derived by adding a fixed interval.
+func subscriptionExpiry(sub *stripe.Subscription) (time.Time, error) {
 	if sub.CurrentPeriodEnd == 0 {
-		logger.Errorw("payment.webhook.stripeSubscriptionExpiry subscription has no current period end",
-			"subscription_id", subscriptionID)
 		return time.Time{}, errors.New("stripe subscription has no current_period_end")
 	}
-
 	return time.Unix(sub.CurrentPeriodEnd, 0).UTC(), nil
 }
 
@@ -133,6 +165,21 @@ func (h *Webhook) StripeWebhook(c *gin.Context) {
 			return
 		}
 
+		sub, err := h.stripeSubscription(c, s.Subscription.ID)
+		if err != nil {
+			// Returning an error lets Stripe retry rather than storing a guessed
+			// expiration.
+			c.JSON(http.StatusInternalServerError, "Internal Server Error")
+			return
+		}
+
+		if !h.ownsSubscription(sub) {
+			logger.Debugw("payment.webhook.Webhook ignoring subscription for another product",
+				"event", event.Type, "subscription_id", s.Subscription.ID)
+			c.JSON(http.StatusOK, nil)
+			return
+		}
+
 		// Get user ID from stripe customer
 		customer, err := h.stripeDB.GetCustomerByCustomerID(c, s.Customer.ID)
 		if err != nil {
@@ -140,10 +187,10 @@ func (h *Webhook) StripeWebhook(c *gin.Context) {
 			return
 		}
 
-		expiredAt, err := h.stripeSubscriptionExpiry(c, s.Subscription.ID)
+		expiredAt, err := subscriptionExpiry(sub)
 		if err != nil {
-			// Returning an error lets Stripe retry rather than storing a guessed
-			// expiration.
+			logger.Errorw("payment.webhook.Webhook failed to get subscription expiry",
+				"subscription_id", s.Subscription.ID, "err", err)
 			c.JSON(http.StatusInternalServerError, "Internal Server Error")
 			return
 		}
@@ -195,6 +242,19 @@ func (h *Webhook) StripeWebhook(c *gin.Context) {
 			return
 		}
 
+		sub, err := h.stripeSubscription(c, inv.Subscription.ID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, "Internal Server Error")
+			return
+		}
+
+		if !h.ownsSubscription(sub) {
+			logger.Debugw("payment.webhook.Webhook ignoring invoice for another product",
+				"invoice_id", inv.ID, "subscription_id", inv.Subscription.ID)
+			c.JSON(http.StatusOK, nil)
+			return
+		}
+
 		mInvoice := &model.StripeInvoice{
 			InvoiceID:      inv.ID,
 			CustomerID:     inv.Customer.ID,
@@ -206,8 +266,10 @@ func (h *Webhook) StripeWebhook(c *gin.Context) {
 		}
 		// The invoice's own period is degenerate on the first payment (start ==
 		// end), so take the period end from the subscription itself.
-		expiredAt, err := h.stripeSubscriptionExpiry(c, inv.Subscription.ID)
+		expiredAt, err := subscriptionExpiry(sub)
 		if err != nil {
+			logger.Errorw("payment.webhook.Webhook failed to get subscription expiry",
+				"subscription_id", inv.Subscription.ID, "err", err)
 			c.JSON(http.StatusInternalServerError, "Internal Server Error")
 			return
 		}

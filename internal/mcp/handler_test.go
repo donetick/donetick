@@ -2,6 +2,7 @@ package mcp
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -184,6 +185,50 @@ func TestModernRequestValidation(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestNotificationTransportValidation(t *testing.T) {
+	engine, _ := newServer(t)
+	method := "notifications/cancelled"
+	body, headers := modern(method, map[string]any{"requestId": 42})
+	var notification object
+	require.NoError(t, json.Unmarshal([]byte(body), &notification))
+	delete(notification, "id")
+	body = string(raw(notification))
+
+	for _, test := range []struct {
+		name    string
+		headers []string
+		code    int
+	}{
+		{"valid", headers, 0},
+		{"missing version header", []string{headerMethod, method}, codeHeaderMismatch},
+		{"mismatched version header", []string{headerProtocolVersion, "2025-11-25", headerMethod, method}, codeHeaderMismatch},
+		{"missing method header", []string{headerProtocolVersion, modernVersion}, codeHeaderMismatch},
+		{"mismatched method header", []string{headerProtocolVersion, modernVersion, headerMethod, "tools/call"}, codeHeaderMismatch},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			r := post(t, engine, alexToken, body, test.headers...)
+			if test.code == 0 {
+				require.Equal(t, http.StatusAccepted, r.status, r.body)
+				require.Empty(t, r.body)
+				return
+			}
+			require.Equal(t, http.StatusBadRequest, r.status, r.body)
+			require.NotNil(t, r.err, r.body)
+			require.Equal(t, test.code, r.err.Code)
+			var response object
+			require.NoError(t, json.Unmarshal([]byte(r.body), &response))
+			require.NotContains(t, response, "id")
+		})
+	}
+
+	r := post(t, engine, alexToken,
+		`{"jsonrpc":"2.0","method":"notifications/cancelled"}`,
+		headerProtocolVersion, modernVersion, headerMethod, method)
+	require.Equal(t, http.StatusBadRequest, r.status, r.body)
+	require.NotNil(t, r.err, r.body)
+	require.Equal(t, codeInvalidParams, r.err.Code)
 }
 
 func TestMalformedRequests(t *testing.T) {

@@ -273,6 +273,9 @@ func (a *choreArguments) apply(chore, given object) {
 		merged := object{}
 		if a.FrequencyMetadata != nil {
 			_ = json.Unmarshal(chore["frequencyMetadata"], &merged)
+			if merged == nil {
+				merged = object{}
+			}
 			var changed object
 			_ = json.Unmarshal(details, &changed)
 			maps.Copy(merged, changed)
@@ -396,7 +399,8 @@ func updateChore(s *session, arguments json.RawMessage) (apiResponse, error) {
 	}
 
 	args.apply(chore, given)
-	if args.FrequencyType != nil || args.Frequency != nil || args.FrequencyMetadata != nil {
+	_, metadataGiven := given["frequencyMetadata"]
+	if args.FrequencyType != nil || args.Frequency != nil || metadataGiven {
 		if err := checkRecurrence(chore); err != nil {
 			return apiResponse{}, err
 		}
@@ -463,6 +467,9 @@ func (a *choreArguments) followDueDate(chore object) {
 	}
 	details := object{}
 	_ = json.Unmarshal(chore["frequencyMetadata"], &details)
+	if details == nil {
+		details = object{}
+	}
 	details["time"] = raw(*recurrence.DueDate)
 	chore["frequencyMetadata"] = raw(details)
 }

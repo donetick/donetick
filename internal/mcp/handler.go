@@ -142,17 +142,18 @@ func (h *Handler) handlePost(c *gin.Context) {
 		writeFailure(c, id, fail)
 		return
 	}
-	if msg.isNotification() {
-		// Nothing a client can notify this server of needs acting on.
-		c.Status(http.StatusAccepted)
-		return
-	}
-
 	modern, fail := negotiate(c.Request.Header, msg)
 	if fail != nil {
 		writeFailure(c, msg.id, fail)
 		return
 	}
+	if msg.isNotification() {
+		// Transport validation applies to notifications too, even though
+		// nothing a client can notify this server of needs acting on.
+		c.Status(http.StatusAccepted)
+		return
+	}
+
 	var result map[string]any
 	if modern {
 		result, fail = h.serveModern(c, msg)

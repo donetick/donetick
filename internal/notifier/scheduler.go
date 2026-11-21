@@ -24,6 +24,12 @@ const (
 	SchedulerKey keyType = "scheduler"
 )
 
+// SentNotificationRetention is how long an already-delivered notification row
+// survives before cleanup removes it. The table is a pure outbound delivery
+// queue -- nothing reads sent rows back into the product -- so retention only
+// needs to cover debugging recent deliveries.
+const SentNotificationRetention = 10 * 24 * time.Hour
+
 type Scheduler struct {
 	choreRepo        *chRepo.ChoreRepository
 	userRepo         *uRepo.UserRepository
@@ -56,7 +62,7 @@ func (s *Scheduler) Start(c context.Context) {
 	log := logging.FromContext(c)
 	log.Debug("Scheduler started")
 	go s.runScheduler(c, " NOTIFICATION_SCHEDULER ", s.loadAndSendNotificationJob, 3*time.Minute)
-	go s.runScheduler(c, " NOTIFICATION_CLEANUP ", s.cleanupSentNotifications, 24*time.Hour*30)
+	go s.runScheduler(c, " NOTIFICATION_CLEANUP ", s.cleanupSentNotifications, 24*time.Hour)
 	go s.runScheduler(c, " BRIDGE_DEVICE_SYNC_RETRY ", s.retryPendingBridgeDeviceSyncJob, 10*time.Minute)
 	go s.runScheduler(c, " NOTIFICATION_DIGEST ", s.generateDigestsJob, 30*time.Minute)
 	go s.runScheduler(c, " DEVICE_TOKEN_CLEANUP ", s.cleanupInactiveDeviceTokensJob, 24*time.Hour)
@@ -141,7 +147,7 @@ func (s *Scheduler) retryPendingBridgeDeviceSyncJob(c context.Context) (time.Dur
 }
 func (s *Scheduler) cleanupSentNotifications(c context.Context) (time.Duration, error) {
 	log := logging.FromContext(c)
-	deleteBefore := time.Now().UTC().Add(-time.Hour * 24 * 30)
+	deleteBefore := time.Now().UTC().Add(-SentNotificationRetention)
 	err := s.notificationRepo.DeleteSentNotifications(c, deleteBefore)
 	if err != nil {
 		log.Error("Error deleting sent notifications", err)

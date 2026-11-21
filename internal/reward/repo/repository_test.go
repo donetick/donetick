@@ -20,6 +20,15 @@ func setupTestDB(t *testing.T) *gorm.DB {
 	if err != nil {
 		t.Fatalf("failed to open sqlite: %v", err)
 	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		t.Fatalf("failed to get database connection: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := sqlDB.Close(); err != nil {
+			t.Errorf("failed to close database connection: %v", err)
+		}
+	})
 	if err := database.Migration(db); err != nil {
 		t.Fatalf("AutoMigrate failed: %v", err)
 	}
@@ -103,7 +112,7 @@ func TestApproveRedemption_DebitsPoints(t *testing.T) {
 		t.Fatalf("request failed: %v", err)
 	}
 
-	if err := r.ApproveRedemption(ctx, redemption.ID, 1, 999); err != nil {
+	if _, err := r.ApproveRedemption(ctx, redemption.ID, 1, 999); err != nil {
 		t.Fatalf("approve failed: %v", err)
 	}
 
@@ -139,10 +148,10 @@ func TestApproveRedemption_NotPending(t *testing.T) {
 	reward := seedReward(t, db, 1, 50)
 	redemption, _ := r.RequestRedemption(ctx, reward.ID, 1, 1, nil)
 
-	if err := r.ApproveRedemption(ctx, redemption.ID, 1, 999); err != nil {
+	if _, err := r.ApproveRedemption(ctx, redemption.ID, 1, 999); err != nil {
 		t.Fatalf("first approve failed: %v", err)
 	}
-	if err := r.ApproveRedemption(ctx, redemption.ID, 1, 999); err != ErrRedemptionNotPending {
+	if _, err := r.ApproveRedemption(ctx, redemption.ID, 1, 999); err != ErrRedemptionNotPending {
 		t.Fatalf("expected ErrRedemptionNotPending on second approve, got %v", err)
 	}
 }

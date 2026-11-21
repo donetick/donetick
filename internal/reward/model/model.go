@@ -10,6 +10,7 @@ type Reward struct {
 	Description string    `json:"description" gorm:"column:description"`
 	PointsCost  int       `json:"pointsCost" gorm:"column:points_cost;not null"`
 	IsActive    bool      `json:"isActive" gorm:"column:is_active;default:true"`
+	AutoApprove bool      `json:"autoApprove" gorm:"column:auto_approve;default:false;not null"`
 	CreatedBy   int       `json:"createdBy" gorm:"column:created_by"`
 	CreatedAt   time.Time `json:"createdAt" gorm:"column:created_at"`
 	UpdatedAt   time.Time `json:"updatedAt" gorm:"column:updated_at"`

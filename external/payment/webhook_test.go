@@ -2,8 +2,10 @@ package payment
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http/httptest"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -16,6 +18,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/glebarez/sqlite"
 	"github.com/stretchr/testify/require"
+	"github.com/stripe/stripe-go/v76"
 	"gorm.io/gorm"
 )
 
@@ -114,5 +117,52 @@ func TestTransferUsesAliasArrays(t *testing.T) {
 			require.Equal(t, original.CircleID, got.CircleID)
 			require.Equal(t, original.ExternalCustomerID, got.ExternalCustomerID)
 		}
+	}
+}
+
+// stripeSubscriptionJSON is the shape Stripe returns for subscription.Get:
+// items are included and each price carries product as a bare ID string, so
+// ownership can be decided without expanding anything.
+func stripeSubscriptionJSON(t *testing.T, productIDs ...string) *stripe.Subscription {
+	t.Helper()
+	items := make([]string, 0, len(productIDs))
+	for i, productID := range productIDs {
+		items = append(items, fmt.Sprintf(
+			`{"id":"si_%d","price":{"id":"price_%d","product":%q}}`, i, i, productID))
+	}
+	payload := fmt.Sprintf(
+		`{"id":"sub_1","current_period_end":1700000000,"items":{"object":"list","data":[%s]}}`,
+		strings.Join(items, ","))
+
+	var sub stripe.Subscription
+	require.NoError(t, json.Unmarshal([]byte(payload), &sub))
+	return &sub
+}
+
+func TestOwnsSubscriptionFiltersForeignProducts(t *testing.T) {
+	ours := stripeSubscriptionJSON(t, "prod_donetick")
+	require.Equal(t, "prod_donetick", ours.Items.Data[0].Price.Product.ID,
+		"product must deserialize from a bare ID string")
+
+	for _, tc := range []struct {
+		name     string
+		products []string
+		sub      *stripe.Subscription
+		want     bool
+	}{
+		{"unconfigured allowlist accepts everything", nil, stripeSubscriptionJSON(t, "prod_other"), true},
+		{"own product", []string{"prod_donetick"}, ours, true},
+		{"other service product", []string{"prod_donetick"}, stripeSubscriptionJSON(t, "prod_other"), false},
+		{"multi-item subscription with one own product", []string{"prod_donetick"}, stripeSubscriptionJSON(t, "prod_other", "prod_donetick"), true},
+		{"no items", []string{"prod_donetick"}, stripeSubscriptionJSON(t), false},
+		{"nil subscription", []string{"prod_donetick"}, nil, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			h := &Webhook{stripeProducts: make(map[string]bool)}
+			for _, productID := range tc.products {
+				h.stripeProducts[productID] = true
+			}
+			require.Equal(t, tc.want, h.ownsSubscription(tc.sub))
+		})
 	}
 }

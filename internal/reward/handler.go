@@ -7,6 +7,7 @@ import (
 	auth "donetick.com/core/internal/auth"
 	circle "donetick.com/core/internal/circle/model"
 	cRepo "donetick.com/core/internal/circle/repo"
+	"donetick.com/core/internal/events"
 	"donetick.com/core/internal/notifier/dispatch"
 	nps "donetick.com/core/internal/notifier/service"
 	rModel "donetick.com/core/internal/reward/model"
@@ -32,16 +33,18 @@ type ResolveReq struct {
 }
 
 type Handler struct {
-	rRepo      *rRepo.RewardRepository
-	circleRepo *cRepo.CircleRepository
-	dispatcher *dispatch.Dispatcher
+	rRepo         *rRepo.RewardRepository
+	circleRepo    *cRepo.CircleRepository
+	dispatcher    *dispatch.Dispatcher
+	eventProducer *events.EventsProducer
 }
 
-func NewHandler(rRepo *rRepo.RewardRepository, circleRepo *cRepo.CircleRepository, dispatcher *dispatch.Dispatcher) *Handler {
+func NewHandler(rRepo *rRepo.RewardRepository, circleRepo *cRepo.CircleRepository, dispatcher *dispatch.Dispatcher, eventProducer *events.EventsProducer) *Handler {
 	return &Handler{
-		rRepo:      rRepo,
-		circleRepo: circleRepo,
-		dispatcher: dispatcher,
+		rRepo:         rRepo,
+		circleRepo:    circleRepo,
+		dispatcher:    dispatcher,
+		eventProducer: eventProducer,
 	}
 }
 
@@ -353,7 +356,8 @@ func (h *Handler) approveRedemption(c *gin.Context) {
 		return
 	}
 
-	if err := h.rRepo.ApproveRedemption(c, id, currentUser.CircleID, currentUser.ID); err != nil {
+	redemption, err := h.rRepo.ApproveRedemption(c, id, currentUser.CircleID, currentUser.ID)
+	if err != nil {
 		if err == rRepo.ErrInsufficientPoints {
 			c.JSON(400, gin.H{"error": "User no longer has enough points for this redemption"})
 			return
@@ -366,6 +370,11 @@ func (h *Handler) approveRedemption(c *gin.Context) {
 		c.JSON(500, gin.H{"error": "Error approving redemption"})
 		return
 	}
+	h.eventProducer.RewardRedeemApproved(c, currentUser.WebhookURL, events.RewardRedemptionData{
+		RedemptionID:    redemption.ID,
+		RewardID:        redemption.RewardID,
+		RecipientUserID: redemption.UserID,
+	})
 	c.JSON(200, gin.H{"message": "Redemption approved"})
 }
 

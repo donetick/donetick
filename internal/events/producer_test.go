@@ -1,6 +1,8 @@
 package events
 
 import (
+	"context"
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -13,6 +15,47 @@ import (
 	"donetick.com/core/internal/webhook"
 	"donetick.com/core/logging"
 )
+
+func TestRewardRedeemApprovedPayload(t *testing.T) {
+	srv, captured := receiver(t, http.StatusOK)
+	p := testProducer(t, nil)
+	data := RewardRedemptionData{RedemptionID: 7, RewardID: 42, RecipientUserID: 2}
+	p.RewardRedeemApproved(context.Background(), &srv.URL, data)
+	select {
+	case event := <-p.queue:
+		p.processEvent(event)
+	default:
+		t.Fatal("no approval event queued")
+	}
+	reqs := captured()
+	if len(reqs) != 1 {
+		t.Fatalf("expected one delivery, got %d", len(reqs))
+	}
+	var body struct {
+		Type      EventType            `json:"type"`
+		Timestamp time.Time            `json:"timestamp"`
+		Data      RewardRedemptionData `json:"data"`
+	}
+	if err := json.Unmarshal([]byte(reqs[0].body), &body); err != nil {
+		t.Fatal(err)
+	}
+	if body.Type != EventTypeRewardRedeemApproved || reqs[0].event != string(EventTypeRewardRedeemApproved) || body.Timestamp.IsZero() || body.Data != data {
+		t.Fatalf("unexpected approval webhook: %s", reqs[0].body)
+	}
+}
+
+func TestRewardRedeemApprovedWithoutWebhook(t *testing.T) {
+	p := testProducer(t, nil)
+	empty := ""
+	for _, url := range []*string{nil, &empty} {
+		p.RewardRedeemApproved(context.Background(), url, RewardRedemptionData{})
+	}
+	select {
+	case event := <-p.queue:
+		t.Fatalf("unexpected event without webhook URL: %+v", event)
+	default:
+	}
+}
 
 type capturedRequest struct {
 	body      string

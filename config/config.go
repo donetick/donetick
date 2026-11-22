@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -141,6 +142,13 @@ type ServerConfig struct {
 	ServeFrontend    bool          `mapstructure:"serve_frontend" yaml:"serve_frontend"`
 	ServeSwagger     bool          `mapstructure:"serve_swagger" yaml:"serve_swagger"`
 	PublicHost       string        `mapstructure:"public_host" yaml:"public_host" default:"http://localhost:2021"`
+	// Allows Donetick to run under a subpath like "/donetick" or "/hassio/ingress/a0d7b954_donetick".
+	// A reverse proxy that strips the prefix must remove the subpath before forwarding.
+	BasePath string `mapstructure:"base_path" yaml:"base_path"`
+	// BasePathHeader names a request header set by a reverse proxy that carries the path prefix.
+	// (e.g. Home Assistant's ingress "X-Ingress-Path" or  "X-Forwarded-Prefix".)
+	// When the header is present and valid it overrides BasePath for that request.
+	BasePathHeader string `mapstructure:"base_path_header" yaml:"base_path_header"`
 }
 
 type SchedulerConfig struct {
@@ -443,6 +451,10 @@ func LoadConfig() *Config {
 	}
 	// Override with environment variables if set:
 	viper.AutomaticEnv()
+	// AutomaticEnv only applies to keys viper already knows from the config file.
+	// Older generated configs predate these keys so bind DT_SERVER_BASE_PATH, and DT_SERVER_BASE_PATH_HEADER explicitly.
+	_ = viper.BindEnv("server.base_path")
+	_ = viper.BindEnv("server.base_path_header")
 
 	var config Config
 	err = viper.Unmarshal(&config)
@@ -463,6 +475,11 @@ func LoadConfig() *Config {
 	fmt.Printf("--ConfigLoad name : %s ", config.Name)
 
 	configEnvironmentOverrides(&config)
+
+	if err := validateBasePathConfig(&config.Server); err != nil {
+		fmt.Printf("\n\n❌ Invalid configuration: %s\n\n", err.Error())
+		panic(err)
+	}
 
 	// Validate JWT secret strength
 	if config.Name != "local" {
@@ -528,6 +545,56 @@ func validateJWTSecret(secret string) error {
 		fmt.Printf("      - ENV:  export DT_JWT_SECRET=\"<your_secure_secret>\"\n")
 		fmt.Printf("\n❌ Application will not start with weak JWT secrets for security reasons.\n\n")
 		panic("Weak JWT secret detected - application startup aborted for security")
+	}
+	return nil
+}
+
+// basePathPattern accepts one or more "/segment" parts made of URL-safe characters.
+// Whitespace, quotes, angle brackets, "//", etc. are rejected so that a value that passes can be written into HTML and JS without escaping issues and cannot point the browser at another origin.
+var basePathPattern = regexp.MustCompile(`^(/[A-Za-z0-9_~-][A-Za-z0-9._~-]*)+$`)
+
+// headerNamePattern accepts header names made of letters and digits joined by single hyphens, starting with a letter.
+// e.g. "X-Ingress-Path" or "X-Forwarded-Prefix"
+// This allows a subset of the characters allowed by headers, but should allow all header names used for this purpose.
+var headerNamePattern = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9]*(-[A-Za-z0-9]+)*$`)
+
+const maxHeaderNameLen = 64
+
+// SanitizeBasePath validates a path prefix and drops one trailing slash ("/foo/" -> "/foo").
+// "" and "/" mean "served at the root" and return "".
+// Whitespace is never accepted.
+func SanitizeBasePath(p string) (string, bool) {
+	if p == "" || p == "/" {
+		return "", true
+	}
+	p = strings.TrimSuffix(p, "/")
+	if !basePathPattern.MatchString(p) {
+		return "", false
+	}
+	for _, seg := range strings.Split(p, "/") {
+		if seg == "." || seg == ".." {
+			return "", false
+		}
+	}
+	return p, true
+}
+
+func ValidHeaderName(name string) bool {
+	if name == "" {
+		return true
+	}
+	return len(name) <= maxHeaderNameLen && headerNamePattern.MatchString(name)
+}
+
+// validateBasePathConfig normalises server.base_path and returns an error if it or server.base_path_header is invalid.
+func validateBasePathConfig(s *ServerConfig) error {
+	p, ok := SanitizeBasePath(s.BasePath)
+	if !ok {
+		return fmt.Errorf("server.base_path %q is not a valid path prefix: use \"/segment\" strings made up of letters, digits, '-', '_', '.', '~' (e.g. \"/donetick\", \"/hassio/ingress/a0d7b954_donetick\")", s.BasePath)
+	}
+	s.BasePath = p
+	if !ValidHeaderName(s.BasePathHeader) {
+		return fmt.Errorf("server.base_path_header %q is not a valid header name: use letters and digits joined by single hyphens (e.g. \"X-Ingress-Path\")", s.BasePathHeader)
 	}
 	return nil
 }

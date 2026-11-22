@@ -204,7 +204,7 @@ type FCMConfig struct {
 // a YAML file. It must never be logged or returned by any Core API after
 // initial setup.
 type BridgeConfig struct {
-	Enabled        bool   `json:"enabled" mapstructure:"enabled" yaml:"enabled"`
+	Enabled        bool   `json:"enabled" mapstructure:"enabled" yaml:"enabled" default:"true"`
 	BaseURL        string `json:"base_url" mapstructure:"base_url" yaml:"base_url"`
 	InstanceID     string `json:"instance_id" mapstructure:"instance_id" yaml:"instance_id"`
 	InstanceToken  string `json:"-" mapstructure:"instance_token" yaml:"instance_token"`

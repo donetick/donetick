@@ -3,11 +3,15 @@ package reward
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
+	"net/http"
 	"net/http/httptest"
 	"path/filepath"
 	"testing"
+	"time"
 
+	"donetick.com/core/config"
 	cModel "donetick.com/core/internal/circle/model"
 	cRepo "donetick.com/core/internal/circle/repo"
 	"donetick.com/core/internal/events"
@@ -39,14 +43,6 @@ type failedCommitTx struct{ *sql.Tx }
 func (tx failedCommitTx) Commit() error {
 	_ = tx.Tx.Rollback()
 	return errors.New("injected commit failure")
-}
-
-type rewardEventRecorder struct {
-	onApproved func(*string, events.RewardRedemptionData)
-}
-
-func (r rewardEventRecorder) RewardRedeemApproved(_ context.Context, url *string, data events.RewardRedemptionData) {
-	r.onApproved(url, data)
 }
 
 func TestApprovedRedemptionWebhook(t *testing.T) {
@@ -85,21 +81,38 @@ func TestApprovedRedemptionWebhook(t *testing.T) {
 			if scenario.rollback {
 				require.NoError(t, db.Migrator().DropTable(&pModel.PointsHistory{}))
 			}
-			url := "https://ha.example/api/webhook/reward"
-			calls := 0
-			publisher := rewardEventRecorder{onApproved: func(gotURL *string, data events.RewardRedemptionData) {
-				calls++
-				require.Equal(t, &url, gotURL)
-				require.Equal(t, events.RewardRedemptionData{RedemptionID: 7, RewardID: 42, RecipientUserID: 2}, data)
-				// Read outside the approval transaction to check that publication follows commit.
-				var stored rModel.RewardRedemption
-				require.NoError(t, db.First(&stored, 7).Error)
-				require.Equal(t, rModel.RedemptionStatusApproved, stored.Status)
-				require.Equal(t, 1, *stored.ResolvedBy)
-				var member cModel.UserCircle
-				require.NoError(t, db.Where("user_id = ?", 2).First(&member).Error)
-				require.Equal(t, 25, member.PointsRedeemed)
-			}}
+			type delivery struct {
+				Type events.EventType            `json:"type"`
+				Data events.RewardRedemptionData `json:"data"`
+			}
+			received := make(chan delivery, 10)
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				var event delivery
+				if err := json.NewDecoder(r.Body).Decode(&event); err != nil {
+					t.Errorf("decode webhook: %v", err)
+					w.WriteHeader(http.StatusBadRequest)
+					return
+				}
+				received <- event
+				w.WriteHeader(http.StatusOK)
+			}))
+			t.Cleanup(server.Close)
+			url := server.URL
+			publisher := events.NewEventsProducer(&config.Config{WebhookConfig: config.WebhookConfig{
+				QueueSize: 10, Timeout: 2 * time.Second, AllowLoopback: true,
+				MaxResponseBytes: 4096, RateLimitPerMinute: 60,
+			}})
+			publisher.Start(context.Background())
+			nextDelivery := func() delivery {
+				t.Helper()
+				select {
+				case event := <-received:
+					return event
+				case <-time.After(5 * time.Second):
+					t.Fatal("timed out waiting for webhook delivery")
+					return delivery{}
+				}
+			}
 			approvalDB := db
 			if scenario.name == "commit failure" {
 				approvalDB = db.Session(&gorm.Session{NewDB: true})
@@ -120,11 +133,19 @@ func TestApprovedRedemptionWebhook(t *testing.T) {
 			}
 			require.Equal(t, scenario.want, request())
 			if scenario.want == 200 {
-				require.Equal(t, 1, calls)
+				event := nextDelivery()
+				require.Equal(t, events.EventTypeRewardRedeemApproved, event.Type)
+				require.Equal(t, events.RewardRedemptionData{RedemptionID: 7, RewardID: 42, RecipientUserID: 2}, event.Data)
+				var stored rModel.RewardRedemption
+				require.NoError(t, db.First(&stored, 7).Error)
+				require.Equal(t, rModel.RedemptionStatusApproved, stored.Status)
+				require.NotNil(t, stored.ResolvedBy)
+				require.Equal(t, 1, *stored.ResolvedBy)
+				var member cModel.UserCircle
+				require.NoError(t, db.Where("user_id = ?", 2).First(&member).Error)
+				require.Equal(t, 25, member.PointsRedeemed)
 				require.Equal(t, 400, request())
-				require.Equal(t, 1, calls, "repeated approval must not publish again")
 			} else {
-				require.Zero(t, calls)
 				var stored rModel.RewardRedemption
 				require.NoError(t, db.First(&stored, 7).Error)
 				require.Equal(t, scenario.status, stored.Status)
@@ -137,6 +158,11 @@ func TestApprovedRedemptionWebhook(t *testing.T) {
 					require.Zero(t, count, "failed approval must not leave points history")
 				}
 			}
+			// The producer delivers FIFO. A sentinel proves all prior events have
+			// been processed without relying on sleeps to detect extra deliveries.
+			sentinel := events.RewardRedemptionData{RedemptionID: -1}
+			publisher.RewardRedeemApproved(context.Background(), &url, sentinel)
+			require.Equal(t, sentinel, nextDelivery().Data, "failed or repeated approval must not publish")
 		})
 	}
 }

@@ -61,7 +61,7 @@ func newRewardAuthTest(t *testing.T) *rewardAuthTest {
 	jwtMiddleware, err := auth.NewAuthMiddleware(cfg, users, nil)
 	require.NoError(t, err)
 	router := gin.New()
-	Routes(router, NewHandler(rRepo.NewRewardRepository(db, cfg), cRepo.NewCircleRepository(db), nil), auth.NewMultiAuthMiddleware(jwtMiddleware, users))
+	Routes(router, NewHandler(rRepo.NewRewardRepository(db, cfg), cRepo.NewCircleRepository(db), nil, nil), auth.NewMultiAuthMiddleware(jwtMiddleware, users))
 	return &rewardAuthTest{router: router, db: db, jwt: jwtMiddleware}
 }
 

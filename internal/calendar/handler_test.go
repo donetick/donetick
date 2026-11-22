@@ -635,7 +635,7 @@ func TestBuildICalFeed_BasicChore(t *testing.T) {
 		{"DTSTART", "DTSTART:20250615T100000Z"},
 		{"SUMMARY", "SUMMARY:Kitchen Cleaning"},
 		{"PRIORITY", "PRIORITY:5"},
-		{"STATUS", "STATUS:NEEDS-ACTION"},
+		{"STATUS", "STATUS:CONFIRMED"},
 		{"LAST-MODIFIED", "LAST-MODIFIED:20250601T120000Z"},
 	}
 
@@ -710,8 +710,12 @@ func TestBuildICalFeed_InProgressStatus(t *testing.T) {
 
 	result := buildICalFeed(chores, "Test", "")
 
-	if !strings.Contains(result, "STATUS:IN-PROCESS") {
-		t.Errorf("expected IN-PROCESS status, got:\n%s", result)
+	// NEEDS-ACTION and IN-PROCESS are VTODO statuses, not VEVENT statuses.
+	if !strings.Contains(result, "STATUS:CONFIRMED") {
+		t.Errorf("expected CONFIRMED event status for an in-progress chore, got:\n%s", result)
+	}
+	if strings.Contains(result, "STATUS:IN-PROCESS") || strings.Contains(result, "STATUS:NEEDS-ACTION") {
+		t.Errorf("unexpected VTODO status in VEVENT, got:\n%s", result)
 	}
 }
 

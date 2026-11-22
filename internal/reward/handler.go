@@ -428,11 +428,13 @@ func (h *Handler) approveRedemption(c *gin.Context) {
 		c.JSON(500, gin.H{"error": "Error approving redemption"})
 		return
 	}
-	h.eventProducer.RewardRedeemApproved(c, currentUser.WebhookURL, events.RewardRedemptionData{
-		RedemptionID:    redemption.ID,
-		RewardID:        redemption.RewardID,
-		RecipientUserID: redemption.UserID,
-	})
+	if h.eventProducer != nil {
+		h.eventProducer.RewardRedeemApproved(c, currentUser.WebhookURL, events.RewardRedemptionData{
+			RedemptionID:    redemption.ID,
+			RewardID:        redemption.RewardID,
+			RecipientUserID: redemption.UserID,
+		})
+	}
 	c.JSON(200, gin.H{"message": "Redemption approved"})
 }
 

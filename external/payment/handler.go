@@ -39,6 +39,16 @@ func NewHandler(stripeDB pDB.StripeDB, subscriptionDB pDB.SubscriptionDB, stripe
 	}
 }
 
+// CreateSubscription godoc
+//
+//	@Summary		Start a Plus subscription checkout
+//	@Description	Creates a Stripe checkout session for the current user and returns its URL.
+//	@Tags			payments
+//	@Produce		json
+//	@Security		JWTKeyAuth
+//	@Success		200	{object}	map[string]string	"sessionURL: Stripe checkout URL"
+//	@Failure		500	{object}	map[string]string	"error: Failed to create customer | Failed to create checkout session"
+//	@Router			/api/v1/payments/create-subscription [get]
 func (h *Handler) CreateSubscription(c *gin.Context) {
 	logger := logging.FromContext(c)
 	currentUser := auth.MustCurrentUser(c)
@@ -91,6 +101,16 @@ func (h *Handler) CreateSubscription(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"sessionURL": session.URL})
 }
 
+// CancelSubscription godoc
+//
+//	@Summary	Cancel my subscription
+//	@Tags		payments
+//	@Produce	json
+//	@Security	JWTKeyAuth
+//	@Success	200	{object}	map[string]string	"message: Subscription cancelled, provider"
+//	@Failure	404	{object}	map[string]string	"error: No active subscription found"
+//	@Failure	500	{object}	map[string]string	"error: Failed to get subscription | Failed to cancel subscription | Failed to update subscription"
+//	@Router		/api/v1/payments/cancel-subscription [post]
 func (h *Handler) CancelSubscription(c *gin.Context) {
 	logger := logging.FromContext(c)
 	currentUser := auth.MustCurrentUser(c)

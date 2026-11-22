@@ -10,12 +10,1102 @@ const docTemplate = `{
         "description": "{{escape .Description}}",
         "title": "{{.Title}}",
         "contact": {},
+        "license": {
+            "name": "GNU Affero General Public License v3.0",
+            "url": "https://github.com/donetick/donetick/blob/main/LICENSE.md"
+        },
         "version": "{{.Version}}"
     },
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/chores": {
+        "/api/v1/assets/chore": {
+            "post": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    }
+                ],
+                "description": "Uploads an attachment or description image for a chore, or a draft for a chore that is still being created. For chore and chore_description, entityId is the chore ID and the user must be allowed to edit it. For the *_draft types, send draftId instead.",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "assets"
+                ],
+                "summary": "Upload a chore file",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "File to upload",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "enum": [
+                            "chore",
+                            "chore_description",
+                            "chore_attachment_draft",
+                            "chore_description_draft"
+                        ],
+                        "type": "string",
+                        "description": "What the file belongs to",
+                        "name": "entityType",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Chore ID (chore, chore_description)",
+                        "name": "entityId",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Draft ID (*_draft types)",
+                        "name": "draftId",
+                        "in": "formData"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "path, sign (signed URL), file_name, size_bytes",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "error: missing file | missing draftId | invalid entityType or entityId",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "error: unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "error: user is not allowed to edit chore | user is not a plus member",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "413": {
+                        "description": "error: file size is too large",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: failed to save file | failed to save file record | failed to sign url",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "507": {
+                        "description": "error: no enough space",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    }
+                ],
+                "description": "Deletes a file uploaded as a draft that was never attached to a saved chore.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "assets"
+                ],
+                "summary": "Delete a draft upload",
+                "parameters": [
+                    {
+                        "description": "file_path",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "message: draft file deleted",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "error: missing file_path",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "error: unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "error: file is not a draft",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "error: draft file not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: failed to delete file | failed to remove file record",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/assets/{filepath}": {
+            "get": {
+                "description": "Streams a stored file. Files outside profiles/ need a valid signed URL (expires and sig query parameters, from the signed URLs other endpoints return). No auth header is needed.",
+                "produces": [
+                    "application/octet-stream"
+                ],
+                "tags": [
+                    "assets"
+                ],
+                "summary": "Download a stored file",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Stored file path",
+                        "name": "filepath",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Signature expiry (Unix seconds)",
+                        "name": "expires",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Signature",
+                        "name": "sig",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "file content"
+                    },
+                    "400": {
+                        "description": "error: missing asset url | invalid url format | invalid asset path",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "error: invalid or expired signature for url",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "error: file not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/": {
+            "post": {
+                "description": "Creates a user with their own circle. Returns 403 when user creation or password auth is disabled on the instance.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Sign up",
+                "parameters": [
+                    {
+                        "description": "New account",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/user.signUp.SignUpReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "empty object",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "error: Invalid request | Username can only contain lowercase letters (a-z), numbers (0-9), dots (.), and hyphens (-)",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "error: User creation is disabled | Password authentication is disabled on this instance",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Error creating user, email already exists or username is taken",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/login": {
+            "post": {
+                "description": "Logs in with username and password and returns access and refresh tokens (the refresh token is also set as an httpOnly cookie). Users with MFA get {mfaRequired: true, sessionToken} instead; finish with POST /api/v1/auth/mfa/verify.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Log in",
+                "parameters": [
+                    {
+                        "description": "Credentials",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/auth.signIn"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "tokens (or mfaRequired + sessionToken)",
+                        "schema": {
+                            "$ref": "#/definitions/auth.TokenResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "error: Invalid request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "error: Invalid credentials",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "error: Password authentication is disabled on this instance",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Authentication failed | Failed to generate tokens",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/login/legacy": {
+            "post": {
+                "description": "Legacy login handled by gin-jwt (the Authenticator configured here); returns an access token only. Prefer POST /api/v1/auth/login. Users with MFA get {mfaRequired: true, sessionToken} instead.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Log in (legacy)",
+                "parameters": [
+                    {
+                        "description": "Credentials",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/auth.signIn"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "code, token, expire (or mfaRequired + sessionToken)",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "code, message",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "error: Password authentication is disabled on this instance",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/logout": {
+            "post": {
+                "description": "Revokes the refresh token (cookie or body) and clears the cookie. Always succeeds.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Log out (revoke refresh token)",
+                "parameters": [
+                    {
+                        "description": "Refresh token, if not sent as a cookie",
+                        "name": "request",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/auth.RefreshRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "message: Logged out successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/mfa/verify": {
+            "post": {
+                "description": "Completes a login that returned mfaRequired, using its sessionToken and a TOTP or backup code.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Finish an MFA login",
+                "parameters": [
+                    {
+                        "description": "Session token and code",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/user.MFAVerifyRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "tokens",
+                        "schema": {
+                            "$ref": "#/definitions/auth.TokenResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "error: Invalid request | Invalid or expired session | Invalid verification code",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Failed to verify user | Unable to Generate a Token",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/password": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Set a new password from a reset link",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Reset code from the email link",
+                        "name": "c",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "description": "New password",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/user.updateUserPassword.RequestBody"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "empty object",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "error: Invalid code | Invalid request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "error: Password authentication is disabled on this instance",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Unable to process password | Unable to reset password",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/refresh": {
+            "post": {
+                "description": "Exchanges a refresh token (refresh_token cookie, or refresh_token in the body) for new access and refresh tokens.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Refresh tokens",
+                "parameters": [
+                    {
+                        "description": "Refresh token, if not sent as a cookie",
+                        "name": "request",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/auth.RefreshRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "tokens",
+                        "schema": {
+                            "$ref": "#/definitions/auth.TokenResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "error: Invalid request | Refresh token required",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "error: Invalid or expired refresh token",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/reset": {
+            "post": {
+                "description": "Emails a password reset link. Unknown emails also get 200, so accounts cannot be discovered.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Request a password reset",
+                "parameters": [
+                    {
+                        "description": "Account email",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/user.resetPassword.ResetPasswordReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "empty object",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "error: Invalid request | User account created with google login. Please login with google",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "error: Password authentication is disabled on this instance",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Unable to generate token | Unable to send email",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/revoke-all": {
+            "post": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    }
+                ],
+                "description": "Revokes every refresh token for the current user, logging out all devices.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Revoke all sessions",
+                "responses": {
+                    "200": {
+                        "description": "message: All sessions revoked successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "error: Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Failed to revoke sessions",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/{provider}/callback": {
+            "post": {
+                "description": "Exchanges a provider credential for Donetick tokens, creating the account on first sign-in. The body depends on provider: google sends {token, provider}; apple sends {provider, data{provider, result{idToken, ...}}}; oauth2 sends {code, redirect_uri, verifier}. Users with MFA get {mfaRequired: true, sessionToken} instead of tokens; finish with POST /api/v1/auth/mfa/verify.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Sign in with a third-party provider",
+                "parameters": [
+                    {
+                        "enum": [
+                            "google",
+                            "apple",
+                            "oauth2"
+                        ],
+                        "type": "string",
+                        "description": "Identity provider",
+                        "name": "provider",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Provider credential (see description)",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "tokens (or mfaRequired + sessionToken)",
+                        "schema": {
+                            "$ref": "#/definitions/auth.TokenResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "error: Invalid request | Invalid token | Invalid Apple ID token | Authorization code is required",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Authentication failed | Unable to create user | Unable to Generate a Token",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/bridge/connect": {
+            "post": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    }
+                ],
+                "description": "Validates and stores a Bridge instance token. Circle admins only. The token is never returned.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "bridge"
+                ],
+                "summary": "Connect to Bridge",
+                "parameters": [
+                    {
+                        "description": "Bridge instance credentials",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/bridge.connectRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Bridge status (same shape as GET /bridge/status)",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "error: invalid request payload | code: VALIDATION_ERROR",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "error: only a circle administrator can manage Bridge settings | code: QUOTA_EXCEEDED",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "error: unable to connect to Bridge, code: REVOKED_TOKEN",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "error: unable to connect to Bridge, code: SERVICE_UNAVAILABLE",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/bridge/disconnect": {
+            "post": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    }
+                ],
+                "description": "Removes the stored Bridge instance token. Circle admins only.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "bridge"
+                ],
+                "summary": "Disconnect from Bridge",
+                "responses": {
+                    "200": {
+                        "description": "connected: false",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "boolean"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "error: only a circle administrator can manage Bridge settings",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: unable to disconnect Bridge",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/bridge/rotate": {
+            "post": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    }
+                ],
+                "description": "Re-validates and stores a new instance token obtained from Bridge. Same behavior as POST /bridge/connect. Circle admins only.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "bridge"
+                ],
+                "summary": "Replace the Bridge instance token",
+                "parameters": [
+                    {
+                        "description": "Bridge instance credentials",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/bridge.connectRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Bridge status (same shape as GET /bridge/status)",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "error: invalid request payload",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "error: only a circle administrator can manage Bridge settings",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "error: unable to connect to Bridge, code: REVOKED_TOKEN",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/bridge/status": {
+            "get": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    }
+                ],
+                "description": "Returns the Donetick Bridge connection, plan and usage for this instance. Circle admins only. When Bridge is not connected the body is {connected: false, code}.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "bridge"
+                ],
+                "summary": "Get Bridge connection status",
+                "responses": {
+                    "200": {
+                        "description": "connected, instanceId, instanceName, enabled, ownerEmailMasked, ownerEmailVerified, plan, subscriptionStatus, usage{notificationsUsed, notificationsLimit, periodStart, periodEnd, activeDevices, deviceLimit}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "error: User not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "error: only a circle administrator can manage Bridge settings",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "connected: false, code: REVOKED_TOKEN",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "503": {
+                        "description": "connected: false, code: SERVICE_UNAVAILABLE",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/chores": {
             "get": {
                 "security": [
                     {
@@ -233,7 +1323,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/chores/archived": {
+        "/api/v1/chores/archived": {
             "get": {
                 "security": [
                     {
@@ -288,7 +1378,68 @@ const docTemplate = `{
                 }
             }
         },
-        "/chores/calendar/url": {
+        "/api/v1/chores/bulk": {
+            "post": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
+                    }
+                ],
+                "description": "Creates up to 100 chores in request order. Each item uses the single-create request format and is validated independently; failures do not stop subsequent items. Results contain the zero-based index, HTTP status, and single-create response fields. Creation is not atomic; a failure after persistence also includes the created ID in res.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "chores"
+                ],
+                "summary": "Create multiple chores",
+                "parameters": [
+                    {
+                        "description": "Chores to create",
+                        "name": "chores",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/chore.BulkCreateChoresReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "res: ordered per-item results",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request format",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Authentication failed",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/chores/calendar/url": {
             "get": {
                 "security": [
                     {
@@ -446,7 +1597,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/chores/calendar/url/rotate": {
+        "/api/v1/chores/calendar/url/rotate": {
             "post": {
                 "security": [
                     {
@@ -495,7 +1646,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/chores/calendar/{token}": {
+        "/api/v1/chores/calendar/{token}": {
             "get": {
                 "description": "Serves an iCal (.ics) calendar file containing the user's chores. Authenticated via a revocable token in the URL.",
                 "produces": [
@@ -536,7 +1687,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/chores/history": {
+        "/api/v1/chores/history": {
             "get": {
                 "security": [
                     {
@@ -614,7 +1765,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/chores/{id}": {
+        "/api/v1/chores/{id}": {
             "get": {
                 "security": [
                     {
@@ -770,7 +1921,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/chores/{id}/approve": {
+        "/api/v1/chores/{id}/approve": {
             "post": {
                 "security": [
                     {
@@ -849,7 +2000,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/chores/{id}/archive": {
+        "/api/v1/chores/{id}/archive": {
             "put": {
                 "security": [
                     {
@@ -919,7 +2070,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/chores/{id}/assignee": {
+        "/api/v1/chores/{id}/assignee": {
             "put": {
                 "security": [
                     {
@@ -1007,7 +2158,175 @@ const docTemplate = `{
                 }
             }
         },
-        "/chores/{id}/details": {
+        "/api/v1/chores/{id}/attachments": {
+            "get": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "assets"
+                ],
+                "summary": "List a chore's attachments",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Chore ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "file_path, file_name, size_bytes, created_by, created_at, sign (signed URL)",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "additionalProperties": true
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "error: invalid chore id",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "error: unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "error: chore not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: failed to get attachments",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    }
+                ],
+                "description": "The user must be allowed to edit the chore.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "assets"
+                ],
+                "summary": "Delete a chore attachment",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Chore ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "file_path",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "message: attachment deleted",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "error: invalid chore id | missing file_path",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "error: unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "error: not allowed to edit chore | attachment does not belong to this chore",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "error: chore not found | attachment not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: internal error | failed to delete file | failed to remove attachment record",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/chores/{id}/details": {
             "get": {
                 "security": [
                     {
@@ -1075,7 +2394,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/chores/{id}/do": {
+        "/api/v1/chores/{id}/do": {
             "post": {
                 "security": [
                     {
@@ -1162,7 +2481,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/chores/{id}/dueDate": {
+        "/api/v1/chores/{id}/dueDate": {
             "put": {
                 "security": [
                     {
@@ -1250,7 +2569,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/chores/{id}/history": {
+        "/api/v1/chores/{id}/history": {
             "get": {
                 "security": [
                     {
@@ -1314,7 +2633,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/chores/{id}/history/{history_id}": {
+        "/api/v1/chores/{id}/history/{history_id}": {
             "put": {
                 "security": [
                     {
@@ -1493,7 +2812,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/chores/{id}/nudge": {
+        "/api/v1/chores/{id}/nudge": {
             "post": {
                 "security": [
                     {
@@ -1570,7 +2889,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/chores/{id}/pause": {
+        "/api/v1/chores/{id}/pause": {
             "put": {
                 "security": [
                     {
@@ -1647,7 +2966,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/chores/{id}/priority": {
+        "/api/v1/chores/{id}/priority": {
             "put": {
                 "security": [
                     {
@@ -1735,7 +3054,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/chores/{id}/reject": {
+        "/api/v1/chores/{id}/reject": {
             "post": {
                 "security": [
                     {
@@ -1820,7 +3139,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/chores/{id}/skip": {
+        "/api/v1/chores/{id}/skip": {
             "post": {
                 "security": [
                     {
@@ -1890,7 +3209,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/chores/{id}/start": {
+        "/api/v1/chores/{id}/start": {
             "put": {
                 "security": [
                     {
@@ -1967,95 +3286,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/chores/{id}/status": {
-            "put": {
-                "security": [
-                    {
-                        "JWTKeyAuth": []
-                    },
-                    {
-                        "APIKeyAuth": []
-                    }
-                ],
-                "description": "Updates the status of a chore (e.g., no status, in progress, paused)",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "chores"
-                ],
-                "summary": "Update chore status",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "Chore ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Status update request",
-                        "name": "status",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/chore.StatusUpdateReq"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "message: Chore status updated successfully",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "error: Invalid ID | Invalid request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "error: Authentication failed",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "403": {
-                        "description": "error: You cannot update the status of this chore",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "error: Failed to retrieve chore | Error updating chore status",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/chores/{id}/subtask": {
+        "/api/v1/chores/{id}/subtask": {
             "put": {
                 "security": [
                     {
@@ -2132,7 +3363,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/chores/{id}/timer": {
+        "/api/v1/chores/{id}/timer": {
             "get": {
                 "security": [
                     {
@@ -2227,95 +3458,9 @@ const docTemplate = `{
                         }
                     }
                 }
-            },
-            "put": {
-                "security": [
-                    {
-                        "JWTKeyAuth": []
-                    },
-                    {
-                        "APIKeyAuth": []
-                    }
-                ],
-                "description": "Manually updates the timer duration for a chore",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "chores"
-                ],
-                "summary": "Update chore timer duration",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "Chore ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Timer update request",
-                        "name": "timer",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/chore.TimerUpdateReq"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "message: Chore timer updated successfully",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "error: Invalid ID | Invalid request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "error: Authentication failed",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "403": {
-                        "description": "error: You cannot update the timer of this chore",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "error: Failed to retrieve chore | Error updating chore timer",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
             }
         },
-        "/chores/{id}/timer/reset": {
+        "/api/v1/chores/{id}/timer/reset": {
             "put": {
                 "security": [
                     {
@@ -2392,7 +3537,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/chores/{id}/timer/{session_id}": {
+        "/api/v1/chores/{id}/timer/{session_id}": {
             "put": {
                 "security": [
                     {
@@ -2571,7 +3716,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/chores/{id}/unarchive": {
+        "/api/v1/chores/{id}/unarchive": {
             "put": {
                 "security": [
                     {
@@ -2641,7 +3786,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/chores/{id}/undo": {
+        "/api/v1/chores/{id}/undo": {
             "post": {
                 "security": [
                     {
@@ -2709,7 +3854,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/circles": {
+        "/api/v1/circles": {
             "get": {
                 "security": [
                     {
@@ -2764,7 +3909,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/circles/join": {
+        "/api/v1/circles/join": {
             "post": {
                 "security": [
                     {
@@ -2843,7 +3988,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/circles/leave": {
+        "/api/v1/circles/leave": {
             "delete": {
                 "security": [
                     {
@@ -2913,7 +4058,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/circles/members": {
+        "/api/v1/circles/members": {
             "get": {
                 "security": [
                     {
@@ -2959,7 +4104,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/circles/members/requests": {
+        "/api/v1/circles/members/requests": {
             "get": {
                 "security": [
                     {
@@ -3023,7 +4168,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/circles/members/requests/accept": {
+        "/api/v1/circles/members/requests/accept": {
             "put": {
                 "security": [
                     {
@@ -3102,7 +4247,86 @@ const docTemplate = `{
                 }
             }
         },
-        "/circles/members/role": {
+        "/api/v1/circles/members/requests/decline": {
+            "delete": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
+                    }
+                ],
+                "description": "Declines a pending circle join request (admin only). The request is removed, so the user may request to join again later.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "circles"
+                ],
+                "summary": "Decline a join request",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Request ID",
+                        "name": "requestId",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "res: Join request declined successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "error: Invalid request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "error: Authentication failed",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "error: You are not an admin of this circle",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Error declining join request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/circles/members/role": {
             "put": {
                 "security": [
                     {
@@ -3191,7 +4415,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/circles/{id}/members/delete": {
+        "/api/v1/circles/{id}/members/delete": {
             "delete": {
                 "security": [
                     {
@@ -3277,7 +4501,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/circles/{id}/members/points/redeem": {
+        "/api/v1/circles/{id}/members/points/redeem": {
             "post": {
                 "security": [
                     {
@@ -3373,7 +4597,450 @@ const docTemplate = `{
                 }
             }
         },
-        "/filters": {
+        "/api/v1/devices/count": {
+            "get": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "devices"
+                ],
+                "summary": "Count the current user's devices",
+                "responses": {
+                    "200": {
+                        "description": "count, limit",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "integer"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "error: User not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Failed to get device count",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/devices/tokens": {
+            "get": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "devices"
+                ],
+                "summary": "List the current user's devices",
+                "parameters": [
+                    {
+                        "type": "boolean",
+                        "description": "Only active devices",
+                        "name": "active",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "res: devices",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/definitions/user.UserDeviceToken"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "error: User not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Failed to retrieve device tokens",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    }
+                ],
+                "description": "Registers or refreshes the current user's FCM device token for push notifications.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "devices"
+                ],
+                "summary": "Register a push notification device",
+                "parameters": [
+                    {
+                        "description": "Device token",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/device.RegisterDeviceTokenRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "message, device_id, id",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "error: Invalid request payload",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "error: User not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "error, code: DEVICE_LIMIT_EXCEEDED",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Failed to register device token",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    }
+                ],
+                "description": "Deactivates a device token, identified by deviceId or token.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "devices"
+                ],
+                "summary": "Unregister a push notification device",
+                "parameters": [
+                    {
+                        "description": "deviceId or token (at least one)",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/device.UnregisterDeviceTokenRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "message: Device token unregistered successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "error: Invalid request payload | Either deviceId or token must be provided",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "error: User not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Failed to unregister device token",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/devices/tokens/{deviceId}/activity": {
+            "put": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    }
+                ],
+                "description": "Updates the device's last-active timestamp. A 404 tells the app its registration is stale and it should register again.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "devices"
+                ],
+                "summary": "Mark a device as active",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Device ID",
+                        "name": "deviceId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "message: Device activity updated successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "error: Device ID is required",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "error, code: DEVICE_NOT_REGISTERED",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Failed to update device activity",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/files": {
+            "get": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    }
+                ],
+                "description": "Checks the user may read the file, then redirects (302) to a short-lived signed URL.",
+                "tags": [
+                    "assets"
+                ],
+                "summary": "Redirect to a signed file URL",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Stored file path",
+                        "name": "path",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "302": {
+                        "description": "Redirect to the signed URL"
+                    },
+                    "400": {
+                        "description": "error: missing path",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "error: unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "error: access denied",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "error: asset not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/files/sign": {
+            "get": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    }
+                ],
+                "description": "Checks the user may read the file and returns a short-lived signed URL for it.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "assets"
+                ],
+                "summary": "Get a signed file URL",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Stored file path",
+                        "name": "path",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "url, path",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "error: missing path",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "error: unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "error: access denied",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "error: asset not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/filters": {
             "get": {
                 "security": [
                     {
@@ -3483,7 +5150,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/filters/by-usage": {
+        "/api/v1/filters/by-usage": {
             "get": {
                 "security": [
                     {
@@ -3526,7 +5193,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/filters/pinned": {
+        "/api/v1/filters/pinned": {
             "get": {
                 "security": [
                     {
@@ -3569,7 +5236,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/filters/{id}": {
+        "/api/v1/filters/{id}": {
             "get": {
                 "security": [
                     {
@@ -3763,7 +5430,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/filters/{id}/toggle-pin": {
+        "/api/v1/filters/{id}/toggle-pin": {
             "post": {
                 "security": [
                     {
@@ -3822,7 +5489,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/projects": {
+        "/api/v1/labels": {
             "get": {
                 "security": [
                     {
@@ -3832,7 +5499,344 @@ const docTemplate = `{
                         "APIKeyAuth": []
                     }
                 ],
-                "description": "Retrieves all projects for the current user's circle",
+                "description": "Returns the current user's own labels plus labels shared in their circle.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "labels"
+                ],
+                "summary": "List labels",
+                "responses": {
+                    "200": {
+                        "description": "labels",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.Label"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "error: User not authenticated",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Error getting labels",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
+                    }
+                ],
+                "description": "Updates a label's name and color. Omitting isShared keeps its current sharing setting.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "labels"
+                ],
+                "summary": "Update a label",
+                "parameters": [
+                    {
+                        "description": "Label with ID",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/label.UpdateLabelReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "res: updated label",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "$ref": "#/definitions/model.Label"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "error: Invalid request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "error: User not authenticated",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Error updating label",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "labels"
+                ],
+                "summary": "Create a label",
+                "parameters": [
+                    {
+                        "description": "Label",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/label.LabelReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "res: created label",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "$ref": "#/definitions/model.Label"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "error: Invalid request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "error: User not authenticated",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Error creating label",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/labels/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
+                    }
+                ],
+                "description": "Removes the label from every chore, then deletes it.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "labels"
+                ],
+                "summary": "Delete a label",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Label ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "res: Label deleted",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "error: Label ID is required | Invalid label ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "error: User not authenticated",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Error unassociating label from chores",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/payments/cancel-subscription": {
+            "post": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payments"
+                ],
+                "summary": "Cancel my subscription",
+                "responses": {
+                    "200": {
+                        "description": "message: Subscription cancelled, provider",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "error: No active subscription found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Failed to get subscription | Failed to cancel subscription | Failed to update subscription",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/payments/create-subscription": {
+            "get": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    }
+                ],
+                "description": "Creates a Stripe checkout session for the current user and returns its URL.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payments"
+                ],
+                "summary": "Start a Plus subscription checkout",
+                "responses": {
+                    "200": {
+                        "description": "sessionURL: Stripe checkout URL",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Failed to create customer | Failed to create checkout session",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/projects": {
+            "get": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
+                    }
+                ],
+                "description": "Retrieves the projects of the current user's circle the user can see: circle-wide ones, their own private ones and the ones shared with them",
                 "consumes": [
                     "application/json"
                 ],
@@ -3882,7 +5886,7 @@ const docTemplate = `{
                         "APIKeyAuth": []
                     }
                 ],
-                "description": "Creates a new project for the current user's circle",
+                "description": "Creates a new project for the current user's circle. visibility is \"private\" (only me), \"members\" (me and memberIds) or \"circle\" (everyone in the circle, the default).",
                 "consumes": [
                     "application/json"
                 ],
@@ -3944,7 +5948,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/projects/{id}": {
+        "/api/v1/projects/{id}": {
             "put": {
                 "security": [
                     {
@@ -3954,7 +5958,7 @@ const docTemplate = `{
                         "APIKeyAuth": []
                     }
                 ],
-                "description": "Updates the name, description, color, and icon of an existing project by ID",
+                "description": "Updates name, description, color and icon of a project owned by the current user and, optionally, who can see it (visibility, memberIds). Fields that are not sent keep their current value. Changing who can see the project also adjusts the assignees of its tasks; use POST /projects/{id}/access-preview to see the effect first.",
                 "consumes": [
                     "application/json"
                 ],
@@ -3994,7 +5998,7 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "error: Invalid project ID or Error binding project data",
+                        "description": "error: Invalid project ID, Error binding project data or invalid members",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -4004,6 +6008,24 @@ const docTemplate = `{
                     },
                     "401": {
                         "description": "error: Error getting current user",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "error: not the project owner",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "error: project not found",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -4031,7 +6053,7 @@ const docTemplate = `{
                         "APIKeyAuth": []
                     }
                 ],
-                "description": "Deletes a project by ID; restricted to the current user's circle",
+                "description": "Deletes a project by ID; restricted to the current user's circle. Its tasks are kept without a project and follow their own privacy from then on.",
                 "consumes": [
                     "application/json"
                 ],
@@ -4091,7 +6113,1216 @@ const docTemplate = `{
                 }
             }
         },
-        "/sync/changes": {
+        "/api/v1/projects/{id}/access-preview": {
+            "post": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
+                    }
+                ],
+                "description": "Returns, without changing anything, which tasks of the project would change assignees and who would gain or lose access if the given visibility and members were saved. Only the project owner may call it.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "projects"
+                ],
+                "summary": "Preview a change of who can see a project",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Project ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Target visibility and members",
+                        "name": "access",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/project.AccessPreviewReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "res: chRepo.ProjectAccessPlan",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "error: not the project owner",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "error: project not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/projects/{id}/board/chores/{choreId}/move": {
+            "put": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
+                    }
+                ],
+                "description": "Places one chore into sectionId, sorted right after afterChoreId (first, when omitted), moving it in from a different section of the same project if needed. Computed from the current server-side order of that section, so two users dragging different cards at the same time cannot clobber each other.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "projects"
+                ],
+                "summary": "Move a chore within a project's board",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Project ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Chore ID",
+                        "name": "choreId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Destination section and chore to place it after",
+                        "name": "move",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/project.MoveChoreReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "res: ok",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "error: project, section or chore not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/projects/{id}/sections": {
+            "get": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
+                    }
+                ],
+                "description": "Lists the sections (board columns) of a project, ordered by position. Shared by every user who can see the project.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "projects"
+                ],
+                "summary": "Get a project's board sections",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Project ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "res: array of pModel.ProjectSection",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "error: project not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
+                    }
+                ],
+                "description": "Adds a column to a project's shared board. Any user who can see the project may add one.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "projects"
+                ],
+                "summary": "Create a board section",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Project ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Section name",
+                        "name": "section",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/project.SectionReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "res: created pModel.ProjectSection",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "error: project not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/projects/{id}/sections/{sectionId}": {
+            "put": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "projects"
+                ],
+                "summary": "Rename a board section",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Project ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Section ID",
+                        "name": "sectionId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "New section name",
+                        "name": "section",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/project.SectionReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "res: ok",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "error: project or section not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
+                    }
+                ],
+                "description": "Deletes a section, moving its chores into the project's remaining section with the lowest position. Fails if it is the only section.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "projects"
+                ],
+                "summary": "Delete a board section",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Project ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Section ID",
+                        "name": "sectionId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "res: ok",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "error: cannot delete the last section",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "error: project or section not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/projects/{id}/sections/{sectionId}/move": {
+            "put": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
+                    }
+                ],
+                "description": "Repositions one section to sort right after afterSectionId (first, when omitted). Computed from the current server-side order, so two users reordering columns at the same time cannot clobber each other.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "projects"
+                ],
+                "summary": "Move a board section",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Project ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Section ID",
+                        "name": "sectionId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Section to place it after",
+                        "name": "move",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/project.MoveSectionReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "res: ok",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "error: project or section not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/realtime/sse": {
+            "get": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    }
+                ],
+                "description": "Opens a Server-Sent Events stream of changes in the user's circle. Authenticate with a Bearer JWT, or with a single-use ticket from GET /api/v1/realtime/sse/ticket for clients (such as EventSource) that cannot send headers. Plus members only.",
+                "produces": [
+                    "text/event-stream"
+                ],
+                "tags": [
+                    "realtime"
+                ],
+                "summary": "Subscribe to real-time circle events",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Single-use SSE ticket",
+                        "name": "ticket",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "event stream",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "error, code: INVALID_REQUEST",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "error: Authentication required, code: AUTH_REQUIRED",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "error: Rate limit exceeded, code: RATE_LIMIT_EXCEEDED",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "error: Server-Sent Events service is not available, code: SERVICE_UNAVAILABLE",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/realtime/sse/ticket": {
+            "get": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    }
+                ],
+                "description": "Issues a short-lived, single-use ticket to pass as ?ticket= to GET /api/v1/realtime/sse. Plus members only.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "realtime"
+                ],
+                "summary": "Get an SSE ticket",
+                "responses": {
+                    "200": {
+                        "description": "ticket, expiresIn (seconds)",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "error: Authentication required, code: AUTH_REQUIRED",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "error: Access denied for non-plus members, code: ACCESS_DENIED",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "error: Rate limit exceeded, code: RATE_LIMIT_EXCEEDED",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Failed to issue ticket, code: TICKET_ISSUE_FAILED",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "code: TICKET_STORE_FULL",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/resource": {
+            "get": {
+                "description": "Public. Returns the OAuth identity provider, versions and feature flags the apps need before login.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "resource"
+                ],
+                "summary": "Get server configuration for clients",
+                "responses": {
+                    "200": {
+                        "description": "server resource info",
+                        "schema": {
+                            "$ref": "#/definitions/resource.Resource"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/rewards": {
+            "get": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
+                    }
+                ],
+                "description": "Returns every reward in the current user's circle.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "rewards"
+                ],
+                "summary": "List rewards",
+                "responses": {
+                    "200": {
+                        "description": "rewards",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.Reward"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "error: Authentication failed",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Error getting rewards",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
+                    }
+                ],
+                "description": "Admins and managers only.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "rewards"
+                ],
+                "summary": "Create a reward",
+                "parameters": [
+                    {
+                        "description": "Reward",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/reward.RewardReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "res: created reward",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "$ref": "#/definitions/model.Reward"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "error: Invalid request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "error: Authentication failed",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "error: Only admins or managers can create rewards",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Error creating reward",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/rewards/redemptions": {
+            "get": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
+                    }
+                ],
+                "description": "Admins and managers get the whole circle's redemptions, optionally filtered by status. Everyone else gets only their own, and the filter is ignored.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "rewards"
+                ],
+                "summary": "List reward redemptions",
+                "parameters": [
+                    {
+                        "enum": [
+                            "pending",
+                            "approved",
+                            "rejected"
+                        ],
+                        "type": "string",
+                        "description": "Filter (admins/managers only)",
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "redemptions",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.RewardRedemption"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "error: Authentication failed",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Error getting redemptions",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/rewards/redemptions/{id}/approve": {
+            "post": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
+                    }
+                ],
+                "description": "Admins and managers only. Deducts the points from the member.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "rewards"
+                ],
+                "summary": "Approve a redemption",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Redemption ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "message: Redemption approved",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "error: Invalid redemption ID | User no longer has enough points for this redemption | Redemption is not pending",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "error: Authentication failed",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "error: Only admins or managers can approve redemptions",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Error approving redemption",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/rewards/redemptions/{id}/reject": {
+            "post": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
+                    }
+                ],
+                "description": "Admins and managers only. The body is optional.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "rewards"
+                ],
+                "summary": "Reject a redemption",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Redemption ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Optional note",
+                        "name": "request",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/reward.ResolveReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "message: Redemption rejected",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "error: Invalid redemption ID | Redemption is not pending",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "error: Authentication failed",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "error: Only admins or managers can reject redemptions",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Error rejecting redemption",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/rewards/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
+                    }
+                ],
+                "description": "Admins and managers only.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "rewards"
+                ],
+                "summary": "Update a reward",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Reward ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Reward",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/reward.RewardReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "res: updated reward",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "$ref": "#/definitions/model.Reward"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "error: Invalid reward ID | Invalid request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "error: Authentication failed",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "error: Only admins or managers can update rewards",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Error updating reward",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
+                    }
+                ],
+                "description": "Admins and managers only.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "rewards"
+                ],
+                "summary": "Delete a reward",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Reward ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "res: Reward deleted",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "error: Invalid reward ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "error: Authentication failed",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "error: Only admins or managers can delete rewards",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Error deleting reward",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/rewards/{id}/redeem": {
+            "post": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
+                    }
+                ],
+                "description": "Spends points on a reward. Auto-approve rewards are approved immediately; otherwise the redemption stays pending and admins are notified. Admins and managers may set userId to redeem for another member. The body is optional.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "rewards"
+                ],
+                "summary": "Redeem a reward",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Reward ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Optional note and member",
+                        "name": "request",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/reward.RedeemReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "res: redemption",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "$ref": "#/definitions/model.RewardRedemption"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "error: Invalid reward ID | Selected user is not an active member of this circle | Not enough points to redeem this reward",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "error: Authentication failed",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "error: Only admins or managers can request a reward for another member",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Error requesting redemption",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/sync/changes": {
             "get": {
                 "security": [
                     {
@@ -4160,7 +7391,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/things": {
+        "/api/v1/things": {
             "get": {
                 "security": [
                     {
@@ -4362,7 +7593,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/things/{id}": {
+        "/api/v1/things/{id}": {
             "delete": {
                 "security": [
                     {
@@ -4444,7 +7675,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/things/{id}/history": {
+        "/api/v1/things/{id}/history": {
             "get": {
                 "security": [
                     {
@@ -4528,7 +7759,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/things/{id}/state": {
+        "/api/v1/things/{id}/state": {
             "put": {
                 "security": [
                     {
@@ -4613,9 +7844,2351 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/api/v1/users": {
+            "put": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
+                    }
+                ],
+                "description": "Updates display name, Telegram chat ID, profile image and timezone. Omitted fields are left unchanged.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Update my profile",
+                "parameters": [
+                    {
+                        "description": "Fields to change",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/user.UpdateUserDetails.UpdateUserReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "updated user",
+                        "schema": {
+                            "$ref": "#/definitions/user.UserDetails"
+                        }
+                    },
+                    "400": {
+                        "description": "error: Invalid request | Invalid timezone | Invalid image",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "error: User not authenticated",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Error updating user",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/users/": {
+            "get": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
+                    }
+                ],
+                "description": "Returns the users in the current user's circle, with signed profile image URLs.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "List circle users",
+                "responses": {
+                    "200": {
+                        "description": "res: users",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/definitions/user.User"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "error: User not authenticated",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Error getting users",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/users/change_password": {
+            "put": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
+                    }
+                ],
+                "description": "Not available on donetick.com.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Change my password",
+                "parameters": [
+                    {
+                        "description": "New password",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/user.updateUserPasswordLoggedInOnly.RequestBody"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "empty object",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "error: Invalid request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "error: User not authenticated",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "error: This action is not allowed on donetick.com",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Unable to process password | Unable to reset password",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/users/delete": {
+            "delete": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
+                    }
+                ],
+                "description": "Permanently deletes the account. confirmation must be DELETE. Returns 400 with the deletion result when circle ownership still has to be transferred (see transferOptions).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Delete my account",
+                "parameters": [
+                    {
+                        "description": "Password, confirmation and transfer choices",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/user.AccountDeletionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "deletion result",
+                        "schema": {
+                            "$ref": "#/definitions/user.DeletionResult"
+                        }
+                    },
+                    "400": {
+                        "description": "transfer required, or error: Confirmation text must be DELETE",
+                        "schema": {
+                            "$ref": "#/definitions/user.DeletionResult"
+                        }
+                    },
+                    "401": {
+                        "description": "error: User not authenticated | Invalid password",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Failed to delete account",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/users/delete/check": {
+            "post": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
+                    }
+                ],
+                "description": "Dry run: reports what deleting the account would remove and whether circle ownership must be transferred first.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Preview account deletion",
+                "parameters": [
+                    {
+                        "description": "Current password",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/user.AccountDeletionCheckRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "deletion preview",
+                        "schema": {
+                            "$ref": "#/definitions/user.DeletionResult"
+                        }
+                    },
+                    "400": {
+                        "description": "error: Invalid password",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "error: User not authenticated",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Failed to check account deletion",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/users/logout": {
+            "post": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
+                    }
+                ],
+                "description": "Revokes the refresh token (from the refresh_token cookie, or refreshToken in the body) and clears the auth cookies. Always succeeds.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Log out",
+                "parameters": [
+                    {
+                        "description": "Refresh token, if not sent as a cookie",
+                        "name": "request",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/user.RefreshRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "message: Logged out successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/users/mfa/confirm": {
+            "post": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
+                    }
+                ],
+                "description": "Enables MFA using the secret and backup codes from setup and a current TOTP code.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "mfa"
+                ],
+                "summary": "Enable MFA",
+                "parameters": [
+                    {
+                        "description": "Secret, code and backup codes",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/user.confirmMFA.ConfirmMFARequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "message: MFA enabled successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "error: MFA is already enabled | Invalid request | Invalid verification code",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Failed to enable MFA",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/users/mfa/disable": {
+            "post": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
+                    }
+                ],
+                "description": "Requires a current TOTP code or a backup code.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "mfa"
+                ],
+                "summary": "Disable MFA",
+                "parameters": [
+                    {
+                        "description": "Verification code",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/user.MFAVerifyRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "message: MFA disabled successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "error: MFA is not enabled | Invalid request | Invalid verification code",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Failed to validate code | Failed to disable MFA",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/users/mfa/setup": {
+            "post": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
+                    }
+                ],
+                "description": "Generates a TOTP secret, QR code URL and backup codes. MFA is not enabled until POST /api/v1/users/mfa/confirm.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "mfa"
+                ],
+                "summary": "Start MFA setup",
+                "responses": {
+                    "200": {
+                        "description": "secret, QR code URL, backup codes",
+                        "schema": {
+                            "$ref": "#/definitions/user.MFASetupResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "error: MFA is already enabled",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Failed to generate MFA secret | Failed to generate backup codes",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/users/mfa/status": {
+            "get": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "mfa"
+                ],
+                "summary": "Get my MFA status",
+                "responses": {
+                    "200": {
+                        "description": "mfaEnabled",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "boolean"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Failed to get current user",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/users/notifications/preferences": {
+            "get": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Get my notification preferences",
+                "responses": {
+                    "200": {
+                        "description": "profile, overrides, digestHour, effective",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "error: User not authenticated",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Failed to get notification preference",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
+                    }
+                ],
+                "description": "Omitting digestHour keeps the saved hour.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Update my notification preferences",
+                "parameters": [
+                    {
+                        "description": "Preferences",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/user.UpdateNotificationPreferenceReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "profile, overrides, digestHour, effective",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "error: Invalid request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "error: User not authenticated",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Failed to update notification preference",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/users/profile": {
+            "get": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Get my profile",
+                "responses": {
+                    "200": {
+                        "description": "res: current user",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "$ref": "#/definitions/user.UserDetails"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "error: User not authenticated",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/users/profile_photo": {
+            "post": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
+                    }
+                ],
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Upload my profile photo",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "Image file",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "sign: signed photo URL",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "error: Invalid file | Invalid file extension",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "error: User not authenticated",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Failed to save file | Failed to update profile photo",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/users/storage": {
+            "get": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Get my storage usage",
+                "responses": {
+                    "200": {
+                        "description": "res: {used, total} in bytes",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "object",
+                                "additionalProperties": {
+                                    "type": "integer"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "error: User not authenticated",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Failed to get storage usage",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/users/subaccounts": {
+            "get": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
+                    }
+                ],
+                "description": "Parent users only.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "List my sub-accounts",
+                "responses": {
+                    "200": {
+                        "description": "res: sub-accounts",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/definitions/user.ChildUserResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "error: User not authenticated",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "error: Only parent users can view child accounts",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Failed to get child users",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
+                    }
+                ],
+                "description": "Creates a child user in the parent's circle. Parent users only.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Create a sub-account",
+                "parameters": [
+                    {
+                        "description": "Sub-account",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/user.CreateChildUserRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "res: created sub-account",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "$ref": "#/definitions/user.ChildUserResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "error: Invalid request | Invalid child username format",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "error: User not authenticated",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "error: Only parent users can create child accounts | Maximum subaccounts reached",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Failed to create child user",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/users/subaccounts/password": {
+            "put": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
+                    }
+                ],
+                "description": "Parent users only, for their own sub-accounts.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Change a sub-account's password",
+                "parameters": [
+                    {
+                        "description": "Sub-account and new password",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/user.UpdateChildPasswordRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "message: Child user password updated successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "error: Invalid request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "error: User not authenticated",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "error: Only parent users can update child passwords | You can only update passwords for your own child users",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "error: Child user not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Failed to update password",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/users/subaccounts/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
+                    }
+                ],
+                "description": "Parent users only, for their own sub-accounts.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Delete a sub-account",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Sub-account user ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "message: Child user deleted successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "error: Child user ID is required | Invalid child user ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "error: User not authenticated",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "error: Only parent users can delete child accounts | You can only delete your own child users",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "error: Child user not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Failed to delete child user",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/users/targets": {
+            "put": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
+                    }
+                ],
+                "description": "Sets where notifications are delivered. type is 0 none (removes the target), 1 Telegram, 2 Pushover, 3 webhook, 4 Discord, 5 FCM.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Set my notification target",
+                "parameters": [
+                    {
+                        "description": "Target",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/user.UpdateNotificationTarget.Request"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "empty object",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "error: Invalid request, or an invalid target",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "error: User not authenticated",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Failed to update notification target",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/users/tokens": {
+            "get": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
+                    }
+                ],
+                "description": "Tokens are returned masked.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "List my API tokens",
+                "responses": {
+                    "200": {
+                        "description": "res: [{id, name, userId, maskedToken, createdAt}]",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "error: User not authenticated",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Failed to get user tokens",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
+                    }
+                ],
+                "description": "Creates a long-lived API token for the secretkey header. The full token is only returned here. Users with MFA must include a valid mfaCode.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Create an API token",
+                "parameters": [
+                    {
+                        "description": "Token name and optional MFA code",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/user.CreateLongLivedToken.TokenRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "res: {id, name, userId, token, prefix, createdAt}, message (optional)",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "error: Invalid request | Invalid MFA code",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "error: User not authenticated",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Failed to store the token",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/users/tokens/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Delete an API token",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Token ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "empty object",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "error: User not authenticated",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Failed to delete the token",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/users/webhook": {
+            "put": {
+                "security": [
+                    {
+                        "JWTKeyAuth": []
+                    },
+                    {
+                        "APIKeyAuth": []
+                    }
+                ],
+                "description": "Sets or clears (url: null) the URL that receives circle events. Circle admins with Plus only.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Set the circle webhook",
+                "parameters": [
+                    {
+                        "description": "Webhook URL",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/user.setWebhook.Request"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "empty object",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "error: Invalid request, or an invalid URL",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "error: User not authenticated",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "error: This action is only available for Plus members | You are not an admin",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Failed to set webhook URL",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/eapi/v1/chore": {
+            "get": {
+                "security": [
+                    {
+                        "APIKeyAuth": []
+                    }
+                ],
+                "description": "Returns the active chores visible to the API token's user.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "external-api"
+                ],
+                "summary": "List chores (external API)",
+                "parameters": [
+                    {
+                        "type": "boolean",
+                        "description": "Include subtasks",
+                        "name": "includeSubtasks",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "chores",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.Chore"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "APIKeyAuth": []
+                    }
+                ],
+                "description": "Creates a one-time chore assigned to its creator. dueDate accepts RFC3339 or YYYY-MM-DD (the date-only form uses the current UTC time of day). createdBy must be a member of the circle.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "external-api"
+                ],
+                "summary": "Create a chore (external API)",
+                "parameters": [
+                    {
+                        "description": "Chore",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.ChoreLiteReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "created chore",
+                        "schema": {
+                            "$ref": "#/definitions/model.Chore"
+                        }
+                    },
+                    "400": {
+                        "description": "error: Invalid request body | Chore name is required | Invalid due date format | Specified user not found in circle | Specified project not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Failed to get circle members | Error creating chore",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/eapi/v1/chore/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "APIKeyAuth": []
+                    }
+                ],
+                "description": "Updates a chore's name, description and due date. Empty fields keep their current values; forceUnarchive restores an archived chore. Only the chore creator or a circle admin/manager may update it. Plus members only.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "external-api"
+                ],
+                "summary": "Update a chore (external API)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Chore ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Fields to change",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.ChoreLiteReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "updated chore",
+                        "schema": {
+                            "$ref": "#/definitions/model.Chore"
+                        }
+                    },
+                    "400": {
+                        "description": "error: Invalid chore ID | Invalid request body | Invalid due date format",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "error: Only the chore creator or a circle admin/manager can update this chore",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "error: Chore not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Error updating chore",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "APIKeyAuth": []
+                    }
+                ],
+                "description": "Only the chore creator or a circle admin/manager may delete it.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "external-api"
+                ],
+                "summary": "Delete a chore (external API)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Chore ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "message: Chore deleted successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "error: Invalid chore ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "error: Only the chore creator or a circle admin/manager can delete this chore",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "error: Chore not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Failed to delete chore",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/eapi/v1/chore/{id}/complete": {
+            "post": {
+                "security": [
+                    {
+                        "APIKeyAuth": []
+                    }
+                ],
+                "description": "Marks a chore done and schedules its next occurrence. completedBy credits another circle member; it must be assigned to the chore. Plus members only.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "external-api"
+                ],
+                "summary": "Complete a chore (external API)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Chore ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "User ID to credit (defaults to the token's user)",
+                        "name": "completedBy",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "updated chore",
+                        "schema": {
+                            "$ref": "#/definitions/model.Chore"
+                        }
+                    },
+                    "400": {
+                        "description": "error: Invalid ID | User is not assigned to chore | Chore is out of completion window",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Error getting chore | Error completing chore | Error scheduling next due date",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/eapi/v1/circle/members": {
+            "get": {
+                "security": [
+                    {
+                        "APIKeyAuth": []
+                    }
+                ],
+                "description": "Plus members only.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "external-api"
+                ],
+                "summary": "List circle members (external API)",
+                "responses": {
+                    "200": {
+                        "description": "circle members",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/circle.UserCircleDetail"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "error: No members found in the circle",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error: Failed to get circle members",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/eapi/v1/things": {
+            "get": {
+                "security": [
+                    {
+                        "APIKeyAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "external-api"
+                ],
+                "summary": "List things (external API)",
+                "responses": {
+                    "200": {
+                        "description": "things",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.Thing"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/eapi/v1/things/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "APIKeyAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "external-api"
+                ],
+                "summary": "Get a thing (external API)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Thing ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "thing",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "$ref": "#/definitions/model.Thing"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "error: Invalid thing id",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "error: Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/eapi/v1/things/{id}/state": {
+            "get": {
+                "security": [
+                    {
+                        "APIKeyAuth": []
+                    }
+                ],
+                "description": "Sets the state of one of the token user's things and runs any chore triggers. Uses GET so it can be called from simple webhooks.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "external-api"
+                ],
+                "summary": "Set a thing's state (external API)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Thing ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "New state",
+                        "name": "state",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "empty object",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "error: Invalid state value | Invalid state for thing | Invalid thing id",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "error: Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/eapi/v1/things/{id}/state/change": {
+            "get": {
+                "security": [
+                    {
+                        "APIKeyAuth": []
+                    }
+                ],
+                "description": "Adds op to a numeric thing's state, or sets it to set, then runs any chore triggers. Uses GET so it can be called from simple webhooks.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "external-api"
+                ],
+                "summary": "Change a thing's state (external API)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Thing ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Amount to add (negative to subtract)",
+                        "name": "op",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Value to set",
+                        "name": "set",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "state: new state",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "error: Invalid increment value | Invalid state for thing | Invalid thing id",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "error: Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/health": {
+            "get": {
+                "description": "Public, unauthenticated health check for containers and orchestrators.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "resource"
+                ],
+                "summary": "Health check",
+                "responses": {
+                    "200": {
+                        "description": "status: healthy, version, commit",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/mcp": {
+            "post": {
+                "security": [
+                    {
+                        "APIKeyAuth": []
+                    }
+                ],
+                "description": "Model Context Protocol endpoint (JSON-RPC 2.0 over streamable HTTP) for AI assistants. Authenticate with an API token in the secretkey header or as Authorization: Bearer. Only available when MCP is enabled on the instance. GET and DELETE return 405.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "mcp"
+                ],
+                "summary": "MCP endpoint",
+                "parameters": [
+                    {
+                        "description": "JSON-RPC 2.0 request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "JSON-RPC 2.0 response",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "error: API token required | Invalid API token | User account is disabled",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "413": {
+                        "description": "request too large",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "415": {
+                        "description": "unsupported media type",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/webhooks/revenuecat": {
+            "post": {
+                "description": "Receives RevenueCat in-app subscription events. The Authorization header must equal the configured RevenueCat secret. Called by RevenueCat, not by clients.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "webhooks"
+                ],
+                "summary": "RevenueCat webhook",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "RevenueCat shared secret",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "RevenueCat event",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "event processed"
+                    },
+                    "400": {
+                        "description": "Invalid JSON",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "503": {
+                        "description": "Webhook not configured",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/webhooks/stripe": {
+            "post": {
+                "description": "Receives Stripe subscription events. Only accepted from whitelisted Stripe IP addresses. Called by Stripe, not by clients.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "webhooks"
+                ],
+                "summary": "Stripe webhook",
+                "parameters": [
+                    {
+                        "description": "Stripe event",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "event processed"
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
+        "auth.RefreshRequest": {
+            "type": "object",
+            "required": [
+                "refresh_token"
+            ],
+            "properties": {
+                "refresh_token": {
+                    "type": "string"
+                }
+            }
+        },
+        "auth.TokenResponse": {
+            "type": "object",
+            "properties": {
+                "access_token": {
+                    "type": "string"
+                },
+                "access_token_expiry": {
+                    "type": "string"
+                },
+                "expire": {
+                    "description": "Same as access_token_expiry",
+                    "type": "string"
+                },
+                "refresh_token": {
+                    "type": "string"
+                },
+                "refresh_token_expiry": {
+                    "type": "string"
+                },
+                "token": {
+                    "description": "Legacy fields for backward compatibility",
+                    "type": "string"
+                },
+                "token_type": {
+                    "type": "string"
+                }
+            }
+        },
+        "auth.signIn": {
+            "type": "object",
+            "required": [
+                "password",
+                "username"
+            ],
+            "properties": {
+                "password": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "bridge.connectRequest": {
+            "type": "object",
+            "required": [
+                "baseUrl",
+                "instanceId",
+                "instanceToken"
+            ],
+            "properties": {
+                "baseUrl": {
+                    "type": "string"
+                },
+                "instanceId": {
+                    "type": "string"
+                },
+                "instanceToken": {
+                    "type": "string"
+                }
+            }
+        },
         "chore.ActionOptions": {
             "type": "object",
             "properties": {
@@ -4644,6 +10217,9 @@ const docTemplate = `{
                     "type": "string"
                 }
             }
+        },
+        "chore.BulkCreateChoresReq": {
+            "type": "object"
         },
         "chore.ChoreReq": {
             "type": "object",
@@ -4676,6 +10252,12 @@ const docTemplate = `{
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/model.ChoreAssignees"
+                    }
+                },
+                "completionActions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.CompletionAction"
                     }
                 },
                 "completionWindow": {
@@ -4757,6 +10339,10 @@ const docTemplate = `{
                 },
                 "requireApproval": {
                     "type": "boolean"
+                },
+                "sectionId": {
+                    "description": "SectionID places a new chore directly into one of projectId's board\ncolumns. Ignored when ProjectID is nil; a chore without a section falls\nback to the project's first one when rendered.",
+                    "type": "integer"
                 },
                 "subTasks": {
                     "type": "array",
@@ -5052,6 +10638,46 @@ const docTemplate = `{
                 "UserRoleManager"
             ]
         },
+        "device.RegisterDeviceTokenRequest": {
+            "type": "object",
+            "required": [
+                "deviceId",
+                "platform",
+                "token"
+            ],
+            "properties": {
+                "appVersion": {
+                    "type": "string"
+                },
+                "deviceId": {
+                    "type": "string"
+                },
+                "deviceModel": {
+                    "type": "string"
+                },
+                "platform": {
+                    "type": "string",
+                    "enum": [
+                        "ios",
+                        "android"
+                    ]
+                },
+                "token": {
+                    "type": "string"
+                }
+            }
+        },
+        "device.UnregisterDeviceTokenRequest": {
+            "type": "object",
+            "properties": {
+                "deviceId": {
+                    "type": "string"
+                },
+                "token": {
+                    "type": "string"
+                }
+            }
+        },
         "donetick_com_core_internal_storage_model.EntityType": {
             "type": "integer",
             "enum": [
@@ -5072,6 +10698,60 @@ const docTemplate = `{
                 "EntityTypeChoreAttachmentDraft",
                 "EntityTypeChoreDescriptionDraft"
             ]
+        },
+        "label.LabelReq": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "color": {
+                    "type": "string"
+                },
+                "isShared": {
+                    "description": "Omitted on update preserves the current privacy setting.",
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "label.UpdateLabelReq": {
+            "type": "object",
+            "required": [
+                "id",
+                "name"
+            ],
+            "properties": {
+                "color": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "isShared": {
+                    "description": "Omitted on update preserves the current privacy setting.",
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.ActivePeriod": {
+            "type": "object",
+            "properties": {
+                "end": {
+                    "type": "string"
+                },
+                "start": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
         },
         "model.AssignmentStrategy": {
             "type": "string",
@@ -5122,9 +10802,19 @@ const docTemplate = `{
                         "$ref": "#/definitions/model.StorageFile"
                     }
                 },
+                "boardPosition": {
+                    "description": "Ordering of the chore within its section, shared by every viewer of the project",
+                    "type": "integer"
+                },
                 "circleId": {
                     "description": "The circle this chore is in",
                     "type": "integer"
+                },
+                "completionActions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.CompletionAction"
+                    }
                 },
                 "completionWindow": {
                     "description": "Number seconds before the chore is due that it can be completed",
@@ -5226,6 +10916,10 @@ const docTemplate = `{
                 "requireApproval": {
                     "description": "Whether chore completion requires admin approval",
                     "type": "boolean"
+                },
+                "sectionId": {
+                    "description": "The project section (board column) this chore is placed in; nil falls back to the project's first section",
+                    "type": "integer"
                 },
                 "status": {
                     "$ref": "#/definitions/model.Status"
@@ -5349,6 +11043,47 @@ const docTemplate = `{
                 "ChoreHistoryStatusRescheduled"
             ]
         },
+        "model.ChoreLiteReq": {
+            "type": "object",
+            "properties": {
+                "createdBy": {
+                    "type": "integer"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "dueDate": {
+                    "type": "string"
+                },
+                "forceUnarchive": {
+                    "type": "boolean"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "projectId": {
+                    "description": "The project this chore belongs to",
+                    "type": "integer"
+                }
+            }
+        },
+        "model.CompletionAction": {
+            "type": "object",
+            "properties": {
+                "operation": {
+                    "type": "string"
+                },
+                "thingId": {
+                    "type": "integer"
+                },
+                "value": {
+                    "type": "string"
+                }
+            }
+        },
         "model.Filter": {
             "type": "object",
             "properties": {
@@ -5380,6 +11115,9 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "isPinned": {
+                    "type": "boolean"
+                },
+                "isShared": {
                     "type": "boolean"
                 },
                 "name": {
@@ -5448,6 +11186,10 @@ const docTemplate = `{
                 "isPinned": {
                     "type": "boolean"
                 },
+                "isShared": {
+                    "description": "Omitted on update preserves the current privacy setting.",
+                    "type": "boolean"
+                },
                 "name": {
                     "type": "string",
                     "maxLength": 100,
@@ -5487,6 +11229,14 @@ const docTemplate = `{
                     "items": {
                         "type": "integer"
                     }
+                },
+                "scheduleBounds": {
+                    "description": "ScheduleBounds optionally narrows when the recurrence is live and when it\nstops. See bounds.go.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.ScheduleBounds"
+                        }
+                    ]
                 },
                 "time": {
                     "type": "string"
@@ -5568,6 +11318,9 @@ const docTemplate = `{
                 "id": {
                     "type": "integer"
                 },
+                "isShared": {
+                    "type": "boolean"
+                },
                 "name": {
                     "type": "string"
                 }
@@ -5625,6 +11378,26 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "model.NotificationPlatform": {
+            "type": "integer",
+            "format": "int32",
+            "enum": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5
+            ],
+            "x-enum-varnames": [
+                "NotificationPlatformNone",
+                "NotificationPlatformTelegram",
+                "NotificationPlatformPushover",
+                "NotificationPlatformWebhook",
+                "NotificationPlatformDiscord",
+                "NotificationPlatformFCM"
+            ]
         },
         "model.NotificationTemplate": {
             "type": "object",
@@ -5695,7 +11468,7 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "isPrivate": {
-                    "description": "Whether the project is only visible to its creator",
+                    "description": "Whether the project is hidden from the circle",
                     "type": "boolean"
                 },
                 "name": {
@@ -5703,14 +11476,19 @@ const docTemplate = `{
                 },
                 "updatedAt": {
                     "type": "string"
+                },
+                "view": {
+                    "description": "View is the current user's own, private layout preference (board, list,\ncards, compact, calendar) for this project. It is not a database column:\nthe handler fills\nit in per-request from ProjectViewPreference before marshaling a\nresponse, so it is never persisted via Save/Updates on this struct.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.ProjectView"
+                        }
+                    ]
                 }
             }
         },
         "model.ProjectReq": {
             "type": "object",
-            "required": [
-                "name"
-            ],
             "properties": {
                 "color": {
                     "type": "string"
@@ -5722,11 +11500,165 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "isPrivate": {
-                    "description": "IsPrivate is optional: when omitted on update the current value is kept, so\nolder clients that don't know about the field can't accidentally unset it.",
+                    "description": "IsPrivate is optional: when omitted on update the current value is kept, so\nolder clients that don't know about the field can't accidentally unset it.\nClients that only know isPrivate keep a \"members\" project shared as long as\nthey send isPrivate=true; isPrivate=false opens it to the whole circle.",
+                    "type": "boolean"
+                },
+                "memberIds": {
+                    "description": "MemberIDs is only read together with visibility \"members\". When omitted\nthere, the current member list is kept.",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "name": {
+                    "description": "Name has no binding:\"required\" tag because a request that only sets\nView (e.g. toggling board/list from the view menu) sends nothing else.\nHandlers that apply the other fields must reject an empty Name\nthemselves.",
+                    "type": "string"
+                },
+                "view": {
+                    "description": "View is the caller's own, private layout preference. Unlike every other\nfield above, it never needs project ownership to change: any user who\ncan see the project may set their own view, so it is applied\nindependently of the owner-only field update below.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.ProjectView"
+                        }
+                    ]
+                },
+                "visibility": {
+                    "description": "Visibility takes precedence over IsPrivate when both are sent.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.ProjectVisibility"
+                        }
+                    ]
+                }
+            }
+        },
+        "model.ProjectView": {
+            "type": "string",
+            "enum": [
+                "board",
+                "list",
+                "default",
+                "compact",
+                "calendar"
+            ],
+            "x-enum-varnames": [
+                "ProjectViewBoard",
+                "ProjectViewList",
+                "ProjectViewDefault",
+                "ProjectViewCompact",
+                "ProjectViewCalendar"
+            ]
+        },
+        "model.ProjectVisibility": {
+            "type": "string",
+            "enum": [
+                "private",
+                "members",
+                "circle"
+            ],
+            "x-enum-varnames": [
+                "ProjectVisibilityPrivate",
+                "ProjectVisibilityMembers",
+                "ProjectVisibilityCircle"
+            ]
+        },
+        "model.RedemptionStatus": {
+            "type": "integer",
+            "format": "int32",
+            "enum": [
+                0,
+                1,
+                2
+            ],
+            "x-enum-varnames": [
+                "RedemptionStatusPending",
+                "RedemptionStatusApproved",
+                "RedemptionStatusRejected"
+            ]
+        },
+        "model.Reward": {
+            "type": "object",
+            "properties": {
+                "autoApprove": {
+                    "type": "boolean"
+                },
+                "circleId": {
+                    "type": "integer"
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "createdBy": {
+                    "type": "integer"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "isActive": {
                     "type": "boolean"
                 },
                 "name": {
                     "type": "string"
+                },
+                "pointsCost": {
+                    "type": "integer"
+                },
+                "updatedAt": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.RewardRedemption": {
+            "type": "object",
+            "properties": {
+                "circleId": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "note": {
+                    "type": "string"
+                },
+                "pointsCost": {
+                    "description": "snapshot at request time",
+                    "type": "integer"
+                },
+                "requestedAt": {
+                    "type": "string"
+                },
+                "resolvedAt": {
+                    "type": "string"
+                },
+                "resolvedBy": {
+                    "type": "integer"
+                },
+                "rewardId": {
+                    "type": "integer"
+                },
+                "rewardName": {
+                    "description": "snapshot, survives reward edits/deletes",
+                    "type": "string"
+                },
+                "status": {
+                    "$ref": "#/definitions/model.RedemptionStatus"
+                },
+                "userId": {
+                    "type": "integer"
+                }
+            }
+        },
+        "model.ScheduleBounds": {
+            "type": "object",
+            "properties": {
+                "activePeriod": {
+                    "$ref": "#/definitions/model.ActivePeriod"
+                },
+                "stopRepeating": {
+                    "$ref": "#/definitions/model.StopRepeating"
                 }
             }
         },
@@ -5745,6 +11677,20 @@ const docTemplate = `{
                 "ChoreStatusPaused",
                 "ChoreStatusPendingApproval"
             ]
+        },
+        "model.StopRepeating": {
+            "type": "object",
+            "properties": {
+                "completionLimit": {
+                    "type": "integer"
+                },
+                "date": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
         },
         "model.StorageFile": {
             "type": "object",
@@ -5950,6 +11896,152 @@ const docTemplate = `{
                 "WeekPatternWeekOfQuarter"
             ]
         },
+        "project.AccessPreviewReq": {
+            "type": "object",
+            "properties": {
+                "isPrivate": {
+                    "type": "boolean"
+                },
+                "memberIds": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "visibility": {
+                    "$ref": "#/definitions/model.ProjectVisibility"
+                }
+            }
+        },
+        "project.MoveChoreReq": {
+            "type": "object",
+            "required": [
+                "sectionId"
+            ],
+            "properties": {
+                "afterChoreId": {
+                    "type": "integer"
+                },
+                "sectionId": {
+                    "type": "integer"
+                }
+            }
+        },
+        "project.MoveSectionReq": {
+            "type": "object",
+            "properties": {
+                "afterSectionId": {
+                    "type": "integer"
+                }
+            }
+        },
+        "project.SectionReq": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "resource.Resource": {
+            "type": "object",
+            "properties": {
+                "api_commit": {
+                    "type": "string"
+                },
+                "api_version": {
+                    "type": "string"
+                },
+                "bridge_enabled": {
+                    "type": "boolean"
+                },
+                "disable_password_auth": {
+                    "description": "DisablePasswordAuth tells the client to hide username/password login and\nsignup, leaving only SSO (#438).",
+                    "type": "boolean"
+                },
+                "identity_provider": {
+                    "$ref": "#/definitions/resource.identityProvider"
+                },
+                "is_user_creation_disabled": {
+                    "type": "boolean"
+                },
+                "min_version": {
+                    "type": "string"
+                },
+                "single_circle_instance": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "resource.identityProvider": {
+            "type": "object",
+            "properties": {
+                "auth_url": {
+                    "type": "string"
+                },
+                "client_id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "pkce": {
+                    "type": "boolean"
+                },
+                "scopes": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "reward.RedeemReq": {
+            "type": "object",
+            "properties": {
+                "note": {
+                    "type": "string"
+                },
+                "userId": {
+                    "type": "integer"
+                }
+            }
+        },
+        "reward.ResolveReq": {
+            "type": "object",
+            "properties": {
+                "note": {
+                    "type": "string"
+                }
+            }
+        },
+        "reward.RewardReq": {
+            "type": "object",
+            "required": [
+                "name",
+                "pointsCost"
+            ],
+            "properties": {
+                "autoApprove": {
+                    "type": "boolean"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "isActive": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "pointsCost": {
+                    "type": "integer"
+                }
+            }
+        },
         "thing.ThingRequest": {
             "type": "object",
             "required": [
@@ -5970,18 +12062,657 @@ const docTemplate = `{
                     "type": "string"
                 }
             }
+        },
+        "user.AccountDeletionCheckRequest": {
+            "type": "object",
+            "required": [
+                "password"
+            ],
+            "properties": {
+                "password": {
+                    "type": "string"
+                }
+            }
+        },
+        "user.AccountDeletionRequest": {
+            "type": "object",
+            "required": [
+                "confirmation",
+                "password"
+            ],
+            "properties": {
+                "confirmation": {
+                    "description": "Must be \"DELETE\"",
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                },
+                "transferOptions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/user.CircleTransferOption"
+                    }
+                }
+            }
+        },
+        "user.AuthProviderType": {
+            "type": "integer",
+            "enum": [
+                0,
+                1,
+                2,
+                3
+            ],
+            "x-enum-varnames": [
+                "AuthProviderDonetick",
+                "AuthProviderOAuth2",
+                "AuthProviderGoogle",
+                "AuthProviderApple"
+            ]
+        },
+        "user.ChildUserResponse": {
+            "type": "object",
+            "properties": {
+                "createdAt": {
+                    "type": "string"
+                },
+                "displayName": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "userType": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "user.CircleTransferInfo": {
+            "type": "object",
+            "properties": {
+                "circleId": {
+                    "type": "integer"
+                },
+                "circleName": {
+                    "type": "string"
+                },
+                "memberCount": {
+                    "type": "integer"
+                }
+            }
+        },
+        "user.CircleTransferOption": {
+            "type": "object",
+            "properties": {
+                "circleId": {
+                    "type": "integer"
+                },
+                "newOwnerId": {
+                    "type": "integer"
+                },
+                "newOwnerName": {
+                    "type": "string"
+                }
+            }
+        },
+        "user.CreateChildUserRequest": {
+            "type": "object",
+            "required": [
+                "childName",
+                "password"
+            ],
+            "properties": {
+                "childName": {
+                    "type": "string",
+                    "maxLength": 20,
+                    "minLength": 2
+                },
+                "displayName": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string",
+                    "maxLength": 64,
+                    "minLength": 8
+                }
+            }
+        },
+        "user.CreateLongLivedToken.TokenRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "mfaCode": {
+                    "description": "Optional MFA code for enhanced security",
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "user.DeletionResult": {
+            "type": "object",
+            "properties": {
+                "circlesLeft": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/user.CircleTransferInfo"
+                    }
+                },
+                "deletedData": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "integer"
+                    }
+                },
+                "message": {
+                    "type": "string"
+                },
+                "requiresTransfer": {
+                    "type": "boolean"
+                },
+                "success": {
+                    "type": "boolean"
+                },
+                "transferOptions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/user.CircleTransferOption"
+                    }
+                }
+            }
+        },
+        "user.MFASetupResponse": {
+            "type": "object",
+            "properties": {
+                "backupCodes": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "qrCodeUrl": {
+                    "type": "string"
+                },
+                "secret": {
+                    "type": "string"
+                }
+            }
+        },
+        "user.MFAVerifyRequest": {
+            "type": "object",
+            "required": [
+                "code"
+            ],
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "sessionToken": {
+                    "description": "For login flow",
+                    "type": "string"
+                }
+            }
+        },
+        "user.NotificationOverrides": {
+            "type": "object",
+            "additionalProperties": {
+                "type": "boolean"
+            }
+        },
+        "user.RefreshRequest": {
+            "type": "object",
+            "properties": {
+                "refreshToken": {
+                    "type": "string"
+                }
+            }
+        },
+        "user.UpdateChildPasswordRequest": {
+            "type": "object",
+            "required": [
+                "childUserId",
+                "password"
+            ],
+            "properties": {
+                "childUserId": {
+                    "type": "integer"
+                },
+                "password": {
+                    "type": "string",
+                    "maxLength": 64,
+                    "minLength": 8
+                }
+            }
+        },
+        "user.UpdateNotificationPreferenceReq": {
+            "type": "object",
+            "required": [
+                "profile"
+            ],
+            "properties": {
+                "digestHour": {
+                    "description": "DigestHour is a pointer so an omitted field leaves the previously saved\nhour untouched instead of resetting it to 0 (midnight).",
+                    "type": "integer",
+                    "maximum": 23,
+                    "minimum": 0
+                },
+                "overrides": {
+                    "$ref": "#/definitions/user.NotificationOverrides"
+                },
+                "profile": {
+                    "description": "swaggertype/enums: the alias constants (NotificationProfileDefault, ...)\nwould otherwise be listed twice in the generated enum.",
+                    "type": "string",
+                    "enum": [
+                        "balanced",
+                        "planner",
+                        "just_in_time",
+                        "persistent",
+                        "quiet",
+                        "custom"
+                    ]
+                }
+            }
+        },
+        "user.UpdateNotificationTarget.Request": {
+            "type": "object",
+            "properties": {
+                "target": {
+                    "type": "string"
+                },
+                "type": {
+                    "$ref": "#/definitions/model.NotificationPlatform"
+                }
+            }
+        },
+        "user.UpdateUserDetails.UpdateUserReq": {
+            "type": "object",
+            "properties": {
+                "chatID": {
+                    "type": "integer"
+                },
+                "displayName": {
+                    "type": "string"
+                },
+                "image": {
+                    "type": "string"
+                },
+                "timezone": {
+                    "type": "string"
+                }
+            }
+        },
+        "user.User": {
+            "type": "object",
+            "properties": {
+                "chatID": {
+                    "description": "Telegram chat ID",
+                    "type": "integer"
+                },
+                "circleID": {
+                    "description": "Circle ID",
+                    "type": "integer"
+                },
+                "created_at": {
+                    "description": "Created at",
+                    "type": "string"
+                },
+                "customerID": {
+                    "description": "Email    string ` + "`" + `json:\"email\" gorm:\"column:email\"` + "`" + `       // Email",
+                    "type": "string"
+                },
+                "disabled": {
+                    "description": "Disabled",
+                    "type": "boolean"
+                },
+                "displayName": {
+                    "description": "Display name",
+                    "type": "string"
+                },
+                "email": {
+                    "description": "Email (unique when not empty, allows empty for child users)",
+                    "type": "string"
+                },
+                "expiration": {
+                    "description": "read only column",
+                    "type": "string"
+                },
+                "id": {
+                    "description": "Unique identifier",
+                    "type": "integer"
+                },
+                "image": {
+                    "description": "Image",
+                    "type": "string"
+                },
+                "mfaEnabled": {
+                    "description": "MFA fields",
+                    "type": "boolean"
+                },
+                "notification_target": {
+                    "$ref": "#/definitions/user.UserNotificationTarget"
+                },
+                "parentUserId": {
+                    "description": "Parent-Child relationship fields",
+                    "type": "integer"
+                },
+                "provider": {
+                    "description": "Provider",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/user.AuthProviderType"
+                        }
+                    ]
+                },
+                "subscription": {
+                    "description": "read only column",
+                    "type": "string"
+                },
+                "timezone": {
+                    "description": "Timezone",
+                    "type": "string"
+                },
+                "updated_at": {
+                    "description": "Updated at",
+                    "type": "string"
+                },
+                "userType": {
+                    "$ref": "#/definitions/user.UserType"
+                },
+                "username": {
+                    "description": "Username (unique)",
+                    "type": "string"
+                }
+            }
+        },
+        "user.UserDetails": {
+            "type": "object",
+            "properties": {
+                "chatID": {
+                    "description": "Telegram chat ID",
+                    "type": "integer"
+                },
+                "circleID": {
+                    "description": "Circle ID",
+                    "type": "integer"
+                },
+                "created_at": {
+                    "description": "Created at",
+                    "type": "string"
+                },
+                "customerID": {
+                    "description": "Email    string ` + "`" + `json:\"email\" gorm:\"column:email\"` + "`" + `       // Email",
+                    "type": "string"
+                },
+                "disabled": {
+                    "description": "Disabled",
+                    "type": "boolean"
+                },
+                "displayName": {
+                    "description": "Display name",
+                    "type": "string"
+                },
+                "email": {
+                    "description": "Email (unique when not empty, allows empty for child users)",
+                    "type": "string"
+                },
+                "expiration": {
+                    "description": "read only column",
+                    "type": "string"
+                },
+                "id": {
+                    "description": "Unique identifier",
+                    "type": "integer"
+                },
+                "image": {
+                    "description": "Image",
+                    "type": "string"
+                },
+                "mfaEnabled": {
+                    "description": "MFA fields",
+                    "type": "boolean"
+                },
+                "notification_target": {
+                    "$ref": "#/definitions/user.UserNotificationTarget"
+                },
+                "parentUserId": {
+                    "description": "Parent-Child relationship fields",
+                    "type": "integer"
+                },
+                "provider": {
+                    "description": "Provider",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/user.AuthProviderType"
+                        }
+                    ]
+                },
+                "subscription": {
+                    "description": "read only column",
+                    "type": "string"
+                },
+                "timezone": {
+                    "description": "Timezone",
+                    "type": "string"
+                },
+                "updated_at": {
+                    "description": "Updated at",
+                    "type": "string"
+                },
+                "userType": {
+                    "$ref": "#/definitions/user.UserType"
+                },
+                "username": {
+                    "description": "Username (unique)",
+                    "type": "string"
+                },
+                "webhookURL": {
+                    "description": "read only column",
+                    "type": "string"
+                }
+            }
+        },
+        "user.UserDeviceToken": {
+            "type": "object",
+            "properties": {
+                "appVersion": {
+                    "description": "App version",
+                    "type": "string"
+                },
+                "createdAt": {
+                    "description": "Created timestamp",
+                    "type": "string"
+                },
+                "deviceId": {
+                    "description": "Device identifier",
+                    "type": "string"
+                },
+                "deviceModel": {
+                    "description": "Device model",
+                    "type": "string"
+                },
+                "id": {
+                    "description": "Primary key",
+                    "type": "integer"
+                },
+                "isActive": {
+                    "description": "Active status",
+                    "type": "boolean"
+                },
+                "lastActiveAt": {
+                    "description": "Last active timestamp",
+                    "type": "string"
+                },
+                "platform": {
+                    "description": "ios, android",
+                    "type": "string"
+                },
+                "userId": {
+                    "description": "User ID",
+                    "type": "integer"
+                }
+            }
+        },
+        "user.UserNotificationTarget": {
+            "type": "object",
+            "properties": {
+                "target_id": {
+                    "description": "Target ID",
+                    "type": "string"
+                },
+                "type": {
+                    "description": "Type",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.NotificationPlatform"
+                        }
+                    ]
+                },
+                "userId": {
+                    "description": "Index on userID",
+                    "type": "integer"
+                }
+            }
+        },
+        "user.UserType": {
+            "type": "integer",
+            "enum": [
+                0,
+                1
+            ],
+            "x-enum-varnames": [
+                "UserTypeParent",
+                "UserTypeChild"
+            ]
+        },
+        "user.confirmMFA.ConfirmMFARequest": {
+            "type": "object",
+            "required": [
+                "backupCodes",
+                "code",
+                "secret"
+            ],
+            "properties": {
+                "backupCodes": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "code": {
+                    "type": "string"
+                },
+                "secret": {
+                    "type": "string"
+                }
+            }
+        },
+        "user.resetPassword.ResetPasswordReq": {
+            "type": "object",
+            "required": [
+                "email"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string"
+                }
+            }
+        },
+        "user.setWebhook.Request": {
+            "type": "object",
+            "properties": {
+                "url": {
+                    "type": "string"
+                }
+            }
+        },
+        "user.signUp.SignUpReq": {
+            "type": "object",
+            "required": [
+                "email",
+                "password",
+                "username"
+            ],
+            "properties": {
+                "displayName": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string",
+                    "maxLength": 64,
+                    "minLength": 8
+                },
+                "timezone": {
+                    "description": "Timezone is the client's IANA zone (e.g. \"America/New_York\"), sent at\nsignup so time-of-day features -- digest notifications above all --\nwork from the first day. Optional: older clients omit it and the user\nstays on the UTC fallback until they save a timezone in settings.",
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string",
+                    "maxLength": 20,
+                    "minLength": 4
+                }
+            }
+        },
+        "user.updateUserPassword.RequestBody": {
+            "type": "object",
+            "required": [
+                "password"
+            ],
+            "properties": {
+                "password": {
+                    "type": "string",
+                    "maxLength": 64,
+                    "minLength": 8
+                }
+            }
+        },
+        "user.updateUserPasswordLoggedInOnly.RequestBody": {
+            "type": "object",
+            "required": [
+                "password"
+            ],
+            "properties": {
+                "password": {
+                    "type": "string",
+                    "maxLength": 64,
+                    "minLength": 8
+                }
+            }
+        }
+    },
+    "securityDefinitions": {
+        "APIKeyAuth": {
+            "description": "donetick issued apikey",
+            "type": "apiKey",
+            "name": "secretkey",
+            "in": "header"
+        },
+        "JWTKeyAuth": {
+            "description": "Type \"Bearer\" followed by a space and JWT token.",
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
         }
     }
 }`
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
-	Version:          "",
+	Version:          "1.0",
 	Host:             "",
-	BasePath:         "",
+	BasePath:         "/",
 	Schemes:          []string{},
-	Title:            "",
-	Description:      "",
+	Title:            "Donetick Swagger API",
+	Description:      "Donetick swagger documentation.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

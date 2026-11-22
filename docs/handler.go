@@ -38,7 +38,7 @@ func NewHandler(config *config.Config) *Handler {
 //	@license.name	GNU Affero General Public License v3.0
 //	@license.url	https://github.com/donetick/donetick/blob/main/LICENSE.md
 
-//	@BasePath	/api/v1
+//	@BasePath	/
 
 //	@securityDefinitions.apikey	JWTKeyAuth
 //	@in							header

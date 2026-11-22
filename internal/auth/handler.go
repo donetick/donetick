@@ -33,6 +33,17 @@ func NewAuthHandler(tokenService *TokenService, userRepo *uRepo.UserRepository, 
 }
 
 // RefreshTokenHandler handles POST /auth/refresh
+//
+//	@Summary		Refresh tokens
+//	@Description	Exchanges a refresh token (refresh_token cookie, or refresh_token in the body) for new access and refresh tokens.
+//	@Tags			auth
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		RefreshRequest		false	"Refresh token, if not sent as a cookie"
+//	@Success		200		{object}	TokenResponse		"tokens"
+//	@Failure		400		{object}	map[string]string	"error: Invalid request | Refresh token required"
+//	@Failure		401		{object}	map[string]string	"error: Invalid or expired refresh token"
+//	@Router			/api/v1/auth/refresh [post]
 func (h *AuthHandler) RefreshTokenHandler(c *gin.Context) {
 	// Try to get refresh token from cookie first (httpOnly), fallback to body (legacy)
 	refreshToken, err := c.Cookie("refresh_token")
@@ -73,6 +84,15 @@ func (h *AuthHandler) RefreshTokenHandler(c *gin.Context) {
 }
 
 // LogoutHandler handles POST /auth/logout
+//
+//	@Summary		Log out (revoke refresh token)
+//	@Description	Revokes the refresh token (cookie or body) and clears the cookie. Always succeeds.
+//	@Tags			auth
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		RefreshRequest		false	"Refresh token, if not sent as a cookie"
+//	@Success		200		{object}	map[string]string	"message: Logged out successfully"
+//	@Router			/api/v1/auth/logout [post]
 func (h *AuthHandler) LogoutHandler(c *gin.Context) {
 	// Try to get refresh token from cookie first (httpOnly), fallback to body (legacy)
 	refreshToken, err := c.Cookie("refresh_token")
@@ -104,6 +124,16 @@ func (h *AuthHandler) LogoutHandler(c *gin.Context) {
 }
 
 // RevokeAllHandler handles POST /auth/revoke-all
+//
+//	@Summary		Revoke all sessions
+//	@Description	Revokes every refresh token for the current user, logging out all devices.
+//	@Tags			auth
+//	@Produce		json
+//	@Security		JWTKeyAuth
+//	@Success		200	{object}	map[string]string	"message: All sessions revoked successfully"
+//	@Failure		401	{object}	map[string]string	"error: Unauthorized"
+//	@Failure		500	{object}	map[string]string	"error: Failed to revoke sessions"
+//	@Router			/api/v1/auth/revoke-all [post]
 func (h *AuthHandler) RevokeAllHandler(c *gin.Context) {
 	// Get current user from JWT token
 	currentUser, ok := CurrentUser(c)
@@ -132,6 +162,19 @@ func (h *AuthHandler) RevokeAllHandler(c *gin.Context) {
 }
 
 // EnhancedLoginHandler provides enhanced login with refresh tokens
+//
+//	@Summary		Log in
+//	@Description	Logs in with username and password and returns access and refresh tokens (the refresh token is also set as an httpOnly cookie). Users with MFA get {mfaRequired: true, sessionToken} instead; finish with POST /api/v1/auth/mfa/verify.
+//	@Tags			auth
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		signIn				true	"Credentials"
+//	@Success		200		{object}	TokenResponse		"tokens (or mfaRequired + sessionToken)"
+//	@Failure		400		{object}	map[string]string	"error: Invalid request"
+//	@Failure		401		{object}	map[string]string	"error: Invalid credentials"
+//	@Failure		403		{object}	map[string]string	"error: Password authentication is disabled on this instance"
+//	@Failure		500		{object}	map[string]string	"error: Authentication failed | Failed to generate tokens"
+//	@Router			/api/v1/auth/login [post]
 func (h *AuthHandler) EnhancedLoginHandler(c *gin.Context) {
 	logger := logging.FromContext(c)
 	var loginReq struct {

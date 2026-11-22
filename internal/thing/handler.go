@@ -58,7 +58,7 @@ func NewHandler(cr *chRepo.ChoreRepository, circleRepo *cRepo.CircleRepository,
 //	@Failure		400		{object}	map[string]string		"error: Invalid request | Invalid state"
 //	@Failure		401		{object}	map[string]string		"error: Unauthorized"
 //	@Failure		500		{object}	map[string]string		"error: Failed to create thing"
-//	@Router			/things [post]
+//	@Router			/api/v1/things [post]
 func (h *Handler) CreateThing(c *gin.Context) {
 	log := logging.FromContext(c)
 	currentUser, ok := auth.CurrentUser(c)
@@ -108,7 +108,7 @@ func (h *Handler) CreateThing(c *gin.Context) {
 //	@Failure		401		{object}	map[string]string		"error: Unauthorized"
 //	@Failure		403		{object}	map[string]string		"error: Forbidden"
 //	@Failure		500		{object}	map[string]string		"error: Unable to find thing | Failed to update state"
-//	@Router			/things/{id}/state [put]
+//	@Router			/api/v1/things/{id}/state [put]
 func (h *Handler) UpdateThingState(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
@@ -205,7 +205,7 @@ func EvaluateTriggerAndScheduleDueDate(h *Handler, c *gin.Context, thing *tModel
 //	@Failure		401		{object}	map[string]string		"error: Unauthorized"
 //	@Failure		403		{object}	map[string]string		"error: Forbidden"
 //	@Failure		500		{object}	map[string]string		"error: Unable to find thing | Failed to update thing"
-//	@Router			/things [put]
+//	@Router			/api/v1/things [put]
 func (h *Handler) UpdateThing(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
@@ -260,7 +260,7 @@ func (h *Handler) UpdateThing(c *gin.Context) {
 //	@Success		200	{object}	map[string][]interface{}	"res: array of things"
 //	@Failure		401	{object}	map[string]string			"error: Unauthorized"
 //	@Failure		500	{object}	map[string]string			"error: Failed to retrieve things"
-//	@Router			/things [get]
+//	@Router			/api/v1/things [get]
 func (h *Handler) GetAllThings(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
@@ -294,7 +294,7 @@ func (h *Handler) GetAllThings(c *gin.Context) {
 //	@Failure		401		{object}	map[string]string		"error: Unauthorized"
 //	@Failure		403		{object}	map[string]string		"error: Forbidden"
 //	@Failure		500		{object}	map[string]string		"error: Unable to find thing | Failed to retrieve history"
-//	@Router			/things/{id}/history [get]
+//	@Router			/api/v1/things/{id}/history [get]
 func (h *Handler) GetThingHistory(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
@@ -351,7 +351,7 @@ func (h *Handler) GetThingHistory(c *gin.Context) {
 //	@Failure		403	{object}	map[string]string	"error: Forbidden"
 //	@Failure		405	{object}	map[string]string	"error: Unable to delete thing with associated tasks"
 //	@Failure		500	{object}	map[string]string	"error: Unable to find thing | Unable to find tasks linked to this thing | Failed to delete thing"
-//	@Router			/things/{id} [delete]
+//	@Router			/api/v1/things/{id} [delete]
 func (h *Handler) DeleteThing(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {

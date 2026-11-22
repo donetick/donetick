@@ -40,6 +40,19 @@ func NewAPI(cr *chRepo.ChoreRepository, circleRepo *cRepo.CircleRepository,
 	}
 }
 
+// UpdateThingState godoc
+//
+//	@Summary		Set a thing's state (external API)
+//	@Description	Sets the state of one of the token user's things and runs any chore triggers. Uses GET so it can be called from simple webhooks.
+//	@Tags			external-api
+//	@Produce		json
+//	@Security		APIKeyAuth
+//	@Param			id		path		int					true	"Thing ID"
+//	@Param			state	query		string				true	"New state"
+//	@Success		200		{object}	map[string]string	"empty object"
+//	@Failure		400		{object}	map[string]string	"error: Invalid state value | Invalid state for thing | Invalid thing id"
+//	@Failure		401		{object}	map[string]string	"error: Unauthorized"
+//	@Router			/eapi/v1/things/{id}/state [get]
 func (h *API) UpdateThingState(c *gin.Context) {
 	thing, shouldReturn := validateUserAndThing(c, h)
 	if shouldReturn {
@@ -81,6 +94,20 @@ func (h *API) UpdateThingState(c *gin.Context) {
 	c.JSON(200, gin.H{})
 }
 
+// ChangeThingState godoc
+//
+//	@Summary		Change a thing's state (external API)
+//	@Description	Adds op to a numeric thing's state, or sets it to set, then runs any chore triggers. Uses GET so it can be called from simple webhooks.
+//	@Tags			external-api
+//	@Produce		json
+//	@Security		APIKeyAuth
+//	@Param			id	path		int					true	"Thing ID"
+//	@Param			op	query		int					false	"Amount to add (negative to subtract)"
+//	@Param			set	query		string				false	"Value to set"
+//	@Success		200	{object}	map[string]string	"state: new state"
+//	@Failure		400	{object}	map[string]string	"error: Invalid increment value | Invalid state for thing | Invalid thing id"
+//	@Failure		401	{object}	map[string]string	"error: Unauthorized"
+//	@Router			/eapi/v1/things/{id}/state/change [get]
 func (h *API) ChangeThingState(c *gin.Context) {
 	thing, shouldReturn := validateUserAndThing(c, h)
 	if shouldReturn {
@@ -208,6 +235,16 @@ func APIs(cfg *config.Config, w *API, r *gin.Engine, auth *jwt.GinJWTMiddleware,
 }
 
 // GetThingByID returns a single thing by its ID for the authenticated user
+//
+//	@Summary	Get a thing (external API)
+//	@Tags		external-api
+//	@Produce	json
+//	@Security	APIKeyAuth
+//	@Param		id	path		int						true	"Thing ID"
+//	@Success	200	{object}	map[string]tModel.Thing	"thing"
+//	@Failure	400	{object}	map[string]string		"error: Invalid thing id"
+//	@Failure	401	{object}	map[string]string		"error: Unauthorized"
+//	@Router		/eapi/v1/things/{id} [get]
 func (h *API) GetThingByID(c *gin.Context) {
 	thing, shouldReturn := validateUserAndThing(c, h)
 	if shouldReturn {
@@ -217,6 +254,14 @@ func (h *API) GetThingByID(c *gin.Context) {
 }
 
 // GetAllThings returns all things for the authenticated user
+//
+//	@Summary	List things (external API)
+//	@Tags		external-api
+//	@Produce	json
+//	@Security	APIKeyAuth
+//	@Success	200	{array}		tModel.Thing		"things"
+//	@Failure	500	{object}	map[string]string	"error"
+//	@Router		/eapi/v1/things [get]
 func (h *API) GetAllThings(c *gin.Context) {
 	user := auth.MustCurrentUser(c)
 	things, err := h.thingRepo.GetThingsByUserID(c, user.ID)

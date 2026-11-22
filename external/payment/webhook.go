@@ -119,6 +119,18 @@ func subscriptionExpiry(sub *stripe.Subscription) (time.Time, error) {
 	return time.Unix(sub.CurrentPeriodEnd, 0).UTC(), nil
 }
 
+// StripeWebhook godoc
+//
+//	@Summary		Stripe webhook
+//	@Description	Receives Stripe subscription events. Only accepted from whitelisted Stripe IP addresses. Called by Stripe, not by clients.
+//	@Tags			webhooks
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body	map[string]interface{}	true	"Stripe event"
+//	@Success		200		"event processed"
+//	@Failure		403		{string}	string	"Forbidden"
+//	@Failure		500		{string}	string	"Internal Server Error"
+//	@Router			/webhooks/stripe [post]
 func (h *Webhook) StripeWebhook(c *gin.Context) {
 
 	logger := logging.FromContext(c)
@@ -372,6 +384,20 @@ func (e RevenueCatEvent) expiresAt() *time.Time {
 	return &expiresAt
 }
 
+// RevenueCatWebhook godoc
+//
+//	@Summary		RevenueCat webhook
+//	@Description	Receives RevenueCat in-app subscription events. The Authorization header must equal the configured RevenueCat secret. Called by RevenueCat, not by clients.
+//	@Tags			webhooks
+//	@Accept			json
+//	@Produce		json
+//	@Param			Authorization	header	string					true	"RevenueCat shared secret"
+//	@Param			request			body	map[string]interface{}	true	"RevenueCat event"
+//	@Success		200				"event processed"
+//	@Failure		400				{string}	string	"Invalid JSON"
+//	@Failure		403				{string}	string	"Forbidden"
+//	@Failure		503				{string}	string	"Webhook not configured"
+//	@Router			/webhooks/revenuecat [post]
 func (h *Webhook) RevenueCatWebhook(c *gin.Context) {
 	logger := logging.FromContext(c)
 

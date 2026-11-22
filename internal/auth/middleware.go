@@ -38,6 +38,18 @@ func MustCurrentUser(c *gin.Context) *uModel.UserDetails {
 	panic("no account in gin.Context")
 }
 
+// NewAuthMiddleware godoc
+//
+//	@Summary		Log in (legacy)
+//	@Description	Legacy login handled by gin-jwt (the Authenticator configured here); returns an access token only. Prefer POST /api/v1/auth/login. Users with MFA get {mfaRequired: true, sessionToken} instead.
+//	@Tags			auth
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		signIn					true	"Credentials"
+//	@Success		200		{object}	map[string]interface{}	"code, token, expire (or mfaRequired + sessionToken)"
+//	@Failure		401		{object}	map[string]interface{}	"code, message"
+//	@Failure		403		{object}	map[string]string		"error: Password authentication is disabled on this instance"
+//	@Router			/api/v1/auth/login/legacy [post]
 func NewAuthMiddleware(cfg *config.Config, userRepo *uRepo.UserRepository, mfaService *mfa.MFAService) (*jwt.GinJWTMiddleware, error) {
 	return jwt.New(&jwt.GinJWTMiddleware{
 		Realm:       "test zone",

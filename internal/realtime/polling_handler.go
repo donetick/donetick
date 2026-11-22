@@ -68,6 +68,19 @@ func NewPollingHandler(
 // EventSource clients exchange for an authenticated SSE connection. This
 // endpoint is protected by the standard JWT middleware, so the token is sent in
 // the Authorization header and never exposed in a URL.
+//
+//	@Summary		Get an SSE ticket
+//	@Description	Issues a short-lived, single-use ticket to pass as ?ticket= to GET /api/v1/realtime/sse. Plus members only.
+//	@Tags			realtime
+//	@Produce		json
+//	@Security		JWTKeyAuth
+//	@Success		200	{object}	map[string]interface{}	"ticket, expiresIn (seconds)"
+//	@Failure		401	{object}	map[string]string		"error: Authentication required, code: AUTH_REQUIRED"
+//	@Failure		403	{object}	map[string]string		"error: Access denied for non-plus members, code: ACCESS_DENIED"
+//	@Failure		429	{object}	map[string]string		"error: Rate limit exceeded, code: RATE_LIMIT_EXCEEDED"
+//	@Failure		503	{object}	map[string]string		"code: TICKET_STORE_FULL"
+//	@Failure		500	{object}	map[string]string		"error: Failed to issue ticket, code: TICKET_ISSUE_FAILED"
+//	@Router			/api/v1/realtime/sse/ticket [get]
 func (h *PollingHandler) HandleSSETicket(c *gin.Context) {
 	logger := logging.FromContext(c.Request.Context())
 
@@ -125,6 +138,19 @@ func (h *PollingHandler) HandleSSETicket(c *gin.Context) {
 }
 
 // HandleSSE handles Server-Sent Events connections
+//
+//	@Summary		Subscribe to real-time circle events
+//	@Description	Opens a Server-Sent Events stream of changes in the user's circle. Authenticate with a Bearer JWT, or with a single-use ticket from GET /api/v1/realtime/sse/ticket for clients (such as EventSource) that cannot send headers. Plus members only.
+//	@Tags			realtime
+//	@Produce		text/event-stream
+//	@Security		JWTKeyAuth
+//	@Param			ticket	query		string				false	"Single-use SSE ticket"
+//	@Success		200		{string}	string				"event stream"
+//	@Failure		400		{object}	map[string]string	"error, code: INVALID_REQUEST"
+//	@Failure		401		{object}	map[string]string	"error: Authentication required, code: AUTH_REQUIRED"
+//	@Failure		429		{object}	map[string]string	"error: Rate limit exceeded, code: RATE_LIMIT_EXCEEDED"
+//	@Failure		503		{object}	map[string]string	"error: Server-Sent Events service is not available, code: SERVICE_UNAVAILABLE"
+//	@Router			/api/v1/realtime/sse [get]
 func (h *PollingHandler) HandleSSE(c *gin.Context) {
 	// Check if SSE is enabled
 	if !h.config.RealTimeConfig.Enabled || !h.config.RealTimeConfig.SSEEnabled {

@@ -117,7 +117,7 @@ func NewHandler(cr *chRepo.ChoreRepository, circleRepo *cRepo.CircleRepository, 
 //	@Success		200				{object}	map[string][]chModel.Chore	"res: array of chores"
 //	@Failure		401				{object}	map[string]string			"error: Authentication failed"
 //	@Failure		500				{object}	map[string]string			"error: Failed to retrieve chores"
-//	@Router			/chores [get]
+//	@Router			/api/v1/chores [get]
 func (h *Handler) GetChores(c *gin.Context) {
 	logger := logging.FromContext(c)
 	u, ok := auth.CurrentUser(c)
@@ -160,7 +160,7 @@ func (h *Handler) GetChores(c *gin.Context) {
 //	@Success		200	{object}	map[string][]chModel.Chore	"res: array of archived chores"
 //	@Failure		401	{object}	map[string]string			"error: Authentication failed"
 //	@Failure		500	{object}	map[string]string			"error: Failed to retrieve archived chores"
-//	@Router			/chores/archived [get]
+//	@Router			/api/v1/chores/archived [get]
 func (h *Handler) GetArchivedChores(c *gin.Context) {
 	logger := logging.FromContext(c)
 	u, ok := auth.CurrentUser(c)
@@ -200,7 +200,7 @@ func (h *Handler) GetArchivedChores(c *gin.Context) {
 //	@Failure		401	{object}	map[string]string			"error: Authentication failed"
 //	@Failure		403	{object}	map[string]string			"error: You are not allowed to view this chore"
 //	@Failure		500	{object}	map[string]string			"error: Failed to retrieve chore"
-//	@Router			/chores/{id} [get]
+//	@Router			/api/v1/chores/{id} [get]
 func (h *Handler) GetChore(c *gin.Context) {
 	logger := logging.FromContext(c)
 	currentUser, ok := auth.CurrentUser(c)
@@ -467,7 +467,7 @@ func applyPauseActionTime(session *chModel.TimeSession, userID int, actionTime t
 //	@Failure		400		{object}	map[string]string	"error: Invalid request format | Assignee not found in circle | Invalid date"
 //	@Failure		401		{object}	map[string]string	"error: Authentication failed"
 //	@Failure		500		{object}	map[string]string	"error: Failed to create chore | Error adding labels | Error adding chore assignees"
-//	@Router			/chores [post]
+//	@Router			/api/v1/chores [post]
 func (h *Handler) CreateChore(c *gin.Context) {
 	logger := logging.FromContext(c)
 	currentUser, ok := auth.CurrentUser(c)
@@ -504,18 +504,18 @@ type BulkCreateChoresReq struct {
 
 // BulkCreateChores godoc
 //
-//	@Summary Create multiple chores
-//	@Description Creates up to 100 chores in request order. Each item uses the single-create request format and is validated independently; failures do not stop subsequent items. Results contain the zero-based index, HTTP status, and single-create response fields. Creation is not atomic; a failure after persistence also includes the created ID in res.
-//	@Tags chores
-//	@Accept json
-//	@Produce json
-//	@Security JWTKeyAuth
-//	@Security APIKeyAuth
-//	@Param chores body BulkCreateChoresReq true "Chores to create"
-//	@Success 200 {object} map[string]interface{} "res: ordered per-item results"
-//	@Failure 400 {object} map[string]string "Invalid request format"
-//	@Failure 401 {object} map[string]string "Authentication failed"
-//	@Router /chores/bulk [post]
+//	@Summary		Create multiple chores
+//	@Description	Creates up to 100 chores in request order. Each item uses the single-create request format and is validated independently; failures do not stop subsequent items. Results contain the zero-based index, HTTP status, and single-create response fields. Creation is not atomic; a failure after persistence also includes the created ID in res.
+//	@Tags			chores
+//	@Accept			json
+//	@Produce		json
+//	@Security		JWTKeyAuth
+//	@Security		APIKeyAuth
+//	@Param			chores	body		BulkCreateChoresReq		true	"Chores to create"
+//	@Success		200		{object}	map[string]interface{}	"res: ordered per-item results"
+//	@Failure		400		{object}	map[string]string		"Invalid request format"
+//	@Failure		401		{object}	map[string]string		"Authentication failed"
+//	@Router			/api/v1/chores/bulk [post]
 func (h *Handler) BulkCreateChores(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
@@ -811,7 +811,7 @@ func setCreateChoreDefaults(choreReq *ChoreReq) []string {
 //	@Failure		401		{object}	map[string]string	"error: Authentication failed"
 //	@Failure		403		{object}	map[string]string	"error: You cannot edit this chore"
 //	@Failure		500		{object}	map[string]string	"error: Failed to retrieve chore | Error adding chore | Error adding subtasks"
-//	@Router			/chores [put]
+//	@Router			/api/v1/chores [put]
 func (h *Handler) EditChore(c *gin.Context) {
 	// logger := logging.FromContext(c)
 	logger := logging.FromContext(c)
@@ -1319,7 +1319,7 @@ func associateThing(choreReq ChoreReq, savedChore *chModel.Chore, h *Handler, c 
 //	@Failure		401	{object}	map[string]string	"error: Authentication failed"
 //	@Failure		403	{object}	map[string]string	"error: You are not allowed to delete this chore"
 //	@Failure		500	{object}	map[string]string	"error: Failed to retrieve chore | Failed to delete chore"
-//	@Router			/chores/{id} [delete]
+//	@Router			/api/v1/chores/{id} [delete]
 func (h *Handler) DeleteChore(c *gin.Context) {
 	// logger := logging.FromContext(c)
 	logger := logging.FromContext(c)
@@ -1435,7 +1435,7 @@ type AssigneeReq struct {
 //	@Failure		401			{object}	map[string]string			"error: Authentication failed"
 //	@Failure		403			{object}	map[string]string			"error: You cannot edit this chore"
 //	@Failure		500			{object}	map[string]string			"error: Failed to retrieve chore | Error updating assignee"
-//	@Router			/chores/{id}/assignee [put]
+//	@Router			/api/v1/chores/{id}/assignee [put]
 func (h *Handler) UpdateAssignee(c *gin.Context) {
 	logger := logging.FromContext(c)
 	currentUser, ok := auth.CurrentUser(c)
@@ -1560,7 +1560,7 @@ func (h *Handler) UpdateAssignee(c *gin.Context) {
 //	@Failure		401	{object}	map[string]string		"error: Authentication failed"
 //	@Failure		403	{object}	map[string]string		"error: You are not allowed to start this chore"
 //	@Failure		500	{object}	map[string]string		"error: Failed to retrieve chore | Error creating time session"
-//	@Router			/chores/{id}/start [put]
+//	@Router			/api/v1/chores/{id}/start [put]
 func (h *Handler) StartChore(c *gin.Context) {
 	var req ActionReq
 	if err := bindOptionalActionReq(c, &req); err != nil {
@@ -1737,7 +1737,7 @@ func (h *Handler) StartChore(c *gin.Context) {
 //	@Failure		401	{object}	map[string]string		"error: Authentication failed"
 //	@Failure		403	{object}	map[string]string		"error: You are not allowed to pause this chore"
 //	@Failure		500	{object}	map[string]string		"error: Failed to retrieve chore | Error getting active time session"
-//	@Router			/chores/{id}/pause [put]
+//	@Router			/api/v1/chores/{id}/pause [put]
 func (h *Handler) PauseChore(c *gin.Context) {
 	var req ActionReq
 	if err := bindOptionalActionReq(c, &req); err != nil {
@@ -1883,7 +1883,7 @@ func (h *Handler) PauseChore(c *gin.Context) {
 //	@Failure		401	{object}	map[string]string		"error: Authentication failed"
 //	@Failure		403	{object}	map[string]string		"error: You are not allowed to reset timer for this chore"
 //	@Failure		500	{object}	map[string]string		"error: Failed to retrieve chore | Error updating time session"
-//	@Router			/chores/{id}/timer/reset [put]
+//	@Router			/api/v1/chores/{id}/timer/reset [put]
 func (h *Handler) ResetChoreTimer(c *gin.Context) {
 	rawID := c.Param("id")
 	id, err := strconv.Atoi(rawID)
@@ -2013,7 +2013,7 @@ func (h *Handler) ResetChoreTimer(c *gin.Context) {
 //	@Failure		400	{object}	map[string]string			"error: Invalid ID"
 //	@Failure		401	{object}	map[string]string			"error: Authentication failed"
 //	@Failure		500	{object}	map[string]string			"error: Failed to retrieve chore | Error scheduling next due date | Error completing chore"
-//	@Router			/chores/{id}/skip [post]
+//	@Router			/api/v1/chores/{id}/skip [post]
 func (h *Handler) SkipChore(c *gin.Context) {
 	var req ActionReq
 	if err := bindOptionalActionReq(c, &req); err != nil {
@@ -2157,7 +2157,7 @@ type DueDateReq struct {
 //	@Failure		401		{object}	map[string]string			"error: Authentication failed"
 //	@Failure		403		{object}	map[string]string			"error: You cannot edit this chore"
 //	@Failure		500		{object}	map[string]string			"error: Failed to retrieve chore | Error updating due date"
-//	@Router			/chores/{id}/dueDate [put]
+//	@Router			/api/v1/chores/{id}/dueDate [put]
 func (h *Handler) UpdateDueDate(c *gin.Context) {
 	logger := logging.FromContext(c)
 	currentUser, ok := auth.CurrentUser(c)
@@ -2271,7 +2271,7 @@ func (h *Handler) UpdateDueDate(c *gin.Context) {
 //	@Failure		400	{object}	map[string]string	"error: Invalid ID"
 //	@Failure		401	{object}	map[string]string	"error: Authentication failed"
 //	@Failure		500	{object}	map[string]string	"error: Error archiving chore"
-//	@Router			/chores/{id}/archive [put]
+//	@Router			/api/v1/chores/{id}/archive [put]
 func (h *Handler) ArchiveChore(c *gin.Context) {
 	rawID := c.Param("id")
 	id, err := strconv.Atoi(rawID)
@@ -2344,7 +2344,7 @@ func (h *Handler) ArchiveChore(c *gin.Context) {
 //	@Failure		400	{object}	map[string]string	"error: Invalid ID"
 //	@Failure		401	{object}	map[string]string	"error: Authentication failed"
 //	@Failure		500	{object}	map[string]string	"error: Error unarchiving chore"
-//	@Router			/chores/{id}/unarchive [put]
+//	@Router			/api/v1/chores/{id}/unarchive [put]
 func (h *Handler) UnarchiveChore(c *gin.Context) {
 	rawID := c.Param("id")
 	id, err := strconv.Atoi(rawID)
@@ -2428,7 +2428,7 @@ type CompleteChoreReq struct { // TODO: Remove "Note" in future.
 //	@Failure		401			{object}	map[string]string			"error: Authentication failed"
 //	@Failure		403			{object}	map[string]string			"error: You are not allowed to complete this action"
 //	@Failure		500			{object}	map[string]string			"error: Failed to retrieve chore | Error completing chore"
-//	@Router			/chores/{id}/do [post]
+//	@Router			/api/v1/chores/{id}/do [post]
 func (h *Handler) CompleteChore(c *gin.Context) {
 
 	var req CompleteChoreReq
@@ -2716,7 +2716,7 @@ func authorizeChoreCompletionForUser(h *Handler, c *gin.Context, currentUser *uM
 //	@Success		200	{object}	map[string][]chModel.ChoreHistory	"res: array of chore history entries"
 //	@Failure		400	{object}	map[string]string					"error: Invalid ID"
 //	@Failure		500	{object}	map[string]string					"error: Failed to fetch chore history"
-//	@Router			/chores/{id}/history [get]
+//	@Router			/api/v1/chores/{id}/history [get]
 func (h *Handler) GetChoreHistory(c *gin.Context) {
 	logger := logging.FromContext(c)
 	currentUser, ok := auth.CurrentUser(c)
@@ -2792,7 +2792,7 @@ func (h *Handler) GetChoreHistory(c *gin.Context) {
 //	@Failure		400	{object}	map[string]string		"error: Invalid ID"
 //	@Failure		401	{object}	map[string]string		"error: Authentication failed"
 //	@Failure		500	{object}	map[string]string		"error: Failed to fetch chore details"
-//	@Router			/chores/{id}/details [get]
+//	@Router			/api/v1/chores/{id}/details [get]
 func (h *Handler) GetChoreDetail(c *gin.Context) {
 
 	logger := logging.FromContext(c)
@@ -2859,7 +2859,7 @@ type ModifyHistoryReq struct {
 //	@Failure		401			{object}	map[string]string				"error: Authentication failed"
 //	@Failure		403			{object}	map[string]string				"error: You are not allowed to modify this history"
 //	@Failure		500			{object}	map[string]string				"error: Failed to fetch chore history entry | Error updating history"
-//	@Router			/chores/{id}/history/{history_id} [put]
+//	@Router			/api/v1/chores/{id}/history/{history_id} [put]
 func (h *Handler) ModifyHistory(c *gin.Context) {
 
 	logger := logging.FromContext(c)
@@ -2978,7 +2978,7 @@ type PriorityReq struct {
 //	@Failure		401			{object}	map[string]string	"error: Authentication failed"
 //	@Failure		403			{object}	map[string]string	"error: You are not allowed to edit this chore"
 //	@Failure		500			{object}	map[string]string	"error: Failed to retrieve chore | Error updating priority"
-//	@Router			/chores/{id}/priority [put]
+//	@Router			/api/v1/chores/{id}/priority [put]
 func (h *Handler) UpdatePriority(c *gin.Context) {
 
 	logger := logging.FromContext(c)
@@ -3062,7 +3062,7 @@ func (h *Handler) UpdatePriority(c *gin.Context) {
 //	@Failure		400		{object}	map[string]string					"error: Invalid duration"
 //	@Failure		401		{object}	map[string]string					"error: Authentication failed"
 //	@Failure		500		{object}	map[string]string					"error: Failed to fetch user's chore history"
-//	@Router			/chores/history [get]
+//	@Router			/api/v1/chores/history [get]
 func (h *Handler) GetChoresHistory(c *gin.Context) {
 
 	logger := logging.FromContext(c)
@@ -3121,7 +3121,7 @@ func (h *Handler) GetChoresHistory(c *gin.Context) {
 //	@Failure		401			{object}	map[string]string	"error: Authentication failed"
 //	@Failure		403			{object}	map[string]string	"error: You are not allowed to delete this history"
 //	@Failure		500			{object}	map[string]string	"error: Failed to fetch chore history entry | Error deleting history"
-//	@Router			/chores/{id}/history/{history_id} [delete]
+//	@Router			/api/v1/chores/{id}/history/{history_id} [delete]
 func (h *Handler) DeleteHistory(c *gin.Context) {
 
 	logger := logging.FromContext(c)
@@ -3224,7 +3224,7 @@ type SubtaskReq struct {
 //	@Failure		400		{object}	map[string]string		"error: Invalid Chore ID | Invalid request | User is not assigned to chore"
 //	@Failure		401		{object}	map[string]string		"error: Authentication failed"
 //	@Failure		500		{object}	map[string]string		"error: Failed to retrieve chore | Error getting subtask"
-//	@Router			/chores/{id}/subtask [put]
+//	@Router			/api/v1/chores/{id}/subtask [put]
 func (h *Handler) UpdateSubtaskCompletedAt(c *gin.Context) {
 	logger := logging.FromContext(c)
 
@@ -3348,7 +3348,7 @@ func (h *Handler) UpdateSubtaskCompletedAt(c *gin.Context) {
 //	@Failure		403				{object}	map[string]string				"error: You are not allowed to view time sessions for this chore"
 //	@Failure		404				{object}	map[string]string				"error: No time session found"
 //	@Failure		500				{object}	map[string]string				"error: Failed to retrieve chore | Error getting chore time session"
-//	@Router			/chores/{id}/timer [get]
+//	@Router			/api/v1/chores/{id}/timer [get]
 func (h *Handler) GetChoreTimeSessions(c *gin.Context) {
 	logger := logging.FromContext(c)
 	currentUser, ok := auth.CurrentUser(c)
@@ -3454,7 +3454,7 @@ type UpdateTimeSessionReq struct {
 //	@Failure		401			{object}	map[string]string				"error: Authentication failed"
 //	@Failure		403			{object}	map[string]string				"error: You are not allowed to modify time sessions for this chore"
 //	@Failure		500			{object}	map[string]string				"error: Failed to retrieve chore | Error getting time session | Error updating time session"
-//	@Router			/chores/{id}/timer/{session_id} [put]
+//	@Router			/api/v1/chores/{id}/timer/{session_id} [put]
 func (h *Handler) UpdateTimeSession(c *gin.Context) {
 	logger := logging.FromContext(c)
 	currentUser, ok := auth.CurrentUser(c)
@@ -3578,7 +3578,7 @@ func (h *Handler) UpdateTimeSession(c *gin.Context) {
 //	@Failure		401			{object}	map[string]string	"error: Authentication failed"
 //	@Failure		403			{object}	map[string]string	"error: You are not allowed to delete time sessions for this chore"
 //	@Failure		500			{object}	map[string]string	"error: Failed to retrieve chore | Error getting time session | Error deleting time session"
-//	@Router			/chores/{id}/timer/{session_id} [delete]
+//	@Router			/api/v1/chores/{id}/timer/{session_id} [delete]
 func (h *Handler) DeleteTimeSession(c *gin.Context) {
 	logger := logging.FromContext(c)
 	currentUser, ok := auth.CurrentUser(c)
@@ -3692,7 +3692,7 @@ func (h *Handler) DeleteTimeSession(c *gin.Context) {
 //	@Failure		401	{object}	map[string]string			"error: Authentication failed"
 //	@Failure		403	{object}	map[string]string			"error: Only admins can approve chores"
 //	@Failure		500	{object}	map[string]string			"error: Failed to retrieve chore | Error approving chore"
-//	@Router			/chores/{id}/approve [post]
+//	@Router			/api/v1/chores/{id}/approve [post]
 func (h *Handler) ApproveChore(c *gin.Context) {
 	logger := logging.FromContext(c)
 	currentUser, ok := auth.CurrentUser(c)
@@ -3897,7 +3897,7 @@ type RejectChoreReq struct { // TODO: Remove "Note" in future.
 //	@Failure		401			{object}	map[string]string		"error: Authentication failed"
 //	@Failure		403			{object}	map[string]string		"error: Only admins can reject chores"
 //	@Failure		500			{object}	map[string]string		"error: Failed to retrieve chore | Error rejecting chore"
-//	@Router			/chores/{id}/reject [post]
+//	@Router			/api/v1/chores/{id}/reject [post]
 func (h *Handler) RejectChore(c *gin.Context) {
 	logger := logging.FromContext(c)
 	currentUser, ok := auth.CurrentUser(c)
@@ -4041,7 +4041,6 @@ type StatusUpdateReq struct {
 //	@Failure		401		{object}	map[string]string	"error: Authentication failed"
 //	@Failure		403		{object}	map[string]string	"error: You cannot update the status of this chore"
 //	@Failure		500		{object}	map[string]string	"error: Failed to retrieve chore | Error updating chore status"
-//	@Router			/chores/{id}/status [put]
 func (h *Handler) updateChoreStatus(c *gin.Context) { // TODO: Not used in Routes
 	logger := logging.FromContext(c)
 	currentUser, ok := auth.CurrentUser(c)
@@ -4149,7 +4148,6 @@ type TimerUpdateReq struct {
 //	@Failure		401		{object}	map[string]string	"error: Authentication failed"
 //	@Failure		403		{object}	map[string]string	"error: You cannot update the timer of this chore"
 //	@Failure		500		{object}	map[string]string	"error: Failed to retrieve chore | Error updating chore timer"
-//	@Router			/chores/{id}/timer [put]
 func (h *Handler) updateTimer(c *gin.Context) { // TODO: Not used in Routes
 	logger := logging.FromContext(c)
 	currentUser, ok := auth.CurrentUser(c)
@@ -4459,7 +4457,7 @@ type NudgeRequest struct {
 //	@Failure		400		{object}	map[string]string		"error: Invalid chore ID | Invalid request payload | Chore has no assignees | Cannot nudge yourself"
 //	@Failure		401		{object}	map[string]string		"error: Authentication failed"
 //	@Failure		404		{object}	map[string]string		"error: Chore not found"
-//	@Router			/chores/{id}/nudge [post]
+//	@Router			/api/v1/chores/{id}/nudge [post]
 func (h *Handler) SendNudgeNotification(c *gin.Context) {
 	log := logging.FromContext(c)
 
@@ -4688,7 +4686,7 @@ func (h *Handler) sendNudgeToUser(c context.Context, userID int, chore *chModel.
 //	@Failure		400	{object}	map[string]string		"error: Invalid chore ID | No recent action found to undo | Cannot undo this type of action"
 //	@Failure		401	{object}	map[string]string		"error: Authentication failed"
 //	@Failure		500	{object}	map[string]string		"error: Failed to retrieve chore | Failed to check recent actions | Failed to undo action | Failed to restore pending approval status | Failed to retrieve updated chore"
-//	@Router			/chores/{id}/undo [post]
+//	@Router			/api/v1/chores/{id}/undo [post]
 func (h *Handler) UndoChore(c *gin.Context) {
 	logger := logging.FromContext(c)
 	currentUser, ok := auth.CurrentUser(c)

@@ -10,6 +10,17 @@ import (
 )
 
 // setupMFA initiates MFA setup for the current user
+//
+//	@Summary		Start MFA setup
+//	@Description	Generates a TOTP secret, QR code URL and backup codes. MFA is not enabled until POST /api/v1/users/mfa/confirm.
+//	@Tags			mfa
+//	@Produce		json
+//	@Security		JWTKeyAuth
+//	@Security		APIKeyAuth
+//	@Success		200	{object}	uModel.MFASetupResponse	"secret, QR code URL, backup codes"
+//	@Failure		400	{object}	map[string]string		"error: MFA is already enabled"
+//	@Failure		500	{object}	map[string]string		"error: Failed to generate MFA secret | Failed to generate backup codes"
+//	@Router			/api/v1/users/mfa/setup [post]
 func (h *Handler) setupMFA(c *gin.Context) {
 	logger := logging.FromContext(c)
 	currentUser, ok := auth.CurrentUser(c)
@@ -50,6 +61,19 @@ func (h *Handler) setupMFA(c *gin.Context) {
 }
 
 // confirmMFA confirms and enables MFA for the current user
+//
+//	@Summary		Enable MFA
+//	@Description	Enables MFA using the secret and backup codes from setup and a current TOTP code.
+//	@Tags			mfa
+//	@Accept			json
+//	@Produce		json
+//	@Security		JWTKeyAuth
+//	@Security		APIKeyAuth
+//	@Param			request	body		user.confirmMFA.ConfirmMFARequest	true	"Secret, code and backup codes"
+//	@Success		200		{object}	map[string]string					"message: MFA enabled successfully"
+//	@Failure		400		{object}	map[string]string					"error: MFA is already enabled | Invalid request | Invalid verification code"
+//	@Failure		500		{object}	map[string]string					"error: Failed to enable MFA"
+//	@Router			/api/v1/users/mfa/confirm [post]
 func (h *Handler) confirmMFA(c *gin.Context) {
 	logger := logging.FromContext(c)
 	currentUser, ok := auth.CurrentUser(c)
@@ -93,6 +117,19 @@ func (h *Handler) confirmMFA(c *gin.Context) {
 }
 
 // disableMFA disables MFA for the current user
+//
+//	@Summary		Disable MFA
+//	@Description	Requires a current TOTP code or a backup code.
+//	@Tags			mfa
+//	@Accept			json
+//	@Produce		json
+//	@Security		JWTKeyAuth
+//	@Security		APIKeyAuth
+//	@Param			request	body		uModel.MFAVerifyRequest	true	"Verification code"
+//	@Success		200		{object}	map[string]string		"message: MFA disabled successfully"
+//	@Failure		400		{object}	map[string]string		"error: MFA is not enabled | Invalid request | Invalid verification code"
+//	@Failure		500		{object}	map[string]string		"error: Failed to validate code | Failed to disable MFA"
+//	@Router			/api/v1/users/mfa/disable [post]
 func (h *Handler) disableMFA(c *gin.Context) {
 	logger := logging.FromContext(c)
 	currentUser, ok := auth.CurrentUser(c)
@@ -150,6 +187,17 @@ func (h *Handler) disableMFA(c *gin.Context) {
 }
 
 // verifyMFA verifies MFA code during login process
+//
+//	@Summary		Finish an MFA login
+//	@Description	Completes a login that returned mfaRequired, using its sessionToken and a TOTP or backup code.
+//	@Tags			auth
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		uModel.MFAVerifyRequest	true	"Session token and code"
+//	@Success		200		{object}	auth.TokenResponse		"tokens"
+//	@Failure		400		{object}	map[string]string		"error: Invalid request | Invalid or expired session | Invalid verification code"
+//	@Failure		500		{object}	map[string]string		"error: Failed to verify user | Unable to Generate a Token"
+//	@Router			/api/v1/auth/mfa/verify [post]
 func (h *Handler) verifyMFA(c *gin.Context) {
 	logger := logging.FromContext(c)
 
@@ -223,6 +271,15 @@ func (h *Handler) verifyMFA(c *gin.Context) {
 }
 
 // getMFAStatus returns the current MFA status for the user
+//
+//	@Summary	Get my MFA status
+//	@Tags		mfa
+//	@Produce	json
+//	@Security	JWTKeyAuth
+//	@Security	APIKeyAuth
+//	@Success	200	{object}	map[string]bool		"mfaEnabled"
+//	@Failure	500	{object}	map[string]string	"error: Failed to get current user"
+//	@Router		/api/v1/users/mfa/status [get]
 func (h *Handler) getMFAStatus(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {

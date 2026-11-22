@@ -116,6 +116,18 @@ func (h *Handler) isAdminOrManager(c *gin.Context, userID int, circleID int) (bo
 	return false, nil
 }
 
+// getRewards godoc
+//
+//	@Summary		List rewards
+//	@Description	Returns every reward in the current user's circle.
+//	@Tags			rewards
+//	@Produce		json
+//	@Security		JWTKeyAuth
+//	@Security		APIKeyAuth
+//	@Success		200	{array}		rModel.Reward		"rewards"
+//	@Failure		401	{object}	map[string]string	"error: Authentication failed"
+//	@Failure		500	{object}	map[string]string	"error: Error getting rewards"
+//	@Router			/api/v1/rewards [get]
 func (h *Handler) getRewards(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
@@ -131,6 +143,22 @@ func (h *Handler) getRewards(c *gin.Context) {
 	c.JSON(200, rewards)
 }
 
+// createReward godoc
+//
+//	@Summary		Create a reward
+//	@Description	Admins and managers only.
+//	@Tags			rewards
+//	@Accept			json
+//	@Produce		json
+//	@Security		JWTKeyAuth
+//	@Security		APIKeyAuth
+//	@Param			request	body		RewardReq					true	"Reward"
+//	@Success		200		{object}	map[string]rModel.Reward	"res: created reward"
+//	@Failure		400		{object}	map[string]string			"error: Invalid request"
+//	@Failure		401		{object}	map[string]string			"error: Authentication failed"
+//	@Failure		403		{object}	map[string]string			"error: Only admins or managers can create rewards"
+//	@Failure		500		{object}	map[string]string			"error: Error creating reward"
+//	@Router			/api/v1/rewards [post]
 func (h *Handler) createReward(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
@@ -179,6 +207,23 @@ func (h *Handler) createReward(c *gin.Context) {
 	c.JSON(200, gin.H{"res": reward})
 }
 
+// updateReward godoc
+//
+//	@Summary		Update a reward
+//	@Description	Admins and managers only.
+//	@Tags			rewards
+//	@Accept			json
+//	@Produce		json
+//	@Security		JWTKeyAuth
+//	@Security		APIKeyAuth
+//	@Param			id		path		int							true	"Reward ID"
+//	@Param			request	body		RewardReq					true	"Reward"
+//	@Success		200		{object}	map[string]rModel.Reward	"res: updated reward"
+//	@Failure		400		{object}	map[string]string			"error: Invalid reward ID | Invalid request"
+//	@Failure		401		{object}	map[string]string			"error: Authentication failed"
+//	@Failure		403		{object}	map[string]string			"error: Only admins or managers can update rewards"
+//	@Failure		500		{object}	map[string]string			"error: Error updating reward"
+//	@Router			/api/v1/rewards/{id} [put]
 func (h *Handler) updateReward(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
@@ -233,6 +278,21 @@ func (h *Handler) updateReward(c *gin.Context) {
 	c.JSON(200, gin.H{"res": updatedReward})
 }
 
+// deleteReward godoc
+//
+//	@Summary		Delete a reward
+//	@Description	Admins and managers only.
+//	@Tags			rewards
+//	@Produce		json
+//	@Security		JWTKeyAuth
+//	@Security		APIKeyAuth
+//	@Param			id	path		int					true	"Reward ID"
+//	@Success		200	{object}	map[string]string	"res: Reward deleted"
+//	@Failure		400	{object}	map[string]string	"error: Invalid reward ID"
+//	@Failure		401	{object}	map[string]string	"error: Authentication failed"
+//	@Failure		403	{object}	map[string]string	"error: Only admins or managers can delete rewards"
+//	@Failure		500	{object}	map[string]string	"error: Error deleting reward"
+//	@Router			/api/v1/rewards/{id} [delete]
 func (h *Handler) deleteReward(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
@@ -263,6 +323,23 @@ func (h *Handler) deleteReward(c *gin.Context) {
 	c.JSON(200, gin.H{"res": "Reward deleted"})
 }
 
+// redeemReward godoc
+//
+//	@Summary		Redeem a reward
+//	@Description	Spends points on a reward. Auto-approve rewards are approved immediately; otherwise the redemption stays pending and admins are notified. Admins and managers may set userId to redeem for another member. The body is optional.
+//	@Tags			rewards
+//	@Accept			json
+//	@Produce		json
+//	@Security		JWTKeyAuth
+//	@Security		APIKeyAuth
+//	@Param			id		path		int									true	"Reward ID"
+//	@Param			request	body		RedeemReq							false	"Optional note and member"
+//	@Success		200		{object}	map[string]rModel.RewardRedemption	"res: redemption"
+//	@Failure		400		{object}	map[string]string					"error: Invalid reward ID | Selected user is not an active member of this circle | Not enough points to redeem this reward"
+//	@Failure		401		{object}	map[string]string					"error: Authentication failed"
+//	@Failure		403		{object}	map[string]string					"error: Only admins or managers can request a reward for another member"
+//	@Failure		500		{object}	map[string]string					"error: Error requesting redemption"
+//	@Router			/api/v1/rewards/{id}/redeem [post]
 func (h *Handler) redeemReward(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
@@ -346,6 +423,19 @@ func (h *Handler) redeemReward(c *gin.Context) {
 	c.JSON(200, gin.H{"res": redemption})
 }
 
+// getRedemptions godoc
+//
+//	@Summary		List reward redemptions
+//	@Description	Admins and managers get the whole circle's redemptions, optionally filtered by status. Everyone else gets only their own, and the filter is ignored.
+//	@Tags			rewards
+//	@Produce		json
+//	@Security		JWTKeyAuth
+//	@Security		APIKeyAuth
+//	@Param			status	query		string					false	"Filter (admins/managers only)"	Enums(pending, approved, rejected)
+//	@Success		200		{array}		rModel.RewardRedemption	"redemptions"
+//	@Failure		401		{object}	map[string]string		"error: Authentication failed"
+//	@Failure		500		{object}	map[string]string		"error: Error getting redemptions"
+//	@Router			/api/v1/rewards/redemptions [get]
 func (h *Handler) getRedemptions(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
@@ -391,6 +481,21 @@ func (h *Handler) getRedemptions(c *gin.Context) {
 	c.JSON(200, redemptions)
 }
 
+// approveRedemption godoc
+//
+//	@Summary		Approve a redemption
+//	@Description	Admins and managers only. Deducts the points from the member.
+//	@Tags			rewards
+//	@Produce		json
+//	@Security		JWTKeyAuth
+//	@Security		APIKeyAuth
+//	@Param			id	path		int					true	"Redemption ID"
+//	@Success		200	{object}	map[string]string	"message: Redemption approved"
+//	@Failure		400	{object}	map[string]string	"error: Invalid redemption ID | User no longer has enough points for this redemption | Redemption is not pending"
+//	@Failure		401	{object}	map[string]string	"error: Authentication failed"
+//	@Failure		403	{object}	map[string]string	"error: Only admins or managers can approve redemptions"
+//	@Failure		500	{object}	map[string]string	"error: Error approving redemption"
+//	@Router			/api/v1/rewards/redemptions/{id}/approve [post]
 func (h *Handler) approveRedemption(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
@@ -438,6 +543,23 @@ func (h *Handler) approveRedemption(c *gin.Context) {
 	c.JSON(200, gin.H{"message": "Redemption approved"})
 }
 
+// rejectRedemption godoc
+//
+//	@Summary		Reject a redemption
+//	@Description	Admins and managers only. The body is optional.
+//	@Tags			rewards
+//	@Accept			json
+//	@Produce		json
+//	@Security		JWTKeyAuth
+//	@Security		APIKeyAuth
+//	@Param			id		path		int					true	"Redemption ID"
+//	@Param			request	body		ResolveReq			false	"Optional note"
+//	@Success		200		{object}	map[string]string	"message: Redemption rejected"
+//	@Failure		400		{object}	map[string]string	"error: Invalid redemption ID | Redemption is not pending"
+//	@Failure		401		{object}	map[string]string	"error: Authentication failed"
+//	@Failure		403		{object}	map[string]string	"error: Only admins or managers can reject redemptions"
+//	@Failure		500		{object}	map[string]string	"error: Error rejecting redemption"
+//	@Router			/api/v1/rewards/redemptions/{id}/reject [post]
 func (h *Handler) rejectRedemption(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {

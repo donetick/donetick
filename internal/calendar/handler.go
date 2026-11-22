@@ -121,7 +121,7 @@ func (h *Handler) issueToken(c *gin.Context, userID int) (*calModel.CalendarToke
 //	@Failure		401	{object}	map[string]string	"error: Authentication failed"
 //	@Failure		403	{object}	map[string]string	"error: Only plus members can access this endpoint"
 //	@Failure		404	{object}	map[string]string	"error: No calendar URL generated"
-//	@Router			/chores/calendar/url [get]
+//	@Router			/api/v1/chores/calendar/url [get]
 func (h *Handler) GetCalendarURL(c *gin.Context) {
 	logger := logging.FromContext(c)
 	currentUser, ok := auth.CurrentUser(c)
@@ -157,7 +157,7 @@ func (h *Handler) GetCalendarURL(c *gin.Context) {
 //	@Success		201	{object}	map[string]string	"url: newly generated calendar subscription URL"
 //	@Failure		401	{object}	map[string]string	"error: Authentication failed"
 //	@Failure		403	{object}	map[string]string	"error: Only plus members can access this endpoint"
-//	@Router			/chores/calendar/url [post]
+//	@Router			/api/v1/chores/calendar/url [post]
 func (h *Handler) CreateCalendarURL(c *gin.Context) {
 	logger := logging.FromContext(c)
 	currentUser, ok := auth.CurrentUser(c)
@@ -200,7 +200,7 @@ func (h *Handler) CreateCalendarURL(c *gin.Context) {
 //	@Success		200	{object}	map[string]string	"url: new calendar subscription URL"
 //	@Failure		401	{object}	map[string]string	"error: Authentication failed"
 //	@Failure		403	{object}	map[string]string	"error: Only plus members can access this endpoint"
-//	@Router			/chores/calendar/url/rotate [post]
+//	@Router			/api/v1/chores/calendar/url/rotate [post]
 func (h *Handler) RotateCalendarURL(c *gin.Context) {
 	logger := logging.FromContext(c)
 	currentUser, ok := auth.CurrentUser(c)
@@ -229,10 +229,10 @@ func (h *Handler) RotateCalendarURL(c *gin.Context) {
 //	@Produce		json
 //	@Security		JWTKeyAuth
 //	@Security		APIKeyAuth
-//	@Success		204	{string}	string	"No content"
+//	@Success		204	{string}	string				"No content"
 //	@Failure		401	{object}	map[string]string	"error: Authentication failed"
 //	@Failure		403	{object}	map[string]string	"error: Only plus members can access this endpoint"
-//	@Router			/chores/calendar/url [delete]
+//	@Router			/api/v1/chores/calendar/url [delete]
 func (h *Handler) RevokeCalendarURL(c *gin.Context) {
 	logger := logging.FromContext(c)
 	currentUser, ok := auth.CurrentUser(c)
@@ -262,7 +262,7 @@ func (h *Handler) RevokeCalendarURL(c *gin.Context) {
 //	@Success		200		{string}	string	"iCal calendar data"
 //	@Failure		403		{string}	string	"Invalid calendar token, or the owner is not a plus member"
 //	@Failure		500		{string}	string	"Failed to generate calendar"
-//	@Router			/chores/calendar/{token} [get]
+//	@Router			/api/v1/chores/calendar/{token} [get]
 func (h *Handler) ServeCalendar(c *gin.Context) {
 	logger := logging.FromContext(c)
 	ctx := c.Request.Context()

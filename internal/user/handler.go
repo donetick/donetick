@@ -91,6 +91,18 @@ func NewHandler(ur *uRepo.UserRepository, cr *cRepo.CircleRepository,
 	}
 }
 
+// GetAllUsers godoc
+//
+//	@Summary		List circle users
+//	@Description	Returns the users in the current user's circle, with signed profile image URLs.
+//	@Tags			users
+//	@Produce		json
+//	@Security		JWTKeyAuth
+//	@Security		APIKeyAuth
+//	@Success		200	{object}	map[string][]uModel.User	"res: users"
+//	@Failure		401	{object}	map[string]string			"error: User not authenticated"
+//	@Failure		500	{object}	map[string]string			"error: Error getting users"
+//	@Router			/api/v1/users/ [get]
 func (h *Handler) GetAllUsers() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		currentUser, ok := auth.CurrentUser(c)
@@ -119,6 +131,19 @@ func (h *Handler) GetAllUsers() gin.HandlerFunc {
 	}
 }
 
+// signUp godoc
+//
+//	@Summary		Sign up
+//	@Description	Creates a user with their own circle. Returns 403 when user creation or password auth is disabled on the instance.
+//	@Tags			auth
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		user.signUp.SignUpReq	true	"New account"
+//	@Success		201		{object}	map[string]string		"empty object"
+//	@Failure		400		{object}	map[string]string		"error: Invalid request | Username can only contain lowercase letters (a-z), numbers (0-9), dots (.), and hyphens (-)"
+//	@Failure		403		{object}	map[string]string		"error: User creation is disabled | Password authentication is disabled on this instance"
+//	@Failure		500		{object}	map[string]string		"error: Error creating user, email already exists or username is taken"
+//	@Router			/api/v1/auth/ [post]
 func (h *Handler) signUp(c *gin.Context) {
 	if h.IsUserCreationDisabled {
 		c.JSON(403, gin.H{
@@ -252,6 +277,16 @@ func (h *Handler) signUp(c *gin.Context) {
 	c.JSON(201, gin.H{})
 }
 
+// GetUserProfile godoc
+//
+//	@Summary	Get my profile
+//	@Tags		users
+//	@Produce	json
+//	@Security	JWTKeyAuth
+//	@Security	APIKeyAuth
+//	@Success	200	{object}	map[string]uModel.UserDetails	"res: current user"
+//	@Failure	401	{object}	map[string]string				"error: User not authenticated"
+//	@Router		/api/v1/users/profile [get]
 func (h *Handler) GetUserProfile(c *gin.Context) {
 	user, ok := auth.CurrentUser(c)
 	if !ok {
@@ -290,6 +325,19 @@ func (h *Handler) syncOIDCRole(c *gin.Context, userID, circleID int, groups []st
 	logger.Infow("OIDC role sync", "userID", userID, "circleID", circleID, "oldRole", currentRole, "newRole", resolvedRole, "groups", groups)
 }
 
+// thirdPartyAuthCallback godoc
+//
+//	@Summary		Sign in with a third-party provider
+//	@Description	Exchanges a provider credential for Donetick tokens, creating the account on first sign-in. The body depends on provider: google sends {token, provider}; apple sends {provider, data{provider, result{idToken, ...}}}; oauth2 sends {code, redirect_uri, verifier}. Users with MFA get {mfaRequired: true, sessionToken} instead of tokens; finish with POST /api/v1/auth/mfa/verify.
+//	@Tags			auth
+//	@Accept			json
+//	@Produce		json
+//	@Param			provider	path		string					true	"Identity provider"	Enums(google, apple, oauth2)
+//	@Param			request		body		map[string]interface{}	true	"Provider credential (see description)"
+//	@Success		200			{object}	auth.TokenResponse		"tokens (or mfaRequired + sessionToken)"
+//	@Failure		400			{object}	map[string]string		"error: Invalid request | Invalid token | Invalid Apple ID token | Authorization code is required"
+//	@Failure		500			{object}	map[string]string		"error: Authentication failed | Unable to create user | Unable to Generate a Token"
+//	@Router			/api/v1/auth/{provider}/callback [post]
 func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 
 	// read :provider from path param, if param is google check the token with google if it's valid and fetch the user details:
@@ -862,6 +910,19 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 	}
 }
 
+// resetPassword godoc
+//
+//	@Summary		Request a password reset
+//	@Description	Emails a password reset link. Unknown emails also get 200, so accounts cannot be discovered.
+//	@Tags			auth
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		user.resetPassword.ResetPasswordReq	true	"Account email"
+//	@Success		200		{object}	map[string]string					"empty object"
+//	@Failure		400		{object}	map[string]string					"error: Invalid request | User account created with google login. Please login with google"
+//	@Failure		403		{object}	map[string]string					"error: Password authentication is disabled on this instance"
+//	@Failure		500		{object}	map[string]string					"error: Unable to generate token | Unable to send email"
+//	@Router			/api/v1/auth/reset [post]
 func (h *Handler) resetPassword(c *gin.Context) {
 	log := logging.FromContext(c)
 	type ResetPasswordReq struct {
@@ -920,6 +981,19 @@ func (h *Handler) resetPassword(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{})
 }
 
+// updateUserPassword godoc
+//
+//	@Summary	Set a new password from a reset link
+//	@Tags		auth
+//	@Accept		json
+//	@Produce	json
+//	@Param		c		query		string								true	"Reset code from the email link"
+//	@Param		request	body		user.updateUserPassword.RequestBody	true	"New password"
+//	@Success	200		{object}	map[string]string					"empty object"
+//	@Failure	400		{object}	map[string]string					"error: Invalid code | Invalid request"
+//	@Failure	403		{object}	map[string]string					"error: Password authentication is disabled on this instance"
+//	@Failure	500		{object}	map[string]string					"error: Unable to process password | Unable to reset password"
+//	@Router		/api/v1/auth/password [post]
 func (h *Handler) updateUserPassword(c *gin.Context) {
 	logger := logging.FromContext(c)
 	// read the code from query param:
@@ -1005,6 +1079,21 @@ func validateUserImage(image string, userID int) (string, error) {
 	return key, nil
 }
 
+// UpdateUserDetails godoc
+//
+//	@Summary		Update my profile
+//	@Description	Updates display name, Telegram chat ID, profile image and timezone. Omitted fields are left unchanged.
+//	@Tags			users
+//	@Accept			json
+//	@Produce		json
+//	@Security		JWTKeyAuth
+//	@Security		APIKeyAuth
+//	@Param			request	body		user.UpdateUserDetails.UpdateUserReq	true	"Fields to change"
+//	@Success		200		{object}	uModel.UserDetails						"updated user"
+//	@Failure		400		{object}	map[string]string						"error: Invalid request | Invalid timezone | Invalid image"
+//	@Failure		401		{object}	map[string]string						"error: User not authenticated"
+//	@Failure		500		{object}	map[string]string						"error: Error updating user"
+//	@Router			/api/v1/users [put]
 func (h *Handler) UpdateUserDetails(c *gin.Context) {
 	type UpdateUserReq struct {
 		DisplayName *string `json:"displayName" binding:"omitempty"`
@@ -1062,6 +1151,21 @@ func (h *Handler) UpdateUserDetails(c *gin.Context) {
 	c.JSON(200, user)
 }
 
+// CreateLongLivedToken godoc
+//
+//	@Summary		Create an API token
+//	@Description	Creates a long-lived API token for the secretkey header. The full token is only returned here. Users with MFA must include a valid mfaCode.
+//	@Tags			users
+//	@Accept			json
+//	@Produce		json
+//	@Security		JWTKeyAuth
+//	@Security		APIKeyAuth
+//	@Param			request	body		user.CreateLongLivedToken.TokenRequest	true	"Token name and optional MFA code"
+//	@Success		200		{object}	map[string]interface{}					"res: {id, name, userId, token, prefix, createdAt}, message (optional)"
+//	@Failure		400		{object}	map[string]string						"error: Invalid request | Invalid MFA code"
+//	@Failure		401		{object}	map[string]string						"error: User not authenticated"
+//	@Failure		500		{object}	map[string]string						"error: Failed to store the token"
+//	@Router			/api/v1/users/tokens [post]
 func (h *Handler) CreateLongLivedToken(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
@@ -1151,6 +1255,18 @@ func (h *Handler) CreateLongLivedToken(c *gin.Context) {
 
 const tokenMask = "********" // Used for masking the token to display it after creation (8 asterisks)
 
+// GetAllUserToken godoc
+//
+//	@Summary		List my API tokens
+//	@Description	Tokens are returned masked.
+//	@Tags			users
+//	@Produce		json
+//	@Security		JWTKeyAuth
+//	@Security		APIKeyAuth
+//	@Success		200	{object}	map[string]interface{}	"res: [{id, name, userId, maskedToken, createdAt}]"
+//	@Failure		401	{object}	map[string]string		"error: User not authenticated"
+//	@Failure		500	{object}	map[string]string		"error: Failed to get user tokens"
+//	@Router			/api/v1/users/tokens [get]
 func (h *Handler) GetAllUserToken(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
@@ -1189,6 +1305,18 @@ func (h *Handler) GetAllUserToken(c *gin.Context) {
 
 }
 
+// DeleteUserToken godoc
+//
+//	@Summary	Delete an API token
+//	@Tags		users
+//	@Produce	json
+//	@Security	JWTKeyAuth
+//	@Security	APIKeyAuth
+//	@Param		id	path		int					true	"Token ID"
+//	@Success	200	{object}	map[string]string	"empty object"
+//	@Failure	401	{object}	map[string]string	"error: User not authenticated"
+//	@Failure	500	{object}	map[string]string	"error: Failed to delete the token"
+//	@Router		/api/v1/users/tokens/{id} [delete]
 func (h *Handler) DeleteUserToken(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
@@ -1210,6 +1338,16 @@ func (h *Handler) DeleteUserToken(c *gin.Context) {
 // GetNotificationPreference returns the current user's notification profile
 // and overrides, plus the resolved (profile ⊕ overrides) value for every
 // known event type so clients don't need to re-implement the resolution rule.
+//
+//	@Summary	Get my notification preferences
+//	@Tags		users
+//	@Produce	json
+//	@Security	JWTKeyAuth
+//	@Security	APIKeyAuth
+//	@Success	200	{object}	map[string]interface{}	"profile, overrides, digestHour, effective"
+//	@Failure	401	{object}	map[string]string		"error: User not authenticated"
+//	@Failure	500	{object}	map[string]string		"error: Failed to get notification preference"
+//	@Router		/api/v1/users/notifications/preferences [get]
 func (h *Handler) GetNotificationPreference(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
@@ -1232,13 +1370,30 @@ func (h *Handler) GetNotificationPreference(c *gin.Context) {
 }
 
 type UpdateNotificationPreferenceReq struct {
-	Profile   uModel.NotificationProfile   `json:"profile" binding:"required,oneof=balanced planner just_in_time persistent quiet custom"`
+	// swaggertype/enums: the alias constants (NotificationProfileDefault, ...)
+	// would otherwise be listed twice in the generated enum.
+	Profile   uModel.NotificationProfile   `json:"profile" binding:"required,oneof=balanced planner just_in_time persistent quiet custom" swaggertype:"string" enums:"balanced,planner,just_in_time,persistent,quiet,custom"`
 	Overrides uModel.NotificationOverrides `json:"overrides"`
 	// DigestHour is a pointer so an omitted field leaves the previously saved
 	// hour untouched instead of resetting it to 0 (midnight).
 	DigestHour *int `json:"digestHour" binding:"omitempty,gte=0,lte=23"`
 }
 
+// UpdateNotificationPreference godoc
+//
+//	@Summary		Update my notification preferences
+//	@Description	Omitting digestHour keeps the saved hour.
+//	@Tags			users
+//	@Accept			json
+//	@Produce		json
+//	@Security		JWTKeyAuth
+//	@Security		APIKeyAuth
+//	@Param			request	body		UpdateNotificationPreferenceReq	true	"Preferences"
+//	@Success		200		{object}	map[string]interface{}			"profile, overrides, digestHour, effective"
+//	@Failure		400		{object}	map[string]string				"error: Invalid request"
+//	@Failure		401		{object}	map[string]string				"error: User not authenticated"
+//	@Failure		500		{object}	map[string]string				"error: Failed to update notification preference"
+//	@Router			/api/v1/users/notifications/preferences [put]
 func (h *Handler) UpdateNotificationPreference(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
@@ -1334,6 +1489,21 @@ func validateNotificationTarget(platform nModel.NotificationPlatform, target str
 	return nil
 }
 
+// UpdateNotificationTarget godoc
+//
+//	@Summary		Set my notification target
+//	@Description	Sets where notifications are delivered. type is 0 none (removes the target), 1 Telegram, 2 Pushover, 3 webhook, 4 Discord, 5 FCM.
+//	@Tags			users
+//	@Accept			json
+//	@Produce		json
+//	@Security		JWTKeyAuth
+//	@Security		APIKeyAuth
+//	@Param			request	body		user.UpdateNotificationTarget.Request	true	"Target"
+//	@Success		200		{object}	map[string]string						"empty object"
+//	@Failure		400		{object}	map[string]string						"error: Invalid request, or an invalid target"
+//	@Failure		401		{object}	map[string]string						"error: User not authenticated"
+//	@Failure		500		{object}	map[string]string						"error: Failed to update notification target"
+//	@Router			/api/v1/users/targets [put]
 func (h *Handler) UpdateNotificationTarget(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
@@ -1381,6 +1551,22 @@ func (h *Handler) UpdateNotificationTarget(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{})
 }
 
+// updateUserPasswordLoggedInOnly godoc
+//
+//	@Summary		Change my password
+//	@Description	Not available on donetick.com.
+//	@Tags			users
+//	@Accept			json
+//	@Produce		json
+//	@Security		JWTKeyAuth
+//	@Security		APIKeyAuth
+//	@Param			request	body		user.updateUserPasswordLoggedInOnly.RequestBody	true	"New password"
+//	@Success		200		{object}	map[string]string								"empty object"
+//	@Failure		400		{object}	map[string]string								"error: Invalid request"
+//	@Failure		401		{object}	map[string]string								"error: User not authenticated"
+//	@Failure		403		{object}	map[string]string								"error: This action is not allowed on donetick.com"
+//	@Failure		500		{object}	map[string]string								"error: Unable to process password | Unable to reset password"
+//	@Router			/api/v1/users/change_password [put]
 func (h *Handler) updateUserPasswordLoggedInOnly(c *gin.Context) {
 	if h.isDonetickDotCom {
 		// only enable this feature for self-hosted instances
@@ -1425,6 +1611,22 @@ func (h *Handler) updateUserPasswordLoggedInOnly(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{})
 }
 
+// setWebhook godoc
+//
+//	@Summary		Set the circle webhook
+//	@Description	Sets or clears (url: null) the URL that receives circle events. Circle admins with Plus only.
+//	@Tags			users
+//	@Accept			json
+//	@Produce		json
+//	@Security		JWTKeyAuth
+//	@Security		APIKeyAuth
+//	@Param			request	body		user.setWebhook.Request	true	"Webhook URL"
+//	@Success		200		{object}	map[string]string		"empty object"
+//	@Failure		400		{object}	map[string]string		"error: Invalid request, or an invalid URL"
+//	@Failure		401		{object}	map[string]string		"error: User not authenticated"
+//	@Failure		403		{object}	map[string]string		"error: This action is only available for Plus members | You are not an admin"
+//	@Failure		500		{object}	map[string]string		"error: Failed to set webhook URL"
+//	@Router			/api/v1/users/webhook [put]
 func (h *Handler) setWebhook(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
@@ -1486,6 +1688,20 @@ func (h *Handler) setWebhook(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{})
 }
 
+// updateProfilePhoto godoc
+//
+//	@Summary	Upload my profile photo
+//	@Tags		users
+//	@Accept		multipart/form-data
+//	@Produce	json
+//	@Security	JWTKeyAuth
+//	@Security	APIKeyAuth
+//	@Param		file	formData	file				true	"Image file"
+//	@Success	200		{object}	map[string]string	"sign: signed photo URL"
+//	@Failure	400		{object}	map[string]string	"error: Invalid file | Invalid file extension"
+//	@Failure	401		{object}	map[string]string	"error: User not authenticated"
+//	@Failure	500		{object}	map[string]string	"error: Failed to save file | Failed to update profile photo"
+//	@Router		/api/v1/users/profile_photo [post]
 func (h *Handler) updateProfilePhoto(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
@@ -1604,6 +1820,17 @@ func (h *Handler) previousProfilePhotoKey(c *gin.Context, image string, userID i
 	return key
 }
 
+// getStorageUsage godoc
+//
+//	@Summary	Get my storage usage
+//	@Tags		users
+//	@Produce	json
+//	@Security	JWTKeyAuth
+//	@Security	APIKeyAuth
+//	@Success	200	{object}	map[string]map[string]int	"res: {used, total} in bytes"
+//	@Failure	401	{object}	map[string]string			"error: User not authenticated"
+//	@Failure	500	{object}	map[string]string			"error: Failed to get storage usage"
+//	@Router		/api/v1/users/storage [get]
 func (h *Handler) getStorageUsage(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
@@ -1636,6 +1863,21 @@ type AccountDeletionCheckRequest struct {
 	Password string `json:"password" binding:"required"`
 }
 
+// checkAccountDeletion godoc
+//
+//	@Summary		Preview account deletion
+//	@Description	Dry run: reports what deleting the account would remove and whether circle ownership must be transferred first.
+//	@Tags			users
+//	@Accept			json
+//	@Produce		json
+//	@Security		JWTKeyAuth
+//	@Security		APIKeyAuth
+//	@Param			request	body		AccountDeletionCheckRequest	true	"Current password"
+//	@Success		200		{object}	DeletionResult				"deletion preview"
+//	@Failure		400		{object}	map[string]string			"error: Invalid password"
+//	@Failure		401		{object}	map[string]string			"error: User not authenticated"
+//	@Failure		500		{object}	map[string]string			"error: Failed to check account deletion"
+//	@Router			/api/v1/users/delete/check [post]
 func (h *Handler) checkAccountDeletion(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
@@ -1665,6 +1907,21 @@ func (h *Handler) checkAccountDeletion(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
 }
 
+// deleteAccount godoc
+//
+//	@Summary		Delete my account
+//	@Description	Permanently deletes the account. confirmation must be DELETE. Returns 400 with the deletion result when circle ownership still has to be transferred (see transferOptions).
+//	@Tags			users
+//	@Accept			json
+//	@Produce		json
+//	@Security		JWTKeyAuth
+//	@Security		APIKeyAuth
+//	@Param			request	body		AccountDeletionRequest	true	"Password, confirmation and transfer choices"
+//	@Success		200		{object}	DeletionResult			"deletion result"
+//	@Failure		400		{object}	DeletionResult			"transfer required, or error: Confirmation text must be DELETE"
+//	@Failure		401		{object}	map[string]string		"error: User not authenticated | Invalid password"
+//	@Failure		500		{object}	map[string]string		"error: Failed to delete account"
+//	@Router			/api/v1/users/delete [delete]
 func (h *Handler) deleteAccount(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
@@ -1733,6 +1990,22 @@ type ChildUserResponse struct {
 	CreatedAt   string `json:"createdAt"`
 }
 
+// createChildUser godoc
+//
+//	@Summary		Create a sub-account
+//	@Description	Creates a child user in the parent's circle. Parent users only.
+//	@Tags			users
+//	@Accept			json
+//	@Produce		json
+//	@Security		JWTKeyAuth
+//	@Security		APIKeyAuth
+//	@Param			request	body		CreateChildUserRequest			true	"Sub-account"
+//	@Success		201		{object}	map[string]ChildUserResponse	"res: created sub-account"
+//	@Failure		400		{object}	map[string]string				"error: Invalid request | Invalid child username format"
+//	@Failure		401		{object}	map[string]string				"error: User not authenticated"
+//	@Failure		403		{object}	map[string]string				"error: Only parent users can create child accounts | Maximum subaccounts reached"
+//	@Failure		500		{object}	map[string]string				"error: Failed to create child user"
+//	@Router			/api/v1/users/subaccounts [post]
 func (h *Handler) createChildUser(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
@@ -1846,6 +2119,23 @@ func (h *Handler) createChildUser(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"res": response})
 }
 
+// updateChildPassword godoc
+//
+//	@Summary		Change a sub-account's password
+//	@Description	Parent users only, for their own sub-accounts.
+//	@Tags			users
+//	@Accept			json
+//	@Produce		json
+//	@Security		JWTKeyAuth
+//	@Security		APIKeyAuth
+//	@Param			request	body		UpdateChildPasswordRequest	true	"Sub-account and new password"
+//	@Success		200		{object}	map[string]string			"message: Child user password updated successfully"
+//	@Failure		400		{object}	map[string]string			"error: Invalid request"
+//	@Failure		401		{object}	map[string]string			"error: User not authenticated"
+//	@Failure		403		{object}	map[string]string			"error: Only parent users can update child passwords | You can only update passwords for your own child users"
+//	@Failure		404		{object}	map[string]string			"error: Child user not found"
+//	@Failure		500		{object}	map[string]string			"error: Failed to update password"
+//	@Router			/api/v1/users/subaccounts/password [put]
 func (h *Handler) updateChildPassword(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
@@ -1894,6 +2184,22 @@ func (h *Handler) updateChildPassword(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Child user password updated successfully"})
 }
 
+// deleteChildUser godoc
+//
+//	@Summary		Delete a sub-account
+//	@Description	Parent users only, for their own sub-accounts.
+//	@Tags			users
+//	@Produce		json
+//	@Security		JWTKeyAuth
+//	@Security		APIKeyAuth
+//	@Param			id	path		int					true	"Sub-account user ID"
+//	@Success		200	{object}	map[string]string	"message: Child user deleted successfully"
+//	@Failure		400	{object}	map[string]string	"error: Child user ID is required | Invalid child user ID"
+//	@Failure		401	{object}	map[string]string	"error: User not authenticated"
+//	@Failure		403	{object}	map[string]string	"error: Only parent users can delete child accounts | You can only delete your own child users"
+//	@Failure		404	{object}	map[string]string	"error: Child user not found"
+//	@Failure		500	{object}	map[string]string	"error: Failed to delete child user"
+//	@Router			/api/v1/users/subaccounts/{id} [delete]
 func (h *Handler) deleteChildUser(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
@@ -1947,6 +2253,19 @@ func (h *Handler) deleteChildUser(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Child user deleted successfully"})
 }
 
+// getChildUsers godoc
+//
+//	@Summary		List my sub-accounts
+//	@Description	Parent users only.
+//	@Tags			users
+//	@Produce		json
+//	@Security		JWTKeyAuth
+//	@Security		APIKeyAuth
+//	@Success		200	{object}	map[string][]ChildUserResponse	"res: sub-accounts"
+//	@Failure		401	{object}	map[string]string				"error: User not authenticated"
+//	@Failure		403	{object}	map[string]string				"error: Only parent users can view child accounts"
+//	@Failure		500	{object}	map[string]string				"error: Failed to get child users"
+//	@Router			/api/v1/users/subaccounts [get]
 func (h *Handler) getChildUsers(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
@@ -1986,6 +2305,17 @@ type RefreshRequest struct {
 }
 
 // logout handles user logout by clearing cookies and revoking refresh tokens
+//
+//	@Summary		Log out
+//	@Description	Revokes the refresh token (from the refresh_token cookie, or refreshToken in the body) and clears the auth cookies. Always succeeds.
+//	@Tags			users
+//	@Accept			json
+//	@Produce		json
+//	@Security		JWTKeyAuth
+//	@Security		APIKeyAuth
+//	@Param			request	body		RefreshRequest		false	"Refresh token, if not sent as a cookie"
+//	@Success		200		{object}	map[string]string	"message: Logged out successfully"
+//	@Router			/api/v1/users/logout [post]
 func (h *Handler) logout(c *gin.Context) {
 	logger := logging.FromContext(c)
 

@@ -113,6 +113,20 @@ func unauthorized(c *gin.Context, reason string) {
 	c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": reason})
 }
 
+// handlePost godoc
+//
+//	@Summary		MCP endpoint
+//	@Description	Model Context Protocol endpoint (JSON-RPC 2.0 over streamable HTTP) for AI assistants. Authenticate with an API token in the secretkey header or as Authorization: Bearer. Only available when MCP is enabled on the instance. GET and DELETE return 405.
+//	@Tags			mcp
+//	@Accept			json
+//	@Produce		json
+//	@Security		APIKeyAuth
+//	@Param			request	body		map[string]interface{}	true	"JSON-RPC 2.0 request"
+//	@Success		200		{object}	map[string]interface{}	"JSON-RPC 2.0 response"
+//	@Failure		401		{object}	map[string]string		"error: API token required | Invalid API token | User account is disabled"
+//	@Failure		413		{object}	map[string]interface{}	"request too large"
+//	@Failure		415		{object}	map[string]interface{}	"unsupported media type"
+//	@Router			/mcp [post]
 func (h *Handler) handlePost(c *gin.Context) {
 	if !strings.EqualFold(c.ContentType(), "application/json") {
 		writeFailure(c, nil, &failure{

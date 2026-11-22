@@ -92,6 +92,18 @@ func errorStatusCode(err error) (int, string) {
 }
 
 // GetStatus implements GET /api/v1/bridge/status.
+//
+//	@Summary		Get Bridge connection status
+//	@Description	Returns the Donetick Bridge connection, plan and usage for this instance. Circle admins only. When Bridge is not connected the body is {connected: false, code}.
+//	@Tags			bridge
+//	@Produce		json
+//	@Security		JWTKeyAuth
+//	@Success		200	{object}	map[string]interface{}	"connected, instanceId, instanceName, enabled, ownerEmailMasked, ownerEmailVerified, plan, subscriptionStatus, usage{notificationsUsed, notificationsLimit, periodStart, periodEnd, activeDevices, deviceLimit}"
+//	@Failure		401	{object}	map[string]string		"error: User not found"
+//	@Failure		403	{object}	map[string]string		"error: only a circle administrator can manage Bridge settings"
+//	@Failure		409	{object}	map[string]interface{}	"connected: false, code: REVOKED_TOKEN"
+//	@Failure		503	{object}	map[string]interface{}	"connected: false, code: SERVICE_UNAVAILABLE"
+//	@Router			/api/v1/bridge/status [get]
 func (h *Handler) GetStatus(c *gin.Context) {
 	if !h.requireCircleAdmin(c) {
 		return
@@ -120,6 +132,20 @@ type connectRequest struct {
 // read from the request body only long enough to validate and persist it;
 // it is never logged (c.ShouldBindJSON's body is not logged by any
 // middleware in this handler, and no log call below references req).
+//
+//	@Summary		Connect to Bridge
+//	@Description	Validates and stores a Bridge instance token. Circle admins only. The token is never returned.
+//	@Tags			bridge
+//	@Accept			json
+//	@Produce		json
+//	@Security		JWTKeyAuth
+//	@Param			request	body		connectRequest			true	"Bridge instance credentials"
+//	@Success		200		{object}	map[string]interface{}	"Bridge status (same shape as GET /bridge/status)"
+//	@Failure		400		{object}	map[string]string		"error: invalid request payload | code: VALIDATION_ERROR"
+//	@Failure		403		{object}	map[string]string		"error: only a circle administrator can manage Bridge settings | code: QUOTA_EXCEEDED"
+//	@Failure		409		{object}	map[string]string		"error: unable to connect to Bridge, code: REVOKED_TOKEN"
+//	@Failure		503		{object}	map[string]string		"error: unable to connect to Bridge, code: SERVICE_UNAVAILABLE"
+//	@Router			/api/v1/bridge/connect [post]
 func (h *Handler) Connect(c *gin.Context) {
 	if !h.requireCircleAdmin(c) {
 		return
@@ -146,11 +172,34 @@ func (h *Handler) Connect(c *gin.Context) {
 // the frontend/UI language ("rotate credential") and confirmation-dialog
 // flow can differ from initial connect even though the server-side effect
 // is the same.
+//
+//	@Summary		Replace the Bridge instance token
+//	@Description	Re-validates and stores a new instance token obtained from Bridge. Same behavior as POST /bridge/connect. Circle admins only.
+//	@Tags			bridge
+//	@Accept			json
+//	@Produce		json
+//	@Security		JWTKeyAuth
+//	@Param			request	body		connectRequest			true	"Bridge instance credentials"
+//	@Success		200		{object}	map[string]interface{}	"Bridge status (same shape as GET /bridge/status)"
+//	@Failure		400		{object}	map[string]string		"error: invalid request payload"
+//	@Failure		403		{object}	map[string]string		"error: only a circle administrator can manage Bridge settings"
+//	@Failure		409		{object}	map[string]string		"error: unable to connect to Bridge, code: REVOKED_TOKEN"
+//	@Router			/api/v1/bridge/rotate [post]
 func (h *Handler) Rotate(c *gin.Context) {
 	h.Connect(c)
 }
 
 // Disconnect implements POST /api/v1/bridge/disconnect.
+//
+//	@Summary		Disconnect from Bridge
+//	@Description	Removes the stored Bridge instance token. Circle admins only.
+//	@Tags			bridge
+//	@Produce		json
+//	@Security		JWTKeyAuth
+//	@Success		200	{object}	map[string]bool		"connected: false"
+//	@Failure		403	{object}	map[string]string	"error: only a circle administrator can manage Bridge settings"
+//	@Failure		500	{object}	map[string]string	"error: unable to disconnect Bridge"
+//	@Router			/api/v1/bridge/disconnect [post]
 func (h *Handler) Disconnect(c *gin.Context) {
 	if !h.requireCircleAdmin(c) {
 		return

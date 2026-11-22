@@ -79,6 +79,20 @@ func (h *Handler) syncDeviceWithBridge(c context.Context, deviceToken *uModel.Us
 }
 
 // RegisterDeviceToken registers a new FCM device token
+//
+//	@Summary		Register a push notification device
+//	@Description	Registers or refreshes the current user's FCM device token for push notifications.
+//	@Tags			devices
+//	@Accept			json
+//	@Produce		json
+//	@Security		JWTKeyAuth
+//	@Param			request	body		RegisterDeviceTokenRequest	true	"Device token"
+//	@Success		201		{object}	map[string]interface{}		"message, device_id, id"
+//	@Failure		400		{object}	map[string]string			"error: Invalid request payload"
+//	@Failure		401		{object}	map[string]string			"error: User not found"
+//	@Failure		409		{object}	map[string]string			"error, code: DEVICE_LIMIT_EXCEEDED"
+//	@Failure		500		{object}	map[string]string			"error: Failed to register device token"
+//	@Router			/api/v1/devices/tokens [post]
 func (h *Handler) RegisterDeviceToken(c *gin.Context) {
 	log := logging.FromContext(c)
 	currentUser, ok := auth.CurrentUser(c)
@@ -138,6 +152,19 @@ func (h *Handler) RegisterDeviceToken(c *gin.Context) {
 }
 
 // UnregisterDeviceToken removes a device token
+//
+//	@Summary		Unregister a push notification device
+//	@Description	Deactivates a device token, identified by deviceId or token.
+//	@Tags			devices
+//	@Accept			json
+//	@Produce		json
+//	@Security		JWTKeyAuth
+//	@Param			request	body		UnregisterDeviceTokenRequest	true	"deviceId or token (at least one)"
+//	@Success		200		{object}	map[string]string				"message: Device token unregistered successfully"
+//	@Failure		400		{object}	map[string]string				"error: Invalid request payload | Either deviceId or token must be provided"
+//	@Failure		401		{object}	map[string]string				"error: User not found"
+//	@Failure		500		{object}	map[string]string				"error: Failed to unregister device token"
+//	@Router			/api/v1/devices/tokens [delete]
 func (h *Handler) UnregisterDeviceToken(c *gin.Context) {
 	log := logging.FromContext(c)
 	currentUser, ok := auth.CurrentUser(c)
@@ -202,6 +229,16 @@ func (h *Handler) UnregisterDeviceToken(c *gin.Context) {
 }
 
 // GetDeviceTokens retrieves all device tokens for the current user
+//
+//	@Summary	List the current user's devices
+//	@Tags		devices
+//	@Produce	json
+//	@Security	JWTKeyAuth
+//	@Param		active	query		bool								false	"Only active devices"
+//	@Success	200		{object}	map[string][]uModel.UserDeviceToken	"res: devices"
+//	@Failure	401		{object}	map[string]string					"error: User not found"
+//	@Failure	500		{object}	map[string]string					"error: Failed to retrieve device tokens"
+//	@Router		/api/v1/devices/tokens [get]
 func (h *Handler) GetDeviceTokens(c *gin.Context) {
 	log := logging.FromContext(c)
 	currentUser, ok := auth.CurrentUser(c)
@@ -234,6 +271,18 @@ func (h *Handler) GetDeviceTokens(c *gin.Context) {
 }
 
 // UpdateDeviceActivity updates the last active timestamp for a device
+//
+//	@Summary		Mark a device as active
+//	@Description	Updates the device's last-active timestamp. A 404 tells the app its registration is stale and it should register again.
+//	@Tags			devices
+//	@Produce		json
+//	@Security		JWTKeyAuth
+//	@Param			deviceId	path		string				true	"Device ID"
+//	@Success		200			{object}	map[string]string	"message: Device activity updated successfully"
+//	@Failure		400			{object}	map[string]string	"error: Device ID is required"
+//	@Failure		404			{object}	map[string]string	"error, code: DEVICE_NOT_REGISTERED"
+//	@Failure		500			{object}	map[string]string	"error: Failed to update device activity"
+//	@Router			/api/v1/devices/tokens/{deviceId}/activity [put]
 func (h *Handler) UpdateDeviceActivity(c *gin.Context) {
 	log := logging.FromContext(c)
 	currentUser, ok := auth.CurrentUser(c)
@@ -268,6 +317,15 @@ func (h *Handler) UpdateDeviceActivity(c *gin.Context) {
 }
 
 // GetDeviceCount returns the number of active devices for the current user
+//
+//	@Summary	Count the current user's devices
+//	@Tags		devices
+//	@Produce	json
+//	@Security	JWTKeyAuth
+//	@Success	200	{object}	map[string]int		"count, limit"
+//	@Failure	401	{object}	map[string]string	"error: User not found"
+//	@Failure	500	{object}	map[string]string	"error: Failed to get device count"
+//	@Router		/api/v1/devices/count [get]
 func (h *Handler) GetDeviceCount(c *gin.Context) {
 	log := logging.FromContext(c)
 	currentUser, ok := auth.CurrentUser(c)

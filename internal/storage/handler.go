@@ -49,6 +49,19 @@ func NewHandler(storage Storage, choreRepo *chRepo.ChoreRepository, circleRepo *
 }
 
 // AssetHandler serves signed asset URLs from local storage
+//
+//	@Summary		Download a stored file
+//	@Description	Streams a stored file. Files outside profiles/ need a valid signed URL (expires and sig query parameters, from the signed URLs other endpoints return). No auth header is needed.
+//	@Tags			assets
+//	@Produce		octet-stream
+//	@Param			filepath	path		string				true	"Stored file path"
+//	@Param			expires		query		int					false	"Signature expiry (Unix seconds)"
+//	@Param			sig			query		string				false	"Signature"
+//	@Success		200			"file content"
+//	@Failure		400			{object}	map[string]string	"error: missing asset url | invalid url format | invalid asset path"
+//	@Failure		403			{object}	map[string]string	"error: invalid or expired signature for url"
+//	@Failure		404			{object}	map[string]string	"error: file not found"
+//	@Router			/api/v1/assets/{filepath} [get]
 func (h *Handler) AssetHandler(c *gin.Context) {
 
 	rawURL := c.Param("filepath")
@@ -123,6 +136,26 @@ func (h *Handler) AssetHandler(c *gin.Context) {
 	io.Copy(c.Writer, file)
 }
 
+// ChoreUploadHandler godoc
+//
+//	@Summary		Upload a chore file
+//	@Description	Uploads an attachment or description image for a chore, or a draft for a chore that is still being created. For chore and chore_description, entityId is the chore ID and the user must be allowed to edit it. For the *_draft types, send draftId instead.
+//	@Tags			assets
+//	@Accept			multipart/form-data
+//	@Produce		json
+//	@Security		JWTKeyAuth
+//	@Param			file		formData	file					true	"File to upload"
+//	@Param			entityType	formData	string					true	"What the file belongs to"	Enums(chore, chore_description, chore_attachment_draft, chore_description_draft)
+//	@Param			entityId	formData	int						false	"Chore ID (chore, chore_description)"
+//	@Param			draftId		formData	string					false	"Draft ID (*_draft types)"
+//	@Success		200			{object}	map[string]interface{}	"path, sign (signed URL), file_name, size_bytes"
+//	@Failure		400			{object}	map[string]string		"error: missing file | missing draftId | invalid entityType or entityId"
+//	@Failure		401			{object}	map[string]string		"error: unauthorized"
+//	@Failure		403			{object}	map[string]string		"error: user is not allowed to edit chore | user is not a plus member"
+//	@Failure		413			{object}	map[string]string		"error: file size is too large"
+//	@Failure		507			{object}	map[string]string		"error: no enough space"
+//	@Failure		500			{object}	map[string]string		"error: failed to save file | failed to save file record | failed to sign url"
+//	@Router			/api/v1/assets/chore [post]
 func (h *Handler) ChoreUploadHandler(c *gin.Context) {
 	// read chore from formdata chore and the file from file:
 	log := logging.FromContext(c)
@@ -309,6 +342,19 @@ func handleEntityType(c *gin.Context, h *Handler, currentUser *user.UserDetails)
 	}
 }
 
+// ListChoreAttachmentsHandler godoc
+//
+//	@Summary	List a chore's attachments
+//	@Tags		assets
+//	@Produce	json
+//	@Security	JWTKeyAuth
+//	@Param		id	path		int						true	"Chore ID"
+//	@Success	200	{array}		map[string]interface{}	"file_path, file_name, size_bytes, created_by, created_at, sign (signed URL)"
+//	@Failure	400	{object}	map[string]string		"error: invalid chore id"
+//	@Failure	401	{object}	map[string]string		"error: unauthorized"
+//	@Failure	404	{object}	map[string]string		"error: chore not found"
+//	@Failure	500	{object}	map[string]string		"error: failed to get attachments"
+//	@Router		/api/v1/chores/{id}/attachments [get]
 func (h *Handler) ListChoreAttachmentsHandler(c *gin.Context) {
 	log := logging.FromContext(c)
 	currentUser, ok := auth.CurrentUser(c)
@@ -366,6 +412,23 @@ func (h *Handler) ListChoreAttachmentsHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
 }
 
+// DeleteChoreAttachmentHandler godoc
+//
+//	@Summary		Delete a chore attachment
+//	@Description	The user must be allowed to edit the chore.
+//	@Tags			assets
+//	@Accept			json
+//	@Produce		json
+//	@Security		JWTKeyAuth
+//	@Param			id		path		int					true	"Chore ID"
+//	@Param			request	body		map[string]string	true	"file_path"
+//	@Success		200		{object}	map[string]string	"message: attachment deleted"
+//	@Failure		400		{object}	map[string]string	"error: invalid chore id | missing file_path"
+//	@Failure		401		{object}	map[string]string	"error: unauthorized"
+//	@Failure		403		{object}	map[string]string	"error: not allowed to edit chore | attachment does not belong to this chore"
+//	@Failure		404		{object}	map[string]string	"error: chore not found | attachment not found"
+//	@Failure		500		{object}	map[string]string	"error: internal error | failed to delete file | failed to remove attachment record"
+//	@Router			/api/v1/chores/{id}/attachments [delete]
 func (h *Handler) DeleteChoreAttachmentHandler(c *gin.Context) {
 	log := logging.FromContext(c)
 	currentUser, ok := auth.CurrentUser(c)
@@ -435,6 +498,19 @@ func (h *Handler) DeleteChoreAttachmentHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "attachment deleted"})
 }
 
+// RedirectAssetHandler godoc
+//
+//	@Summary		Redirect to a signed file URL
+//	@Description	Checks the user may read the file, then redirects (302) to a short-lived signed URL.
+//	@Tags			assets
+//	@Security		JWTKeyAuth
+//	@Param			path	query	string	true	"Stored file path"
+//	@Success		302		"Redirect to the signed URL"
+//	@Failure		400		{object}	map[string]string	"error: missing path"
+//	@Failure		401		{object}	map[string]string	"error: unauthorized"
+//	@Failure		403		{object}	map[string]string	"error: access denied"
+//	@Failure		404		{object}	map[string]string	"error: asset not found"
+//	@Router			/api/v1/files [get]
 func (h *Handler) RedirectAssetHandler(c *gin.Context) {
 	log := logging.FromContext(c)
 	currentUser, ok := auth.CurrentUser(c)
@@ -479,6 +555,20 @@ func (h *Handler) RedirectAssetHandler(c *gin.Context) {
 	c.Redirect(http.StatusFound, signedURL)
 }
 
+// SignAssetHandler godoc
+//
+//	@Summary		Get a signed file URL
+//	@Description	Checks the user may read the file and returns a short-lived signed URL for it.
+//	@Tags			assets
+//	@Produce		json
+//	@Security		JWTKeyAuth
+//	@Param			path	query		string				true	"Stored file path"
+//	@Success		200		{object}	map[string]string	"url, path"
+//	@Failure		400		{object}	map[string]string	"error: missing path"
+//	@Failure		401		{object}	map[string]string	"error: unauthorized"
+//	@Failure		403		{object}	map[string]string	"error: access denied"
+//	@Failure		404		{object}	map[string]string	"error: asset not found"
+//	@Router			/api/v1/files/sign [get]
 func (h *Handler) SignAssetHandler(c *gin.Context) {
 	log := logging.FromContext(c)
 	currentUser, ok := auth.CurrentUser(c)
@@ -531,6 +621,21 @@ func (h *Handler) SignAssetHandler(c *gin.Context) {
 
 // DeleteDraftAttachmentHandler deletes a draft upload (attachment or
 // description image) before its chore exists. Only the uploader can delete it.
+//
+//	@Summary		Delete a draft upload
+//	@Description	Deletes a file uploaded as a draft that was never attached to a saved chore.
+//	@Tags			assets
+//	@Accept			json
+//	@Produce		json
+//	@Security		JWTKeyAuth
+//	@Param			request	body		map[string]string	true	"file_path"
+//	@Success		200		{object}	map[string]string	"message: draft file deleted"
+//	@Failure		400		{object}	map[string]string	"error: missing file_path"
+//	@Failure		401		{object}	map[string]string	"error: unauthorized"
+//	@Failure		403		{object}	map[string]string	"error: file is not a draft"
+//	@Failure		404		{object}	map[string]string	"error: draft file not found"
+//	@Failure		500		{object}	map[string]string	"error: failed to delete file | failed to remove file record"
+//	@Router			/api/v1/assets/chore [delete]
 func (h *Handler) DeleteDraftAttachmentHandler(c *gin.Context) {
 	log := logging.FromContext(c)
 	currentUser, ok := auth.CurrentUser(c)

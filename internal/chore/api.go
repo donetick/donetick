@@ -51,6 +51,17 @@ func NewAPI(cr *chRepo.ChoreRepository, userRepo *uRepo.UserRepository, circleRe
 	}
 }
 
+// GetAllChores godoc
+//
+//	@Summary		List chores (external API)
+//	@Description	Returns the active chores visible to the API token's user.
+//	@Tags			external-api
+//	@Produce		json
+//	@Security		APIKeyAuth
+//	@Param			includeSubtasks	query		bool				false	"Include subtasks"
+//	@Success		200				{array}		chModel.Chore		"chores"
+//	@Failure		500				{object}	map[string]string	"error"
+//	@Router			/eapi/v1/chore [get]
 func (h *API) GetAllChores(c *gin.Context) {
 	user := auth.MustCurrentUser(c)
 
@@ -68,6 +79,19 @@ func (h *API) GetAllChores(c *gin.Context) {
 	c.JSON(200, chores)
 }
 
+// CreateChore godoc
+//
+//	@Summary		Create a chore (external API)
+//	@Description	Creates a one-time chore assigned to its creator. dueDate accepts RFC3339 or YYYY-MM-DD (the date-only form uses the current UTC time of day). createdBy must be a member of the circle.
+//	@Tags			external-api
+//	@Accept			json
+//	@Produce		json
+//	@Security		APIKeyAuth
+//	@Param			request	body		chModel.ChoreLiteReq	true	"Chore"
+//	@Success		201		{object}	chModel.Chore			"created chore"
+//	@Failure		400		{object}	map[string]string		"error: Invalid request body | Chore name is required | Invalid due date format | Specified user not found in circle | Specified project not found"
+//	@Failure		500		{object}	map[string]string		"error: Failed to get circle members | Error creating chore"
+//	@Router			/eapi/v1/chore [post]
 func (h *API) CreateChore(c *gin.Context) {
 	log := logging.FromContext(c)
 	var choreRequest chModel.ChoreLiteReq
@@ -186,6 +210,22 @@ func (h *API) CreateChore(c *gin.Context) {
 	c.JSON(201, createdChore)
 }
 
+// UpdateChore godoc
+//
+//	@Summary		Update a chore (external API)
+//	@Description	Updates a chore's name, description and due date. Empty fields keep their current values; forceUnarchive restores an archived chore. Only the chore creator or a circle admin/manager may update it. Plus members only.
+//	@Tags			external-api
+//	@Accept			json
+//	@Produce		json
+//	@Security		APIKeyAuth
+//	@Param			id		path		int						true	"Chore ID"
+//	@Param			request	body		chModel.ChoreLiteReq	true	"Fields to change"
+//	@Success		200		{object}	chModel.Chore			"updated chore"
+//	@Failure		400		{object}	map[string]string		"error: Invalid chore ID | Invalid request body | Invalid due date format"
+//	@Failure		403		{object}	map[string]string		"error: Only the chore creator or a circle admin/manager can update this chore"
+//	@Failure		404		{object}	map[string]string		"error: Chore not found"
+//	@Failure		500		{object}	map[string]string		"error: Error updating chore"
+//	@Router			/eapi/v1/chore/{id} [put]
 func (h *API) UpdateChore(c *gin.Context) {
 	log := logging.FromContext(c)
 	var choreRequest chModel.ChoreLiteReq
@@ -290,6 +330,19 @@ func (h *API) UpdateChore(c *gin.Context) {
 	c.JSON(200, updatedChore)
 }
 
+// CompleteChore godoc
+//
+//	@Summary		Complete a chore (external API)
+//	@Description	Marks a chore done and schedules its next occurrence. completedBy credits another circle member; it must be assigned to the chore. Plus members only.
+//	@Tags			external-api
+//	@Produce		json
+//	@Security		APIKeyAuth
+//	@Param			id			path		int					true	"Chore ID"
+//	@Param			completedBy	query		int					false	"User ID to credit (defaults to the token's user)"
+//	@Success		200			{object}	chModel.Chore		"updated chore"
+//	@Failure		400			{object}	map[string]string	"error: Invalid ID | User is not assigned to chore | Chore is out of completion window"
+//	@Failure		500			{object}	map[string]string	"error: Error getting chore | Error completing chore | Error scheduling next due date"
+//	@Router			/eapi/v1/chore/{id}/complete [post]
 func (h *API) CompleteChore(c *gin.Context) {
 	log := logging.FromContext(c)
 	completedDate := time.Now().UTC()
@@ -416,6 +469,17 @@ func (h *API) CompleteChore(c *gin.Context) {
 	)
 }
 
+// GetCircleMembers godoc
+//
+//	@Summary		List circle members (external API)
+//	@Description	Plus members only.
+//	@Tags			external-api
+//	@Produce		json
+//	@Security		APIKeyAuth
+//	@Success		200	{array}		circle.UserCircleDetail	"circle members"
+//	@Failure		404	{object}	map[string]string		"error: No members found in the circle"
+//	@Failure		500	{object}	map[string]string		"error: Failed to get circle members"
+//	@Router			/eapi/v1/circle/members [get]
 func (h *API) GetCircleMembers(c *gin.Context) {
 	currentUser := auth.MustCurrentUser(c)
 	users, err := h.circleRepo.GetCircleUsers(c, currentUser.CircleID)
@@ -429,6 +493,21 @@ func (h *API) GetCircleMembers(c *gin.Context) {
 	}
 	c.JSON(200, users)
 }
+
+// DeleteChore godoc
+//
+//	@Summary		Delete a chore (external API)
+//	@Description	Only the chore creator or a circle admin/manager may delete it.
+//	@Tags			external-api
+//	@Produce		json
+//	@Security		APIKeyAuth
+//	@Param			id	path		int					true	"Chore ID"
+//	@Success		200	{object}	map[string]string	"message: Chore deleted successfully"
+//	@Failure		400	{object}	map[string]string	"error: Invalid chore ID"
+//	@Failure		403	{object}	map[string]string	"error: Only the chore creator or a circle admin/manager can delete this chore"
+//	@Failure		404	{object}	map[string]string	"error: Chore not found"
+//	@Failure		500	{object}	map[string]string	"error: Failed to delete chore"
+//	@Router			/eapi/v1/chore/{id} [delete]
 func (h *API) DeleteChore(c *gin.Context) {
 	choreIDRaw := c.Param("id")
 	choreID, err := strconv.Atoi(choreIDRaw)

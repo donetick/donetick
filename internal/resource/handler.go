@@ -37,6 +37,14 @@ func NewHandler(cfg *config.Config) *Handler {
 	}
 }
 
+// getResource godoc
+//
+//	@Summary		Get server configuration for clients
+//	@Description	Public. Returns the OAuth identity provider, versions and feature flags the apps need before login.
+//	@Tags			resource
+//	@Produce		json
+//	@Success		200	{object}	Resource	"server resource info"
+//	@Router			/api/v1/resource [get]
 func (h *Handler) getResource(c *gin.Context) {
 	c.JSON(200, &Resource{
 		Idp: identityProvider{
@@ -56,6 +64,14 @@ func (h *Handler) getResource(c *gin.Context) {
 	})
 }
 
+// getHealth godoc
+//
+//	@Summary		Health check
+//	@Description	Public, unauthenticated health check for containers and orchestrators.
+//	@Tags			resource
+//	@Produce		json
+//	@Success		200	{object}	map[string]string	"status: healthy, version, commit"
+//	@Router			/health [get]
 func (h *Handler) getHealth(c *gin.Context) {
 	c.JSON(200, gin.H{
 		"status":  "healthy",

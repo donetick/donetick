@@ -30,7 +30,7 @@ func NewHandler(fRepo *fRepo.FilterRepository) *Handler {
 //	@Security		APIKeyAuth
 //	@Success		200	{array}		map[string][]fModel.Filter	"array of filters"
 //	@Failure		500	{object}	map[string]string			"error: Error getting current user | Error getting filters"
-//	@Router			/filters [get]
+//	@Router			/api/v1/filters [get]
 func (h *Handler) getFilters(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
@@ -65,7 +65,7 @@ func (h *Handler) getFilters(c *gin.Context) {
 //	@Failure		400	{object}	map[string]string	"error: Filter ID is required | Invalid filter ID"
 //	@Failure		404	{object}	map[string]string	"error: Filter not found"
 //	@Failure		500	{object}	map[string]string	"error: Error getting current user"
-//	@Router			/filters/{id} [get]
+//	@Router			/api/v1/filters/{id} [get]
 func (h *Handler) getFilterByID(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
@@ -115,7 +115,7 @@ func (h *Handler) getFilterByID(c *gin.Context) {
 //	@Success		200		{object}	map[string]fModel.Filter	"res: created filter object"
 //	@Failure		400		{object}	map[string]string			"error: Error binding filter data | Filter name already exists"
 //	@Failure		500		{object}	map[string]string			"error: Error getting current user | Error checking filter name | Error creating filter"
-//	@Router			/filters [post]
+//	@Router			/api/v1/filters [post]
 func (h *Handler) createFilter(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
@@ -202,7 +202,7 @@ func (h *Handler) createFilter(c *gin.Context) {
 //	@Success		200		{object}	map[string]fModel.Filter	"res: updated filter object"
 //	@Failure		400		{object}	map[string]string			"error: Filter ID is required | Invalid filter ID | Error binding filter data | Filter name already exists"
 //	@Failure		500		{object}	map[string]string			"error: Error getting current user | Error checking filter name | Error getting updated filter | internal error"
-//	@Router			/filters/{id} [put]
+//	@Router			/api/v1/filters/{id} [put]
 func (h *Handler) updateFilter(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
@@ -308,7 +308,7 @@ func (h *Handler) updateFilter(c *gin.Context) {
 //	@Success		200	{object}	map[string]string	"res: Filter deleted successfully"
 //	@Failure		400	{object}	map[string]string	"error: Filter ID is required | Invalid filter ID"
 //	@Failure		500	{object}	map[string]string	"error: Error getting current user | internal error"
-//	@Router			/filters/{id} [delete]
+//	@Router			/api/v1/filters/{id} [delete]
 func (h *Handler) deleteFilter(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
@@ -359,7 +359,7 @@ func (h *Handler) deleteFilter(c *gin.Context) {
 //	@Success		200	{object}	map[string]interface{}	"res: {isPinned: bool}"
 //	@Failure		400	{object}	map[string]string		"error: Filter ID is required | Invalid filter ID"
 //	@Failure		500	{object}	map[string]string		"error: Error getting current user | internal error"
-//	@Router			/filters/{id}/toggle-pin [post]
+//	@Router			/api/v1/filters/{id}/toggle-pin [post]
 func (h *Handler) toggleFilterPin(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
@@ -411,7 +411,7 @@ func (h *Handler) toggleFilterPin(c *gin.Context) {
 //	@Security		APIKeyAuth
 //	@Success		200	{array}		fModel.Filter		"array of pinned filters"
 //	@Failure		500	{object}	map[string]string	"error: Error getting current user | Error getting pinned filters"
-//	@Router			/filters/pinned [get]
+//	@Router			/api/v1/filters/pinned [get]
 func (h *Handler) getPinnedFilters(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
@@ -443,7 +443,7 @@ func (h *Handler) getPinnedFilters(c *gin.Context) {
 //	@Security		APIKeyAuth
 //	@Success		200	{array}		fModel.Filter		"array of filters sorted by usage"
 //	@Failure		500	{object}	map[string]string	"error: Error getting current user | Error getting filters by usage"
-//	@Router			/filters/by-usage [get]
+//	@Router			/api/v1/filters/by-usage [get]
 func (h *Handler) getFiltersByUsage(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {

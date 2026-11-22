@@ -31,6 +31,18 @@ func NewHandler(lRepo *lRepo.LabelRepository) *Handler {
 	}
 }
 
+// getLabels godoc
+//
+//	@Summary		List labels
+//	@Description	Returns the current user's own labels plus labels shared in their circle.
+//	@Tags			labels
+//	@Produce		json
+//	@Security		JWTKeyAuth
+//	@Security		APIKeyAuth
+//	@Success		200	{array}		lModel.Label		"labels"
+//	@Failure		401	{object}	map[string]string	"error: User not authenticated"
+//	@Failure		500	{object}	map[string]string	"error: Error getting labels"
+//	@Router			/api/v1/labels [get]
 func (h *Handler) getLabels(c *gin.Context) {
 	// get current user:
 	currentUser, ok := auth.CurrentUser(c)
@@ -53,6 +65,20 @@ func (h *Handler) getLabels(c *gin.Context) {
 	)
 }
 
+// createLabel godoc
+//
+//	@Summary	Create a label
+//	@Tags		labels
+//	@Accept		json
+//	@Produce	json
+//	@Security	JWTKeyAuth
+//	@Security	APIKeyAuth
+//	@Param		request	body		LabelReq				true	"Label"
+//	@Success	200		{object}	map[string]lModel.Label	"res: created label"
+//	@Failure	400		{object}	map[string]string		"error: Invalid request"
+//	@Failure	401		{object}	map[string]string		"error: User not authenticated"
+//	@Failure	500		{object}	map[string]string		"error: Error creating label"
+//	@Router		/api/v1/labels [post]
 func (h *Handler) createLabel(c *gin.Context) {
 	// get current user:
 	currentUser, ok := auth.CurrentUser(c)
@@ -92,6 +118,21 @@ func (h *Handler) createLabel(c *gin.Context) {
 	})
 }
 
+// updateLabel godoc
+//
+//	@Summary		Update a label
+//	@Description	Updates a label's name and color. Omitting isShared keeps its current sharing setting.
+//	@Tags			labels
+//	@Accept			json
+//	@Produce		json
+//	@Security		JWTKeyAuth
+//	@Security		APIKeyAuth
+//	@Param			request	body		UpdateLabelReq			true	"Label with ID"
+//	@Success		200		{object}	map[string]lModel.Label	"res: updated label"
+//	@Failure		400		{object}	map[string]string		"error: Invalid request"
+//	@Failure		401		{object}	map[string]string		"error: User not authenticated"
+//	@Failure		500		{object}	map[string]string		"error: Error updating label"
+//	@Router			/api/v1/labels [put]
 func (h *Handler) updateLabel(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
@@ -127,6 +168,20 @@ func (h *Handler) updateLabel(c *gin.Context) {
 	})
 }
 
+// deleteLabel godoc
+//
+//	@Summary		Delete a label
+//	@Description	Removes the label from every chore, then deletes it.
+//	@Tags			labels
+//	@Produce		json
+//	@Security		JWTKeyAuth
+//	@Security		APIKeyAuth
+//	@Param			id	path		int					true	"Label ID"
+//	@Success		200	{object}	map[string]string	"res: Label deleted"
+//	@Failure		400	{object}	map[string]string	"error: Label ID is required | Invalid label ID"
+//	@Failure		401	{object}	map[string]string	"error: User not authenticated"
+//	@Failure		500	{object}	map[string]string	"error: Error unassociating label from chores"
+//	@Router			/api/v1/labels/{id} [delete]
 func (h *Handler) deleteLabel(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	// read label id from path:

@@ -1,4 +1,54 @@
+basePath: /
 definitions:
+  auth.RefreshRequest:
+    properties:
+      refresh_token:
+        type: string
+    required:
+    - refresh_token
+    type: object
+  auth.TokenResponse:
+    properties:
+      access_token:
+        type: string
+      access_token_expiry:
+        type: string
+      expire:
+        description: Same as access_token_expiry
+        type: string
+      refresh_token:
+        type: string
+      refresh_token_expiry:
+        type: string
+      token:
+        description: Legacy fields for backward compatibility
+        type: string
+      token_type:
+        type: string
+    type: object
+  auth.signIn:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
+    required:
+    - password
+    - username
+    type: object
+  bridge.connectRequest:
+    properties:
+      baseUrl:
+        type: string
+      instanceId:
+        type: string
+      instanceToken:
+        type: string
+    required:
+    - baseUrl
+    - instanceId
+    - instanceToken
+    type: object
   chore.ActionOptions:
     properties:
       createdAt:
@@ -18,6 +68,8 @@ definitions:
     - assignee
     - updatedAt
     type: object
+  chore.BulkCreateChoresReq:
+    type: object
   chore.ChoreReq:
     properties:
       assignStrategy:
@@ -36,6 +88,10 @@ definitions:
       assignees:
         items:
           $ref: '#/definitions/model.ChoreAssignees'
+        type: array
+      completionActions:
+        items:
+          $ref: '#/definitions/model.CompletionAction'
         type: array
       completionWindow:
         type: integer
@@ -93,6 +149,12 @@ definitions:
         type: integer
       requireApproval:
         type: boolean
+      sectionId:
+        description: |-
+          SectionID places a new chore directly into one of projectId's board
+          columns. Ignored when ProjectID is nil; a chore without a section falls
+          back to the project's first one when rendered.
+        type: integer
       subTasks:
         items:
           $ref: '#/definitions/model.SubTask'
@@ -303,6 +365,33 @@ definitions:
     - UserRoleAdmin
     - UserRoleMember
     - UserRoleManager
+  device.RegisterDeviceTokenRequest:
+    properties:
+      appVersion:
+        type: string
+      deviceId:
+        type: string
+      deviceModel:
+        type: string
+      platform:
+        enum:
+        - ios
+        - android
+        type: string
+      token:
+        type: string
+    required:
+    - deviceId
+    - platform
+    - token
+    type: object
+  device.UnregisterDeviceTokenRequest:
+    properties:
+      deviceId:
+        type: string
+      token:
+        type: string
+    type: object
   donetick_com_core_internal_storage_model.EntityType:
     enum:
     - 0
@@ -321,6 +410,42 @@ definitions:
     - EntityTypeChoreAttachment
     - EntityTypeChoreAttachmentDraft
     - EntityTypeChoreDescriptionDraft
+  label.LabelReq:
+    properties:
+      color:
+        type: string
+      isShared:
+        description: Omitted on update preserves the current privacy setting.
+        type: boolean
+      name:
+        type: string
+    required:
+    - name
+    type: object
+  label.UpdateLabelReq:
+    properties:
+      color:
+        type: string
+      id:
+        type: integer
+      isShared:
+        description: Omitted on update preserves the current privacy setting.
+        type: boolean
+      name:
+        type: string
+    required:
+    - id
+    - name
+    type: object
+  model.ActivePeriod:
+    properties:
+      end:
+        type: string
+      start:
+        type: string
+      type:
+        type: string
+    type: object
   model.AssignmentStrategy:
     enum:
     - random
@@ -357,9 +482,17 @@ definitions:
         items:
           $ref: '#/definitions/model.StorageFile'
         type: array
+      boardPosition:
+        description: Ordering of the chore within its section, shared by every viewer
+          of the project
+        type: integer
       circleId:
         description: The circle this chore is in
         type: integer
+      completionActions:
+        items:
+          $ref: '#/definitions/model.CompletionAction'
+        type: array
       completionWindow:
         description: Number seconds before the chore is due that it can be completed
         type: integer
@@ -427,6 +560,10 @@ definitions:
       requireApproval:
         description: Whether chore completion requires admin approval
         type: boolean
+      sectionId:
+        description: The project section (board column) this chore is placed in; nil
+          falls back to the project's first section
+        type: integer
       status:
         $ref: '#/definitions/model.Status'
       subTasks:
@@ -514,6 +651,33 @@ definitions:
     - ChoreHistoryStatusRejected
     - ChoreHistoryStatusMissed
     - ChoreHistoryStatusRescheduled
+  model.ChoreLiteReq:
+    properties:
+      createdBy:
+        type: integer
+      description:
+        type: string
+      dueDate:
+        type: string
+      forceUnarchive:
+        type: boolean
+      id:
+        type: integer
+      name:
+        type: string
+      projectId:
+        description: The project this chore belongs to
+        type: integer
+    type: object
+  model.CompletionAction:
+    properties:
+      operation:
+        type: string
+      thingId:
+        type: integer
+      value:
+        type: string
+    type: object
   model.Filter:
     properties:
       circleId:
@@ -535,6 +699,8 @@ definitions:
       id:
         type: integer
       isPinned:
+        type: boolean
+      isShared:
         type: boolean
       name:
         type: string
@@ -581,6 +747,9 @@ definitions:
         type: string
       isPinned:
         type: boolean
+      isShared:
+        description: Omitted on update preserves the current privacy setting.
+        type: boolean
       name:
         maxLength: 100
         minLength: 1
@@ -611,6 +780,12 @@ definitions:
         items:
           type: integer
         type: array
+      scheduleBounds:
+        allOf:
+        - $ref: '#/definitions/model.ScheduleBounds'
+        description: |-
+          ScheduleBounds optionally narrows when the recurrence is live and when it
+          stops. See bounds.go.
       time:
         type: string
       timezone:
@@ -672,6 +847,8 @@ definitions:
         type: integer
       id:
         type: integer
+      isShared:
+        type: boolean
       name:
         type: string
     type: object
@@ -711,6 +888,23 @@ definitions:
         maxItems: 5
         type: array
     type: object
+  model.NotificationPlatform:
+    enum:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    format: int32
+    type: integer
+    x-enum-varnames:
+    - NotificationPlatformNone
+    - NotificationPlatformTelegram
+    - NotificationPlatformPushover
+    - NotificationPlatformWebhook
+    - NotificationPlatformDiscord
+    - NotificationPlatformFCM
   model.NotificationTemplate:
     properties:
       unit:
@@ -758,12 +952,21 @@ definitions:
       isDefault:
         type: boolean
       isPrivate:
-        description: Whether the project is only visible to its creator
+        description: Whether the project is hidden from the circle
         type: boolean
       name:
         type: string
       updatedAt:
         type: string
+      view:
+        allOf:
+        - $ref: '#/definitions/model.ProjectView'
+        description: |-
+          View is the current user's own, private layout preference (board, list,
+          cards, compact, calendar) for this project. It is not a database column:
+          the handler fills
+          it in per-request from ProjectViewPreference before marshaling a
+          response, so it is never persisted via Save/Updates on this struct.
     type: object
   model.ProjectReq:
     properties:
@@ -777,11 +980,127 @@ definitions:
         description: |-
           IsPrivate is optional: when omitted on update the current value is kept, so
           older clients that don't know about the field can't accidentally unset it.
+          Clients that only know isPrivate keep a "members" project shared as long as
+          they send isPrivate=true; isPrivate=false opens it to the whole circle.
+        type: boolean
+      memberIds:
+        description: |-
+          MemberIDs is only read together with visibility "members". When omitted
+          there, the current member list is kept.
+        items:
+          type: integer
+        type: array
+      name:
+        description: |-
+          Name has no binding:"required" tag because a request that only sets
+          View (e.g. toggling board/list from the view menu) sends nothing else.
+          Handlers that apply the other fields must reject an empty Name
+          themselves.
+        type: string
+      view:
+        allOf:
+        - $ref: '#/definitions/model.ProjectView'
+        description: |-
+          View is the caller's own, private layout preference. Unlike every other
+          field above, it never needs project ownership to change: any user who
+          can see the project may set their own view, so it is applied
+          independently of the owner-only field update below.
+      visibility:
+        allOf:
+        - $ref: '#/definitions/model.ProjectVisibility'
+        description: Visibility takes precedence over IsPrivate when both are sent.
+    type: object
+  model.ProjectView:
+    enum:
+    - board
+    - list
+    - default
+    - compact
+    - calendar
+    type: string
+    x-enum-varnames:
+    - ProjectViewBoard
+    - ProjectViewList
+    - ProjectViewDefault
+    - ProjectViewCompact
+    - ProjectViewCalendar
+  model.ProjectVisibility:
+    enum:
+    - private
+    - members
+    - circle
+    type: string
+    x-enum-varnames:
+    - ProjectVisibilityPrivate
+    - ProjectVisibilityMembers
+    - ProjectVisibilityCircle
+  model.RedemptionStatus:
+    enum:
+    - 0
+    - 1
+    - 2
+    format: int32
+    type: integer
+    x-enum-varnames:
+    - RedemptionStatusPending
+    - RedemptionStatusApproved
+    - RedemptionStatusRejected
+  model.Reward:
+    properties:
+      autoApprove:
+        type: boolean
+      circleId:
+        type: integer
+      createdAt:
+        type: string
+      createdBy:
+        type: integer
+      description:
+        type: string
+      id:
+        type: integer
+      isActive:
         type: boolean
       name:
         type: string
-    required:
-    - name
+      pointsCost:
+        type: integer
+      updatedAt:
+        type: string
+    type: object
+  model.RewardRedemption:
+    properties:
+      circleId:
+        type: integer
+      id:
+        type: integer
+      note:
+        type: string
+      pointsCost:
+        description: snapshot at request time
+        type: integer
+      requestedAt:
+        type: string
+      resolvedAt:
+        type: string
+      resolvedBy:
+        type: integer
+      rewardId:
+        type: integer
+      rewardName:
+        description: snapshot, survives reward edits/deletes
+        type: string
+      status:
+        $ref: '#/definitions/model.RedemptionStatus'
+      userId:
+        type: integer
+    type: object
+  model.ScheduleBounds:
+    properties:
+      activePeriod:
+        $ref: '#/definitions/model.ActivePeriod'
+      stopRepeating:
+        $ref: '#/definitions/model.StopRepeating'
     type: object
   model.Status:
     enum:
@@ -796,6 +1115,15 @@ definitions:
     - ChoreStatusInProgress
     - ChoreStatusPaused
     - ChoreStatusPendingApproval
+  model.StopRepeating:
+    properties:
+      completionLimit:
+        type: integer
+      date:
+        type: string
+      type:
+        type: string
+    type: object
   model.StorageFile:
     properties:
       created_at:
@@ -939,6 +1267,103 @@ definitions:
     - WeekpatternEveryWeek
     - WeekPatternWeekOfMonth
     - WeekPatternWeekOfQuarter
+  project.AccessPreviewReq:
+    properties:
+      isPrivate:
+        type: boolean
+      memberIds:
+        items:
+          type: integer
+        type: array
+      visibility:
+        $ref: '#/definitions/model.ProjectVisibility'
+    type: object
+  project.MoveChoreReq:
+    properties:
+      afterChoreId:
+        type: integer
+      sectionId:
+        type: integer
+    required:
+    - sectionId
+    type: object
+  project.MoveSectionReq:
+    properties:
+      afterSectionId:
+        type: integer
+    type: object
+  project.SectionReq:
+    properties:
+      name:
+        type: string
+    required:
+    - name
+    type: object
+  resource.Resource:
+    properties:
+      api_commit:
+        type: string
+      api_version:
+        type: string
+      bridge_enabled:
+        type: boolean
+      disable_password_auth:
+        description: |-
+          DisablePasswordAuth tells the client to hide username/password login and
+          signup, leaving only SSO (#438).
+        type: boolean
+      identity_provider:
+        $ref: '#/definitions/resource.identityProvider'
+      is_user_creation_disabled:
+        type: boolean
+      min_version:
+        type: string
+      single_circle_instance:
+        type: boolean
+    type: object
+  resource.identityProvider:
+    properties:
+      auth_url:
+        type: string
+      client_id:
+        type: string
+      name:
+        type: string
+      pkce:
+        type: boolean
+      scopes:
+        items:
+          type: string
+        type: array
+    type: object
+  reward.RedeemReq:
+    properties:
+      note:
+        type: string
+      userId:
+        type: integer
+    type: object
+  reward.ResolveReq:
+    properties:
+      note:
+        type: string
+    type: object
+  reward.RewardReq:
+    properties:
+      autoApprove:
+        type: boolean
+      description:
+        type: string
+      isActive:
+        type: boolean
+      name:
+        type: string
+      pointsCost:
+        type: integer
+    required:
+    - name
+    - pointsCost
+    type: object
   thing.ThingRequest:
     properties:
       id:
@@ -953,10 +1378,1205 @@ definitions:
     - name
     - type
     type: object
+  user.AccountDeletionCheckRequest:
+    properties:
+      password:
+        type: string
+    required:
+    - password
+    type: object
+  user.AccountDeletionRequest:
+    properties:
+      confirmation:
+        description: Must be "DELETE"
+        type: string
+      password:
+        type: string
+      transferOptions:
+        items:
+          $ref: '#/definitions/user.CircleTransferOption'
+        type: array
+    required:
+    - confirmation
+    - password
+    type: object
+  user.AuthProviderType:
+    enum:
+    - 0
+    - 1
+    - 2
+    - 3
+    type: integer
+    x-enum-varnames:
+    - AuthProviderDonetick
+    - AuthProviderOAuth2
+    - AuthProviderGoogle
+    - AuthProviderApple
+  user.ChildUserResponse:
+    properties:
+      createdAt:
+        type: string
+      displayName:
+        type: string
+      id:
+        type: integer
+      userType:
+        type: string
+      username:
+        type: string
+    type: object
+  user.CircleTransferInfo:
+    properties:
+      circleId:
+        type: integer
+      circleName:
+        type: string
+      memberCount:
+        type: integer
+    type: object
+  user.CircleTransferOption:
+    properties:
+      circleId:
+        type: integer
+      newOwnerId:
+        type: integer
+      newOwnerName:
+        type: string
+    type: object
+  user.CreateChildUserRequest:
+    properties:
+      childName:
+        maxLength: 20
+        minLength: 2
+        type: string
+      displayName:
+        type: string
+      password:
+        maxLength: 64
+        minLength: 8
+        type: string
+    required:
+    - childName
+    - password
+    type: object
+  user.CreateLongLivedToken.TokenRequest:
+    properties:
+      mfaCode:
+        description: Optional MFA code for enhanced security
+        type: string
+      name:
+        type: string
+    required:
+    - name
+    type: object
+  user.DeletionResult:
+    properties:
+      circlesLeft:
+        items:
+          $ref: '#/definitions/user.CircleTransferInfo'
+        type: array
+      deletedData:
+        additionalProperties:
+          type: integer
+        type: object
+      message:
+        type: string
+      requiresTransfer:
+        type: boolean
+      success:
+        type: boolean
+      transferOptions:
+        items:
+          $ref: '#/definitions/user.CircleTransferOption'
+        type: array
+    type: object
+  user.MFASetupResponse:
+    properties:
+      backupCodes:
+        items:
+          type: string
+        type: array
+      qrCodeUrl:
+        type: string
+      secret:
+        type: string
+    type: object
+  user.MFAVerifyRequest:
+    properties:
+      code:
+        type: string
+      sessionToken:
+        description: For login flow
+        type: string
+    required:
+    - code
+    type: object
+  user.NotificationOverrides:
+    additionalProperties:
+      type: boolean
+    type: object
+  user.RefreshRequest:
+    properties:
+      refreshToken:
+        type: string
+    type: object
+  user.UpdateChildPasswordRequest:
+    properties:
+      childUserId:
+        type: integer
+      password:
+        maxLength: 64
+        minLength: 8
+        type: string
+    required:
+    - childUserId
+    - password
+    type: object
+  user.UpdateNotificationPreferenceReq:
+    properties:
+      digestHour:
+        description: |-
+          DigestHour is a pointer so an omitted field leaves the previously saved
+          hour untouched instead of resetting it to 0 (midnight).
+        maximum: 23
+        minimum: 0
+        type: integer
+      overrides:
+        $ref: '#/definitions/user.NotificationOverrides'
+      profile:
+        description: |-
+          swaggertype/enums: the alias constants (NotificationProfileDefault, ...)
+          would otherwise be listed twice in the generated enum.
+        enum:
+        - balanced
+        - planner
+        - just_in_time
+        - persistent
+        - quiet
+        - custom
+        type: string
+    required:
+    - profile
+    type: object
+  user.UpdateNotificationTarget.Request:
+    properties:
+      target:
+        type: string
+      type:
+        $ref: '#/definitions/model.NotificationPlatform'
+    type: object
+  user.UpdateUserDetails.UpdateUserReq:
+    properties:
+      chatID:
+        type: integer
+      displayName:
+        type: string
+      image:
+        type: string
+      timezone:
+        type: string
+    type: object
+  user.User:
+    properties:
+      chatID:
+        description: Telegram chat ID
+        type: integer
+      circleID:
+        description: Circle ID
+        type: integer
+      created_at:
+        description: Created at
+        type: string
+      customerID:
+        description: Email    string `json:"email" gorm:"column:email"`       // Email
+        type: string
+      disabled:
+        description: Disabled
+        type: boolean
+      displayName:
+        description: Display name
+        type: string
+      email:
+        description: Email (unique when not empty, allows empty for child users)
+        type: string
+      expiration:
+        description: read only column
+        type: string
+      id:
+        description: Unique identifier
+        type: integer
+      image:
+        description: Image
+        type: string
+      mfaEnabled:
+        description: MFA fields
+        type: boolean
+      notification_target:
+        $ref: '#/definitions/user.UserNotificationTarget'
+      parentUserId:
+        description: Parent-Child relationship fields
+        type: integer
+      provider:
+        allOf:
+        - $ref: '#/definitions/user.AuthProviderType'
+        description: Provider
+      subscription:
+        description: read only column
+        type: string
+      timezone:
+        description: Timezone
+        type: string
+      updated_at:
+        description: Updated at
+        type: string
+      userType:
+        $ref: '#/definitions/user.UserType'
+      username:
+        description: Username (unique)
+        type: string
+    type: object
+  user.UserDetails:
+    properties:
+      chatID:
+        description: Telegram chat ID
+        type: integer
+      circleID:
+        description: Circle ID
+        type: integer
+      created_at:
+        description: Created at
+        type: string
+      customerID:
+        description: Email    string `json:"email" gorm:"column:email"`       // Email
+        type: string
+      disabled:
+        description: Disabled
+        type: boolean
+      displayName:
+        description: Display name
+        type: string
+      email:
+        description: Email (unique when not empty, allows empty for child users)
+        type: string
+      expiration:
+        description: read only column
+        type: string
+      id:
+        description: Unique identifier
+        type: integer
+      image:
+        description: Image
+        type: string
+      mfaEnabled:
+        description: MFA fields
+        type: boolean
+      notification_target:
+        $ref: '#/definitions/user.UserNotificationTarget'
+      parentUserId:
+        description: Parent-Child relationship fields
+        type: integer
+      provider:
+        allOf:
+        - $ref: '#/definitions/user.AuthProviderType'
+        description: Provider
+      subscription:
+        description: read only column
+        type: string
+      timezone:
+        description: Timezone
+        type: string
+      updated_at:
+        description: Updated at
+        type: string
+      userType:
+        $ref: '#/definitions/user.UserType'
+      username:
+        description: Username (unique)
+        type: string
+      webhookURL:
+        description: read only column
+        type: string
+    type: object
+  user.UserDeviceToken:
+    properties:
+      appVersion:
+        description: App version
+        type: string
+      createdAt:
+        description: Created timestamp
+        type: string
+      deviceId:
+        description: Device identifier
+        type: string
+      deviceModel:
+        description: Device model
+        type: string
+      id:
+        description: Primary key
+        type: integer
+      isActive:
+        description: Active status
+        type: boolean
+      lastActiveAt:
+        description: Last active timestamp
+        type: string
+      platform:
+        description: ios, android
+        type: string
+      userId:
+        description: User ID
+        type: integer
+    type: object
+  user.UserNotificationTarget:
+    properties:
+      target_id:
+        description: Target ID
+        type: string
+      type:
+        allOf:
+        - $ref: '#/definitions/model.NotificationPlatform'
+        description: Type
+      userId:
+        description: Index on userID
+        type: integer
+    type: object
+  user.UserType:
+    enum:
+    - 0
+    - 1
+    type: integer
+    x-enum-varnames:
+    - UserTypeParent
+    - UserTypeChild
+  user.confirmMFA.ConfirmMFARequest:
+    properties:
+      backupCodes:
+        items:
+          type: string
+        type: array
+      code:
+        type: string
+      secret:
+        type: string
+    required:
+    - backupCodes
+    - code
+    - secret
+    type: object
+  user.resetPassword.ResetPasswordReq:
+    properties:
+      email:
+        type: string
+    required:
+    - email
+    type: object
+  user.setWebhook.Request:
+    properties:
+      url:
+        type: string
+    type: object
+  user.signUp.SignUpReq:
+    properties:
+      displayName:
+        type: string
+      email:
+        type: string
+      password:
+        maxLength: 64
+        minLength: 8
+        type: string
+      timezone:
+        description: |-
+          Timezone is the client's IANA zone (e.g. "America/New_York"), sent at
+          signup so time-of-day features -- digest notifications above all --
+          work from the first day. Optional: older clients omit it and the user
+          stays on the UTC fallback until they save a timezone in settings.
+        type: string
+      username:
+        maxLength: 20
+        minLength: 4
+        type: string
+    required:
+    - email
+    - password
+    - username
+    type: object
+  user.updateUserPassword.RequestBody:
+    properties:
+      password:
+        maxLength: 64
+        minLength: 8
+        type: string
+    required:
+    - password
+    type: object
+  user.updateUserPasswordLoggedInOnly.RequestBody:
+    properties:
+      password:
+        maxLength: 64
+        minLength: 8
+        type: string
+    required:
+    - password
+    type: object
 info:
   contact: {}
+  description: Donetick swagger documentation.
+  license:
+    name: GNU Affero General Public License v3.0
+    url: https://github.com/donetick/donetick/blob/main/LICENSE.md
+  title: Donetick Swagger API
+  version: "1.0"
 paths:
-  /chores:
+  /api/v1/assets/{filepath}:
+    get:
+      description: Streams a stored file. Files outside profiles/ need a valid signed
+        URL (expires and sig query parameters, from the signed URLs other endpoints
+        return). No auth header is needed.
+      parameters:
+      - description: Stored file path
+        in: path
+        name: filepath
+        required: true
+        type: string
+      - description: Signature expiry (Unix seconds)
+        in: query
+        name: expires
+        type: integer
+      - description: Signature
+        in: query
+        name: sig
+        type: string
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: file content
+        "400":
+          description: 'error: missing asset url | invalid url format | invalid asset
+            path'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 'error: invalid or expired signature for url'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: 'error: file not found'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Download a stored file
+      tags:
+      - assets
+  /api/v1/assets/chore:
+    delete:
+      consumes:
+      - application/json
+      description: Deletes a file uploaded as a draft that was never attached to a
+        saved chore.
+      parameters:
+      - description: file_path
+        in: body
+        name: request
+        required: true
+        schema:
+          additionalProperties:
+            type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'message: draft file deleted'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 'error: missing file_path'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: unauthorized'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 'error: file is not a draft'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: 'error: draft file not found'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: failed to delete file | failed to remove file record'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      summary: Delete a draft upload
+      tags:
+      - assets
+    post:
+      consumes:
+      - multipart/form-data
+      description: Uploads an attachment or description image for a chore, or a draft
+        for a chore that is still being created. For chore and chore_description,
+        entityId is the chore ID and the user must be allowed to edit it. For the
+        *_draft types, send draftId instead.
+      parameters:
+      - description: File to upload
+        in: formData
+        name: file
+        required: true
+        type: file
+      - description: What the file belongs to
+        enum:
+        - chore
+        - chore_description
+        - chore_attachment_draft
+        - chore_description_draft
+        in: formData
+        name: entityType
+        required: true
+        type: string
+      - description: Chore ID (chore, chore_description)
+        in: formData
+        name: entityId
+        type: integer
+      - description: Draft ID (*_draft types)
+        in: formData
+        name: draftId
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: path, sign (signed URL), file_name, size_bytes
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 'error: missing file | missing draftId | invalid entityType
+            or entityId'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: unauthorized'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 'error: user is not allowed to edit chore | user is not a plus
+            member'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "413":
+          description: 'error: file size is too large'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: failed to save file | failed to save file record |
+            failed to sign url'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "507":
+          description: 'error: no enough space'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      summary: Upload a chore file
+      tags:
+      - assets
+  /api/v1/auth/:
+    post:
+      consumes:
+      - application/json
+      description: Creates a user with their own circle. Returns 403 when user creation
+        or password auth is disabled on the instance.
+      parameters:
+      - description: New account
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/user.signUp.SignUpReq'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: empty object
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 'error: Invalid request | Username can only contain lowercase
+            letters (a-z), numbers (0-9), dots (.), and hyphens (-)'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 'error: User creation is disabled | Password authentication
+            is disabled on this instance'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Error creating user, email already exists or username
+            is taken'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Sign up
+      tags:
+      - auth
+  /api/v1/auth/{provider}/callback:
+    post:
+      consumes:
+      - application/json
+      description: 'Exchanges a provider credential for Donetick tokens, creating
+        the account on first sign-in. The body depends on provider: google sends {token,
+        provider}; apple sends {provider, data{provider, result{idToken, ...}}}; oauth2
+        sends {code, redirect_uri, verifier}. Users with MFA get {mfaRequired: true,
+        sessionToken} instead of tokens; finish with POST /api/v1/auth/mfa/verify.'
+      parameters:
+      - description: Identity provider
+        enum:
+        - google
+        - apple
+        - oauth2
+        in: path
+        name: provider
+        required: true
+        type: string
+      - description: Provider credential (see description)
+        in: body
+        name: request
+        required: true
+        schema:
+          additionalProperties: true
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: tokens (or mfaRequired + sessionToken)
+          schema:
+            $ref: '#/definitions/auth.TokenResponse'
+        "400":
+          description: 'error: Invalid request | Invalid token | Invalid Apple ID
+            token | Authorization code is required'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Authentication failed | Unable to create user | Unable
+            to Generate a Token'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Sign in with a third-party provider
+      tags:
+      - auth
+  /api/v1/auth/login:
+    post:
+      consumes:
+      - application/json
+      description: 'Logs in with username and password and returns access and refresh
+        tokens (the refresh token is also set as an httpOnly cookie). Users with MFA
+        get {mfaRequired: true, sessionToken} instead; finish with POST /api/v1/auth/mfa/verify.'
+      parameters:
+      - description: Credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/auth.signIn'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: tokens (or mfaRequired + sessionToken)
+          schema:
+            $ref: '#/definitions/auth.TokenResponse'
+        "400":
+          description: 'error: Invalid request'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: Invalid credentials'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 'error: Password authentication is disabled on this instance'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Authentication failed | Failed to generate tokens'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Log in
+      tags:
+      - auth
+  /api/v1/auth/login/legacy:
+    post:
+      consumes:
+      - application/json
+      description: 'Legacy login handled by gin-jwt (the Authenticator configured
+        here); returns an access token only. Prefer POST /api/v1/auth/login. Users
+        with MFA get {mfaRequired: true, sessionToken} instead.'
+      parameters:
+      - description: Credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/auth.signIn'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: code, token, expire (or mfaRequired + sessionToken)
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: code, message
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: 'error: Password authentication is disabled on this instance'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Log in (legacy)
+      tags:
+      - auth
+  /api/v1/auth/logout:
+    post:
+      consumes:
+      - application/json
+      description: Revokes the refresh token (cookie or body) and clears the cookie.
+        Always succeeds.
+      parameters:
+      - description: Refresh token, if not sent as a cookie
+        in: body
+        name: request
+        schema:
+          $ref: '#/definitions/auth.RefreshRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'message: Logged out successfully'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Log out (revoke refresh token)
+      tags:
+      - auth
+  /api/v1/auth/mfa/verify:
+    post:
+      consumes:
+      - application/json
+      description: Completes a login that returned mfaRequired, using its sessionToken
+        and a TOTP or backup code.
+      parameters:
+      - description: Session token and code
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/user.MFAVerifyRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: tokens
+          schema:
+            $ref: '#/definitions/auth.TokenResponse'
+        "400":
+          description: 'error: Invalid request | Invalid or expired session | Invalid
+            verification code'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to verify user | Unable to Generate a Token'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Finish an MFA login
+      tags:
+      - auth
+  /api/v1/auth/password:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Reset code from the email link
+        in: query
+        name: c
+        required: true
+        type: string
+      - description: New password
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/user.updateUserPassword.RequestBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: empty object
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 'error: Invalid code | Invalid request'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 'error: Password authentication is disabled on this instance'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Unable to process password | Unable to reset password'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Set a new password from a reset link
+      tags:
+      - auth
+  /api/v1/auth/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Exchanges a refresh token (refresh_token cookie, or refresh_token
+        in the body) for new access and refresh tokens.
+      parameters:
+      - description: Refresh token, if not sent as a cookie
+        in: body
+        name: request
+        schema:
+          $ref: '#/definitions/auth.RefreshRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: tokens
+          schema:
+            $ref: '#/definitions/auth.TokenResponse'
+        "400":
+          description: 'error: Invalid request | Refresh token required'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: Invalid or expired refresh token'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Refresh tokens
+      tags:
+      - auth
+  /api/v1/auth/reset:
+    post:
+      consumes:
+      - application/json
+      description: Emails a password reset link. Unknown emails also get 200, so accounts
+        cannot be discovered.
+      parameters:
+      - description: Account email
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/user.resetPassword.ResetPasswordReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: empty object
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 'error: Invalid request | User account created with google
+            login. Please login with google'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 'error: Password authentication is disabled on this instance'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Unable to generate token | Unable to send email'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Request a password reset
+      tags:
+      - auth
+  /api/v1/auth/revoke-all:
+    post:
+      description: Revokes every refresh token for the current user, logging out all
+        devices.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'message: All sessions revoked successfully'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: Unauthorized'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to revoke sessions'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      summary: Revoke all sessions
+      tags:
+      - auth
+  /api/v1/bridge/connect:
+    post:
+      consumes:
+      - application/json
+      description: Validates and stores a Bridge instance token. Circle admins only.
+        The token is never returned.
+      parameters:
+      - description: Bridge instance credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/bridge.connectRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Bridge status (same shape as GET /bridge/status)
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 'error: invalid request payload | code: VALIDATION_ERROR'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 'error: only a circle administrator can manage Bridge settings
+            | code: QUOTA_EXCEEDED'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: 'error: unable to connect to Bridge, code: REVOKED_TOKEN'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "503":
+          description: 'error: unable to connect to Bridge, code: SERVICE_UNAVAILABLE'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      summary: Connect to Bridge
+      tags:
+      - bridge
+  /api/v1/bridge/disconnect:
+    post:
+      description: Removes the stored Bridge instance token. Circle admins only.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'connected: false'
+          schema:
+            additionalProperties:
+              type: boolean
+            type: object
+        "403":
+          description: 'error: only a circle administrator can manage Bridge settings'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: unable to disconnect Bridge'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      summary: Disconnect from Bridge
+      tags:
+      - bridge
+  /api/v1/bridge/rotate:
+    post:
+      consumes:
+      - application/json
+      description: Re-validates and stores a new instance token obtained from Bridge.
+        Same behavior as POST /bridge/connect. Circle admins only.
+      parameters:
+      - description: Bridge instance credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/bridge.connectRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Bridge status (same shape as GET /bridge/status)
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 'error: invalid request payload'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 'error: only a circle administrator can manage Bridge settings'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: 'error: unable to connect to Bridge, code: REVOKED_TOKEN'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      summary: Replace the Bridge instance token
+      tags:
+      - bridge
+  /api/v1/bridge/status:
+    get:
+      description: 'Returns the Donetick Bridge connection, plan and usage for this
+        instance. Circle admins only. When Bridge is not connected the body is {connected:
+        false, code}.'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: connected, instanceId, instanceName, enabled, ownerEmailMasked,
+            ownerEmailVerified, plan, subscriptionStatus, usage{notificationsUsed,
+            notificationsLimit, periodStart, periodEnd, activeDevices, deviceLimit}
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 'error: User not found'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 'error: only a circle administrator can manage Bridge settings'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: 'connected: false, code: REVOKED_TOKEN'
+          schema:
+            additionalProperties: true
+            type: object
+        "503":
+          description: 'connected: false, code: SERVICE_UNAVAILABLE'
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - JWTKeyAuth: []
+      summary: Get Bridge connection status
+      tags:
+      - bridge
+  /api/v1/chores:
     get:
       consumes:
       - application/json
@@ -1099,7 +2719,7 @@ paths:
       summary: Edit an existing chore
       tags:
       - chores
-  /chores/{id}:
+  /api/v1/chores/{id}:
     delete:
       consumes:
       - application/json
@@ -1198,7 +2818,7 @@ paths:
       summary: Get a specific chore
       tags:
       - chores
-  /chores/{id}/approve:
+  /api/v1/chores/{id}/approve:
     post:
       consumes:
       - application/json
@@ -1248,7 +2868,7 @@ paths:
       summary: Approve a chore completion
       tags:
       - chores
-  /chores/{id}/archive:
+  /api/v1/chores/{id}/archive:
     put:
       consumes:
       - application/json
@@ -1292,7 +2912,7 @@ paths:
       summary: Archive a chore
       tags:
       - chores
-  /chores/{id}/assignee:
+  /api/v1/chores/{id}/assignee:
     put:
       consumes:
       - application/json
@@ -1349,7 +2969,119 @@ paths:
       summary: Update chore assignee
       tags:
       - chores
-  /chores/{id}/details:
+  /api/v1/chores/{id}/attachments:
+    delete:
+      consumes:
+      - application/json
+      description: The user must be allowed to edit the chore.
+      parameters:
+      - description: Chore ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: file_path
+        in: body
+        name: request
+        required: true
+        schema:
+          additionalProperties:
+            type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'message: attachment deleted'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 'error: invalid chore id | missing file_path'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: unauthorized'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 'error: not allowed to edit chore | attachment does not belong
+            to this chore'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: 'error: chore not found | attachment not found'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: internal error | failed to delete file | failed to
+            remove attachment record'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      summary: Delete a chore attachment
+      tags:
+      - assets
+    get:
+      parameters:
+      - description: Chore ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: file_path, file_name, size_bytes, created_by, created_at, sign
+            (signed URL)
+          schema:
+            items:
+              additionalProperties: true
+              type: object
+            type: array
+        "400":
+          description: 'error: invalid chore id'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: unauthorized'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: 'error: chore not found'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: failed to get attachments'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      summary: List a chore's attachments
+      tags:
+      - assets
+  /api/v1/chores/{id}/details:
     get:
       consumes:
       - application/json
@@ -1392,7 +3124,7 @@ paths:
       summary: Get chore details
       tags:
       - chores
-  /chores/{id}/do:
+  /api/v1/chores/{id}/do:
     post:
       consumes:
       - application/json
@@ -1449,7 +3181,7 @@ paths:
       summary: Complete a chore
       tags:
       - chores
-  /chores/{id}/dueDate:
+  /api/v1/chores/{id}/dueDate:
     put:
       consumes:
       - application/json
@@ -1505,7 +3237,7 @@ paths:
       summary: Update chore due date
       tags:
       - chores
-  /chores/{id}/history:
+  /api/v1/chores/{id}/history:
     get:
       consumes:
       - application/json
@@ -1545,7 +3277,7 @@ paths:
       summary: Get chore history
       tags:
       - chores
-  /chores/{id}/history/{history_id}:
+  /api/v1/chores/{id}/history/{history_id}:
     delete:
       consumes:
       - application/json
@@ -1663,7 +3395,7 @@ paths:
       summary: Modify chore history entry
       tags:
       - chores
-  /chores/{id}/nudge:
+  /api/v1/chores/{id}/nudge:
     post:
       consumes:
       - application/json
@@ -1713,7 +3445,7 @@ paths:
       summary: Send a nudge notification
       tags:
       - chores
-  /chores/{id}/pause:
+  /api/v1/chores/{id}/pause:
     put:
       consumes:
       - application/json
@@ -1764,7 +3496,7 @@ paths:
       summary: Pause a chore timer
       tags:
       - chores
-  /chores/{id}/priority:
+  /api/v1/chores/{id}/priority:
     put:
       consumes:
       - application/json
@@ -1820,7 +3552,7 @@ paths:
       summary: Update chore priority
       tags:
       - chores
-  /chores/{id}/reject:
+  /api/v1/chores/{id}/reject:
     post:
       consumes:
       - application/json
@@ -1875,7 +3607,7 @@ paths:
       summary: Reject a chore completion
       tags:
       - chores
-  /chores/{id}/skip:
+  /api/v1/chores/{id}/skip:
     post:
       consumes:
       - application/json
@@ -1921,7 +3653,7 @@ paths:
       summary: Skip a chore
       tags:
       - chores
-  /chores/{id}/start:
+  /api/v1/chores/{id}/start:
     put:
       consumes:
       - application/json
@@ -1970,63 +3702,7 @@ paths:
       summary: Start a chore timer
       tags:
       - chores
-  /chores/{id}/status:
-    put:
-      consumes:
-      - application/json
-      description: Updates the status of a chore (e.g., no status, in progress, paused)
-      parameters:
-      - description: Chore ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: Status update request
-        in: body
-        name: status
-        required: true
-        schema:
-          $ref: '#/definitions/chore.StatusUpdateReq'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 'message: Chore status updated successfully'
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "400":
-          description: 'error: Invalid ID | Invalid request'
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "401":
-          description: 'error: Authentication failed'
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "403":
-          description: 'error: You cannot update the status of this chore'
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: 'error: Failed to retrieve chore | Error updating chore status'
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - JWTKeyAuth: []
-      - APIKeyAuth: []
-      summary: Update chore status
-      tags:
-      - chores
-  /chores/{id}/subtask:
+  /api/v1/chores/{id}/subtask:
     put:
       consumes:
       - application/json
@@ -2076,7 +3752,7 @@ paths:
       summary: Update subtask completion status
       tags:
       - chores
-  /chores/{id}/timer:
+  /api/v1/chores/{id}/timer:
     get:
       consumes:
       - application/json
@@ -2140,62 +3816,7 @@ paths:
       summary: Get chore time sessions
       tags:
       - chores
-    put:
-      consumes:
-      - application/json
-      description: Manually updates the timer duration for a chore
-      parameters:
-      - description: Chore ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: Timer update request
-        in: body
-        name: timer
-        required: true
-        schema:
-          $ref: '#/definitions/chore.TimerUpdateReq'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 'message: Chore timer updated successfully'
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "400":
-          description: 'error: Invalid ID | Invalid request'
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "401":
-          description: 'error: Authentication failed'
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "403":
-          description: 'error: You cannot update the timer of this chore'
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: 'error: Failed to retrieve chore | Error updating chore timer'
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - JWTKeyAuth: []
-      - APIKeyAuth: []
-      summary: Update chore timer duration
-      tags:
-      - chores
-  /chores/{id}/timer/{session_id}:
+  /api/v1/chores/{id}/timer/{session_id}:
     delete:
       consumes:
       - application/json
@@ -2316,7 +3937,7 @@ paths:
       summary: Update a time session
       tags:
       - chores
-  /chores/{id}/timer/reset:
+  /api/v1/chores/{id}/timer/reset:
     put:
       consumes:
       - application/json
@@ -2366,7 +3987,7 @@ paths:
       summary: Reset chore timer
       tags:
       - chores
-  /chores/{id}/unarchive:
+  /api/v1/chores/{id}/unarchive:
     put:
       consumes:
       - application/json
@@ -2410,7 +4031,7 @@ paths:
       summary: Unarchive a chore
       tags:
       - chores
-  /chores/{id}/undo:
+  /api/v1/chores/{id}/undo:
     post:
       consumes:
       - application/json
@@ -2458,7 +4079,7 @@ paths:
       summary: Undo a chore action
       tags:
       - chores
-  /chores/archived:
+  /api/v1/chores/archived:
     get:
       consumes:
       - application/json
@@ -2492,7 +4113,49 @@ paths:
       summary: Get archived chores
       tags:
       - chores
-  /chores/calendar/{token}:
+  /api/v1/chores/bulk:
+    post:
+      consumes:
+      - application/json
+      description: Creates up to 100 chores in request order. Each item uses the single-create
+        request format and is validated independently; failures do not stop subsequent
+        items. Results contain the zero-based index, HTTP status, and single-create
+        response fields. Creation is not atomic; a failure after persistence also
+        includes the created ID in res.
+      parameters:
+      - description: Chores to create
+        in: body
+        name: chores
+        required: true
+        schema:
+          $ref: '#/definitions/chore.BulkCreateChoresReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'res: ordered per-item results'
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request format
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Authentication failed
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      - APIKeyAuth: []
+      summary: Create multiple chores
+      tags:
+      - chores
+  /api/v1/chores/calendar/{token}:
     get:
       description: Serves an iCal (.ics) calendar file containing the user's chores.
         Authenticated via a revocable token in the URL.
@@ -2520,7 +4183,7 @@ paths:
       summary: Serve iCal calendar feed
       tags:
       - chores
-  /chores/calendar/url:
+  /api/v1/chores/calendar/url:
     delete:
       description: Revokes the current user's calendar subscription URL. Existing
         subscriptions stop working immediately.
@@ -2621,7 +4284,7 @@ paths:
       summary: Generate calendar subscription URL
       tags:
       - chores
-  /chores/calendar/url/rotate:
+  /api/v1/chores/calendar/url/rotate:
     post:
       description: Issues a new calendar subscription URL and immediately invalidates
         the previous one.
@@ -2652,7 +4315,7 @@ paths:
       summary: Rotate calendar subscription URL
       tags:
       - chores
-  /chores/history:
+  /api/v1/chores/history:
     get:
       consumes:
       - application/json
@@ -2701,7 +4364,7 @@ paths:
       summary: Get chores history for user
       tags:
       - chores
-  /circles:
+  /api/v1/circles:
     get:
       consumes:
       - application/json
@@ -2735,7 +4398,7 @@ paths:
       summary: Get user circles
       tags:
       - circles
-  /circles/{id}/members/delete:
+  /api/v1/circles/{id}/members/delete:
     delete:
       consumes:
       - application/json
@@ -2790,7 +4453,7 @@ paths:
       summary: Delete a circle member
       tags:
       - circles
-  /circles/{id}/members/points/redeem:
+  /api/v1/circles/{id}/members/points/redeem:
     post:
       consumes:
       - application/json
@@ -2852,7 +4515,7 @@ paths:
       summary: Redeem member points
       tags:
       - circles
-  /circles/join:
+  /api/v1/circles/join:
     post:
       consumes:
       - application/json
@@ -2902,7 +4565,7 @@ paths:
       summary: Request to join a circle
       tags:
       - circles
-  /circles/leave:
+  /api/v1/circles/leave:
     delete:
       consumes:
       - application/json
@@ -2947,7 +4610,7 @@ paths:
       summary: Leave a circle
       tags:
       - circles
-  /circles/members:
+  /api/v1/circles/members:
     get:
       consumes:
       - application/json
@@ -2975,7 +4638,7 @@ paths:
       summary: Get circle members
       tags:
       - circles
-  /circles/members/requests:
+  /api/v1/circles/members/requests:
     get:
       consumes:
       - application/json
@@ -3015,7 +4678,7 @@ paths:
       summary: Get pending join requests
       tags:
       - circles
-  /circles/members/requests/accept:
+  /api/v1/circles/members/requests/accept:
     put:
       consumes:
       - application/json
@@ -3065,7 +4728,58 @@ paths:
       summary: Accept a join request
       tags:
       - circles
-  /circles/members/role:
+  /api/v1/circles/members/requests/decline:
+    delete:
+      consumes:
+      - application/json
+      description: Declines a pending circle join request (admin only). The request
+        is removed, so the user may request to join again later.
+      parameters:
+      - description: Request ID
+        in: query
+        name: requestId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'res: Join request declined successfully'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 'error: Invalid request'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: Authentication failed'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 'error: You are not an admin of this circle'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Error declining join request'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      - APIKeyAuth: []
+      summary: Decline a join request
+      tags:
+      - circles
+  /api/v1/circles/members/role:
     put:
       consumes:
       - application/json
@@ -3122,7 +4836,295 @@ paths:
       summary: Change member role
       tags:
       - circles
-  /filters:
+  /api/v1/devices/count:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: count, limit
+          schema:
+            additionalProperties:
+              type: integer
+            type: object
+        "401":
+          description: 'error: User not found'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to get device count'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      summary: Count the current user's devices
+      tags:
+      - devices
+  /api/v1/devices/tokens:
+    delete:
+      consumes:
+      - application/json
+      description: Deactivates a device token, identified by deviceId or token.
+      parameters:
+      - description: deviceId or token (at least one)
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/device.UnregisterDeviceTokenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'message: Device token unregistered successfully'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 'error: Invalid request payload | Either deviceId or token
+            must be provided'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: User not found'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to unregister device token'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      summary: Unregister a push notification device
+      tags:
+      - devices
+    get:
+      parameters:
+      - description: Only active devices
+        in: query
+        name: active
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'res: devices'
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/user.UserDeviceToken'
+              type: array
+            type: object
+        "401":
+          description: 'error: User not found'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to retrieve device tokens'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      summary: List the current user's devices
+      tags:
+      - devices
+    post:
+      consumes:
+      - application/json
+      description: Registers or refreshes the current user's FCM device token for
+        push notifications.
+      parameters:
+      - description: Device token
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/device.RegisterDeviceTokenRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: message, device_id, id
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 'error: Invalid request payload'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: User not found'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: 'error, code: DEVICE_LIMIT_EXCEEDED'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to register device token'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      summary: Register a push notification device
+      tags:
+      - devices
+  /api/v1/devices/tokens/{deviceId}/activity:
+    put:
+      description: Updates the device's last-active timestamp. A 404 tells the app
+        its registration is stale and it should register again.
+      parameters:
+      - description: Device ID
+        in: path
+        name: deviceId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'message: Device activity updated successfully'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 'error: Device ID is required'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: 'error, code: DEVICE_NOT_REGISTERED'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to update device activity'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      summary: Mark a device as active
+      tags:
+      - devices
+  /api/v1/files:
+    get:
+      description: Checks the user may read the file, then redirects (302) to a short-lived
+        signed URL.
+      parameters:
+      - description: Stored file path
+        in: query
+        name: path
+        required: true
+        type: string
+      responses:
+        "302":
+          description: Redirect to the signed URL
+        "400":
+          description: 'error: missing path'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: unauthorized'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 'error: access denied'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: 'error: asset not found'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      summary: Redirect to a signed file URL
+      tags:
+      - assets
+  /api/v1/files/sign:
+    get:
+      description: Checks the user may read the file and returns a short-lived signed
+        URL for it.
+      parameters:
+      - description: Stored file path
+        in: query
+        name: path
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: url, path
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 'error: missing path'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: unauthorized'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 'error: access denied'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: 'error: asset not found'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      summary: Get a signed file URL
+      tags:
+      - assets
+  /api/v1/filters:
     get:
       consumes:
       - application/json
@@ -3191,7 +5193,7 @@ paths:
       summary: Create a new filter
       tags:
       - filters
-  /filters/{id}:
+  /api/v1/filters/{id}:
     delete:
       consumes:
       - application/json
@@ -3315,7 +5317,7 @@ paths:
       summary: Update a filter
       tags:
       - filters
-  /filters/{id}/toggle-pin:
+  /api/v1/filters/{id}/toggle-pin:
     post:
       consumes:
       - application/json
@@ -3352,7 +5354,7 @@ paths:
       summary: Toggle filter pin status
       tags:
       - filters
-  /filters/by-usage:
+  /api/v1/filters/by-usage:
     get:
       consumes:
       - application/json
@@ -3379,7 +5381,7 @@ paths:
       summary: Get filters by usage
       tags:
       - filters
-  /filters/pinned:
+  /api/v1/filters/pinned:
     get:
       consumes:
       - application/json
@@ -3405,11 +5407,228 @@ paths:
       summary: Get pinned filters
       tags:
       - filters
-  /projects:
+  /api/v1/labels:
+    get:
+      description: Returns the current user's own labels plus labels shared in their
+        circle.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: labels
+          schema:
+            items:
+              $ref: '#/definitions/model.Label'
+            type: array
+        "401":
+          description: 'error: User not authenticated'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Error getting labels'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      - APIKeyAuth: []
+      summary: List labels
+      tags:
+      - labels
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Label
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/label.LabelReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'res: created label'
+          schema:
+            additionalProperties:
+              $ref: '#/definitions/model.Label'
+            type: object
+        "400":
+          description: 'error: Invalid request'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: User not authenticated'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Error creating label'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      - APIKeyAuth: []
+      summary: Create a label
+      tags:
+      - labels
+    put:
+      consumes:
+      - application/json
+      description: Updates a label's name and color. Omitting isShared keeps its current
+        sharing setting.
+      parameters:
+      - description: Label with ID
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/label.UpdateLabelReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'res: updated label'
+          schema:
+            additionalProperties:
+              $ref: '#/definitions/model.Label'
+            type: object
+        "400":
+          description: 'error: Invalid request'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: User not authenticated'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Error updating label'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      - APIKeyAuth: []
+      summary: Update a label
+      tags:
+      - labels
+  /api/v1/labels/{id}:
+    delete:
+      description: Removes the label from every chore, then deletes it.
+      parameters:
+      - description: Label ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'res: Label deleted'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 'error: Label ID is required | Invalid label ID'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: User not authenticated'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Error unassociating label from chores'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      - APIKeyAuth: []
+      summary: Delete a label
+      tags:
+      - labels
+  /api/v1/payments/cancel-subscription:
+    post:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'message: Subscription cancelled, provider'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: 'error: No active subscription found'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to get subscription | Failed to cancel subscription
+            | Failed to update subscription'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      summary: Cancel my subscription
+      tags:
+      - payments
+  /api/v1/payments/create-subscription:
+    get:
+      description: Creates a Stripe checkout session for the current user and returns
+        its URL.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'sessionURL: Stripe checkout URL'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to create customer | Failed to create checkout
+            session'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      summary: Start a Plus subscription checkout
+      tags:
+      - payments
+  /api/v1/projects:
     get:
       consumes:
       - application/json
-      description: Retrieves all projects for the current user's circle
+      description: 'Retrieves the projects of the current user''s circle the user
+        can see: circle-wide ones, their own private ones and the ones shared with
+        them'
       produces:
       - application/json
       responses:
@@ -3440,7 +5659,9 @@ paths:
     post:
       consumes:
       - application/json
-      description: Creates a new project for the current user's circle
+      description: Creates a new project for the current user's circle. visibility
+        is "private" (only me), "members" (me and memberIds) or "circle" (everyone
+        in the circle, the default).
       parameters:
       - description: Project creation request
         in: body
@@ -3481,11 +5702,13 @@ paths:
       summary: Create a new project
       tags:
       - projects
-  /projects/{id}:
+  /api/v1/projects/{id}:
     delete:
       consumes:
       - application/json
-      description: Deletes a project by ID; restricted to the current user's circle
+      description: Deletes a project by ID; restricted to the current user's circle.
+        Its tasks are kept without a project and follow their own privacy from then
+        on.
       parameters:
       - description: Project ID
         in: path
@@ -3528,8 +5751,11 @@ paths:
     put:
       consumes:
       - application/json
-      description: Updates the name, description, color, and icon of an existing project
-        by ID
+      description: Updates name, description, color and icon of a project owned by
+        the current user and, optionally, who can see it (visibility, memberIds).
+        Fields that are not sent keep their current value. Changing who can see the
+        project also adjusts the assignees of its tasks; use POST /projects/{id}/access-preview
+        to see the effect first.
       parameters:
       - description: Project ID
         in: path
@@ -3552,13 +5778,26 @@ paths:
               $ref: '#/definitions/model.Project'
             type: object
         "400":
-          description: 'error: Invalid project ID or Error binding project data'
+          description: 'error: Invalid project ID, Error binding project data or invalid
+            members'
           schema:
             additionalProperties:
               type: string
             type: object
         "401":
           description: 'error: Error getting current user'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 'error: not the project owner'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: 'error: project not found'
           schema:
             additionalProperties:
               type: string
@@ -3575,7 +5814,793 @@ paths:
       summary: Update a project
       tags:
       - projects
-  /sync/changes:
+  /api/v1/projects/{id}/access-preview:
+    post:
+      consumes:
+      - application/json
+      description: Returns, without changing anything, which tasks of the project
+        would change assignees and who would gain or lose access if the given visibility
+        and members were saved. Only the project owner may call it.
+      parameters:
+      - description: Project ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Target visibility and members
+        in: body
+        name: access
+        required: true
+        schema:
+          $ref: '#/definitions/project.AccessPreviewReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'res: chRepo.ProjectAccessPlan'
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 'error: not the project owner'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: 'error: project not found'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      - APIKeyAuth: []
+      summary: Preview a change of who can see a project
+      tags:
+      - projects
+  /api/v1/projects/{id}/board/chores/{choreId}/move:
+    put:
+      consumes:
+      - application/json
+      description: Places one chore into sectionId, sorted right after afterChoreId
+        (first, when omitted), moving it in from a different section of the same project
+        if needed. Computed from the current server-side order of that section, so
+        two users dragging different cards at the same time cannot clobber each other.
+      parameters:
+      - description: Project ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Chore ID
+        in: path
+        name: choreId
+        required: true
+        type: integer
+      - description: Destination section and chore to place it after
+        in: body
+        name: move
+        required: true
+        schema:
+          $ref: '#/definitions/project.MoveChoreReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'res: ok'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: 'error: project, section or chore not found'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      - APIKeyAuth: []
+      summary: Move a chore within a project's board
+      tags:
+      - projects
+  /api/v1/projects/{id}/sections:
+    get:
+      description: Lists the sections (board columns) of a project, ordered by position.
+        Shared by every user who can see the project.
+      parameters:
+      - description: Project ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'res: array of pModel.ProjectSection'
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: 'error: project not found'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      - APIKeyAuth: []
+      summary: Get a project's board sections
+      tags:
+      - projects
+    post:
+      consumes:
+      - application/json
+      description: Adds a column to a project's shared board. Any user who can see
+        the project may add one.
+      parameters:
+      - description: Project ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Section name
+        in: body
+        name: section
+        required: true
+        schema:
+          $ref: '#/definitions/project.SectionReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'res: created pModel.ProjectSection'
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: 'error: project not found'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      - APIKeyAuth: []
+      summary: Create a board section
+      tags:
+      - projects
+  /api/v1/projects/{id}/sections/{sectionId}:
+    delete:
+      description: Deletes a section, moving its chores into the project's remaining
+        section with the lowest position. Fails if it is the only section.
+      parameters:
+      - description: Project ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Section ID
+        in: path
+        name: sectionId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'res: ok'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 'error: cannot delete the last section'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: 'error: project or section not found'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      - APIKeyAuth: []
+      summary: Delete a board section
+      tags:
+      - projects
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Project ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Section ID
+        in: path
+        name: sectionId
+        required: true
+        type: integer
+      - description: New section name
+        in: body
+        name: section
+        required: true
+        schema:
+          $ref: '#/definitions/project.SectionReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'res: ok'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: 'error: project or section not found'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      - APIKeyAuth: []
+      summary: Rename a board section
+      tags:
+      - projects
+  /api/v1/projects/{id}/sections/{sectionId}/move:
+    put:
+      consumes:
+      - application/json
+      description: Repositions one section to sort right after afterSectionId (first,
+        when omitted). Computed from the current server-side order, so two users reordering
+        columns at the same time cannot clobber each other.
+      parameters:
+      - description: Project ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Section ID
+        in: path
+        name: sectionId
+        required: true
+        type: integer
+      - description: Section to place it after
+        in: body
+        name: move
+        required: true
+        schema:
+          $ref: '#/definitions/project.MoveSectionReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'res: ok'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: 'error: project or section not found'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      - APIKeyAuth: []
+      summary: Move a board section
+      tags:
+      - projects
+  /api/v1/realtime/sse:
+    get:
+      description: Opens a Server-Sent Events stream of changes in the user's circle.
+        Authenticate with a Bearer JWT, or with a single-use ticket from GET /api/v1/realtime/sse/ticket
+        for clients (such as EventSource) that cannot send headers. Plus members only.
+      parameters:
+      - description: Single-use SSE ticket
+        in: query
+        name: ticket
+        type: string
+      produces:
+      - text/event-stream
+      responses:
+        "200":
+          description: event stream
+          schema:
+            type: string
+        "400":
+          description: 'error, code: INVALID_REQUEST'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: Authentication required, code: AUTH_REQUIRED'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "429":
+          description: 'error: Rate limit exceeded, code: RATE_LIMIT_EXCEEDED'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "503":
+          description: 'error: Server-Sent Events service is not available, code:
+            SERVICE_UNAVAILABLE'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      summary: Subscribe to real-time circle events
+      tags:
+      - realtime
+  /api/v1/realtime/sse/ticket:
+    get:
+      description: Issues a short-lived, single-use ticket to pass as ?ticket= to
+        GET /api/v1/realtime/sse. Plus members only.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: ticket, expiresIn (seconds)
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 'error: Authentication required, code: AUTH_REQUIRED'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 'error: Access denied for non-plus members, code: ACCESS_DENIED'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "429":
+          description: 'error: Rate limit exceeded, code: RATE_LIMIT_EXCEEDED'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to issue ticket, code: TICKET_ISSUE_FAILED'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "503":
+          description: 'code: TICKET_STORE_FULL'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      summary: Get an SSE ticket
+      tags:
+      - realtime
+  /api/v1/resource:
+    get:
+      description: Public. Returns the OAuth identity provider, versions and feature
+        flags the apps need before login.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: server resource info
+          schema:
+            $ref: '#/definitions/resource.Resource'
+      summary: Get server configuration for clients
+      tags:
+      - resource
+  /api/v1/rewards:
+    get:
+      description: Returns every reward in the current user's circle.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: rewards
+          schema:
+            items:
+              $ref: '#/definitions/model.Reward'
+            type: array
+        "401":
+          description: 'error: Authentication failed'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Error getting rewards'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      - APIKeyAuth: []
+      summary: List rewards
+      tags:
+      - rewards
+    post:
+      consumes:
+      - application/json
+      description: Admins and managers only.
+      parameters:
+      - description: Reward
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/reward.RewardReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'res: created reward'
+          schema:
+            additionalProperties:
+              $ref: '#/definitions/model.Reward'
+            type: object
+        "400":
+          description: 'error: Invalid request'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: Authentication failed'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 'error: Only admins or managers can create rewards'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Error creating reward'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      - APIKeyAuth: []
+      summary: Create a reward
+      tags:
+      - rewards
+  /api/v1/rewards/{id}:
+    delete:
+      description: Admins and managers only.
+      parameters:
+      - description: Reward ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'res: Reward deleted'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 'error: Invalid reward ID'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: Authentication failed'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 'error: Only admins or managers can delete rewards'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Error deleting reward'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      - APIKeyAuth: []
+      summary: Delete a reward
+      tags:
+      - rewards
+    put:
+      consumes:
+      - application/json
+      description: Admins and managers only.
+      parameters:
+      - description: Reward ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Reward
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/reward.RewardReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'res: updated reward'
+          schema:
+            additionalProperties:
+              $ref: '#/definitions/model.Reward'
+            type: object
+        "400":
+          description: 'error: Invalid reward ID | Invalid request'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: Authentication failed'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 'error: Only admins or managers can update rewards'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Error updating reward'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      - APIKeyAuth: []
+      summary: Update a reward
+      tags:
+      - rewards
+  /api/v1/rewards/{id}/redeem:
+    post:
+      consumes:
+      - application/json
+      description: Spends points on a reward. Auto-approve rewards are approved immediately;
+        otherwise the redemption stays pending and admins are notified. Admins and
+        managers may set userId to redeem for another member. The body is optional.
+      parameters:
+      - description: Reward ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Optional note and member
+        in: body
+        name: request
+        schema:
+          $ref: '#/definitions/reward.RedeemReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'res: redemption'
+          schema:
+            additionalProperties:
+              $ref: '#/definitions/model.RewardRedemption'
+            type: object
+        "400":
+          description: 'error: Invalid reward ID | Selected user is not an active
+            member of this circle | Not enough points to redeem this reward'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: Authentication failed'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 'error: Only admins or managers can request a reward for another
+            member'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Error requesting redemption'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      - APIKeyAuth: []
+      summary: Redeem a reward
+      tags:
+      - rewards
+  /api/v1/rewards/redemptions:
+    get:
+      description: Admins and managers get the whole circle's redemptions, optionally
+        filtered by status. Everyone else gets only their own, and the filter is ignored.
+      parameters:
+      - description: Filter (admins/managers only)
+        enum:
+        - pending
+        - approved
+        - rejected
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: redemptions
+          schema:
+            items:
+              $ref: '#/definitions/model.RewardRedemption'
+            type: array
+        "401":
+          description: 'error: Authentication failed'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Error getting redemptions'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      - APIKeyAuth: []
+      summary: List reward redemptions
+      tags:
+      - rewards
+  /api/v1/rewards/redemptions/{id}/approve:
+    post:
+      description: Admins and managers only. Deducts the points from the member.
+      parameters:
+      - description: Redemption ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'message: Redemption approved'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 'error: Invalid redemption ID | User no longer has enough points
+            for this redemption | Redemption is not pending'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: Authentication failed'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 'error: Only admins or managers can approve redemptions'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Error approving redemption'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      - APIKeyAuth: []
+      summary: Approve a redemption
+      tags:
+      - rewards
+  /api/v1/rewards/redemptions/{id}/reject:
+    post:
+      consumes:
+      - application/json
+      description: Admins and managers only. The body is optional.
+      parameters:
+      - description: Redemption ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Optional note
+        in: body
+        name: request
+        schema:
+          $ref: '#/definitions/reward.ResolveReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'message: Redemption rejected'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 'error: Invalid redemption ID | Redemption is not pending'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: Authentication failed'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 'error: Only admins or managers can reject redemptions'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Error rejecting redemption'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      - APIKeyAuth: []
+      summary: Reject a redemption
+      tags:
+      - rewards
+  /api/v1/sync/changes:
     get:
       consumes:
       - application/json
@@ -3621,7 +6646,7 @@ paths:
       summary: Get sync changes
       tags:
       - sync
-  /things:
+  /api/v1/things:
     get:
       consumes:
       - application/json
@@ -3750,7 +6775,7 @@ paths:
       summary: Update a thing
       tags:
       - things
-  /things/{id}:
+  /api/v1/things/{id}:
     delete:
       consumes:
       - application/json
@@ -3804,7 +6829,7 @@ paths:
       summary: Delete a thing
       tags:
       - things
-  /things/{id}/history:
+  /api/v1/things/{id}/history:
     get:
       consumes:
       - application/json
@@ -3859,7 +6884,7 @@ paths:
       summary: Get thing history
       tags:
       - things
-  /things/{id}/state:
+  /api/v1/things/{id}/state:
     put:
       consumes:
       - application/json
@@ -3916,4 +6941,1484 @@ paths:
       summary: Update thing state
       tags:
       - things
+  /api/v1/users:
+    put:
+      consumes:
+      - application/json
+      description: Updates display name, Telegram chat ID, profile image and timezone.
+        Omitted fields are left unchanged.
+      parameters:
+      - description: Fields to change
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/user.UpdateUserDetails.UpdateUserReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: updated user
+          schema:
+            $ref: '#/definitions/user.UserDetails'
+        "400":
+          description: 'error: Invalid request | Invalid timezone | Invalid image'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: User not authenticated'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Error updating user'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      - APIKeyAuth: []
+      summary: Update my profile
+      tags:
+      - users
+  /api/v1/users/:
+    get:
+      description: Returns the users in the current user's circle, with signed profile
+        image URLs.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'res: users'
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/user.User'
+              type: array
+            type: object
+        "401":
+          description: 'error: User not authenticated'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Error getting users'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      - APIKeyAuth: []
+      summary: List circle users
+      tags:
+      - users
+  /api/v1/users/change_password:
+    put:
+      consumes:
+      - application/json
+      description: Not available on donetick.com.
+      parameters:
+      - description: New password
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/user.updateUserPasswordLoggedInOnly.RequestBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: empty object
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 'error: Invalid request'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: User not authenticated'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 'error: This action is not allowed on donetick.com'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Unable to process password | Unable to reset password'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      - APIKeyAuth: []
+      summary: Change my password
+      tags:
+      - users
+  /api/v1/users/delete:
+    delete:
+      consumes:
+      - application/json
+      description: Permanently deletes the account. confirmation must be DELETE. Returns
+        400 with the deletion result when circle ownership still has to be transferred
+        (see transferOptions).
+      parameters:
+      - description: Password, confirmation and transfer choices
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/user.AccountDeletionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: deletion result
+          schema:
+            $ref: '#/definitions/user.DeletionResult'
+        "400":
+          description: 'transfer required, or error: Confirmation text must be DELETE'
+          schema:
+            $ref: '#/definitions/user.DeletionResult'
+        "401":
+          description: 'error: User not authenticated | Invalid password'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to delete account'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      - APIKeyAuth: []
+      summary: Delete my account
+      tags:
+      - users
+  /api/v1/users/delete/check:
+    post:
+      consumes:
+      - application/json
+      description: 'Dry run: reports what deleting the account would remove and whether
+        circle ownership must be transferred first.'
+      parameters:
+      - description: Current password
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/user.AccountDeletionCheckRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: deletion preview
+          schema:
+            $ref: '#/definitions/user.DeletionResult'
+        "400":
+          description: 'error: Invalid password'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: User not authenticated'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to check account deletion'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      - APIKeyAuth: []
+      summary: Preview account deletion
+      tags:
+      - users
+  /api/v1/users/logout:
+    post:
+      consumes:
+      - application/json
+      description: Revokes the refresh token (from the refresh_token cookie, or refreshToken
+        in the body) and clears the auth cookies. Always succeeds.
+      parameters:
+      - description: Refresh token, if not sent as a cookie
+        in: body
+        name: request
+        schema:
+          $ref: '#/definitions/user.RefreshRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'message: Logged out successfully'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      - APIKeyAuth: []
+      summary: Log out
+      tags:
+      - users
+  /api/v1/users/mfa/confirm:
+    post:
+      consumes:
+      - application/json
+      description: Enables MFA using the secret and backup codes from setup and a
+        current TOTP code.
+      parameters:
+      - description: Secret, code and backup codes
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/user.confirmMFA.ConfirmMFARequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'message: MFA enabled successfully'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 'error: MFA is already enabled | Invalid request | Invalid
+            verification code'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to enable MFA'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      - APIKeyAuth: []
+      summary: Enable MFA
+      tags:
+      - mfa
+  /api/v1/users/mfa/disable:
+    post:
+      consumes:
+      - application/json
+      description: Requires a current TOTP code or a backup code.
+      parameters:
+      - description: Verification code
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/user.MFAVerifyRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'message: MFA disabled successfully'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 'error: MFA is not enabled | Invalid request | Invalid verification
+            code'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to validate code | Failed to disable MFA'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      - APIKeyAuth: []
+      summary: Disable MFA
+      tags:
+      - mfa
+  /api/v1/users/mfa/setup:
+    post:
+      description: Generates a TOTP secret, QR code URL and backup codes. MFA is not
+        enabled until POST /api/v1/users/mfa/confirm.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: secret, QR code URL, backup codes
+          schema:
+            $ref: '#/definitions/user.MFASetupResponse'
+        "400":
+          description: 'error: MFA is already enabled'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to generate MFA secret | Failed to generate
+            backup codes'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      - APIKeyAuth: []
+      summary: Start MFA setup
+      tags:
+      - mfa
+  /api/v1/users/mfa/status:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: mfaEnabled
+          schema:
+            additionalProperties:
+              type: boolean
+            type: object
+        "500":
+          description: 'error: Failed to get current user'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      - APIKeyAuth: []
+      summary: Get my MFA status
+      tags:
+      - mfa
+  /api/v1/users/notifications/preferences:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: profile, overrides, digestHour, effective
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 'error: User not authenticated'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to get notification preference'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      - APIKeyAuth: []
+      summary: Get my notification preferences
+      tags:
+      - users
+    put:
+      consumes:
+      - application/json
+      description: Omitting digestHour keeps the saved hour.
+      parameters:
+      - description: Preferences
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/user.UpdateNotificationPreferenceReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: profile, overrides, digestHour, effective
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 'error: Invalid request'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: User not authenticated'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to update notification preference'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      - APIKeyAuth: []
+      summary: Update my notification preferences
+      tags:
+      - users
+  /api/v1/users/profile:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'res: current user'
+          schema:
+            additionalProperties:
+              $ref: '#/definitions/user.UserDetails'
+            type: object
+        "401":
+          description: 'error: User not authenticated'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      - APIKeyAuth: []
+      summary: Get my profile
+      tags:
+      - users
+  /api/v1/users/profile_photo:
+    post:
+      consumes:
+      - multipart/form-data
+      parameters:
+      - description: Image file
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'sign: signed photo URL'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 'error: Invalid file | Invalid file extension'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: User not authenticated'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to save file | Failed to update profile photo'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      - APIKeyAuth: []
+      summary: Upload my profile photo
+      tags:
+      - users
+  /api/v1/users/storage:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'res: {used, total} in bytes'
+          schema:
+            additionalProperties:
+              additionalProperties:
+                type: integer
+              type: object
+            type: object
+        "401":
+          description: 'error: User not authenticated'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to get storage usage'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      - APIKeyAuth: []
+      summary: Get my storage usage
+      tags:
+      - users
+  /api/v1/users/subaccounts:
+    get:
+      description: Parent users only.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'res: sub-accounts'
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/user.ChildUserResponse'
+              type: array
+            type: object
+        "401":
+          description: 'error: User not authenticated'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 'error: Only parent users can view child accounts'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to get child users'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      - APIKeyAuth: []
+      summary: List my sub-accounts
+      tags:
+      - users
+    post:
+      consumes:
+      - application/json
+      description: Creates a child user in the parent's circle. Parent users only.
+      parameters:
+      - description: Sub-account
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/user.CreateChildUserRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: 'res: created sub-account'
+          schema:
+            additionalProperties:
+              $ref: '#/definitions/user.ChildUserResponse'
+            type: object
+        "400":
+          description: 'error: Invalid request | Invalid child username format'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: User not authenticated'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 'error: Only parent users can create child accounts | Maximum
+            subaccounts reached'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to create child user'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      - APIKeyAuth: []
+      summary: Create a sub-account
+      tags:
+      - users
+  /api/v1/users/subaccounts/{id}:
+    delete:
+      description: Parent users only, for their own sub-accounts.
+      parameters:
+      - description: Sub-account user ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'message: Child user deleted successfully'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 'error: Child user ID is required | Invalid child user ID'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: User not authenticated'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 'error: Only parent users can delete child accounts | You can
+            only delete your own child users'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: 'error: Child user not found'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to delete child user'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      - APIKeyAuth: []
+      summary: Delete a sub-account
+      tags:
+      - users
+  /api/v1/users/subaccounts/password:
+    put:
+      consumes:
+      - application/json
+      description: Parent users only, for their own sub-accounts.
+      parameters:
+      - description: Sub-account and new password
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/user.UpdateChildPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'message: Child user password updated successfully'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 'error: Invalid request'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: User not authenticated'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 'error: Only parent users can update child passwords | You
+            can only update passwords for your own child users'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: 'error: Child user not found'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to update password'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      - APIKeyAuth: []
+      summary: Change a sub-account's password
+      tags:
+      - users
+  /api/v1/users/targets:
+    put:
+      consumes:
+      - application/json
+      description: Sets where notifications are delivered. type is 0 none (removes
+        the target), 1 Telegram, 2 Pushover, 3 webhook, 4 Discord, 5 FCM.
+      parameters:
+      - description: Target
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/user.UpdateNotificationTarget.Request'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: empty object
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 'error: Invalid request, or an invalid target'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: User not authenticated'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to update notification target'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      - APIKeyAuth: []
+      summary: Set my notification target
+      tags:
+      - users
+  /api/v1/users/tokens:
+    get:
+      description: Tokens are returned masked.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'res: [{id, name, userId, maskedToken, createdAt}]'
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 'error: User not authenticated'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to get user tokens'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      - APIKeyAuth: []
+      summary: List my API tokens
+      tags:
+      - users
+    post:
+      consumes:
+      - application/json
+      description: Creates a long-lived API token for the secretkey header. The full
+        token is only returned here. Users with MFA must include a valid mfaCode.
+      parameters:
+      - description: Token name and optional MFA code
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/user.CreateLongLivedToken.TokenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'res: {id, name, userId, token, prefix, createdAt}, message
+            (optional)'
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: 'error: Invalid request | Invalid MFA code'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: User not authenticated'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to store the token'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      - APIKeyAuth: []
+      summary: Create an API token
+      tags:
+      - users
+  /api/v1/users/tokens/{id}:
+    delete:
+      parameters:
+      - description: Token ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: empty object
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: User not authenticated'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to delete the token'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      - APIKeyAuth: []
+      summary: Delete an API token
+      tags:
+      - users
+  /api/v1/users/webhook:
+    put:
+      consumes:
+      - application/json
+      description: 'Sets or clears (url: null) the URL that receives circle events.
+        Circle admins with Plus only.'
+      parameters:
+      - description: Webhook URL
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/user.setWebhook.Request'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: empty object
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 'error: Invalid request, or an invalid URL'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: User not authenticated'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 'error: This action is only available for Plus members | You
+            are not an admin'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to set webhook URL'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - JWTKeyAuth: []
+      - APIKeyAuth: []
+      summary: Set the circle webhook
+      tags:
+      - users
+  /eapi/v1/chore:
+    get:
+      description: Returns the active chores visible to the API token's user.
+      parameters:
+      - description: Include subtasks
+        in: query
+        name: includeSubtasks
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: chores
+          schema:
+            items:
+              $ref: '#/definitions/model.Chore'
+            type: array
+        "500":
+          description: error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - APIKeyAuth: []
+      summary: List chores (external API)
+      tags:
+      - external-api
+    post:
+      consumes:
+      - application/json
+      description: Creates a one-time chore assigned to its creator. dueDate accepts
+        RFC3339 or YYYY-MM-DD (the date-only form uses the current UTC time of day).
+        createdBy must be a member of the circle.
+      parameters:
+      - description: Chore
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.ChoreLiteReq'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: created chore
+          schema:
+            $ref: '#/definitions/model.Chore'
+        "400":
+          description: 'error: Invalid request body | Chore name is required | Invalid
+            due date format | Specified user not found in circle | Specified project
+            not found'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to get circle members | Error creating chore'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - APIKeyAuth: []
+      summary: Create a chore (external API)
+      tags:
+      - external-api
+  /eapi/v1/chore/{id}:
+    delete:
+      description: Only the chore creator or a circle admin/manager may delete it.
+      parameters:
+      - description: Chore ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'message: Chore deleted successfully'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 'error: Invalid chore ID'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 'error: Only the chore creator or a circle admin/manager can
+            delete this chore'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: 'error: Chore not found'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to delete chore'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - APIKeyAuth: []
+      summary: Delete a chore (external API)
+      tags:
+      - external-api
+    put:
+      consumes:
+      - application/json
+      description: Updates a chore's name, description and due date. Empty fields
+        keep their current values; forceUnarchive restores an archived chore. Only
+        the chore creator or a circle admin/manager may update it. Plus members only.
+      parameters:
+      - description: Chore ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Fields to change
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.ChoreLiteReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: updated chore
+          schema:
+            $ref: '#/definitions/model.Chore'
+        "400":
+          description: 'error: Invalid chore ID | Invalid request body | Invalid due
+            date format'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 'error: Only the chore creator or a circle admin/manager can
+            update this chore'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: 'error: Chore not found'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Error updating chore'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - APIKeyAuth: []
+      summary: Update a chore (external API)
+      tags:
+      - external-api
+  /eapi/v1/chore/{id}/complete:
+    post:
+      description: Marks a chore done and schedules its next occurrence. completedBy
+        credits another circle member; it must be assigned to the chore. Plus members
+        only.
+      parameters:
+      - description: Chore ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: User ID to credit (defaults to the token's user)
+        in: query
+        name: completedBy
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: updated chore
+          schema:
+            $ref: '#/definitions/model.Chore'
+        "400":
+          description: 'error: Invalid ID | User is not assigned to chore | Chore
+            is out of completion window'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Error getting chore | Error completing chore | Error
+            scheduling next due date'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - APIKeyAuth: []
+      summary: Complete a chore (external API)
+      tags:
+      - external-api
+  /eapi/v1/circle/members:
+    get:
+      description: Plus members only.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: circle members
+          schema:
+            items:
+              $ref: '#/definitions/circle.UserCircleDetail'
+            type: array
+        "404":
+          description: 'error: No members found in the circle'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'error: Failed to get circle members'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - APIKeyAuth: []
+      summary: List circle members (external API)
+      tags:
+      - external-api
+  /eapi/v1/things:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: things
+          schema:
+            items:
+              $ref: '#/definitions/model.Thing'
+            type: array
+        "500":
+          description: error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - APIKeyAuth: []
+      summary: List things (external API)
+      tags:
+      - external-api
+  /eapi/v1/things/{id}:
+    get:
+      parameters:
+      - description: Thing ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: thing
+          schema:
+            additionalProperties:
+              $ref: '#/definitions/model.Thing'
+            type: object
+        "400":
+          description: 'error: Invalid thing id'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: Unauthorized'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - APIKeyAuth: []
+      summary: Get a thing (external API)
+      tags:
+      - external-api
+  /eapi/v1/things/{id}/state:
+    get:
+      description: Sets the state of one of the token user's things and runs any chore
+        triggers. Uses GET so it can be called from simple webhooks.
+      parameters:
+      - description: Thing ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: New state
+        in: query
+        name: state
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: empty object
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 'error: Invalid state value | Invalid state for thing | Invalid
+            thing id'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: Unauthorized'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - APIKeyAuth: []
+      summary: Set a thing's state (external API)
+      tags:
+      - external-api
+  /eapi/v1/things/{id}/state/change:
+    get:
+      description: Adds op to a numeric thing's state, or sets it to set, then runs
+        any chore triggers. Uses GET so it can be called from simple webhooks.
+      parameters:
+      - description: Thing ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Amount to add (negative to subtract)
+        in: query
+        name: op
+        type: integer
+      - description: Value to set
+        in: query
+        name: set
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'state: new state'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 'error: Invalid increment value | Invalid state for thing |
+            Invalid thing id'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'error: Unauthorized'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - APIKeyAuth: []
+      summary: Change a thing's state (external API)
+      tags:
+      - external-api
+  /health:
+    get:
+      description: Public, unauthenticated health check for containers and orchestrators.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'status: healthy, version, commit'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Health check
+      tags:
+      - resource
+  /mcp:
+    post:
+      consumes:
+      - application/json
+      description: 'Model Context Protocol endpoint (JSON-RPC 2.0 over streamable
+        HTTP) for AI assistants. Authenticate with an API token in the secretkey header
+        or as Authorization: Bearer. Only available when MCP is enabled on the instance.
+        GET and DELETE return 405.'
+      parameters:
+      - description: JSON-RPC 2.0 request
+        in: body
+        name: request
+        required: true
+        schema:
+          additionalProperties: true
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: JSON-RPC 2.0 response
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 'error: API token required | Invalid API token | User account
+            is disabled'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "413":
+          description: request too large
+          schema:
+            additionalProperties: true
+            type: object
+        "415":
+          description: unsupported media type
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - APIKeyAuth: []
+      summary: MCP endpoint
+      tags:
+      - mcp
+  /webhooks/revenuecat:
+    post:
+      consumes:
+      - application/json
+      description: Receives RevenueCat in-app subscription events. The Authorization
+        header must equal the configured RevenueCat secret. Called by RevenueCat,
+        not by clients.
+      parameters:
+      - description: RevenueCat shared secret
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: RevenueCat event
+        in: body
+        name: request
+        required: true
+        schema:
+          additionalProperties: true
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: event processed
+        "400":
+          description: Invalid JSON
+          schema:
+            type: string
+        "403":
+          description: Forbidden
+          schema:
+            type: string
+        "503":
+          description: Webhook not configured
+          schema:
+            type: string
+      summary: RevenueCat webhook
+      tags:
+      - webhooks
+  /webhooks/stripe:
+    post:
+      consumes:
+      - application/json
+      description: Receives Stripe subscription events. Only accepted from whitelisted
+        Stripe IP addresses. Called by Stripe, not by clients.
+      parameters:
+      - description: Stripe event
+        in: body
+        name: request
+        required: true
+        schema:
+          additionalProperties: true
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: event processed
+        "403":
+          description: Forbidden
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Stripe webhook
+      tags:
+      - webhooks
+securityDefinitions:
+  APIKeyAuth:
+    description: donetick issued apikey
+    in: header
+    name: secretkey
+    type: apiKey
+  JWTKeyAuth:
+    description: Type "Bearer" followed by a space and JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"

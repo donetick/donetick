@@ -61,7 +61,7 @@ func statusFor(err error) int {
 //	@Success		200	{array}		pModel.Project		"array of projects"
 //	@Failure		401	{object}	map[string]string	"error: Error getting current user"
 //	@Failure		500	{object}	map[string]string	"error: Error getting projects"
-//	@Router			/projects [get]
+//	@Router			/api/v1/projects [get]
 func (h *Handler) getProjects(c *gin.Context) {
 
 	currentUser, ok := auth.CurrentUser(c)
@@ -112,7 +112,7 @@ func (h *Handler) getProjects(c *gin.Context) {
 //	@Failure		400		{object}	map[string]string			"error: Error binding project data"
 //	@Failure		401		{object}	map[string]string			"error: Error getting current user"
 //	@Failure		500		{object}	map[string]string			"error: Error creating project"
-//	@Router			/projects [post]
+//	@Router			/api/v1/projects [post]
 func (h *Handler) createProject(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
@@ -199,7 +199,7 @@ func (h *Handler) createProject(c *gin.Context) {
 //	@Failure		403		{object}	map[string]string			"error: not the project owner"
 //	@Failure		404		{object}	map[string]string			"error: project not found"
 //	@Failure		500		{object}	map[string]string			"error: Error updating project or Error getting updated project"
-//	@Router			/projects/{id} [put]
+//	@Router			/api/v1/projects/{id} [put]
 func (h *Handler) updateProject(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
@@ -315,13 +315,13 @@ type AccessPreviewReq struct {
 //	@Produce		json
 //	@Security		JWTKeyAuth
 //	@Security		APIKeyAuth
-//	@Param			id		path		int					true	"Project ID"
-//	@Param			access	body		AccessPreviewReq	true	"Target visibility and members"
+//	@Param			id		path		int						true	"Project ID"
+//	@Param			access	body		AccessPreviewReq		true	"Target visibility and members"
 //	@Success		200		{object}	map[string]interface{}	"res: chRepo.ProjectAccessPlan"
-//	@Failure		400		{object}	map[string]string	"error"
-//	@Failure		403		{object}	map[string]string	"error: not the project owner"
-//	@Failure		404		{object}	map[string]string	"error: project not found"
-//	@Router			/projects/{id}/access-preview [post]
+//	@Failure		400		{object}	map[string]string		"error"
+//	@Failure		403		{object}	map[string]string		"error: not the project owner"
+//	@Failure		404		{object}	map[string]string		"error: project not found"
+//	@Router			/api/v1/projects/{id}/access-preview [post]
 func (h *Handler) previewProjectAccess(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
@@ -374,7 +374,7 @@ func (h *Handler) previewProjectAccess(c *gin.Context) {
 //	@Failure		400	{object}	map[string]string	"error: Invalid project ID"
 //	@Failure		401	{object}	map[string]string	"error: Error getting current user"
 //	@Failure		500	{object}	map[string]string	"error: Error deleting project"
-//	@Router			/projects/{id} [delete]
+//	@Router			/api/v1/projects/{id} [delete]
 func (h *Handler) deleteProject(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
@@ -518,7 +518,7 @@ func (h *Handler) broadcastBoardUpdated(c *gin.Context, circleID, projectID int,
 //	@Param			id	path		int						true	"Project ID"
 //	@Success		200	{object}	map[string]interface{}	"res: array of pModel.ProjectSection"
 //	@Failure		404	{object}	map[string]string		"error: project not found"
-//	@Router			/projects/{id}/sections [get]
+//	@Router			/api/v1/projects/{id}/sections [get]
 func (h *Handler) getSections(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
@@ -561,7 +561,7 @@ type SectionReq struct {
 //	@Param			section	body		SectionReq				true	"Section name"
 //	@Success		200		{object}	map[string]interface{}	"res: created pModel.ProjectSection"
 //	@Failure		404		{object}	map[string]string		"error: project not found"
-//	@Router			/projects/{id}/sections [post]
+//	@Router			/api/v1/projects/{id}/sections [post]
 func (h *Handler) createSection(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
@@ -589,18 +589,18 @@ func (h *Handler) createSection(c *gin.Context) {
 
 // renameSection godoc
 //
-//	@Summary		Rename a board section
-//	@Tags			projects
-//	@Accept			json
-//	@Produce		json
-//	@Security		JWTKeyAuth
-//	@Security		APIKeyAuth
-//	@Param			id			path		int					true	"Project ID"
-//	@Param			sectionId	path		int					true	"Section ID"
-//	@Param			section		body		SectionReq			true	"New section name"
-//	@Success		200			{object}	map[string]string	"res: ok"
-//	@Failure		404			{object}	map[string]string	"error: project or section not found"
-//	@Router			/projects/{id}/sections/{sectionId} [put]
+//	@Summary	Rename a board section
+//	@Tags		projects
+//	@Accept		json
+//	@Produce	json
+//	@Security	JWTKeyAuth
+//	@Security	APIKeyAuth
+//	@Param		id			path		int					true	"Project ID"
+//	@Param		sectionId	path		int					true	"Section ID"
+//	@Param		section		body		SectionReq			true	"New section name"
+//	@Success	200			{object}	map[string]string	"res: ok"
+//	@Failure	404			{object}	map[string]string	"error: project or section not found"
+//	@Router		/api/v1/projects/{id}/sections/{sectionId} [put]
 func (h *Handler) renameSection(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
@@ -643,7 +643,7 @@ func (h *Handler) renameSection(c *gin.Context) {
 //	@Success		200			{object}	map[string]string	"res: ok"
 //	@Failure		400			{object}	map[string]string	"error: cannot delete the last section"
 //	@Failure		404			{object}	map[string]string	"error: project or section not found"
-//	@Router			/projects/{id}/sections/{sectionId} [delete]
+//	@Router			/api/v1/projects/{id}/sections/{sectionId} [delete]
 func (h *Handler) deleteSection(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
@@ -688,7 +688,7 @@ type MoveSectionReq struct {
 //	@Param			move		body		MoveSectionReq		true	"Section to place it after"
 //	@Success		200			{object}	map[string]string	"res: ok"
 //	@Failure		404			{object}	map[string]string	"error: project or section not found"
-//	@Router			/projects/{id}/sections/{sectionId}/move [put]
+//	@Router			/api/v1/projects/{id}/sections/{sectionId}/move [put]
 func (h *Handler) moveSection(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {
@@ -739,7 +739,7 @@ type MoveChoreReq struct {
 //	@Param			move	body		MoveChoreReq		true	"Destination section and chore to place it after"
 //	@Success		200		{object}	map[string]string	"res: ok"
 //	@Failure		404		{object}	map[string]string	"error: project, section or chore not found"
-//	@Router			/projects/{id}/board/chores/{choreId}/move [put]
+//	@Router			/api/v1/projects/{id}/board/chores/{choreId}/move [put]
 func (h *Handler) moveChore(c *gin.Context) {
 	currentUser, ok := auth.CurrentUser(c)
 	if !ok {

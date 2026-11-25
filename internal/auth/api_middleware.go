@@ -33,6 +33,17 @@ func APITokenMiddleware(userRepo *uRepo.UserRepository) gin.HandlerFunc {
 			return
 		}
 
+		token, err := userRepo.GetAPIToken(c.Request.Context(), apiToken)
+		if err != nil {
+			c.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
+		if (token.CircleID != nil && *token.CircleID != user.CircleID) || !tokenHasScope(token.Scopes, requiredTokenScope(c.Request.Method, c.FullPath())) {
+			denyTokenScope(c)
+			return
+		}
+		c.Set(apiTokenContextKey, token)
+		_ = userRepo.TouchAPIToken(c.Request.Context(), token.ID)
 		// Set the user in context
 		c.Set(identityKey, user)
 		c.Next()

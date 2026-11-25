@@ -1070,8 +1070,11 @@ func (h *Handler) CreateLongLivedToken(c *gin.Context) {
 	}
 
 	type TokenRequest struct {
-		Name    string `json:"name" binding:"required"`
-		MFACode string `json:"mfaCode"` // Optional MFA code for enhanced security
+		Name      string     `json:"name" binding:"required,max=100"`
+		Scopes    []string   `json:"scopes" binding:"required"`
+		ExpiresAt *time.Time `json:"expiresAt" binding:"required"`
+		CircleID  *int       `json:"circleId"`
+		MFACode   string     `json:"mfaCode"` // Optional MFA code for enhanced security
 	}
 	var req TokenRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -1079,7 +1082,15 @@ func (h *Handler) CreateLongLivedToken(c *gin.Context) {
 		return
 	}
 
-	// If user has MFA enabled and provides an MFA code, verify it
+	if !auth.ValidAPITokenScopes(req.Scopes) || req.ExpiresAt == nil || !req.ExpiresAt.After(time.Now().UTC()) || (req.CircleID != nil && *req.CircleID != currentUser.CircleID) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Explicit valid scopes, a future expiresAt, and an accessible circleId are required"})
+		return
+	}
+	if currentUser.MFAEnabled && req.MFACode == "" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "MFA code required"})
+		return
+	}
+	// Verify step-up MFA when enabled.
 	if currentUser.MFAEnabled && req.MFACode != "" {
 		valid, newUsedCodes, err := h.mfaService.IsCodeValid(
 			currentUser.MFASecret,
@@ -1102,12 +1113,14 @@ func (h *Handler) CreateLongLivedToken(c *gin.Context) {
 		if newUsedCodes != currentUser.MFARecoveryUsed {
 			if err := h.userRepo.UpdateMFARecoveryCodes(c, currentUser.ID, newUsedCodes); err != nil {
 				logging.FromContext(c).Errorw("Failed to update recovery codes", "error", err)
+				c.AbortWithStatus(http.StatusInternalServerError)
+				return
 			}
 		}
 	}
 
 	// Step 1: Generate a secure random number
-	randomBytes := make([]byte, 16) // 128 bits are enough for strong randomness
+	randomBytes := make([]byte, 32) // 256-bit random secret
 	_, err := rand.Read(randomBytes)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate random part of the token"})
@@ -1116,21 +1129,25 @@ func (h *Handler) CreateLongLivedToken(c *gin.Context) {
 
 	tokenBody := hex.EncodeToString(randomBytes)
 
-	tokenModel, err := h.userRepo.StoreAPIToken(c, currentUser.ID, req.Name, tokenBody, uModel.APITokenPrefix)
+	tokenModel, err := h.userRepo.StoreAPIToken(c, currentUser.ID, req.Name, tokenBody, uModel.APITokenPrefix, uRepo.APITokenOptions{Scopes: req.Scopes, ExpiresAt: req.ExpiresAt, CircleID: req.CircleID})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to store the token"})
 		return
 	}
 
 	type createTokenResponse struct {
-		ID        int       `json:"id"`
-		Name      string    `json:"name"`
-		UserID    int       `json:"userId"`
-		Token     string    `json:"token"`
-		Prefix    *string   `json:"prefix"`
-		CreatedAt time.Time `json:"createdAt"`
+		Scopes    []string   `json:"scopes"`
+		ExpiresAt *time.Time `json:"expiresAt"`
+		CircleID  *int       `json:"circleId"`
+		ID        int        `json:"id"`
+		Name      string     `json:"name"`
+		UserID    int        `json:"userId"`
+		Token     string     `json:"token"`
+		Prefix    *string    `json:"prefix"`
+		CreatedAt time.Time  `json:"createdAt"`
 	}
 	resModel := createTokenResponse{
+		Scopes: tokenModel.Scopes, ExpiresAt: tokenModel.ExpiresAt, CircleID: tokenModel.CircleID,
 		ID:        tokenModel.ID,
 		Name:      tokenModel.Name,
 		UserID:    tokenModel.UserID,
@@ -1140,11 +1157,6 @@ func (h *Handler) CreateLongLivedToken(c *gin.Context) {
 	}
 
 	response := gin.H{"res": resModel}
-
-	// If user has MFA enabled but didn't provide a code, suggest using MFA for enhanced security
-	if currentUser.MFAEnabled && req.MFACode == "" {
-		response["message"] = "API token created successfully. For enhanced security, consider providing an MFA code when creating API tokens."
-	}
 
 	c.JSON(http.StatusOK, response)
 }
@@ -1165,15 +1177,21 @@ func (h *Handler) GetAllUserToken(c *gin.Context) {
 	}
 
 	type listTokenResponse struct {
-		ID          int       `json:"id"`
-		Name        string    `json:"name"`
-		UserID      int       `json:"userId"`
-		MaskedToken *string   `json:"maskedToken"`
-		CreatedAt   time.Time `json:"createdAt"`
+		ID          int        `json:"id"`
+		Name        string     `json:"name"`
+		UserID      int        `json:"userId"`
+		Scopes      []string   `json:"scopes"`
+		ExpiresAt   *time.Time `json:"expiresAt"`
+		RevokedAt   *time.Time `json:"revokedAt"`
+		LastUsedAt  *time.Time `json:"lastUsedAt"`
+		CircleID    *int       `json:"circleId"`
+		MaskedToken *string    `json:"maskedToken"`
+		CreatedAt   time.Time  `json:"createdAt"`
 	}
 	resModels := make([]listTokenResponse, len(tokens))
 	for i := range tokens {
 		resModels[i] = listTokenResponse{
+			Scopes: tokens[i].Scopes, ExpiresAt: tokens[i].ExpiresAt, RevokedAt: tokens[i].RevokedAt, LastUsedAt: tokens[i].LastUsedAt, CircleID: tokens[i].CircleID,
 			ID:        tokens[i].ID,
 			Name:      tokens[i].Name,
 			UserID:    tokens[i].UserID,
@@ -2058,6 +2076,8 @@ func Routes(router *gin.Engine, h *Handler, jwtAuth *jwt.GinJWTMiddleware, multi
 		userRoutes.GET("/profile", h.GetUserProfile)
 		userRoutes.PUT("", h.UpdateUserDetails)
 		userRoutes.POST("/tokens", h.CreateLongLivedToken)
+		userRoutes.PUT("/tokens/:id", h.UpdateAPIToken)
+		userRoutes.GET("/tokens/scopes", func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"res": auth.APITokenScopes()}) })
 		userRoutes.GET("/tokens", h.GetAllUserToken)
 		userRoutes.DELETE("/tokens/:id", h.DeleteUserToken)
 		userRoutes.PUT("/webhook", h.setWebhook)

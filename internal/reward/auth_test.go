@@ -51,7 +51,9 @@ func newRewardAuthTest(t *testing.T) *rewardAuthTest {
 			circleID, role = 2, cModel.UserRoleAdmin
 		}
 		require.NoError(t, db.Create(&uModel.User{ID: id, Username: fmt.Sprintf("user%d", id), CircleID: circleID, Disabled: id == 4}).Error)
-		require.NoError(t, db.Create(&uModel.APIToken{UserID: id, Name: "test", Token: fmt.Sprintf("token-%d", id)}).Error)
+		require.NoError(t, db.Create(&uModel.APIToken{UserID: id, Name: "test", Token: fmt.Sprintf("token-%d", id), Scopes: []string{
+			"rewards:read", "rewards:write", "rewards:delete", "rewards:redeem", "rewards:approve",
+		}}).Error)
 		require.NoError(t, db.Create(&cModel.UserCircle{UserID: id, CircleID: circleID, Role: role, IsActive: true, Points: 100}).Error)
 	}
 	cfg := &config.Config{}

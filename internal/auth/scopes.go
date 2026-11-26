@@ -1,15 +1,28 @@
 package auth
 
 import (
-	"github.com/gin-gonic/gin"
 	"net/http"
+
+	uModel "donetick.com/core/internal/user/model"
+	"github.com/gin-gonic/gin"
 )
 
 const apiTokenContextKey = "auth.api_token"
 
 // APITokenScopes is the explicit, independent scope catalog. No scope implies another.
 func APITokenScopes() []string {
-	return []string{"chores:read", "chores:write", "chores:execute", "chores:delete", "chores:history:write", "chores:approve", "circle:read", "profile:read", "labels:read", "labels:write", "labels:delete", "filters:read", "filters:write", "filters:delete", "projects:read", "projects:write", "projects:delete"}
+	return []string{"chores:read", "chores:write", "chores:execute", "chores:delete", "chores:history:write", "chores:approve", "circle:read", "profile:read", "labels:read", "labels:write", "labels:delete", "filters:read", "filters:write", "filters:delete", "projects:read", "projects:write", "projects:delete", "things:read", "things:write", "rewards:read", "rewards:write", "rewards:delete", "rewards:redeem", "rewards:approve"}
+}
+
+// CurrentAPIToken returns the API token used to authenticate the current request, if any.
+// Requests authenticated via session (JWT) have no associated token.
+func CurrentAPIToken(c *gin.Context) (*uModel.APIToken, bool) {
+	data, ok := c.Get(apiTokenContextKey)
+	if !ok {
+		return nil, false
+	}
+	token, ok := data.(*uModel.APIToken)
+	return token, ok
 }
 
 func ValidAPITokenScopes(scopes []string) bool {
@@ -45,6 +58,15 @@ func requiredTokenScope(method, route string) string {
 			return "circle:read"
 		case "/eapi/v1/chore", "/api/v1/chores/", "/api/v1/chores/archived", "/api/v1/chores/history", "/api/v1/chores/:id", "/api/v1/chores/:id/details", "/api/v1/chores/:id/history", "/api/v1/chores/:id/timer":
 			return "chores:read"
+		case "/eapi/v1/things/:id/state/change", "/eapi/v1/things/:id/state":
+			// These GET endpoints mutate the thing's state, so they require write access.
+			return "things:write"
+		case "/eapi/v1/things/:id", "/eapi/v1/things/":
+			return "things:read"
+		case "/api/v1/things", "/api/v1/things/:id/history":
+			return "things:read"
+		case "/api/v1/rewards", "/api/v1/rewards/redemptions":
+			return "rewards:read"
 		}
 	}
 	switch method + " " + route {
@@ -58,6 +80,18 @@ func requiredTokenScope(method, route string) string {
 		return "filters:delete"
 	case "POST /api/v1/projects/:id/access-preview":
 		return "projects:read"
+	case "POST /api/v1/things", "PUT /api/v1/things", "PUT /api/v1/things/:id/state":
+		return "things:write"
+	case "DELETE /api/v1/things/:id":
+		return "things:write"
+	case "POST /api/v1/rewards", "PUT /api/v1/rewards/:id":
+		return "rewards:write"
+	case "DELETE /api/v1/rewards/:id":
+		return "rewards:delete"
+	case "POST /api/v1/rewards/:id/redeem":
+		return "rewards:redeem"
+	case "POST /api/v1/rewards/redemptions/:id/approve", "POST /api/v1/rewards/redemptions/:id/reject":
+		return "rewards:approve"
 	case "POST /api/v1/projects", "PUT /api/v1/projects/:id", "POST /api/v1/projects/:id/sections", "PUT /api/v1/projects/:id/sections/:sectionId", "PUT /api/v1/projects/:id/sections/:sectionId/move", "PUT /api/v1/projects/:id/board/chores/:choreId/move":
 		return "projects:write"
 	case "DELETE /api/v1/projects/:id", "DELETE /api/v1/projects/:id/sections/:sectionId":
@@ -86,6 +120,17 @@ func tokenHasScope(scopes []string, required string) bool {
 		}
 	}
 	return false
+}
+
+// TokenHasScope reports whether scopes contains the given scope. Unlike
+// tokenHasScope, an empty required scope is treated as always satisfied,
+// since callers use this to check for optional, additive scopes rather than
+// the route-gating scope.
+func TokenHasScope(scopes []string, required string) bool {
+	if required == "" {
+		return true
+	}
+	return tokenHasScope(scopes, required)
 }
 
 // Scope policies apply only to API tokens; session authorization remains unchanged.

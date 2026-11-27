@@ -98,7 +98,38 @@ func newCreateChoreTestRouter(t *testing.T) (*gin.Engine, *gorm.DB) {
 	})
 	router.POST("/chores", h.CreateChore)
 	router.POST("/chores/bulk", h.BulkCreateChores)
+	router.GET("/chores/:id", h.GetChore)
 	return router, db
+}
+
+func TestAssignmentRotationCreateAndGetRoundTrip(t *testing.T) {
+	router, db := newCreateChoreTestRouter(t)
+	require.NoError(t, db.Create(&[]cModel.UserCircle{
+		{UserID: 2, CircleID: 1, Role: cModel.UserRoleMember, IsActive: true},
+		{UserID: 3, CircleID: 1, Role: cModel.UserRoleMember, IsActive: true},
+	}).Error)
+
+	body := `{"name":"rotation","frequencyType":"daily","frequency":1,"nextDueDate":"2026-01-01T09:00:00Z","assignStrategy":"round_robin","assignedTo":1,"assignees":[{"userId":1},{"userId":2},{"userId":3}],"assignmentRotation":{"mode":"completions","count":3,"order":[1,3,2]}}`
+	created := httptest.NewRecorder()
+	router.ServeHTTP(created, httptest.NewRequest(http.MethodPost, "/chores", bytes.NewBufferString(body)))
+	require.Equal(t, http.StatusOK, created.Code, created.Body.String())
+	var createResponse struct {
+		Res int `json:"res"`
+	}
+	require.NoError(t, json.Unmarshal(created.Body.Bytes(), &createResponse))
+
+	response := httptest.NewRecorder()
+	router.ServeHTTP(response, httptest.NewRequest(http.MethodGet, fmt.Sprintf("/chores/%d", createResponse.Res), nil))
+	require.Equal(t, http.StatusOK, response.Code, response.Body.String())
+	var payload map[string]any
+	require.NoError(t, json.Unmarshal(response.Body.Bytes(), &payload))
+	res := payload["res"].(map[string]any)
+	require.Equal(t, map[string]any{"mode": "completions", "count": float64(3), "order": []any{float64(1), float64(3), float64(2)}}, res["assignmentRotation"])
+	require.NotContains(t, response.Body.String(), "counter")
+
+	var progress chModel.AssignmentRotationProgress
+	require.NoError(t, db.First(&progress, "chore_id = ?", createResponse.Res).Error)
+	require.Zero(t, progress.Counter)
 }
 
 func TestCreateChoreFirstDueDate(t *testing.T) {

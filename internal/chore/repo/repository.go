@@ -328,6 +328,10 @@ func (r *ChoreRepository) updateChoreVisibility(ctx context.Context, chore *chMo
 				return err
 			}
 		}
+		chore.Assignees = assignees
+		if err := syncRotationProgress(tx.WithContext(ctx), &previousChore, chore); err != nil {
+			return err
+		}
 
 		if len(revokedUserIDs) > 0 || len(grantedUserIDs) > 0 {
 			if _, err := r.applyVisibilityDeltas(ctx, tx, chore.CircleID, []visibilityDelta{{
@@ -605,7 +609,8 @@ func (r *ChoreRepository) CreateChoreWithAssignees(ctx context.Context, chore *c
 				return err
 			}
 		}
-		return nil
+		chore.Assignees = assignees
+		return syncRotationProgress(tx.WithContext(ctx), nil, chore)
 	})
 	if err != nil {
 		return 0, err
@@ -750,6 +755,11 @@ func (r *ChoreRepository) DeleteChore(c context.Context, id int) (int64, error) 
 			return err
 		}
 
+		if tx.Migrator().HasTable(&chModel.AssignmentRotationProgress{}) {
+			if err := tx.Where("chore_id = ?", id).Delete(&chModel.AssignmentRotationProgress{}).Error; err != nil {
+				return err
+			}
+		}
 		// Delete all chore assignees
 		if err := tx.Where("chore_id = ?", id).Delete(&chModel.ChoreAssignees{}).Error; err != nil {
 			return err
@@ -838,6 +848,13 @@ func (r *ChoreRepository) SetChorePendingApproval(c context.Context, chore *chMo
 				Status:      chModel.ChoreHistoryStatusPendingApproval,
 			}
 		default:
+			return err
+		}
+
+		var rotationProgress chModel.AssignmentRotationProgress
+		if err := tx.Where("chore_id = ?", chore.ID).First(&rotationProgress).Error; err == nil {
+			ch.RotationProgress = copyRotationProgress(&rotationProgress)
+		} else if !errors.Is(err, gorm.ErrRecordNotFound) {
 			return err
 		}
 
@@ -952,6 +969,16 @@ func (r *ChoreRepository) ApproveChore(c context.Context, chore *chModel.Chore, 
 		if reached {
 			dueDate = nil
 		}
+		nextAssignedTo, beforeProgress, err := nextConfiguredAssignee(tx, chore, dueDate, nextAssignedTo, true)
+		if err != nil {
+			return err
+		}
+		if history.RotationProgress == nil {
+			history.RotationProgress = beforeProgress
+			if err := tx.Save(&history).Error; err != nil {
+				return err
+			}
+		}
 
 		choreUpdates := map[string]interface{}{}
 		choreUpdates["next_due_date"] = dueDate
@@ -1062,6 +1089,14 @@ func (r *ChoreRepository) CompleteChore(c context.Context, chore *chModel.Chore,
 		if reached {
 			dueDate = nil
 		}
+		nextAssignedTo, beforeProgress, err := nextConfiguredAssignee(tx, chore, dueDate, nextAssignedTo, true)
+		if err != nil {
+			return err
+		}
+		ch.RotationProgress = beforeProgress
+		if err := tx.Save(ch).Error; err != nil {
+			return err
+		}
 
 		choreUpdates := map[string]interface{}{}
 		choreUpdates["next_due_date"] = dueDate
@@ -1098,6 +1133,10 @@ func (r *ChoreRepository) SkipChore(c context.Context, chore *chModel.Chore, use
 		return err
 	}
 	err = r.db.WithContext(c).Transaction(func(tx *gorm.DB) error {
+		nextAssignedTo, beforeProgress, err := nextConfiguredAssignee(tx, chore, dueDate, nextAssignedTo, false)
+		if err != nil {
+			return err
+		}
 		choreUpdates := map[string]interface{}{}
 		choreUpdates["next_due_date"] = dueDate
 		choreUpdates["status"] = chModel.ChoreStatusNoStatus
@@ -1107,7 +1146,7 @@ func (r *ChoreRepository) SkipChore(c context.Context, chore *chModel.Chore, use
 
 		// Look for existing chore history with start or pause status
 		var existingHistory chModel.ChoreHistory
-		err := tx.Where("chore_id = ? AND status = ? ",
+		err = tx.Where("chore_id = ? AND status = ? ",
 			chore.ID, chModel.ChoreHistoryStatusStarted).
 			First(&existingHistory).Error
 
@@ -1140,6 +1179,7 @@ func (r *ChoreRepository) SkipChore(c context.Context, chore *chModel.Chore, use
 		}
 
 		ch.SyncVersion = nextVersion
+		ch.RotationProgress = beforeProgress
 		// Perform the update operation once, using the prepared updates map.
 		if err := tx.Model(&chModel.Chore{}).Where("id = ?", chore.ID).Updates(choreUpdates).Error; err != nil {
 			return err
@@ -1779,6 +1819,14 @@ func (r *ChoreRepository) UndoChoreAction(c context.Context, choreID int, histor
 			if err := tx.Model(&cModel.UserCircle{}).
 				Where("user_id = ? AND circle_id = ?", historyToUndo.CompletedBy, chore.CircleID).
 				Update("points", gorm.Expr("points - ?", *historyToUndo.Points)).Error; err != nil {
+				return err
+			}
+		}
+
+		if historyToUndo.RotationProgress != nil {
+			restored := copyRotationProgress(historyToUndo.RotationProgress)
+			restored.ChoreID = choreID
+			if err := tx.Save(restored).Error; err != nil {
 				return err
 			}
 		}

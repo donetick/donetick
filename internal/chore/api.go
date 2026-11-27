@@ -383,6 +383,7 @@ func (h *API) CompleteChore(c *gin.Context) {
 		return
 	}
 
+	setRotationAdvanceSlots(c, chore, nextDueDate)
 	nextAssignedTo, err := checkNextAssignee(chore, choreHistory, performer, circleUsers)
 	if err != nil {
 		log.Debugw("chore.api.CompleteChore failed to check next assignee", "error", err)

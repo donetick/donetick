@@ -325,6 +325,7 @@ type ChoreReq struct {
 	AssignedTo           *int                          `json:"assignedTo" binding:"omitempty"`
 	Assignees            []chModel.ChoreAssignees      `json:"assignees" binding:"dive"`
 	AssignStrategy       chModel.AssignmentStrategy    `json:"assignStrategy" binding:"required,oneof=no_assignee least_assigned least_completed random keep_last_assigned random_except_last_assigned round_robin"`
+	AssignmentRotation   *chModel.AssignmentRotation   `json:"assignmentRotation"`
 	IsActive             *bool                         `json:"isActive" binding:"omitempty"`
 	Notification         bool                          `json:"notification"`
 	NotificationMetadata *chModel.NotificationMetadata `json:"notificationMetadata"`
@@ -348,6 +349,9 @@ type ChoreReq struct {
 	// nextDueDateSet is true when the request has a nextDueDate key, so an
 	// explicit null (remove the due date) can be told apart from an absent field.
 	nextDueDateSet bool
+	// assignmentRotationSet similarly distinguishes clearing a policy from
+	// leaving it unchanged on PUT.
+	assignmentRotationSet bool
 }
 
 func (r *ChoreReq) UnmarshalJSON(data []byte) error {
@@ -356,12 +360,14 @@ func (r *ChoreReq) UnmarshalJSON(data []byte) error {
 		return err
 	}
 	var present struct {
-		NextDueDate json.RawMessage `json:"nextDueDate"`
+		NextDueDate        json.RawMessage `json:"nextDueDate"`
+		AssignmentRotation json.RawMessage `json:"assignmentRotation"`
 	}
 	if err := json.Unmarshal(data, &present); err != nil {
 		return err
 	}
 	r.nextDueDateSet = present.NextDueDate != nil
+	r.assignmentRotationSet = present.AssignmentRotation != nil
 	return nil
 }
 
@@ -631,6 +637,11 @@ func (h *Handler) createChore(c *gin.Context, currentUser *uModel.UserDetails, c
 		choreReq.NotificationMetadata = nil
 	}
 
+	rotation, err := validateAndNormalizeAssignmentRotation(choreReq.AssignmentRotation, choreReq.AssignStrategy, choreReq.FrequencyType, choreReq.Assignees, dueDate)
+	if err != nil {
+		return 400, gin.H{"error": err.Error()}
+	}
+
 	// A section only means something inside its project; drop it if the
 	// request didn't also place the chore in one.
 	var sectionID *int
@@ -646,6 +657,7 @@ func (h *Handler) createChore(c *gin.Context, currentUser *uModel.UserDetails, c
 		FrequencyMetadataV2:    choreReq.FrequencyMetadata,
 		NextDueDate:            dueDate,
 		AssignStrategy:         choreReq.AssignStrategy,
+		AssignmentRotation:     rotation,
 		AssignedTo:             choreReq.AssignedTo,
 		IsRolling:              choreReq.IsRolling,
 		UpdatedBy:              currentUser.ID,
@@ -980,6 +992,17 @@ func (h *Handler) EditChore(c *gin.Context) {
 
 	setEditChoreDefaults(&choreReq, oldChore)
 
+	rotation := oldChore.AssignmentRotation
+	if choreReq.assignmentRotationSet {
+		rotation, err = validateAndNormalizeAssignmentRotation(choreReq.AssignmentRotation, choreReq.AssignStrategy, choreReq.FrequencyType, choreReq.Assignees, dueDate)
+	} else if rotation != nil {
+		rotation, err = validateAndNormalizeAssignmentRotation(rotation, choreReq.AssignStrategy, choreReq.FrequencyType, choreReq.Assignees, dueDate)
+	}
+	if err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+
 	// Editing bounds has to move the current due date too, otherwise a newly
 	// narrowed chore keeps firing until its next completion.
 	if dueDate != nil {
@@ -1000,6 +1023,7 @@ func (h *Handler) EditChore(c *gin.Context) {
 		FrequencyMetadataV2:    choreReq.FrequencyMetadata,
 		NextDueDate:            dueDate,
 		AssignStrategy:         choreReq.AssignStrategy,
+		AssignmentRotation:     rotation,
 		AssignedTo:             choreReq.AssignedTo,
 		IsRolling:              choreReq.IsRolling,
 		IsActive:               *choreReq.IsActive,
@@ -2098,6 +2122,7 @@ func (h *Handler) SkipChore(c *gin.Context) {
 		t := req.ActionOptions.CreatedAt.UTC()
 		skippedAt = &t
 	}
+	setRotationAdvanceSlots(c, chore, nextDueDate)
 	if err := h.choreRepo.SkipChore(c, chore, effectiveUser.ID, nextDueDate, nextAssignedTo, skippedAt); err != nil {
 		c.JSON(500, gin.H{
 			"error": "Error completing chore",
@@ -2622,6 +2647,7 @@ func (h *Handler) CompleteChore(c *gin.Context) {
 		return
 	}
 
+	setRotationAdvanceSlots(c, chore, nextDueDate)
 	nextAssignedTo, err := checkNextAssignee(chore, choreHistory, completedBy, circleUsers)
 	if err != nil {
 		logging.FromContext(c).Error("Failed to check next assignee", "error", err)
@@ -3824,6 +3850,7 @@ func (h *Handler) ApproveChore(c *gin.Context) {
 		}
 	}
 
+	setRotationAdvanceSlots(c, chore, nextDueDate)
 	nextAssignedTo, err := checkNextAssignee(chore, allHistory, completedBy, circleUsers)
 	if err != nil {
 		c.JSON(500, gin.H{

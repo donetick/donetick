@@ -47,6 +47,31 @@ const (
 
 type AssignmentStrategy string
 
+type AssignmentRotationMode string
+
+const (
+	AssignmentRotationModeDefault              AssignmentRotationMode = "default"
+	AssignmentRotationModeScheduledOccurrences AssignmentRotationMode = "scheduled_occurrences"
+	AssignmentRotationModeCompletions          AssignmentRotationMode = "completions"
+	AssignmentRotationModeWeek                 AssignmentRotationMode = "week"
+	AssignmentRotationModeMonth                AssignmentRotationMode = "month"
+)
+
+type AssignmentRotation struct {
+	Mode  AssignmentRotationMode `json:"mode"`
+	Count *int                   `json:"count,omitempty"`
+	Order []int                  `json:"order,omitempty"`
+}
+
+// AssignmentRotationProgress is deliberately stored separately from the public
+// policy. It must never be serialized as assignmentRotation.
+type AssignmentRotationProgress struct {
+	ChoreID      int       `json:"-" gorm:"primaryKey;column:chore_id"`
+	Counter      int       `json:"-" gorm:"column:counter;not null;default:0"`
+	LastBoundary string    `json:"-" gorm:"column:last_boundary"`
+	UpdatedAt    time.Time `json:"-" gorm:"column:updated_at"`
+}
+
 const (
 	AssignmentStrategyRandom                   AssignmentStrategy = "random"
 	AssignmentStrategyLeastAssigned            AssignmentStrategy = "least_assigned"
@@ -69,6 +94,7 @@ type Chore struct {
 	AssignedTo             *int                       `json:"assignedTo" gorm:"column:assigned_to"`                                                   // Who the chore is assigned to
 	Assignees              []ChoreAssignees           `json:"assignees" gorm:"foreignkey:ChoreID;references:ID"`                                      // Assignees of the chore
 	AssignStrategy         AssignmentStrategy         `json:"assignStrategy" gorm:"column:assign_strategy"`                                           // How the chore is assigned
+	AssignmentRotation     *AssignmentRotation        `json:"assignmentRotation" gorm:"column:assignment_rotation;serializer:json;type:json"`         // Public handoff policy; runtime progress is stored separately
 	IsActive               bool                       `json:"isActive" gorm:"column:is_active"`                                                       // Whether the chore is active
 	Notification           bool                       `json:"notification" gorm:"column:notification"`                                                // Whether the chore has notification
 	NotificationMetadataV2 *NotificationMetadata      `json:"notificationMetadata" gorm:"column:notification_meta_v2;type:json"`                      // Additional notification information
@@ -93,6 +119,7 @@ type Chore struct {
 	BoardPosition          int                        `json:"boardPosition" gorm:"column:board_position;not null;default:0"`                          // Ordering of the chore within its section, shared by every viewer of the project
 	SyncVersion            int64                      `json:"syncVersion" gorm:"column:sync_version;not null;default:0;index;index:idx_chores_circle_sync_version,priority:2"`
 	Attachments            []storageModel.StorageFile `json:"attachments,omitempty" gorm:"-"`
+	RotationAdvanceSlots   int                        `json:"-" gorm:"-"` // recurrence slots crossed while assigning the next occurrence
 }
 
 type Status int8
@@ -110,19 +137,20 @@ type ChoreAssignees struct {
 	UserID  int `json:"userId" gorm:"column:user_id;uniqueIndex:idx_chore_user"` // The user this assignee is for
 }
 type ChoreHistory struct {
-	ID          int                `json:"id" gorm:"primary_key"`                                       // Unique identifier
-	ChoreID     int                `json:"choreId" gorm:"column:chore_id"`                              // The chore this history is for
-	PerformedAt *time.Time         `json:"performedAt" gorm:"column:performed_at"`                      // When the chore was performed (completed or skipped)
-	CompletedBy int                `json:"completedBy" gorm:"column:completed_by"`                      // Who completed the chore
-	AssignedTo  *int               `json:"assignedTo" gorm:"column:assigned_to"`                        // Who the chore was assigned to
-	Note        *string            `json:"notes" gorm:"column:notes"`                                   // Notes about the chore
-	DueDate     *time.Time         `json:"dueDate" gorm:"column:due_date"`                              // When the chore was due
-	UpdatedAt   *time.Time         `json:"updatedAt" gorm:"column:updated_at"`                          // When the record was last updated
-	CreatedAt   time.Time          `json:"createdAt" gorm:"column:created_at;autoCreateTime;<-:create"` // When the record was created (immutable after insert)
-	Status      ChoreHistoryStatus `json:"status" gorm:"column:status"`                                 // Status of the chore (1=completed, 2=skipped)
-	Points      *int               `json:"points,omitempty" gorm:"column:points"`                       // Points for completing the chore
-	Duration    *int               `json:"duration,omitempty" gorm:"<-:false;-:migration"`              // Duration in seconds calculated from query (read-only, no DB column)
-	SyncVersion int64              `json:"syncVersion" gorm:"column:sync_version;not null;default:0;index:idx_chore_history_sync_version"`
+	ID               int                         `json:"id" gorm:"primary_key"`                                       // Unique identifier
+	ChoreID          int                         `json:"choreId" gorm:"column:chore_id"`                              // The chore this history is for
+	PerformedAt      *time.Time                  `json:"performedAt" gorm:"column:performed_at"`                      // When the chore was performed (completed or skipped)
+	CompletedBy      int                         `json:"completedBy" gorm:"column:completed_by"`                      // Who completed the chore
+	AssignedTo       *int                        `json:"assignedTo" gorm:"column:assigned_to"`                        // Who the chore was assigned to
+	Note             *string                     `json:"notes" gorm:"column:notes"`                                   // Notes about the chore
+	DueDate          *time.Time                  `json:"dueDate" gorm:"column:due_date"`                              // When the chore was due
+	UpdatedAt        *time.Time                  `json:"updatedAt" gorm:"column:updated_at"`                          // When the record was last updated
+	CreatedAt        time.Time                   `json:"createdAt" gorm:"column:created_at;autoCreateTime;<-:create"` // When the record was created (immutable after insert)
+	Status           ChoreHistoryStatus          `json:"status" gorm:"column:status"`                                 // Status of the chore (1=completed, 2=skipped)
+	Points           *int                        `json:"points,omitempty" gorm:"column:points"`                       // Points for completing the chore
+	Duration         *int                        `json:"duration,omitempty" gorm:"<-:false;-:migration"`              // Duration in seconds calculated from query (read-only, no DB column)
+	SyncVersion      int64                       `json:"syncVersion" gorm:"column:sync_version;not null;default:0;index:idx_chore_history_sync_version"`
+	RotationProgress *AssignmentRotationProgress `json:"-" gorm:"column:rotation_progress;serializer:json;type:json"`
 }
 
 type ChoreHistoryStatus int8

@@ -204,6 +204,44 @@ func TestCheckNextAssigneeAnyoneChoreDoesNotDropAssignment(t *testing.T) {
 	}
 }
 
+func TestCheckNextAssigneeRoundRobinUsesConfiguredOrder(t *testing.T) {
+	newChore := func(assigned int, assignees []int, savedOrder []int) *chModel.Chore {
+		rows := make([]chModel.ChoreAssignees, 0, len(assignees))
+		for _, id := range assignees {
+			rows = append(rows, chModel.ChoreAssignees{UserID: id})
+		}
+		return &chModel.Chore{
+			AssignedTo: &assigned, AssignStrategy: chModel.AssignmentStrategyRoundRobin, Assignees: rows,
+			AssignmentRotation: &chModel.AssignmentRotation{Mode: chModel.AssignmentRotationModeDefault, Order: savedOrder},
+		}
+	}
+
+	tests := []struct {
+		name       string
+		assigned   int
+		assignees  []int
+		savedOrder []int
+		want       int
+	}{
+		{name: "uses custom next", assigned: 1, assignees: []int{1, 2, 3}, savedOrder: []int{1, 3, 2}, want: 3},
+		{name: "wraps", assigned: 2, assignees: []int{1, 2, 3}, savedOrder: []int{1, 3, 2}, want: 1},
+		{name: "removed assignee is ignored", assigned: 1, assignees: []int{1, 2}, savedOrder: []int{1, 3, 2}, want: 2},
+		{name: "new assignee is appended", assigned: 2, assignees: []int{1, 2, 4}, savedOrder: []int{1, 3, 2}, want: 4},
+		{name: "missing current starts first", assigned: 9, assignees: []int{1, 2, 4}, savedOrder: []int{2, 1}, want: 2},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			next, err := checkNextAssignee(newChore(test.assigned, test.assignees, test.savedOrder), nil, test.assigned, nil)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if next == nil || *next != test.want {
+				t.Fatalf("next assignee = %v, want %d", next, test.want)
+			}
+		})
+	}
+}
+
 func TestCheckNextAssigneeNoAssigneeStrategyStaysUnassigned(t *testing.T) {
 	// no_assignee must keep returning nil: the circle fallback does not apply to it.
 	chore := &chModel.Chore{

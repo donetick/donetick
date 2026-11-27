@@ -58,9 +58,11 @@ const (
 )
 
 type AssignmentRotation struct {
-	Mode  AssignmentRotationMode `json:"mode"`
-	Count *int                   `json:"count,omitempty"`
-	Order []int                  `json:"order,omitempty"`
+	Mode       AssignmentRotationMode `json:"mode"`
+	Count      *int                   `json:"count,omitempty"`
+	Weekday    *string                `json:"weekday,omitempty"`
+	DayOfMonth *int                   `json:"dayOfMonth,omitempty"`
+	Order      []int                  `json:"order,omitempty"`
 }
 
 // AssignmentRotationProgress is deliberately stored separately from the public

@@ -4414,32 +4414,57 @@ func checkNextAssignee(chore *chModel.Chore, choresHistory []*chModel.ChoreHisto
 			nextAssignee = chore.AssignedTo
 		}
 	case chModel.AssignmentStrategyRoundRobin:
-		if len(assignees) == 0 {
+		order := assignmentRotationOrder(assignees, chore.AssignmentRotation)
+		if len(order) == 0 {
 			return chore.AssignedTo, fmt.Errorf("no assignees available")
 		}
 
-		// Find current assignee index
 		currentIndex := -1
-		for i, assignee := range assignees {
-			if chore.AssignedTo != nil && assignee.UserID == *chore.AssignedTo {
+		for i, assigneeID := range order {
+			if chore.AssignedTo != nil && assigneeID == *chore.AssignedTo {
 				currentIndex = i
 				break
 			}
 		}
 
-		// If current assignee is not found, start from the beginning
-		var assigneeID int
-		if currentIndex == -1 {
-			assigneeID = assignees[0].UserID
-		} else {
-			nextIndex := (currentIndex + 1) % len(assignees)
-			assigneeID = assignees[nextIndex].UserID
+		assigneeID := order[0]
+		if currentIndex >= 0 {
+			assigneeID = order[(currentIndex+1)%len(order)]
 		}
 		nextAssignee = &assigneeID
 	default:
 		return chore.AssignedTo, fmt.Errorf("invalid assign strategy")
 	}
 	return nextAssignee, nil
+}
+
+func assignmentRotationOrder(assignees []chModel.ChoreAssignees, rotation *chModel.AssignmentRotation) []int {
+	eligible := make(map[int]struct{}, len(assignees))
+	for _, assignee := range assignees {
+		eligible[assignee.UserID] = struct{}{}
+	}
+	order := make([]int, 0, len(eligible))
+	seen := make(map[int]struct{}, len(eligible))
+	if rotation != nil {
+		for _, id := range rotation.Order {
+			if _, ok := eligible[id]; !ok {
+				continue
+			}
+			if _, duplicate := seen[id]; duplicate {
+				continue
+			}
+			seen[id] = struct{}{}
+			order = append(order, id)
+		}
+	}
+	for _, assignee := range assignees {
+		if _, ok := seen[assignee.UserID]; ok {
+			continue
+		}
+		seen[assignee.UserID] = struct{}{}
+		order = append(order, assignee.UserID)
+	}
+	return order
 }
 
 func remove(s []chModel.ChoreAssignees, i int) []chModel.ChoreAssignees {

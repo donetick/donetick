@@ -72,10 +72,58 @@ func TestConfiguredRotationProgressRollsBackWithOccurrence(t *testing.T) {
 	require.Zero(t, progress.Counter)
 }
 
-func TestCalendarRotationBoundaryClampsMonth(t *testing.T) {
+func TestCalendarRotationBoundaryUsesConfiguredDayAndTimezone(t *testing.T) {
 	day := 31
-	chore := rotationTestChore(chModel.AssignmentRotationModeMonth, &day)
+	chore := rotationTestChore(chModel.AssignmentRotationModeMonth, nil)
+	chore.AssignmentRotation.DayOfMonth = &day
 	chore.FrequencyMetadataV2 = &chModel.FrequencyMetadata{Timezone: "America/New_York"}
-	february := time.Date(2028, time.February, 29, 5, 0, 0, 0, time.UTC)
-	require.Equal(t, "2028-02-29", rotationBoundary(chore, february))
+
+	// Midnight in New York is still the previous UTC date; day 31 clamps to leap day.
+	februaryBoundary := time.Date(2028, time.February, 29, 5, 0, 0, 0, time.UTC)
+	require.Equal(t, "2028-02-29", rotationBoundary(chore, februaryBoundary))
+	beforeBoundary := time.Date(2028, time.February, 29, 4, 30, 0, 0, time.UTC)
+	require.Equal(t, "2028-01-31", rotationBoundary(chore, beforeBoundary))
+
+	weekday := "friday"
+	chore.AssignmentRotation = &chModel.AssignmentRotation{Mode: chModel.AssignmentRotationModeWeek, Weekday: &weekday}
+	fridayInNewYork := time.Date(2028, time.March, 3, 4, 30, 0, 0, time.UTC) // Thursday 23:30 local.
+	require.Equal(t, "2028-02-25", rotationBoundary(chore, fridayInNewYork))
+	fridayInNewYork = time.Date(2028, time.March, 3, 5, 30, 0, 0, time.UTC)
+	require.Equal(t, "2028-03-03", rotationBoundary(chore, fridayInNewYork))
+}
+
+func TestCalendarRotationBoundaryDefaultsToMondayAndDayOne(t *testing.T) {
+	chore := rotationTestChore(chModel.AssignmentRotationModeWeek, nil)
+	require.Equal(t, "2026-01-05", rotationBoundary(chore, time.Date(2026, time.January, 7, 9, 0, 0, 0, time.UTC)))
+	chore.AssignmentRotation = &chModel.AssignmentRotation{Mode: chModel.AssignmentRotationModeMonth}
+	require.Equal(t, "2026-01-01", rotationBoundary(chore, time.Date(2026, time.January, 7, 9, 0, 0, 0, time.UTC)))
+}
+
+func TestRotationTimingIncludesCalendarDay(t *testing.T) {
+	monday, friday := "monday", "friday"
+	day1, day31 := 1, 31
+	require.False(t, rotationTimingEqual(
+		&chModel.AssignmentRotation{Mode: chModel.AssignmentRotationModeWeek, Weekday: &monday},
+		&chModel.AssignmentRotation{Mode: chModel.AssignmentRotationModeWeek, Weekday: &friday},
+	))
+	require.False(t, rotationTimingEqual(
+		&chModel.AssignmentRotation{Mode: chModel.AssignmentRotationModeMonth, DayOfMonth: &day1},
+		&chModel.AssignmentRotation{Mode: chModel.AssignmentRotationModeMonth, DayOfMonth: &day31},
+	))
+}
+
+func TestRandomRotationNeverRepeatsCurrentAssignee(t *testing.T) {
+	current := 42
+	for _, strategy := range []chModel.AssignmentStrategy{chModel.AssignmentStrategyRandom, chModel.AssignmentStrategyRandomExceptLastAssigned} {
+		chore := &chModel.Chore{
+			AssignStrategy:     strategy,
+			Assignees:          []chModel.ChoreAssignees{{UserID: 42}, {UserID: 67}, {UserID: 91}},
+			AssignmentRotation: &chModel.AssignmentRotation{Mode: chModel.AssignmentRotationModeDefault},
+		}
+		for i := 0; i < 50; i++ {
+			next := rotateConfiguredAssignee(chore, &current)
+			require.NotNil(t, next)
+			require.NotEqual(t, current, *next, string(strategy))
+		}
+	}
 }

@@ -132,6 +132,72 @@ func TestAssignmentRotationCreateAndGetRoundTrip(t *testing.T) {
 	require.Zero(t, progress.Counter)
 }
 
+func TestAssignmentRotationCalendarFieldRoundTripAndClear(t *testing.T) {
+	tests := []struct {
+		name     string
+		rotation map[string]any
+	}{
+		{name: "weekday", rotation: map[string]any{"mode": "week", "weekday": "thursday", "order": []int{1, 2}}},
+		{name: "day of month", rotation: map[string]any{"mode": "month", "dayOfMonth": 31, "order": []int{1, 2}}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			router, db := newEditChoreTestRouter(t)
+			require.NoError(t, db.Create(&cModel.UserCircle{UserID: 2, CircleID: 1, Role: cModel.UserRoleMember, IsActive: true}).Error)
+			due := time.Date(2026, time.January, 1, 9, 0, 0, 0, time.UTC)
+			assigned := 1
+			chore := chModel.Chore{
+				Name: "rotation", FrequencyType: chModel.FrequencyTypeDaily, Frequency: 1, NextDueDate: &due,
+				AssignedTo: &assigned, AssignStrategy: chModel.AssignmentStrategyRoundRobin,
+				CircleID: 1, CreatedBy: 1, IsActive: true,
+			}
+			require.NoError(t, db.Create(&chore).Error)
+			require.NoError(t, db.Create(&[]chModel.ChoreAssignees{{ChoreID: chore.ID, UserID: 1}, {ChoreID: chore.ID, UserID: 2}}).Error)
+
+			put := func(rotation any) *httptest.ResponseRecorder {
+				t.Helper()
+				body := map[string]any{
+					"id": chore.ID, "name": chore.Name, "frequencyType": "daily", "frequency": 1,
+					"nextDueDate": due, "assignStrategy": "round_robin", "assignedTo": 1,
+					"assignees": []map[string]int{{"userId": 1}, {"userId": 2}}, "assignmentRotation": rotation,
+				}
+				raw, err := json.Marshal(body)
+				require.NoError(t, err)
+				recorder := httptest.NewRecorder()
+				router.ServeHTTP(recorder, httptest.NewRequest(http.MethodPut, "/chores", bytes.NewReader(raw)))
+				return recorder
+			}
+			getRotation := func() any {
+				t.Helper()
+				recorder := httptest.NewRecorder()
+				router.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, fmt.Sprintf("/chores/%d", chore.ID), nil))
+				require.Equal(t, http.StatusOK, recorder.Code, recorder.Body.String())
+				var payload map[string]any
+				require.NoError(t, json.Unmarshal(recorder.Body.Bytes(), &payload))
+				return payload["res"].(map[string]any)["assignmentRotation"]
+			}
+
+			recorder := put(test.rotation)
+			require.Equal(t, http.StatusOK, recorder.Code, recorder.Body.String())
+			got := getRotation().(map[string]any)
+			require.Equal(t, test.rotation["mode"], got["mode"])
+			if weekday, ok := test.rotation["weekday"]; ok {
+				require.Equal(t, weekday, got["weekday"])
+				require.NotContains(t, got, "dayOfMonth")
+			}
+			if day, ok := test.rotation["dayOfMonth"]; ok {
+				require.EqualValues(t, day, got["dayOfMonth"])
+				require.NotContains(t, got, "weekday")
+			}
+			require.NotContains(t, got, "count")
+
+			recorder = put(nil)
+			require.Equal(t, http.StatusOK, recorder.Code, recorder.Body.String())
+			require.Nil(t, getRotation())
+		})
+	}
+}
+
 func TestCreateChoreFirstDueDate(t *testing.T) {
 	tests := []struct {
 		name          string
@@ -239,6 +305,7 @@ func newEditChoreTestRouter(t *testing.T) (*gin.Engine, *gorm.DB) {
 		c.Next()
 	})
 	router.PUT("/chores", h.EditChore)
+	router.GET("/chores/:id", h.GetChore)
 	return router, db
 }
 

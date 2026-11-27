@@ -39,6 +39,10 @@ func NewChoreRepository(db *gorm.DB, cfg *config.Config) *ChoreRepository {
 	return &ChoreRepository{db: db, dbType: cfg.Database.Type}
 }
 
+func preloadAssignees(db *gorm.DB) *gorm.DB {
+	return db.Order("chore_assignees.id ASC")
+}
+
 // privacyJoins adds the joins privacyPredicate depends on: the current user's row in
 // chore_assignees, the project the chore belongs to (if any), and the current
 // user's row in project_members for that project. Each join matches at most one
@@ -622,7 +626,7 @@ func (r *ChoreRepository) GetChore(c context.Context, choreID int, userID int, c
 	var chore chModel.Chore
 	query := privacyJoins(r.db.WithContext(c).Model(&chModel.Chore{}), userID).
 		Preload("SubTasks", "chore_id = ?", choreID).
-		Preload("Assignees").
+		Preload("Assignees", preloadAssignees).
 		Preload("Project").
 		Preload("ThingChore").
 		Preload("LabelsV2", "is_shared = ? OR created_by = ?", true, userID).
@@ -644,7 +648,7 @@ func (r *ChoreRepository) GetChore(c context.Context, choreID int, userID int, c
 // server-side work that decides recipients itself.
 func (r *ChoreRepository) GetChoreForSystem(c context.Context, choreID int) (*chModel.Chore, error) {
 	var chore chModel.Chore
-	if err := r.db.WithContext(c).Preload("Assignees").Preload("Project").First(&chore, choreID).Error; err != nil {
+	if err := r.db.WithContext(c).Preload("Assignees", preloadAssignees).Preload("Project").First(&chore, choreID).Error; err != nil {
 		return nil, err
 	}
 	if err := access.LoadMembers(c, r.db, chore.Project); err != nil {
@@ -672,7 +676,7 @@ func (r *ChoreRepository) GetChores(c context.Context, circleID int, userID int,
 	var chores []*chModel.Chore
 
 	query := privacyJoins(r.db.WithContext(c).Model(&chModel.Chore{}), userID).
-		Preload("Assignees").
+		Preload("Assignees", preloadAssignees).
 		Preload("LabelsV2", "is_shared = ? OR created_by = ?", true, userID).
 		Where("chores.circle_id = ?", circleID).
 		Where(privacyPredicate(userID)).
@@ -730,7 +734,7 @@ func (r *ChoreRepository) GetChoresForDigest(c context.Context, userID int, circ
 func (r *ChoreRepository) GetArchivedChores(c context.Context, circleID int, userID int) ([]*chModel.Chore, error) {
 	var chores []*chModel.Chore
 	if err := privacyJoins(r.db.WithContext(c).Model(&chModel.Chore{}), userID).
-		Preload("Assignees").
+		Preload("Assignees", preloadAssignees).
 		Preload("LabelsV2", "is_shared = ? OR created_by = ?", true, userID).
 		Where("chores.circle_id = ?", circleID).
 		Where(privacyPredicate(userID)).
@@ -1438,7 +1442,7 @@ func (r *ChoreRepository) GetChoreDetailByID(c context.Context, choreID int, cir
 	var choreDetail chModel.ChoreDetail
 	if err := privacyJoins(r.db.WithContext(c).Table("chores"), userID).
 		Preload("Subtasks").
-		Preload("Assignees").
+		Preload("Assignees", preloadAssignees).
 		Select(`
         chores.id, 
         chores.name,

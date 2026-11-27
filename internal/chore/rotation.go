@@ -11,15 +11,21 @@ func validateAndNormalizeAssignmentRotation(policy *chModel.AssignmentRotation, 
 	if policy == nil {
 		return nil, nil
 	}
-	if strategy != chModel.AssignmentStrategyRoundRobin && strategy != chModel.AssignmentStrategyRandom {
-		return nil, fmt.Errorf("assignmentRotation is only supported with round_robin or random")
+	switch strategy {
+	case chModel.AssignmentStrategyRoundRobin, chModel.AssignmentStrategyRandom, chModel.AssignmentStrategyRandomExceptLastAssigned:
+	default:
+		return nil, fmt.Errorf("assignmentRotation is only supported with round_robin, random or random_except_last_assigned")
 	}
-	switch frequency {
-	case chModel.FrequencyTypeOnce, chModel.FrequencyTypeNoRepeat, chModel.FrequencyTypeAlways, chModel.FrequencyTypeTrigger:
-		return nil, fmt.Errorf("assignmentRotation requires a scheduled repeating task")
-	}
-	if dueDate == nil {
-		return nil, fmt.Errorf("assignmentRotation requires a scheduled repeating task")
+	orderOnlyUnscheduled := strategy == chModel.AssignmentStrategyRoundRobin && policy.Mode == chModel.AssignmentRotationModeDefault &&
+		(frequency == chModel.FrequencyTypeAlways || frequency == chModel.FrequencyTypeTrigger)
+	if !orderOnlyUnscheduled {
+		switch frequency {
+		case chModel.FrequencyTypeOnce, chModel.FrequencyTypeNoRepeat, chModel.FrequencyTypeAlways, chModel.FrequencyTypeTrigger:
+			return nil, fmt.Errorf("assignmentRotation requires a scheduled repeating task")
+		}
+		if dueDate == nil {
+			return nil, fmt.Errorf("assignmentRotation requires a scheduled repeating task")
+		}
 	}
 	eligibleCount := make(map[int]struct{}, len(assignees))
 	for _, assignee := range assignees {
@@ -29,26 +35,33 @@ func validateAndNormalizeAssignmentRotation(policy *chModel.AssignmentRotation, 
 		return nil, fmt.Errorf("assignmentRotation requires at least two explicit assignees")
 	}
 
-	normalized := &chModel.AssignmentRotation{Mode: policy.Mode, Count: policy.Count}
+	normalized := &chModel.AssignmentRotation{Mode: policy.Mode}
 	switch policy.Mode {
 	case chModel.AssignmentRotationModeDefault:
 		if policy.Count != nil {
-			return nil, fmt.Errorf("assignmentRotation.count is only valid for counted or calendar modes")
+			return nil, fmt.Errorf("assignmentRotation.count is only valid for counted modes")
 		}
 	case chModel.AssignmentRotationModeScheduledOccurrences, chModel.AssignmentRotationModeCompletions:
 		if policy.Count == nil || *policy.Count < 1 || *policy.Count > 1000 {
 			return nil, fmt.Errorf("assignmentRotation.count must be an integer between 1 and 1000")
 		}
+		normalized.Count = policy.Count
 	case chModel.AssignmentRotationModeWeek:
-		// count is optional for calendar policies for backwards compatibility. If
-		// omitted, the weekday of the current scheduled occurrence is used.
-		if policy.Count != nil && (*policy.Count < 1 || *policy.Count > 7) {
-			return nil, fmt.Errorf("assignmentRotation.count for week must be between 1 and 7")
+		if policy.Count != nil {
+			return nil, fmt.Errorf("assignmentRotation.count is not valid for week")
 		}
+		if policy.Weekday != nil && !validRotationWeekday(*policy.Weekday) {
+			return nil, fmt.Errorf("assignmentRotation.weekday must be monday through sunday")
+		}
+		normalized.Weekday = policy.Weekday
 	case chModel.AssignmentRotationModeMonth:
-		if policy.Count != nil && (*policy.Count < 1 || *policy.Count > 31) {
-			return nil, fmt.Errorf("assignmentRotation.count for month must be between 1 and 31")
+		if policy.Count != nil {
+			return nil, fmt.Errorf("assignmentRotation.count is not valid for month")
 		}
+		if policy.DayOfMonth != nil && (*policy.DayOfMonth < 1 || *policy.DayOfMonth > 31) {
+			return nil, fmt.Errorf("assignmentRotation.dayOfMonth must be an integer between 1 and 31")
+		}
+		normalized.DayOfMonth = policy.DayOfMonth
 	default:
 		return nil, fmt.Errorf("invalid assignmentRotation.mode")
 	}
@@ -76,4 +89,13 @@ func validateAndNormalizeAssignmentRotation(policy *chModel.AssignmentRotation, 
 		normalized.Order = append(normalized.Order, assignee.UserID)
 	}
 	return normalized, nil
+}
+
+func validRotationWeekday(weekday string) bool {
+	switch weekday {
+	case "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday":
+		return true
+	default:
+		return false
+	}
 }

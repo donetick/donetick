@@ -39,6 +39,10 @@ func NewChoreRepository(db *gorm.DB, cfg *config.Config) *ChoreRepository {
 	return &ChoreRepository{db: db, dbType: cfg.Database.Type}
 }
 
+func preloadAssignees(db *gorm.DB) *gorm.DB {
+	return db.Order("chore_assignees.id ASC")
+}
+
 // privacyJoins adds the joins privacyPredicate depends on: the current user's row in
 // chore_assignees, the project the chore belongs to (if any), and the current
 // user's row in project_members for that project. Each join matches at most one
@@ -328,6 +332,10 @@ func (r *ChoreRepository) updateChoreVisibility(ctx context.Context, chore *chMo
 				return err
 			}
 		}
+		chore.Assignees = assignees
+		if err := syncRotationProgress(tx.WithContext(ctx), &previousChore, chore); err != nil {
+			return err
+		}
 
 		if len(revokedUserIDs) > 0 || len(grantedUserIDs) > 0 {
 			if _, err := r.applyVisibilityDeltas(ctx, tx, chore.CircleID, []visibilityDelta{{
@@ -605,7 +613,8 @@ func (r *ChoreRepository) CreateChoreWithAssignees(ctx context.Context, chore *c
 				return err
 			}
 		}
-		return nil
+		chore.Assignees = assignees
+		return syncRotationProgress(tx.WithContext(ctx), nil, chore)
 	})
 	if err != nil {
 		return 0, err
@@ -617,7 +626,7 @@ func (r *ChoreRepository) GetChore(c context.Context, choreID int, userID int, c
 	var chore chModel.Chore
 	query := privacyJoins(r.db.WithContext(c).Model(&chModel.Chore{}), userID).
 		Preload("SubTasks", "chore_id = ?", choreID).
-		Preload("Assignees").
+		Preload("Assignees", preloadAssignees).
 		Preload("Project").
 		Preload("ThingChore").
 		Preload("LabelsV2", "is_shared = ? OR created_by = ?", true, userID).
@@ -639,7 +648,7 @@ func (r *ChoreRepository) GetChore(c context.Context, choreID int, userID int, c
 // server-side work that decides recipients itself.
 func (r *ChoreRepository) GetChoreForSystem(c context.Context, choreID int) (*chModel.Chore, error) {
 	var chore chModel.Chore
-	if err := r.db.WithContext(c).Preload("Assignees").Preload("Project").First(&chore, choreID).Error; err != nil {
+	if err := r.db.WithContext(c).Preload("Assignees", preloadAssignees).Preload("Project").First(&chore, choreID).Error; err != nil {
 		return nil, err
 	}
 	if err := access.LoadMembers(c, r.db, chore.Project); err != nil {
@@ -667,7 +676,7 @@ func (r *ChoreRepository) GetChores(c context.Context, circleID int, userID int,
 	var chores []*chModel.Chore
 
 	query := privacyJoins(r.db.WithContext(c).Model(&chModel.Chore{}), userID).
-		Preload("Assignees").
+		Preload("Assignees", preloadAssignees).
 		Preload("LabelsV2", "is_shared = ? OR created_by = ?", true, userID).
 		Where("chores.circle_id = ?", circleID).
 		Where(privacyPredicate(userID)).
@@ -725,7 +734,7 @@ func (r *ChoreRepository) GetChoresForDigest(c context.Context, userID int, circ
 func (r *ChoreRepository) GetArchivedChores(c context.Context, circleID int, userID int) ([]*chModel.Chore, error) {
 	var chores []*chModel.Chore
 	if err := privacyJoins(r.db.WithContext(c).Model(&chModel.Chore{}), userID).
-		Preload("Assignees").
+		Preload("Assignees", preloadAssignees).
 		Preload("LabelsV2", "is_shared = ? OR created_by = ?", true, userID).
 		Where("chores.circle_id = ?", circleID).
 		Where(privacyPredicate(userID)).
@@ -750,6 +759,11 @@ func (r *ChoreRepository) DeleteChore(c context.Context, id int) (int64, error) 
 			return err
 		}
 
+		if tx.Migrator().HasTable(&chModel.AssignmentRotationProgress{}) {
+			if err := tx.Where("chore_id = ?", id).Delete(&chModel.AssignmentRotationProgress{}).Error; err != nil {
+				return err
+			}
+		}
 		// Delete all chore assignees
 		if err := tx.Where("chore_id = ?", id).Delete(&chModel.ChoreAssignees{}).Error; err != nil {
 			return err
@@ -843,6 +857,13 @@ func (r *ChoreRepository) SetChorePendingApproval(c context.Context, chore *chMo
 				Note:        note,
 				Status:      chModel.ChoreHistoryStatusPendingApproval,
 			}
+		}
+
+		var rotationProgress chModel.AssignmentRotationProgress
+		if err := tx.Where("chore_id = ?", chore.ID).First(&rotationProgress).Error; err == nil {
+			ch.RotationProgress = copyRotationProgress(&rotationProgress)
+		} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return err
 		}
 
 		ch.SyncVersion = nextVersion
@@ -955,6 +976,16 @@ func (r *ChoreRepository) ApproveChore(c context.Context, chore *chModel.Chore, 
 		}
 		if reached {
 			dueDate = nil
+		}
+		nextAssignedTo, beforeProgress, err := nextConfiguredAssignee(tx, chore, dueDate, nextAssignedTo, true)
+		if err != nil {
+			return err
+		}
+		if history.RotationProgress == nil {
+			history.RotationProgress = beforeProgress
+			if err := tx.Save(&history).Error; err != nil {
+				return err
+			}
 		}
 
 		choreUpdates := map[string]interface{}{}
@@ -1070,6 +1101,14 @@ func (r *ChoreRepository) CompleteChore(c context.Context, chore *chModel.Chore,
 		if reached {
 			dueDate = nil
 		}
+		nextAssignedTo, beforeProgress, err := nextConfiguredAssignee(tx, chore, dueDate, nextAssignedTo, true)
+		if err != nil {
+			return err
+		}
+		ch.RotationProgress = beforeProgress
+		if err := tx.Save(ch).Error; err != nil {
+			return err
+		}
 
 		choreUpdates := map[string]interface{}{}
 		choreUpdates["next_due_date"] = dueDate
@@ -1106,6 +1145,10 @@ func (r *ChoreRepository) SkipChore(c context.Context, chore *chModel.Chore, use
 		return err
 	}
 	err = r.db.WithContext(c).Transaction(func(tx *gorm.DB) error {
+		nextAssignedTo, beforeProgress, err := nextConfiguredAssignee(tx, chore, dueDate, nextAssignedTo, false)
+		if err != nil {
+			return err
+		}
 		choreUpdates := map[string]interface{}{}
 		choreUpdates["next_due_date"] = dueDate
 		choreUpdates["status"] = chModel.ChoreStatusNoStatus
@@ -1115,7 +1158,7 @@ func (r *ChoreRepository) SkipChore(c context.Context, chore *chModel.Chore, use
 
 		// Look for existing chore history with start or pause status
 		var existingHistory chModel.ChoreHistory
-		err := tx.Where("chore_id = ? AND status = ? ",
+		err = tx.Where("chore_id = ? AND status = ? ",
 			chore.ID, chModel.ChoreHistoryStatusStarted).
 			First(&existingHistory).Error
 
@@ -1148,6 +1191,7 @@ func (r *ChoreRepository) SkipChore(c context.Context, chore *chModel.Chore, use
 		}
 
 		ch.SyncVersion = nextVersion
+		ch.RotationProgress = beforeProgress
 		// Perform the update operation once, using the prepared updates map.
 		if err := tx.Model(&chModel.Chore{}).Where("id = ?", chore.ID).Updates(choreUpdates).Error; err != nil {
 			return err
@@ -1406,7 +1450,7 @@ func (r *ChoreRepository) GetChoreDetailByID(c context.Context, choreID int, cir
 	var choreDetail chModel.ChoreDetail
 	if err := privacyJoins(r.db.WithContext(c).Table("chores"), userID).
 		Preload("Subtasks").
-		Preload("Assignees").
+		Preload("Assignees", preloadAssignees).
 		Select(`
         chores.id, 
         chores.name,
@@ -1790,6 +1834,14 @@ func (r *ChoreRepository) UndoChoreAction(c context.Context, choreID int, histor
 			if err := tx.Model(&cModel.UserCircle{}).
 				Where("user_id = ? AND circle_id = ?", historyToUndo.CompletedBy, chore.CircleID).
 				Update("points", gorm.Expr("points - ?", *historyToUndo.Points)).Error; err != nil {
+				return err
+			}
+		}
+
+		if historyToUndo.RotationProgress != nil {
+			restored := copyRotationProgress(historyToUndo.RotationProgress)
+			restored.ChoreID = choreID
+			if err := tx.Save(restored).Error; err != nil {
 				return err
 			}
 		}

@@ -23,6 +23,31 @@ func scheduleNextDueDate(ctx context.Context, chore *chModel.Chore, completedDat
 	return applyScheduleBounds(ctx, chore, *next)
 }
 
+// setRotationAdvanceSlots records how many real recurrence slots the engine
+// crossed to reach next. Seasonal bounds may skip many slots; those slots count
+// for scheduled-occurrence rotation even though only one new open occurrence is
+// created.
+func setRotationAdvanceSlots(ctx context.Context, chore *chModel.Chore, next *time.Time) {
+	chore.RotationAdvanceSlots = 1
+	if chore.AssignmentRotation == nil || chore.AssignmentRotation.Mode != chModel.AssignmentRotationModeScheduledOccurrences || chore.NextDueDate == nil || next == nil {
+		return
+	}
+	candidate := *chore.NextDueDate
+	slots := 0
+	for slots < 10000 {
+		advanced, err := rawNextDueDate(ctx, sequenceStep(chore, candidate), candidate)
+		if err != nil || advanced == nil || !advanced.After(candidate) {
+			return
+		}
+		slots++
+		candidate = *advanced
+		if !candidate.Before(*next) {
+			chore.RotationAdvanceSlots = slots
+			return
+		}
+	}
+}
+
 // applyScheduleBounds returns nil once the stop date has passed, and otherwise
 // keeps advancing through the real recurrence sequence until a candidate falls
 // inside the active period. Advancing through the sequence — rather than

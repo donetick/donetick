@@ -61,6 +61,7 @@ func Migration(db *gorm.DB) error {
 		return err
 	}
 	if err := db.AutoMigrate(uModel.User{}, chModel.Chore{},
+		chModel.AssignmentRotationProgress{},
 		chModel.ChoreHistory{},
 		cModel.Circle{},
 		cModel.UserCircle{},

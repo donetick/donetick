@@ -67,7 +67,7 @@ func (h *AuthHandler) RefreshTokenHandler(c *gin.Context) {
 	}
 
 	// Set new refresh token as httpOnly cookie
-	c.SetCookie("refresh_token", tokenResponse.RefreshToken, int(h.tokenService.refreshTokenExpiry.Seconds()), "/", "", true, true)
+	h.tokenService.SetAuthCookie(c, "refresh_token", tokenResponse.RefreshToken, int(h.tokenService.refreshTokenExpiry.Seconds()))
 
 	c.JSON(http.StatusOK, tokenResponse)
 }
@@ -96,7 +96,7 @@ func (h *AuthHandler) LogoutHandler(c *gin.Context) {
 	}
 
 	// Clear the httpOnly cookie
-	c.SetCookie("refresh_token", "", -1, "/", "", true, true)
+	h.tokenService.SetAuthCookie(c, "refresh_token", "", -1)
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Logged out successfully",
@@ -124,7 +124,7 @@ func (h *AuthHandler) RevokeAllHandler(c *gin.Context) {
 	}
 
 	// Clear the httpOnly cookie since all sessions are revoked
-	c.SetCookie("refresh_token", "", -1, "/", "", true, true)
+	h.tokenService.SetAuthCookie(c, "refresh_token", "", -1)
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "All sessions revoked successfully",
@@ -196,7 +196,7 @@ func (h *AuthHandler) EnhancedLoginHandler(c *gin.Context) {
 		})
 		return
 	}
-	c.SetCookie("refresh_token", tokenResponse.RefreshToken, int(h.tokenService.refreshTokenExpiry.Seconds()), "/", "", true, true)
+	h.tokenService.SetAuthCookie(c, "refresh_token", tokenResponse.RefreshToken, int(h.tokenService.refreshTokenExpiry.Seconds()))
 	c.JSON(http.StatusOK, tokenResponse)
 }
 

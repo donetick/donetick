@@ -218,7 +218,7 @@ func (h *Handler) verifyMFA(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to Generate a Token"})
 		return
 	}
-	c.SetCookie("refresh_token", tokenResponse.RefreshToken, int(h.tokenService.RefreshTokenExpiry().Seconds()), "/", "", true, true)
+	h.tokenService.SetAuthCookie(c, "refresh_token", tokenResponse.RefreshToken, int(h.tokenService.RefreshTokenExpiry().Seconds()))
 	c.JSON(http.StatusOK, tokenResponse)
 }
 

@@ -461,7 +461,7 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 			})
 			return
 		}
-		c.SetCookie("refresh_token", tokenResponse.RefreshToken, int(h.tokenService.RefreshTokenExpiry().Seconds()), "/", "", true, true)
+		h.tokenService.SetAuthCookie(c, "refresh_token", tokenResponse.RefreshToken, int(h.tokenService.RefreshTokenExpiry().Seconds()))
 		c.JSON(http.StatusOK, tokenResponse)
 		return
 	case "apple":
@@ -642,7 +642,7 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 			})
 			return
 		}
-		c.SetCookie("refresh_token", tokenResponse.RefreshToken, int(h.tokenService.RefreshTokenExpiry().Seconds()), "/", "", true, true)
+		h.tokenService.SetAuthCookie(c, "refresh_token", tokenResponse.RefreshToken, int(h.tokenService.RefreshTokenExpiry().Seconds()))
 		c.JSON(http.StatusOK, tokenResponse)
 		return
 	case "oauth2":
@@ -856,7 +856,7 @@ func (h *Handler) thirdPartyAuthCallback(c *gin.Context) {
 			})
 			return
 		}
-		c.SetCookie("refresh_token", tokenResponse.RefreshToken, int(h.tokenService.RefreshTokenExpiry().Seconds()), "/", "", true, true)
+		h.tokenService.SetAuthCookie(c, "refresh_token", tokenResponse.RefreshToken, int(h.tokenService.RefreshTokenExpiry().Seconds()))
 		c.JSON(http.StatusOK, tokenResponse)
 		return
 	}
@@ -2040,10 +2040,10 @@ func (h *Handler) logout(c *gin.Context) {
 	}
 
 	// Clear the httpOnly cookie by setting it with negative max age
-	c.SetCookie("refresh_token", "", 0, "/", "", true, true)
+	h.tokenService.SetAuthCookie(c, "refresh_token", "", 0)
 
 	// Also clear any access token cookie if it exists
-	c.SetCookie("access_token", "", 0, "/", "", true, true)
+	h.tokenService.SetAuthCookie(c, "access_token", "", 0)
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Logged out successfully",

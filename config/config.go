@@ -141,6 +141,14 @@ type ServerConfig struct {
 	ServeFrontend    bool          `mapstructure:"serve_frontend" yaml:"serve_frontend"`
 	ServeSwagger     bool          `mapstructure:"serve_swagger" yaml:"serve_swagger"`
 	PublicHost       string        `mapstructure:"public_host" yaml:"public_host" default:"http://localhost:2021"`
+
+	// InsecureCookies sends the auth cookies without the Secure flag, so
+	// login persists when donetick is reached over plain HTTP (for example
+	// by LAN IP with no TLS reverse proxy in front). The default (false)
+	// keeps them Secure. Only turn it on for an instance on a trusted
+	// network. It is an opt-out flag rather than a `default:"true"` one for
+	// the same reason as the flags in WebhookConfig.
+	InsecureCookies bool `mapstructure:"insecure_cookies" yaml:"insecure_cookies"`
 }
 
 type SchedulerConfig struct {

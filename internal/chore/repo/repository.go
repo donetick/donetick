@@ -812,21 +812,27 @@ func (r *ChoreRepository) SetChorePendingApproval(c context.Context, chore *chMo
 		return err
 	}
 	err = r.db.WithContext(c).Transaction(func(tx *gorm.DB) error {
-		// Look for existing chore history with start or pause status
+		// Look for existing chore history with start or pause status. Find avoids
+		// logging the expected no-row case as an error.
 		var existingHistory chModel.ChoreHistory
-		err := tx.Where("chore_id = ? AND status = ? ",
+		result := tx.Where("chore_id = ? AND status = ? ",
 			chore.ID, chModel.ChoreHistoryStatusStarted).
-			First(&existingHistory).Error
+			Order("id").
+			Limit(1).
+			Find(&existingHistory)
+		if result.Error != nil {
+			return result.Error
+		}
 
 		var ch *chModel.ChoreHistory
 		switch {
-		case err == nil:
+		case result.RowsAffected > 0:
 			// Update existing history record to mark as pending approval
 			existingHistory.PerformedAt = completedDate
 			existingHistory.Note = note
 			existingHistory.Status = chModel.ChoreHistoryStatusPendingApproval
 			ch = &existingHistory
-		case errors.Is(err, gorm.ErrRecordNotFound):
+		default:
 			// Create a new chore history record
 			ch = &chModel.ChoreHistory{
 				ChoreID:     chore.ID,
@@ -837,8 +843,6 @@ func (r *ChoreRepository) SetChorePendingApproval(c context.Context, chore *chMo
 				Note:        note,
 				Status:      chModel.ChoreHistoryStatusPendingApproval,
 			}
-		default:
-			return err
 		}
 
 		ch.SyncVersion = nextVersion
@@ -1012,21 +1016,27 @@ func (r *ChoreRepository) CompleteChore(c context.Context, chore *chModel.Chore,
 		return err
 	}
 	err = r.db.WithContext(c).Transaction(func(tx *gorm.DB) error {
-		// Look for existing chore history with start or pause status
+		// Look for existing chore history with start or pause status. Find avoids
+		// logging the expected no-row case as an error.
 		var existingHistory chModel.ChoreHistory
-		err := tx.Where("chore_id = ? AND status = ? ",
+		result := tx.Where("chore_id = ? AND status = ? ",
 			chore.ID, chModel.ChoreHistoryStatusStarted).
-			First(&existingHistory).Error
+			Order("id").
+			Limit(1).
+			Find(&existingHistory)
+		if result.Error != nil {
+			return result.Error
+		}
 
 		var ch *chModel.ChoreHistory
 		switch {
-		case err == nil:
+		case result.RowsAffected > 0:
 			// Update existing history record
 			existingHistory.PerformedAt = completedDate
 			existingHistory.Note = note
 			existingHistory.Status = chModel.ChoreHistoryStatusCompleted
 			ch = &existingHistory
-		case errors.Is(err, gorm.ErrRecordNotFound):
+		default:
 			// Create a new chore history record
 			ch = &chModel.ChoreHistory{
 				ChoreID:     chore.ID,
@@ -1037,8 +1047,6 @@ func (r *ChoreRepository) CompleteChore(c context.Context, chore *chModel.Chore,
 				Note:        note,
 				Status:      chModel.ChoreHistoryStatusCompleted,
 			}
-		default:
-			return err
 		}
 
 		// Update UserCirclee Points :
@@ -1704,15 +1712,18 @@ func (r *ChoreRepository) GetUserLastChoreAction(c context.Context, choreID int,
 	var history chModel.ChoreHistory
 	cutoffTime := time.Now().UTC().Add(-timeLimit)
 
+	// A started timer row may have been created long before it is completed.
+	// Use its latest write time so the completed action is still undoable for
+	// the configured window, while falling back to creation time for old rows.
 	err := r.db.WithContext(c).
-		Where("chore_id = ? AND completed_by = ? AND created_at > ?", choreID, userID, cutoffTime).
+		Where("chore_id = ? AND completed_by = ? AND COALESCE(updated_at, created_at) > ?", choreID, userID, cutoffTime).
 		Where("status IN (?)", []chModel.ChoreHistoryStatus{
 			chModel.ChoreHistoryStatusCompleted,
 			chModel.ChoreHistoryStatusSkipped,
 			chModel.ChoreHistoryStatusPendingApproval,
 			chModel.ChoreHistoryStatusRejected,
 		}).
-		Order("created_at desc").
+		Order("COALESCE(updated_at, created_at) desc, id desc").
 		First(&history).Error
 
 	if err != nil {

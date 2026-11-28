@@ -5,6 +5,7 @@ import (
 	"errors"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
@@ -25,7 +26,9 @@ func newTestChoreRepo(t *testing.T) (*ChoreRepository, *gorm.DB) {
 	t.Helper()
 
 	dbPath := filepath.Join(t.TempDir(), "test_chores.db")
-	db, err := gorm.Open(sqlite.Open(dbPath), &gorm.Config{})
+	db, err := gorm.Open(sqlite.Open(dbPath), &gorm.Config{
+		NowFunc: func() time.Time { return time.Now().UTC() },
+	})
 	if err != nil {
 		t.Fatalf("failed to open sqlite: %v", err)
 	}

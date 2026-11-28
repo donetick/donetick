@@ -53,7 +53,8 @@ func NewDatabase(cfg *config.Config) (*gorm.DB, error) {
 	)
 
 	gormConfig := gorm.Config{
-		Logger: newLogger,
+		Logger:  newLogger,
+		NowFunc: func() time.Time { return time.Now().UTC() },
 	}
 
 	switch cfg.Database.Type {

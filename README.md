@@ -271,6 +271,18 @@ claude mcp add --transport http donetick https://<your-donetick-host>/mcp --head
 
 The token can also be sent in the `secretkey` header, as with the rest of the API.
 
+### Claude (claude.ai, desktop and mobile apps)
+
+Claude can connect to Donetick as a custom connector. Claude calls your server from Anthropic's cloud rather than from your device, so Donetick has to be reachable from the internet over HTTPS on port 443. A LAN, localhost or VPN-only address won't work.
+
+1. In Donetick, create an API token for Claude.
+2. In Claude, go to **Customize → Connectors**, click **+ Add**, then **Add custom connector**. (On Team and Enterprise plans an owner adds it under **Organization settings → Connectors**.)
+3. Set the URL to `https://<your-donetick-host>/mcp`.
+4. Set **Authentication** to **No sign in**. Donetick doesn't offer OAuth, so the sign-in options fail.
+5. Under **Request headers**, add the header `Authorization` with the value `Bearer <api token>`. Use `Authorization` rather than `secretkey`, because Claude doesn't accept custom header names without special permission.
+
+The connector then works in every Claude app, including Claude Desktop and the mobile apps. On Team and Enterprise plans, a request header is shared by everyone who uses the connector, so every change they make is recorded as the token's owner.
+
 ### Tools
 
 | Area | Tools |

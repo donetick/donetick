@@ -689,7 +689,14 @@ func (h *Handler) createChore(c *gin.Context, currentUser *uModel.UserDetails, c
 	}
 
 	if choreReq.SubTasks != nil {
-		if h.stRepo.UpdateSubtask(c, createdChore.ID, nil, *choreReq.SubTasks) != nil {
+		newSubTasks := *choreReq.SubTasks
+		if token, ok := auth.CurrentAPIToken(c); ok && !auth.TokenHasScope(token.Scopes, "chores:execute") {
+			for i := range newSubTasks {
+				newSubTasks[i].CompletedAt = nil
+				newSubTasks[i].CompletedBy = 0
+			}
+		}
+		if h.stRepo.UpdateSubtask(c, createdChore.ID, nil, newSubTasks) != nil {
 			return 500, gin.H{"error": "Error adding subtasks", "res": id}
 		}
 	}
@@ -1055,6 +1062,15 @@ func (h *Handler) EditChore(c *gin.Context) {
 			}
 		}
 
+		// Editing a chore only requires chores:write. Subtask completion is
+		// gated behind chores:execute, so an API token without that scope
+		// cannot smuggle completion changes in through an otherwise-unrelated
+		// subtask edit (e.g. renaming/reordering).
+		canExecute := true
+		if token, ok := auth.CurrentAPIToken(c); ok {
+			canExecute = auth.TokenHasScope(token.Scopes, "chores:execute")
+		}
+
 		for _, newSubTask := range *choreReq.SubTasks {
 			found := false
 			newSubTask.ChoreID = oldChore.ID
@@ -1063,6 +1079,10 @@ func (h *Handler) EditChore(c *gin.Context) {
 				if existedSubTask.ID == newSubTask.ID {
 					if existedSubTask.Name != newSubTask.Name || existedSubTask.OrderID != newSubTask.OrderID {
 						// there is a change in the subtask, update it
+						if !canExecute {
+							newSubTask.CompletedAt = existedSubTask.CompletedAt
+							newSubTask.CompletedBy = existedSubTask.CompletedBy
+						}
 						break
 					}
 					found = true
@@ -1070,6 +1090,10 @@ func (h *Handler) EditChore(c *gin.Context) {
 				}
 			}
 			if !found {
+				if !canExecute {
+					newSubTask.CompletedAt = nil
+					newSubTask.CompletedBy = 0
+				}
 				ToBeAdded = append(ToBeAdded, newSubTask)
 			}
 		}

@@ -306,7 +306,7 @@ func (r *UserRepository) UpdatePasswordByToken(ctx context.Context, email string
 	return nil
 }
 
-func (r *UserRepository) StoreAPIToken(c context.Context, userID int, name string, tokenBody string, tokenPrefix string) (*uModel.APIToken, error) {
+func (r *UserRepository) StoreAPIToken(c context.Context, userID int, name string, tokenBody string, tokenPrefix string, options ...APITokenOptions) (*uModel.APIToken, error) {
 	fullToken := uModel.BuildFullToken(tokenPrefix, tokenBody)
 
 	hashHex := hashAPIToken(fullToken)
@@ -324,6 +324,11 @@ func (r *UserRepository) StoreAPIToken(c context.Context, userID int, name strin
 		Suffix:    &suffix,
 		CreatedAt: time.Now().UTC(),
 	}
+	if len(options) > 0 {
+		apiToken.Scopes = options[0].Scopes
+		apiToken.ExpiresAt = options[0].ExpiresAt
+		apiToken.CircleID = options[0].CircleID
+	}
 	if err := r.db.WithContext(c).Model(&uModel.APIToken{}).Save(
 		apiToken).Error; err != nil {
 		return nil, err
@@ -333,6 +338,9 @@ func (r *UserRepository) StoreAPIToken(c context.Context, userID int, name strin
 }
 
 func (r *UserRepository) GetUserByToken(c context.Context, token string) (*uModel.UserDetails, error) {
+	if _, err := r.GetAPIToken(c, token); err != nil {
+		return nil, err
+	}
 	var user *uModel.UserDetails
 	now := time.Now().UTC()
 
@@ -373,7 +381,7 @@ func (r *UserRepository) GetAllUserTokens(c context.Context, userID int) ([]*uMo
 }
 
 func (r *UserRepository) DeleteAPIToken(c context.Context, userID int, tokenID string) error {
-	return r.db.WithContext(c).Where("id = ? AND user_id = ?", tokenID, userID).Delete(&uModel.APIToken{}).Error
+	return r.db.WithContext(c).Model(&uModel.APIToken{}).Where("id = ? AND user_id = ?", tokenID, userID).Update("revoked_at", time.Now().UTC()).Error
 }
 
 func (r *UserRepository) UpdateNotificationTarget(c context.Context, userID int, targetID string, targetType nModel.NotificationPlatform) error {

@@ -51,13 +51,18 @@ type UserPasswordReset struct {
 }
 
 type APIToken struct {
-	ID        int       `json:"id" gorm:"primary_key"`              // Unique identifier
-	Name      string    `json:"name" gorm:"column:name"`            // Name (display only, not unique)
-	UserID    int       `json:"userId" gorm:"column:user_id;index"` // Index on userID
-	Token     string    `json:"token" gorm:"column:token;index"`    // Index on token
-	Prefix    *string   `json:"prefix" gorm:"column:prefix"`        // Token format/type marker, e.g. "dt_"
-	Suffix    *string   `json:"suffix" gorm:"column:suffix"`        // Last few chars of the token, for masked display
-	CreatedAt time.Time `json:"createdAt" gorm:"column:created_at"`
+	ID         int        `json:"id" gorm:"primary_key"`              // Unique identifier
+	Name       string     `json:"name" gorm:"column:name"`            // Name (display only, not unique)
+	UserID     int        `json:"userId" gorm:"column:user_id;index"` // Index on userID
+	Token      string     `json:"token" gorm:"column:token;index"`    // Index on token
+	Prefix     *string    `json:"prefix" gorm:"column:prefix"`        // Token format/type marker, e.g. "dt_"
+	Suffix     *string    `json:"suffix" gorm:"column:suffix"`        // Last few chars of the token, for masked display
+	CreatedAt  time.Time  `json:"createdAt" gorm:"column:created_at"`
+	Scopes     []string   `json:"scopes" gorm:"serializer:json"`
+	ExpiresAt  *time.Time `json:"expiresAt"`
+	RevokedAt  *time.Time `json:"revokedAt"`
+	LastUsedAt *time.Time `json:"lastUsedAt"`
+	CircleID   *int       `json:"circleId"`
 }
 
 const APITokenPrefix = "dt_"

@@ -64,7 +64,7 @@ func newAPIPermissionTest(t *testing.T) (*gin.Engine, *gorm.DB) {
 			circleID = 2
 		}
 		require.NoError(t, db.Create(&uModel.User{ID: id, Username: fmt.Sprintf("user%d", id), CircleID: circleID}).Error)
-		require.NoError(t, db.Create(&uModel.APIToken{UserID: id, Name: fmt.Sprintf("token%d", id), Token: fmt.Sprintf("test-token-%d", id)}).Error)
+		require.NoError(t, db.Create(&uModel.APIToken{UserID: id, Name: fmt.Sprintf("token%d", id), Scopes: []string{"chores:write", "chores:delete"}, Token: fmt.Sprintf("test-token-%d", id)}).Error)
 		// User 5 reproduces a valid token for an account missing circle membership.
 		if id == 5 {
 			continue

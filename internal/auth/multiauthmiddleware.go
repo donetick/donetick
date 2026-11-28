@@ -4,8 +4,8 @@ import (
 	"errors"
 	"net/http"
 
+	uModel "donetick.com/core/internal/user/model"
 	uRepo "donetick.com/core/internal/user/repo"
-	"donetick.com/core/logging"
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
 )
@@ -28,33 +28,26 @@ func NewMultiAuthMiddleware(jwtMiddleware *jwt.GinJWTMiddleware, userRepo *uRepo
 // MultiAuthMiddleware tries API key authentication first, then JWT
 func (h *MultiAuthMiddleware) MiddlewareFunc() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		logger := logging.FromContext(c)
-
-		// Authenticate using API key first, it's just's a header check. if fails, try JWT next
-		var authenticated, err = authenticateAPIKey(c, h.userRepo)
-		if authenticated {
+		if c.GetHeader(apiKeyHeader) != "" {
+			if ok, _ := authenticateAPIKey(c, h.userRepo); !ok {
+				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid API token"})
+				return
+			}
+			token := c.MustGet(apiTokenContextKey).(*uModel.APIToken)
+			user, _ := CurrentUser(c)
+			if (token.CircleID != nil && *token.CircleID != user.CircleID) || !tokenHasScope(token.Scopes, requiredTokenScope(c.Request.Method, c.FullPath())) {
+				denyTokenScope(c)
+				return
+			}
+			// Usage metadata is best effort and must not change authorization.
+			_ = h.userRepo.TouchAPIToken(c.Request.Context(), token.ID)
 			c.Next()
 			return
 		}
-
-		if err.Error() == "API token is invalid." {
-			authenticated, err = authenticateJWT(c, h.jwtMiddleware)
-			if authenticated {
-				c.Next()
-				return
-			}
-		}
-
-		// If neither succeeded, return unauthorized
-		if !authenticated {
-			logger.Error("Authentication failed:", err) //TODO: Check logging levels, error might be overkill
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "Authentication required. Provide either a valid JWT token or API key.",
-			})
-			c.Abort()
+		if ok, _ := authenticateJWT(c, h.jwtMiddleware); !ok {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
 			return
 		}
-
 		c.Next()
 	}
 }
@@ -62,6 +55,9 @@ func (h *MultiAuthMiddleware) MiddlewareFunc() gin.HandlerFunc {
 // authenticateJWT attempts JWT authentication and returns true if successful
 func authenticateJWT(c *gin.Context, jwtMiddleware *jwt.GinJWTMiddleware) (bool, error) {
 
+	if jwtMiddleware == nil {
+		return false, errors.New("JWT authentication unavailable")
+	}
 	token, err := jwtMiddleware.ParseToken(c)
 	if err != nil || !token.Valid {
 		return false, errors.New("JWT is invalid.")
@@ -100,6 +96,11 @@ func authenticateAPIKey(c *gin.Context, userRepo *uRepo.UserRepository) (bool, e
 		return false, errors.New("User account is disabled")
 	}
 
+	token, err := userRepo.GetAPIToken(c.Request.Context(), apiToken)
+	if err != nil {
+		return false, errors.New("Invalid API token")
+	}
+	c.Set(apiTokenContextKey, token)
 	// Set the user in context
 	c.Set(identityKey, user)
 	return true, nil

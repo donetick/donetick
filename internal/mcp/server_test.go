@@ -117,7 +117,7 @@ func newServer(t *testing.T) (*gin.Engine, *gorm.DB) {
 		{pat, 2, "pat", patToken, cModel.UserRoleAdmin},
 	} {
 		require.NoError(t, db.Create(&uModel.User{ID: u.id, Username: u.name, DisplayName: u.name, CircleID: u.circle}).Error)
-		require.NoError(t, db.Create(&uModel.APIToken{UserID: u.id, Name: u.name, Token: u.token}).Error)
+		require.NoError(t, db.Create(&uModel.APIToken{UserID: u.id, Name: u.name, Token: u.token, Scopes: auth.APITokenScopes()}).Error)
 		require.NoError(t, db.Create(&cModel.UserCircle{UserID: u.id, CircleID: u.circle, Role: u.role, IsActive: true}).Error)
 	}
 	return engine, db

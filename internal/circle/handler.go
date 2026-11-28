@@ -515,6 +515,18 @@ func (h *Handler) GetUserCircles(c *gin.Context) {
 		return
 	}
 
+	// A circle-bound API token must only see the circle it's bound to, even
+	// though the user may belong to other circles.
+	if token, ok := auth.CurrentAPIToken(c); ok && token.CircleID != nil {
+		filtered := make([]*cModel.CircleDetail, 0, 1)
+		for _, circle := range circles {
+			if circle.ID == *token.CircleID {
+				filtered = append(filtered, circle)
+			}
+		}
+		circles = filtered
+	}
+
 	c.JSON(200, gin.H{
 		"res": circles,
 	})
